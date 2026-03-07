@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+  <head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title th:text="${globalSystemConfig.systemName + ' - Inventario de Ingredientes'}">SavoryCloud - Inventario de Ingredientes</title>
+    <link crossorigin="" href="https://fonts.gstatic.com/" rel="preconnect" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@300;400;500;600;700"
+      rel="stylesheet"
+    />
+    
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
+    <!-- Sistema de Temas (Modo Claro/Oscuro) -->
+    <div th:replace="~{fragments/theme :: themeResources}"></div>
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#38e07b",
+              "primary-dark": "#2bc866",
+              "background-light": "#f8faf9",
+              "background-dark": "#0f1713",
+            },
+            fontFamily: {
+              display: ["Work Sans"],
+            },
+            borderRadius: {
+              DEFAULT: "0.5rem",
+              lg: "0.75rem",
+              xl: "1rem",
+              "2xl": "1.5rem",
+              full: "9999px",
+            },
+          },
+        },
+      };
+    </script>
+
+    <!-- Sidebar Styles Fragment -->
+    <div th:replace="~{fragments/sidebar :: sidebarStyles}"></div>
+  </head>
+  <body
+    class="bg-gradient-to-br from-background-light to-gray-50 dark:from-background-dark dark:to-gray-900 font-display text-gray-800 dark:text-gray-200 overflow-hidden"
+  >
+    <!-- Menu Controls Fragment -->
+    <div th:replace="~{fragments/sidebar :: menuControls}"></div>
+
+    <div class="flex min-h-screen h-screen overflow-hidden">
+      <!-- SIDEBAR - Using Fragment -->
+      <div th:replace="~{fragments/sidebar :: sidebar(activeMenu='inventory')}"></div>
+
+    <!-- MAIN CONTENT -->
+<main class="flex-1 overflow-y-auto h-screen">
+  <div class="p-4 sm:p-6 lg:p-8 pt-20 md:pt-20 lg:pt-8 pb-32">
+    <!-- HEADER -->
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6 sm:mb-8">
+      <div>
+        <h2 class="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white mb-1">
+          Gestión de Inventario
+        </h2>
+        <p class="text-sm sm:text-base text-gray-600 dark:text-gray-400">
+          Control y seguimiento de stock de ingredientes
+        </p>
+      </div>
+      <div class="flex items-center gap-2 flex-wrap">
+        <a th:href="@{/admin/ingredients/new}"
+          class="flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl bg-gradient-to-r from-primary to-primary-dark text-white font-semibold hover:shadow-lg hover:shadow-primary/30 transition-all shadow-md text-sm sm:text-base">
+          <span class="material-symbols-outlined text-lg">add</span>
+          Añadir Ingrediente
+        </a>
+        <a th:href="@{/admin/ingredient-categories}"
+          class="flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white font-semibold hover:bg-gray-50 dark:hover:bg-gray-800 transition-all shadow-md text-sm sm:text-base">
+          <span class="material-symbols-outlined text-lg">category</span>
+          Categorías
+        </a>
+      </div>
+    </div>
+
+    <!-- FLASH MESSAGES -->
+    <div th:if="${successMessage}" class="mb-6 p-4 bg-green-100 dark:bg-green-900 border border-green-200 dark:border-green-800 rounded-xl flex items-center gap-3">
+      <span class="material-symbols-outlined text-green-600 dark:text-green-400">check_circle</span>
+      <span class="text-green-800 dark:text-green-200" th:text="${successMessage}"></span>
+    </div>
+    <div th:if="${errorMessage}" class="mb-6 p-4 bg-red-100 dark:bg-red-900 border border-red-200 dark:border-red-800 rounded-xl flex items-center gap-3">
+      <span class="material-symbols-outlined text-red-600 dark:text-red-400">error</span>
+      <span class="text-red-800 dark:text-red-200" th:text="${errorMessage}"></span>
+    </div>
+
+    <!-- STATS -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
+      <div class="bg-white dark:bg-gray-900 p-4 sm:p-6 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800">
+        <div class="flex items-center gap-4">
+          <div class="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center">
+            <span class="material-symbols-outlined text-primary text-2xl">inventory_2</span>
+          </div>
+          <div>
+            <p class="text-sm text-gray-600 dark:text-gray-400">Total Ingredientes</p>
+            <p class="text-2xl font-bold text-gray-900 dark:text-white" th:text="${totalCount}">0</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white dark:bg-gray-900 p-4 sm:p-6 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800">
+        <div class="flex items-center gap-4">
+          <div class="w-12 h-12 bg-green-500/10 rounded-xl flex items-center justify-center">
+            <span class="material-symbols-outlined text-green-500 text-2xl">check_circle</span>
+          </div>
+          <div>
+            <p class="text-sm text-gray-600 dark:text-gray-400">Activos</p>
+            <p class="text-2xl font-bold text-gray-900 dark:text-white" th:text="${activeCount}">0</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white dark:bg-gray-900 p-4 sm:p-6 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800">
+        <div class="flex items-center gap-4">
+          <div class="w-12 h-12 bg-red-500/10 rounded-xl flex items-center justify-center">
+            <span class="material-symbols-outlined text-red-500 text-2xl">cancel</span>
+          </div>
+          <div>
+            <p class="text-sm text-gray-600 dark:text-gray-400">Inactivos</p>
+            <p class="text-2xl font-bold text-gray-900 dark:text-white" th:text="${inactiveCount}">0</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CONTENEDOR PRINCIPAL -->
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      <!-- SECCIÓN TABLA -->
+      <div class="lg:col-span-3 space-y-6">
+        <!-- FILTROS -->
+        <div class="bg-white dark:bg-gray-900 p-4 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-lg">
+          <form th:action="@{/admin/ingredients}" method="get">
+            <div class="space-y-4">
+              <!-- PRIMERA FILA: Búsqueda por texto + Botón Filtrar -->
+              <div class="flex items-center gap-4">
+                <div class="relative flex-1">
+                  <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">search</span>
+                  <input
+                    name="search"
+                    th:value="${search}"
+                    class="w-full h-12 pl-10 pr-4 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-primary focus:outline-none placeholder:text-gray-400 text-sm"
+                    placeholder="Buscar ingredientes..." type="text" />
+                </div>
+                <button
+                  type="submit"
+                  class="h-12 px-6 flex items-center justify-center gap-2 rounded-xl bg-primary text-white hover:bg-primary-dark transition-colors font-medium whitespace-nowrap">
+                  <span class="material-symbols-outlined">search</span>
+                  Filtrar
+                </button>
+              </div>
+
+              <!-- SEGUNDA FILA: Demás filtros -->
+              <div class="flex flex-wrap items-center gap-3">
+                <select
+                  name="categoryId"
+                  class="h-12 px-4 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-primary focus:outline-none text-sm">
+                  <option value="">Todas las Categorías</option>
+                  <option th:each="category : ${allCategories}" 
+                          th:value="${category.idCategory}" 
+                          th:text="${category.name}"
+                          th:selected="${categoryId == category.idCategory}">
+                  </option>
+                </select>
+                <select
+                  name="supplierId"
+                  class="h-12 px-4 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-primary focus:outline-none text-sm">
+                  <option value="">Todos los Proveedores</option>
+                  <option th:each="supplier : ${allSuppliers}" 
+                          th:value="${supplier.idSupplier}" 
+                          th:text="${supplier.name}"
+                          th:selected="${supplierId == supplier.idSupplier}">
+                  </option>
+                </select>
+                <select
+                  name="sortBy"
+                  class="h-12 px-4 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-primary focus:outline-none text-sm">
+                  <option value="stock-asc" th:selected="${sortBy == 'stock-asc'}">Stock: Menor a Mayor</option>
+                  <option value="stock-desc" th:selected="${sortBy == 'stock-desc'}">Stock: Mayor a Menor</option>
+                </select>
+                <select
+                  name="active"
+                  class="h-12 px-4 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-primary focus:outline-none text-sm">
+                  <option value="true" th:selected="${active == true}">Activos</option>
+                  <option value="false" th:selected="${active == false}">Inactivos</option>
+                </select>
+              </div>
+            </div>
+          </form>
+        </div>
+
+        <!-- TABLA -->
+<div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-lg overflow-hidden">
+  <div class="overflow-x-auto">
+    <table class="w-full text-left">
+      <thead>
+        <tr class="bg-gray-50 dark:bg-gray-800">
+          <th class="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-400">
+            Ingrediente
+          </th>
+          <th class="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-400">
+            Categoría
+          </th>
+          <th class="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-400 text-right">
+            Stock Actual
+          </th>
+          <th class="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-400 text-right">
+            Min / Max
+          </th>
+          <th class="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-400 text-center">
+            Nivel de Stock
+          </th>
+          <th class="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-400 text-center">
+            Acciones
+          </th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+        <tr th:if="${#lists.isEmpty(ingredients)}" class="hover:bg-gray-50 dark:hover:bg-gray-800">
+          <td colspan="6" class="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
+            <span class="material-symbols-outlined text-4xl mb-2 opacity-50">inventory_2</span>
+            <p>No hay ingredientes registrados</p>
+          </td>
+        </tr>
+        
+        <tr th:each="ingredient : ${ingredients}" 
+            th:data-ingredient-id="${ingredient.idIngredient}"
+            class="hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+            th:classappend="${!ingredient.active} ? 'opacity-50' : ''">
+          <!-- INGREDIENTE -->
+          <td class="px-6 py-4">
+            <div class="flex items-center gap-3">
+              <div th:if="${ingredient.category != null}" 
+                   th:style="'background-color: ' + ${ingredient.category.color}" 
+                   class="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0">
+                <span class="material-symbols-outlined text-white" th:text="${ingredient.category.icon}">nutrition</span>
+              </div>
+              <div th:if="${ingredient.category == null}" 
+                   class="w-10 h-10 bg-gray-300 dark:bg-gray-700 rounded-lg flex items-center justify-center flex-shrink-0">
+                <span class="material-symbols-outlined text-gray-600">nutrition</span>
+              </div>
+              <div>
+                <p class="font-medium text-gray-900 dark:text-white" th:text="${ingredient.name}">Ingrediente</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400" th:text="${ingredient.unitOfMeasure}">kg</p>
+              </div>
+            </div>
+          </td>
+          
+          <!-- CATEGORÍA -->
+          <td class="px-6 py-4">
+            <span th:if="${ingredient.category != null}" 
+                  th:style="'background-color: ' + ${ingredient.category.color} + '20; color: ' + ${ingredient.category.color}"
+                  class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold">
+              <span class="material-symbols-outlined text-sm" th:text="${ingredient.category.icon}">category</span>
+              <span th:text="${ingredient.category.name}">Categoría</span>
+            </span>
+            <span th:if="${ingredient.category == null}" class="text-xs text-gray-400">Sin categoría</span>
+          </td>
+          
+          <!-- STOCK ACTUAL -->
+          <td class="px-6 py-4 text-right">
+            <span class="font-semibold text-gray-900 dark:text-white" 
+                  th:text="${ingredient.currentStock} + ' ' + ${ingredient.unitOfMeasure}">50 kg</span>
+          </td>
+          
+          <!-- MIN / MAX -->
+          <td class="px-6 py-4 text-right">
+            <span class="text-sm text-gray-600 dark:text-gray-400" 
+                  th:text="${ingredient.minStock} + ' / ' + ${ingredient.maxStock}">10 / 100</span>
+          </td>
+          
+          <!-- NIVEL DE STOCK -->
+          <td class="px-6 py-4">
+            <div class="w-full">
+              <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 mb-1">
+                <div th:if="${ingredient.isOutOfStock()}" class="bg-red-500 h-2.5 rounded-full" style="width: 0%"></div>
+                <div th:if="${ingredient.isLowStock() && !ingredient.isOutOfStock()}" 
+                     class="bg-yellow-500 h-2.5 rounded-full" 
+                     th:style="'width: ' + ${ingredient.getStockPercentage()} + '%'"></div>
+                <div th:if="${ingredient.isHealthyStock() && !ingredient.isOutOfStock()}" 
+                     class="bg-green-500 h-2.5 rounded-full" 
+                     th:style="'width: ' + ${ingredient.getStockPercentage()} + '%'"></div>
+              </div>
+              <p class="text-xs text-center"
+                 th:classappend="${ingredient.isOutOfStock() ? 'text-red-600 dark:text-red-400 font-semibold' : (ingredient.isLowStock() ? 'text-yellow-600 dark:text-yellow-400' : 'text-green-600 dark:text-green-400')}"
+                 th:text="${ingredient.getStockStatus()}">OK</p>
+            </div>
+          </td>
+          
+          <!-- ACCIONES -->
+          <td class="px-6 py-4 text-center space-x-1">
+            <!-- Bot\u00f3n editar solo si est\u00e1 activo -->
+            <a th:if="${ingredient.active}"
+               th:href="@{/admin/ingredients/{id}/edit(id=${ingredient.idIngredient})}"
+               class="inline-block p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+               title="Editar">
+              <span class="material-symbols-outlined text-gray-600 dark:text-gray-400">edit</span>
+            </a>
+            <!-- Bot\u00f3n deshabilitado si est\u00e1 inactivo -->
+            <button th:if="${!ingredient.active}"
+                    type="button"
+                    class="inline-block p-2 rounded-full cursor-not-allowed opacity-50"
+                    title="Debe activar el ingrediente para editarlo"
+                    disabled>
+              <span class="material-symbols-outlined text-gray-400 dark:text-gray-600">edit_off</span>
+            </button>
+            
+            <!-- Botón de desactivar con SweetAlert -->
+            <button th:if="${ingredient.active}" 
+                    type="button"
+                    class="btn-deactivate-ingredient p-2 rounded-full hover:bg-red-100 dark:hover:bg-red-900 transition-colors"
+                    th:data-ingredient-id="${ingredient.idIngredient}"
+                    th:data-ingredient-name="${ingredient.name}"
+                    title="Desactivar">
+              <span class="material-symbols-outlined text-red-600 dark:text-red-400">delete</span>
+            </button>
+            
+            <form th:if="${!ingredient.active}" 
+                  th:action="@{/admin/ingredients/{id}/activate(id=${ingredient.idIngredient})}" 
+                  method="post" 
+                  style="display: inline;">
+              <button type="submit" 
+                      class="p-2 rounded-full hover:bg-green-100 dark:hover:bg-green-900 transition-colors"
+                      title="Activar">
+                <span class="material-symbols-outlined text-green-600 dark:text-green-400">check_circle</span>
+              </button>
+            </form>
+            
+            <!-- CARRITO: Redirige a proveedores filtrados por este ingrediente -->
+            <a th:href="@{/admin/suppliers(ingredientId=${ingredient.idIngredient},categoryId=${ingredient.category != null ? ingredient.category.idCategory : ''})}"
+               class="inline-block p-2 rounded-full hover:bg-green-100 dark:hover:bg-green-700 transition-colors"
+               title="Ver proveedores de este ingrediente">
+              <span class="material-symbols-outlined text-green-600 dark:text-green-300">shopping_cart</span>
+            </a>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pagination Controls -->
+  <div class="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4 px-6 pb-6">
+    <div class="text-sm text-gray-600 dark:text-gray-400">
+      Mostrando <span id="ingredients-start">0</span> a <span id="ingredients-end">0</span> de <span id="ingredients-total">0</span> ingredientes
+    </div>
+    <div class="flex items-center gap-2">
+      <button
+        id="ingredients-prev-btn"
+        class="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        disabled
+      >
+        <span class="material-symbols-outlined text-sm">chevron_left</span>
+      </button>
+      <div id="ingredients-page-numbers" class="flex items-center gap-1"></div>
+      <button
+        id="ingredients-next-btn"
+        class="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+      >
+        <span class="material-symbols-outlined text-sm">chevron_right</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+      </div>
+
+      <!-- SIDEBAR DE ALERTAS -->
+      <div class="lg:col-span-1">
+        <div
+          class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-lg p-6">
+          <div class="flex items-center gap-3 mb-6">
+            <div class="w-10 h-10 bg-red-500/10 rounded-xl flex items-center justify-center">
+              <span class="material-symbols-outlined text-red-500 text-xl">warning</span>
+            </div>
+            <h3 class="text-lg font-bold text-gray-900 dark:text-white">Alertas de Stock</h3>
+          </div>
+
+          <!-- ESTADÍSTICAS -->
+          <div class="grid grid-cols-2 gap-3 mb-6">
+            <div class="bg-red-50 dark:bg-red-900/20 p-3 rounded-lg">
+              <p class="text-2xl font-bold text-red-600 dark:text-red-400" th:text="${outOfStockCount}">0</p>
+              <p class="text-xs text-gray-600 dark:text-gray-400">Agotados</p>
+            </div>
+            <div class="bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded-lg">
+              <p class="text-2xl font-bold text-yellow-600 dark:text-yellow-400" th:text="${lowStockCount}">0</p>
+              <p class="text-xs text-gray-600 dark:text-gray-400">Stock Bajo</p>
+            </div>
+          </div>
+
+          <!-- INGREDIENTES CRÍTICOS -->
+          <div class="space-y-3 max-h-96 overflow-y-auto">
+            <div th:if="${lowStockCount == 0 && outOfStockCount == 0}" class="text-center py-4">
+              <span class="material-symbols-outlined text-4xl text-green-500 mb-2">check_circle</span>
+              <p class="text-sm text-gray-600 dark:text-gray-400">Todo el stock está bien</p>
+            </div>
+            
+            <div th:each="ingredient : ${ingredients}" 
+                 th:if="${ingredient.isLowStock() || ingredient.isOutOfStock()}"
+                 class="flex items-center justify-between p-3 rounded-lg"
+                 th:classappend="${ingredient.isOutOfStock()} ? 'bg-red-500/10' : 'bg-yellow-500/10'">
+              <div>
+                <p class="font-semibold" 
+                   th:classappend="${ingredient.isOutOfStock()} ? 'text-red-500' : 'text-yellow-600 dark:text-yellow-500'"
+                   th:text="${ingredient.name}">Ingrediente</p>
+                <p class="text-sm text-gray-600 dark:text-gray-400" 
+                   th:text="'Quedan ' + ${ingredient.currentStock} + ' ' + ${ingredient.unitOfMeasure}">Quedan X</p>
+              </div>
+              <a th:href="@{/admin/suppliers(ingredientId=${ingredient.idIngredient})}"
+                 class="h-8 px-3 rounded-md bg-primary text-white text-xs font-bold hover:bg-primary-dark transition flex items-center gap-1">
+                <span class="material-symbols-outlined text-sm">shopping_cart</span>
+                Pedir
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <!-- CONTENEDOR DE DESCARGA DE PDF -->
+        <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-lg p-6 mt-6">
+          <div class="flex items-center gap-3 mb-6">
+            <div class="w-10 h-10 bg-blue-500/10 rounded-xl flex items-center justify-center">
+              <span class="material-symbols-outlined text-blue-500 text-xl">picture_as_pdf</span>
+            </div>
+            <h3 class="text-lg font-bold text-gray-900 dark:text-white">Descargar Reporte</h3>
+          </div>
+
+          <!-- DESCRIPCIÓN -->
+          <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+            Selecciona los tipos de stock que deseas incluir en el reporte PDF
+          </p>
+
+          <!-- BOTONES DE SELECCIÓN -->
+          <div class="space-y-3 mb-6">
+            <!-- Inventario Completo -->
+            <button type="button" 
+                    onclick="toggleStockFilter('all')"
+                    id="filter-all"
+                    class="w-full flex items-center justify-between p-3 rounded-lg border-2 border-gray-200 dark:border-gray-700 transition-all duration-200 hover:shadow-md"
+                    data-selected="false">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 bg-blue-500/10 rounded-lg flex items-center justify-center">
+                  <span class="material-symbols-outlined text-blue-500 text-lg">inventory_2</span>
+                </div>
+                <span class="font-semibold text-gray-700 dark:text-gray-300">Inventario Completo</span>
+              </div>
+              <span class="material-symbols-outlined text-gray-400 check-icon hidden">check</span>
+            </button>
+
+            <!-- Stock Completo -->
+            <button type="button" 
+                    onclick="toggleStockFilter('healthy')"
+                    id="filter-healthy"
+                    class="w-full flex items-center justify-between p-3 rounded-lg border-2 border-gray-200 dark:border-gray-700 transition-all duration-200 hover:shadow-md"
+                    data-selected="false">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 bg-green-500/10 rounded-lg flex items-center justify-center">
+                  <span class="material-symbols-outlined text-green-500 text-lg">check_circle</span>
+                </div>
+                <span class="font-semibold text-gray-700 dark:text-gray-300">Stock OK</span>
+              </div>
+              <span class="material-symbols-outlined text-gray-400 check-icon hidden">check</span>
+            </button>
+
+            <!-- Stock Bajo -->
+            <button type="button" 
+                    onclick="toggleStockFilter('low')"
+                    id="filter-low"
+                    class="w-full flex items-center justify-between p-3 rounded-lg border-2 border-gray-200 dark:border-gray-700 transition-all duration-200 hover:shadow-md"
+                    data-selected="false">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 bg-yellow-500/10 rounded-lg flex items-center justify-center">
+                  <span class="material-symbols-outlined text-yellow-500 text-lg">warning</span>
+                </div>
+                <span class="font-semibold text-gray-700 dark:text-gray-300">Stock Bajo</span>
+              </div>
+              <span class="material-symbols-outlined text-gray-400 check-icon hidden">check</span>
+            </button>
+
+            <!-- Stock Agotado -->
+            <button type="button" 
+                    onclick="toggleStockFilter('out')"
+                    id="filter-out"
+                    class="w-full flex items-center justify-between p-3 rounded-lg border-2 border-gray-200 dark:border-gray-700 transition-all duration-200 hover:shadow-md"
+                    data-selected="false">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 bg-red-500/10 rounded-lg flex items-center justify-center">
+                  <span class="material-symbols-outlined text-red-500 text-lg">error</span>
+                </div>
+                <span class="font-semibold text-gray-700 dark:text-gray-300">Stock Agotado</span>
+              </div>
+              <span class="material-symbols-outlined text-gray-400 check-icon hidden">check</span>
+            </button>
+          </div>
+
+          <!-- BOTÓN DE DESCARGA -->
+          <button type="button"
+                  onclick="downloadStockPDF()"
+                  class="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold hover:shadow-lg hover:shadow-blue-500/30 transition-all shadow-md">
+            <span class="material-symbols-outlined text-lg">download</span>
+            Descargar PDF
+          </button>
+
+          <!-- MENSAJE DE AYUDA -->
+          <p class="text-xs text-gray-500 dark:text-gray-500 mt-4 text-center">
+            Selecciona al menos un tipo de stock para descargar
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+
+    <!-- JAVASCRIPT -->
+    <script>
+      // ============================================
+      // INGREDIENT DEACTIVATION WITH SWEETALERT
+      // ============================================
+      async function confirmDeactivateIngredient(ingredientId, ingredientName) {
+        try {
+          // Hacer llamada AJAX para obtener items afectados
+          const response = await fetch(`/admin/ingredients/${ingredientId}/affected-items`);
+          const data = await response.json();
+          
+          if (!data.success) {
+            Swal.fire({
+              icon: 'error',
+              title: 'Error',
+              text: data.message || 'No se pudo obtener información del ingrediente',
+              confirmButtonColor: '#38e07b',
+              background: document.documentElement.classList.contains('dark') ? '#1f2937' : '#ffffff',
+              color: document.documentElement.classList.contains('dark') ? '#f3f4f6' : '#1f2937'
+            });
+            return;
+          }
+          
+          // Construir mensaje basado en la cantidad de items y complementos afectados
+          let htmlMessage = `<p class="text-lg mb-4">¿Estás seguro de que deseas desactivar el ingrediente <strong>"${ingredientName}"</strong>?</p>`;
+          
+          // Items regulares del menú afectados (quedarán como "Sin Stock")
+          if (data.regularItemCount > 0) {
+            htmlMessage += `<div class="bg-yellow-50 dark:bg-yellow-900/20 border-l-4 border-yellow-500 p-4 mb-4 text-left">
+              <p class="font-semibold text-yellow-800 dark:text-yellow-200 mb-2">
+                ⚠️ ${data.regularItemCount} item(s) regular(es) quedarán como "Sin Stock":
+              </p>
+              <ul class="list-disc list-inside text-sm text-yellow-700 dark:text-yellow-300 max-h-40 overflow-y-auto">
+                ${data.regularItems.map(item => `<li>${item}</li>`).join('')}
+              </ul>
+              <p class="text-xs text-yellow-600 dark:text-yellow-400 mt-2">Los items seguirán activos pero aparecerán como agotados en el menú.</p>
+            </div>`;
+          }
+          
+          // Combos que usan directamente el ingrediente
+          if (data.directlyAffectedCombosCount > 0) {
+            htmlMessage += `<div class="bg-amber-50 dark:bg-amber-900/20 border-l-4 border-amber-500 p-4 mb-4 text-left">
+              <p class="font-semibold text-amber-800 dark:text-amber-200 mb-2">
+                🍱 ${data.directlyAffectedCombosCount} combo(s) que usan directamente este ingrediente quedarán como "Sin Stock":
+              </p>
+              <ul class="list-disc list-inside text-sm text-amber-700 dark:text-amber-300 max-h-40 overflow-y-auto">
+                ${data.directlyAffectedCombos.map(combo => `<li>${combo}</li>`).join('')}
+              </ul>
+            </div>`;
+          }
+          
+          // Combos afectados indirectamente (contienen items que usan el ingrediente)
+          if (data.indirectlyAffectedCombosCount > 0) {
+            htmlMessage += `<div class="bg-purple-50 dark:bg-purple-900/20 border-l-4 border-purple-500 p-4 mb-4 text-left">
+              <p class="font-semibold text-purple-800 dark:text-purple-200 mb-2">
+                📦 ${data.indirectlyAffectedCombosCount} combo(s) que contienen items afectados quedarán como "Sin Stock":
+              </p>
+              <ul class="list-disc list-inside text-sm text-purple-700 dark:text-purple-300 max-h-40 overflow-y-auto">
+                ${data.indirectlyAffectedCombos.map(combo => `<li>${combo}</li>`).join('')}
+              </ul>
+              <p class="text-xs text-purple-600 dark:text-purple-400 mt-2">Estos combos contienen items hijos que usan este ingrediente.</p>
+            </div>`;
+          }
+          
+          // Complementos afectados (quedarán como "Sin Stock")
+          if (data.complementCount > 0) {
+            htmlMessage += `<div class="bg-orange-50 dark:bg-orange-900/20 border-l-4 border-orange-500 p-4 mb-4 text-left">
+              <p class="font-semibold text-orange-800 dark:text-orange-200 mb-2">
+                🥄 ${data.complementCount} complemento(s) quedarán como "Sin Stock":
+              </p>
+              <ul class="list-disc list-inside text-sm text-orange-700 dark:text-orange-300 max-h-40 overflow-y-auto">
+                ${data.complements.map(comp => `<li>${comp}</li>`).join('')}
+              </ul>
+              <p class="text-xs text-orange-600 dark:text-orange-400 mt-2">Los complementos seguirán activos pero no estarán disponibles.</p>
+            </div>`;
+          }
+          
+          // Si no hay items ni complementos afectados
+          if (data.totalItemsCount === 0 && data.complementCount === 0) {
+            htmlMessage += `<p class="text-sm text-gray-600 dark:text-gray-400">Este ingrediente no está siendo usado en ningún item del menú ni complemento.</p>`;
+          }
+          
+          // Mostrar SweetAlert con confirmación
+          const result = await Swal.fire({
+            title: 'Confirmar Desactivación',
+            html: htmlMessage,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#ef4444',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Sí, desactivar',
+            cancelButtonText: 'Cancelar',
+            background: document.documentElement.classList.contains('dark') ? '#1f2937' : '#ffffff',
+            color: document.documentElement.classList.contains('dark') ? '#f3f4f6' : '#1f2937',
+            width: '600px'
+          });
+          
+          if (result.isConfirmed) {
+            // Crear y enviar formulario
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = `/admin/ingredients/${ingredientId}/delete`;
+            document.body.appendChild(form);
+            form.submit();
+          }
+          
+        } catch (error) {
+          console.error('Error:', error);
+          Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Ocurrió un error al procesar la solicitud',
+            confirmButtonColor: '#38e07b',
+            background: document.documentElement.classList.contains('dark') ? '#1f2937' : '#ffffff',
+            color: document.documentElement.classList.contains('dark') ? '#f3f4f6' : '#1f2937'
+          });
+        }
+      }
+
+      // Agregar event listeners a los botones de desactivar
+      document.addEventListener('DOMContentLoaded', function() {
+        const deactivateButtons = document.querySelectorAll('.btn-deactivate-ingredient');
+        
+        deactivateButtons.forEach(button => {
+          button.addEventListener('click', function() {
+            const ingredientId = this.getAttribute('data-ingredient-id');
+            const ingredientName = this.getAttribute('data-ingredient-name');
+            confirmDeactivateIngredient(ingredientId, ingredientName);
+          });
+        });
+      });
+
+      // ============================================
+      // STOCK PDF DOWNLOAD FUNCTIONALITY
+      // ============================================
+      let selectedFilters = {
+        all: false,
+        healthy: false,
+        low: false,
+        out: false
+      };
+
+      function toggleStockFilter(filterType) {
+        selectedFilters[filterType] = !selectedFilters[filterType];
+        const button = document.getElementById('filter-' + filterType);
+        const checkIcon = button.querySelector('.check-icon');
+        
+        // Si se selecciona "Inventario Completo"
+        if (filterType === 'all') {
+          if (selectedFilters.all) {
+            // Deshabilitar los otros botones
+            disableOtherFilters(true);
+            // Deseleccionar los otros filtros
+            selectedFilters.healthy = false;
+            selectedFilters.low = false;
+            selectedFilters.out = false;
+            updateButtonState('healthy', false);
+            updateButtonState('low', false);
+            updateButtonState('out', false);
+          } else {
+            // Habilitar los otros botones
+            disableOtherFilters(false);
+          }
+        } else {
+          // Si se selecciona cualquier otro filtro, deshabilitar "Inventario Completo"
+          if (selectedFilters[filterType]) {
+            if (!selectedFilters.all) {
+              document.getElementById('filter-all').disabled = true;
+              document.getElementById('filter-all').classList.add('opacity-50', 'cursor-not-allowed');
+            }
+          } else {
+            // Si no hay ningún filtro seleccionado, habilitar "Inventario Completo"
+            if (!selectedFilters.healthy && !selectedFilters.low && !selectedFilters.out) {
+              document.getElementById('filter-all').disabled = false;
+              document.getElementById('filter-all').classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+          }
+        }
+        
+        updateButtonState(filterType, selectedFilters[filterType]);
+      }
+
+      function updateButtonState(filterType, isSelected) {
+        const button = document.getElementById('filter-' + filterType);
+        const checkIcon = button.querySelector('.check-icon');
+        
+        if (isSelected) {
+          // Agregar clases de selección
+          button.classList.add('border-primary', 'dark:border-primary', 'bg-primary/5', 'dark:bg-primary/10');
+          button.classList.remove('border-gray-200', 'dark:border-gray-700');
+          checkIcon.classList.remove('hidden');
+          checkIcon.classList.add('text-primary');
+        } else {
+          // Remover clases de selección
+          button.classList.remove('border-primary', 'dark:border-primary', 'bg-primary/5', 'dark:bg-primary/10');
+          button.classList.add('border-gray-200', 'dark:border-gray-700');
+          checkIcon.classList.add('hidden');
+          checkIcon.classList.remove('text-primary');
+        }
+      }
+
+      function disableOtherFilters(disable) {
+        const filters = ['healthy', 'low', 'out'];
+        filters.forEach(filter => {
+          const btn = document.getElementById('filter-' + filter);
+          btn.disabled = disable;
+          if (disable) {
+            btn.classList.add('opacity-50', 'cursor-not-allowed');
+          } else {
+            btn.classList.remove('opacity-50', 'cursor-not-allowed');
+          }
+        });
+      }
+
+      function downloadStockPDF() {
+        // Verificar que al menos un filtro esté seleccionado
+        if (!selectedFilters.all && !selectedFilters.healthy && !selectedFilters.low && !selectedFilters.out) {
+          alert('Por favor selecciona al menos un tipo de stock para descargar');
+          return;
+        }
+
+        // Construir los parámetros de la URL
+        const params = new URLSearchParams();
+        if (selectedFilters.all) {
+          params.append('includeAll', 'true');
+        } else {
+          if (selectedFilters.healthy) params.append('includeHealthy', 'true');
+          if (selectedFilters.low) params.append('includeLow', 'true');
+          if (selectedFilters.out) params.append('includeOut', 'true');
+        }
+
+        // Redirigir a la URL de descarga del PDF
+        window.location.href = '/admin/ingredients/download-stock-pdf?' + params.toString();
+      }
+
+      // ============================================
+      // INGREDIENTS PAGINATION
+      // ============================================
+      let currentPageIngredients = 1;
+      const itemsPerPageIngredients = 15;
+      let totalItemsIngredients = 0;
+      let totalPagesIngredients = 0;
+
+      function initializeIngredientsPagination() {
+        const rows = document.querySelectorAll('tr[data-ingredient-id]');
+        totalItemsIngredients = rows.length;
+        totalPagesIngredients = Math.ceil(totalItemsIngredients / itemsPerPageIngredients);
+
+        if (totalItemsIngredients === 0) return;
+
+        updateIngredientsPagination();
+        updateIngredientsPageNumbers();
+      }
+
+      function updateIngredientsPagination() {
+        const rows = document.querySelectorAll('tr[data-ingredient-id]');
+        const start = (currentPageIngredients - 1) * itemsPerPageIngredients;
+        const end = start + itemsPerPageIngredients;
+
+        rows.forEach((row, index) => {
+          if (index >= start && index < end) {
+            row.style.display = '';
+          } else {
+            row.style.display = 'none';
+          }
+        });
+
+        document.getElementById('ingredients-start').textContent = totalItemsIngredients > 0 ? start + 1 : 0;
+        document.getElementById('ingredients-end').textContent = Math.min(end, totalItemsIngredients);
+        document.getElementById('ingredients-total').textContent = totalItemsIngredients;
+
+        document.getElementById('ingredients-prev-btn').disabled = currentPageIngredients === 1;
+        document.getElementById('ingredients-next-btn').disabled = currentPageIngredients === totalPagesIngredients || totalItemsIngredients === 0;
+      }
+
+      function updateIngredientsPageNumbers() {
+        const pageNumbersContainer = document.getElementById('ingredients-page-numbers');
+        pageNumbersContainer.innerHTML = '';
+
+        for (let i = 1; i <= totalPagesIngredients; i++) {
+          const pageBtn = document.createElement('button');
+          pageBtn.textContent = i;
+          pageBtn.className = i === currentPageIngredients
+            ? 'px-3 py-1 rounded-lg bg-primary text-white font-semibold'
+            : 'px-3 py-1 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors';
+          pageBtn.onclick = () => {
+            currentPageIngredients = i;
+            updateIngredientsPagination();
+            updateIngredientsPageNumbers();
+          };
+          pageNumbersContainer.appendChild(pageBtn);
+        }
+      }
+
+      document.getElementById('ingredients-prev-btn').addEventListener('click', () => {
+        if (currentPageIngredients > 1) {
+          currentPageIngredients--;
+          updateIngredientsPagination();
+          updateIngredientsPageNumbers();
+        }
+      });
+
+      document.getElementById('ingredients-next-btn').addEventListener('click', () => {
+        if (currentPageIngredients < totalPagesIngredients) {
+          currentPageIngredients++;
+          updateIngredientsPagination();
+          updateIngredientsPageNumbers();
+        }
+      });
+
+      // ============================================
+      // AUTO-HIDE ALERTS
+      // ============================================
+      // Auto-hide alerts after 5 seconds
+      document.addEventListener('DOMContentLoaded', function() {
+        // Initialize pagination
+        initializeIngredientsPagination();
+        // Buscar alertas por su contenido de clase CSS
+        const alerts = document.querySelectorAll('.bg-green-100, .bg-red-100');
+        
+        alerts.forEach(alert => {
+          if (alert && alert.classList.contains('mb-6')) {
+            setTimeout(() => {
+              alert.style.transition = 'opacity 0.5s ease-out, transform 0.5s ease-out';
+              alert.style.opacity = '0';
+              alert.style.transform = 'translateY(-20px)';
+              setTimeout(() => {
+                alert.remove();
+              }, 500);
+            }, 2000);
+          }
+        });
+      });
+    </script>
+
+    <!-- Sidebar Scripts Fragment -->
+    <div th:replace="~{fragments/sidebar :: sidebarScripts}"></div>
+      
+    <!-- Script del Sistema de Temas -->
+    <div th:replace="~{fragments/theme :: themeScript}"></div>
+  </body>
+</html>

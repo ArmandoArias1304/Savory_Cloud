@@ -1,0 +1,680 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title
+      th:text="${config != null and config.restaurantName != null ? config.restaurantName + ' - Menú' : 'Menú'}"
+    >
+      Menú
+    </title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@300;400;500;600;700"
+      rel="stylesheet"
+    />
+
+    <!-- Sistema de Temas (Modo Claro/Oscuro) -->
+    <div th:replace="~{fragments/theme :: themeResources}"></div>
+    <!-- Favicon del restaurante (override) -->
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="96x96"
+      th:href="${@cloudinaryUrl.logoSmall(systemConfig.restaurantLogoUrl)}"
+      th:if="${systemConfig != null and systemConfig.restaurantLogoUrl != null and !systemConfig.restaurantLogoUrl.isEmpty()}"
+    />
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#38e07b",
+              "primary-dark": "#2bc866",
+              secondary: "#f59e0b",
+              accent: "#3b82f6",
+              "background-light": "#f8faf9",
+              "background-dark": "#0f1323",
+              "surface-light": "#ffffff",
+              "surface-dark": "#1e293b",
+              "text-light-primary": "#0f172a",
+              "text-light-secondary": "#64748b",
+              "text-dark-primary": "#f8fafc",
+              "text-dark-secondary": "#94a3b8",
+            },
+            fontFamily: {
+              display: ["Work Sans"],
+            },
+            borderRadius: {
+              DEFAULT: "0.5rem",
+              lg: "0.75rem",
+              xl: "1rem",
+              "2xl": "1.5rem",
+              full: "9999px",
+            },
+            boxShadow: {
+              soft: "0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05)",
+              green: "0 4px 12px rgba(56, 224, 123, 0.3)",
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      .material-symbols-outlined {
+        font-variation-settings:
+          "FILL" 0,
+          "wght" 400,
+          "GRAD" 0,
+          "opsz" 24;
+      }
+      .material-symbols-outlined.filled {
+        font-variation-settings:
+          "FILL" 1,
+          "wght" 500;
+      }
+
+      .menu-item-card {
+        transition: all 0.3s ease;
+      }
+
+      .menu-item-card:hover {
+        transform: translateY(-4px);
+        box-shadow:
+          0 10px 25px -5px rgb(0 0 0 / 0.1),
+          0 8px 10px -6px rgb(0 0 0 / 0.1);
+      }
+
+      .category-btn {
+        transition: all 0.2s ease;
+      }
+
+      .category-btn:hover:not(.active) {
+        transform: translateY(-2px);
+      }
+
+      /* Custom Scrollbar */
+      .overflow-y-auto::-webkit-scrollbar {
+        width: 8px;
+      }
+
+      .overflow-y-auto::-webkit-scrollbar-track {
+        background: #f1f5f9;
+        border-radius: 10px;
+      }
+
+      .overflow-y-auto::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 10px;
+      }
+
+      .overflow-y-auto::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8;
+      }
+
+      .dark .overflow-y-auto::-webkit-scrollbar-track {
+        background: #1e293b;
+      }
+
+      .dark .overflow-y-auto::-webkit-scrollbar-thumb {
+        background: #475569;
+      }
+
+      .dark .overflow-y-auto::-webkit-scrollbar-thumb:hover {
+        background: #64748b;
+      }
+    </style>
+  </head>
+  <body
+    class="bg-background-light dark:bg-background-dark font-display text-text-light-primary dark:text-dark-primary"
+  >
+    <div class="flex h-screen flex-col">
+      <!-- Header -->
+      <header
+        class="flex items-center gap-3 border-b border-slate-200/80 dark:border-slate-800/80 bg-white dark:bg-surface-dark px-3 sm:px-6 py-3 sm:py-4 shadow-soft"
+      >
+        <!-- Back Button -->
+        <a
+          href="/client/dashboard"
+          class="flex h-10 w-10 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 transition-colors"
+        >
+          <span class="material-symbols-outlined text-xl">arrow_back</span>
+        </a>
+
+        <!-- Restaurant Logo -->
+        <div
+          class="w-10 h-10 sm:w-12 sm:h-12 shrink-0 bg-white rounded-xl flex items-center justify-center shadow-lg overflow-hidden border border-gray-200 dark:border-gray-700"
+        >
+          <img
+            th:if="${config.restaurantLogoUrl != null and !config.restaurantLogoUrl.isEmpty()}"
+            th:src="${@cloudinaryUrl.logoSmall(config.restaurantLogoUrl)}"
+            th:alt="${config.restaurantName}"
+            class="w-full h-full object-contain p-1"
+          />
+        </div>
+
+        <!-- Title -->
+        <div class="flex-1 min-w-0">
+          <h1
+            class="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white truncate"
+            th:text="${config.restaurantName != null and !config.restaurantName.isEmpty()} ? ${config.restaurantName} : 'Nuestro Menú'"
+          >
+            Nuestro Menú
+          </h1>
+          <p class="text-sm text-gray-600 dark:text-gray-400">
+            Explora nuestros platillos
+          </p>
+        </div>
+      </header>
+
+      <div class="flex-1 flex flex-col overflow-hidden">
+        <!-- Search Bar -->
+        <div
+          class="border-b border-slate-200/80 px-6 py-4 dark:border-slate-800/80 bg-white dark:bg-surface-dark"
+        >
+          <div class="relative max-w-md">
+            <span
+              class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+            >
+              search
+            </span>
+            <input
+              type="text"
+              id="searchInput"
+              placeholder="Buscar platillo..."
+              class="w-full rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 pl-11 pr-10 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:text-white transition-all"
+              oninput="searchItems(this.value)"
+            />
+            <button
+              id="clearSearch"
+              onclick="clearSearch()"
+              class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer transition-colors hidden"
+            >
+              close
+            </button>
+          </div>
+          <p
+            id="searchResults"
+            class="mt-2 text-xs text-gray-500 dark:text-gray-400 hidden"
+          >
+            Se encontraron <span id="resultCount">0</span> platillos
+          </p>
+        </div>
+
+        <!-- Categories - Fixed/Sticky -->
+        <div
+          class="sticky top-0 z-20 border-b border-slate-200/80 px-6 py-4 dark:border-slate-800/80 bg-white dark:bg-surface-dark shadow-sm"
+        >
+          <nav class="flex items-center gap-2 overflow-x-auto">
+            <span
+              th:each="category, iterStat : ${categories}"
+              th:if="${itemsByCategory.containsKey(category.idCategory)}"
+              th:data-category-id="${category.idCategory}"
+              th:classappend="${iterStat.first} ? 'category-btn active flex items-center gap-3 rounded-xl bg-gradient-to-r from-primary to-primary-dark px-6 py-3.5 text-sm font-bold text-white shadow-green whitespace-nowrap cursor-pointer' : 'category-btn flex items-center gap-3 rounded-xl px-6 py-3.5 text-sm font-semibold text-text-light-secondary hover:bg-primary/10 hover:text-primary dark:text-text-dark-secondary dark:hover:bg-primary/20 whitespace-nowrap cursor-pointer'"
+              onclick="filterByCategory(this)"
+            >
+              <span
+                th:if="${category.icon}"
+                class="material-symbols-outlined"
+                th:classappend="${iterStat.first} ? 'filled' : ''"
+                th:text="${category.icon}"
+              >
+                restaurant
+              </span>
+              <span th:text="${category.name}">Categoría</span>
+            </span>
+          </nav>
+        </div>
+
+        <!-- Menu Items Grid -->
+        <div
+          class="flex-1 overflow-y-auto bg-background-light dark:bg-background-dark pb-32"
+        >
+          <div class="p-6">
+            <!-- Categories with Items -->
+            <div
+              th:each="category : ${categories}"
+              th:if="${itemsByCategory.containsKey(category.idCategory)}"
+              th:id="'category-' + ${category.idCategory}"
+              class="category-section mb-8"
+            >
+              <h2
+                class="mb-4 text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2"
+              >
+                <span
+                  th:if="${category.icon}"
+                  class="material-symbols-outlined text-primary"
+                  th:text="${category.icon}"
+                >
+                  restaurant
+                </span>
+                <span th:text="${category.name}">Categoría</span>
+              </h2>
+
+              <!-- Items Grid -->
+              <div
+                class="grid gap-3 sm:gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
+                th:if="${itemsByCategory.containsKey(category.idCategory)}"
+              >
+                <div
+                  th:each="item : ${itemsByCategory.get(category.idCategory)}"
+                  class="menu-item-card flex flex-col rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-surface-dark overflow-hidden shadow-soft cursor-pointer relative"
+                  th:data-item-id="${item.idItemMenu}"
+                  th:data-item-name="${item.name}"
+                  th:data-item-price="${item.price}"
+                  th:data-item-description="${item.description}"
+                  th:data-item-image="${@cloudinaryUrl.modal(item.imageUrl)}"
+                  th:data-item-available="${item.available}"
+                  th:data-schedule-status="${item.scheduleStatus}"
+                  th:data-schedule-info="${item.scheduleInfo}"
+                  th:classappend="${!item.available || !item.scheduleAvailable} ? 'opacity-75' : ''"
+                  th:onclick="${item.available && item.scheduleAvailable} ? 'openItemModal(this)' : 'openItemModal(this)'"
+                >
+                  <!-- AGOTADO Badge (Diagonal) -->
+                  <div
+                    th:if="${!item.available}"
+                    class="absolute top-0 left-0 w-full h-full pointer-events-none z-10 overflow-hidden"
+                  >
+                    <div
+                      class="absolute top-8 -left-12 w-48 bg-red-600 text-white text-center py-1.5 transform rotate-[-45deg] shadow-lg"
+                      style="
+                        font-weight: 900;
+                        font-size: 0.75rem;
+                        letter-spacing: 0.05em;
+                      "
+                    >
+                      AGOTADO
+                    </div>
+                  </div>
+
+                  <!-- NO DISPONIBLE HOY Badge (Diagonal) -->
+                  <div
+                    th:if="${item.available && item.scheduleStatus == 'day_unavailable'}"
+                    class="absolute top-0 left-0 w-full h-full pointer-events-none z-10 overflow-hidden"
+                  >
+                    <div
+                      class="absolute top-8 -left-12 w-48 bg-orange-600 text-white text-center py-1.5 transform rotate-[-45deg] shadow-lg"
+                      style="
+                        font-weight: 900;
+                        font-size: 0.65rem;
+                        letter-spacing: 0.05em;
+                      "
+                    >
+                      NO DISPONIBLE HOY
+                    </div>
+                  </div>
+
+                  <!-- FUERA DE HORARIO Badge (Diagonal) -->
+                  <div
+                    th:if="${item.available && item.scheduleStatus == 'time_unavailable'}"
+                    class="absolute top-0 left-0 w-full h-full pointer-events-none z-10 overflow-hidden"
+                  >
+                    <div
+                      class="absolute top-8 -left-12 w-48 bg-amber-600 text-white text-center py-1.5 transform rotate-[-45deg] shadow-lg"
+                      style="
+                        font-weight: 900;
+                        font-size: 0.65rem;
+                        letter-spacing: 0.05em;
+                      "
+                    >
+                      FUERA DE HORARIO
+                    </div>
+                  </div>
+
+                  <!-- Item Image -->
+                  <div
+                    class="relative h-36 w-full overflow-hidden bg-gray-100 img-skeleton"
+                  >
+                    <img
+                      th:if="${item.imageUrl != null && !item.imageUrl.isEmpty()}"
+                      th:src="${@cloudinaryUrl.card(item.imageUrl)}"
+                      th:srcset="${@cloudinaryUrl.cardSrcset(item.imageUrl)}"
+                      sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                      th:alt="${item.name}"
+                      class="h-full w-full object-cover img-fade"
+                      th:classappend="${!item.available || !item.scheduleAvailable} ? 'grayscale' : ''"
+                      loading="lazy"
+                      decoding="async"
+                      onload="
+                        this.classList.add('loaded');
+                        this.parentElement.classList.remove('img-skeleton');
+                      "
+                    />
+                    <div
+                      th:unless="${item.imageUrl != null && !item.imageUrl.isEmpty()}"
+                      class="flex h-full w-full items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900"
+                    >
+                      <span
+                        class="material-symbols-outlined text-5xl text-gray-400 dark:text-gray-600"
+                      >
+                        restaurant
+                      </span>
+                    </div>
+                  </div>
+
+                  <!-- Item Content -->
+                  <div class="flex flex-col p-3 flex-1">
+                    <h3
+                      class="mb-1.5 text-base font-bold text-gray-900 dark:text-white line-clamp-1"
+                      th:text="${item.name}"
+                    >
+                      Nombre del Platillo
+                    </h3>
+
+                    <p
+                      class="mb-2 text-xs text-gray-600 dark:text-gray-400 line-clamp-2 flex-1"
+                      th:text="${item.description}"
+                    >
+                      Descripción del platillo
+                    </p>
+
+                    <!-- Price -->
+                    <div
+                      class="flex items-center justify-between mt-auto pt-2 border-t border-gray-100 dark:border-gray-800"
+                    >
+                      <span
+                        class="text-xl font-black text-primary"
+                        th:text="'$' + ${#numbers.formatDecimal(item.price, 1, 2)}"
+                      >
+                        $0.00
+                      </span>
+                      <span
+                        class="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-0.5"
+                      >
+                        <span
+                          class="material-symbols-outlined"
+                          style="font-size: 16px"
+                          >info</span
+                        >
+                        Ver
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- No items message -->
+              <div
+                th:unless="${itemsByCategory.containsKey(category.idCategory)}"
+                class="text-center py-12 text-gray-500 dark:text-gray-400"
+              >
+                <span
+                  class="material-symbols-outlined text-6xl mb-2 opacity-50"
+                >
+                  restaurant_menu
+                </span>
+                <p class="text-lg">
+                  No hay platillos disponibles en esta categoría
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script th:inline="javascript">
+      /*<![CDATA[*/
+      let currentItem = null;
+
+      // Search items by name (starting with search term)
+      function searchItems(searchTerm) {
+        const term = searchTerm.trim().toLowerCase();
+        const cards = document.querySelectorAll(".menu-item-card");
+        const categorySections = document.querySelectorAll(".category-section");
+        const clearBtn = document.getElementById("clearSearch");
+        const searchResults = document.getElementById("searchResults");
+        const resultCount = document.getElementById("resultCount");
+
+        let visibleCount = 0;
+
+        // Show/hide clear button
+        if (term.length > 0) {
+          clearBtn.classList.remove("hidden");
+        } else {
+          clearBtn.classList.add("hidden");
+          searchResults.classList.add("hidden");
+        }
+
+        cards.forEach((card) => {
+          const itemName = card.dataset.itemName.toLowerCase();
+
+          // Check if name starts with the search term
+          if (term === "" || itemName.startsWith(term)) {
+            card.style.display = "";
+            visibleCount++;
+          } else {
+            card.style.display = "none";
+          }
+        });
+
+        // Show/hide category sections based on visible items
+        categorySections.forEach((section) => {
+          const sectionCards = section.querySelectorAll(".menu-item-card");
+          const hasVisibleItems = Array.from(sectionCards).some(
+            (card) => card.style.display !== "none",
+          );
+
+          if (hasVisibleItems) {
+            section.style.display = "";
+          } else {
+            section.style.display = "none";
+          }
+        });
+
+        // Show results count if searching
+        if (term.length > 0) {
+          resultCount.textContent = visibleCount;
+          searchResults.classList.remove("hidden");
+        } else {
+          searchResults.classList.add("hidden");
+        }
+      }
+
+      // Clear search
+      function clearSearch() {
+        const searchInput = document.getElementById("searchInput");
+        searchInput.value = "";
+        searchItems("");
+        searchInput.focus();
+      }
+
+      // Filter by category
+      function filterByCategory(button) {
+        // Clear search when clicking category
+        const searchInput = document.getElementById("searchInput");
+        if (searchInput.value) {
+          clearSearch();
+        }
+
+        // Update active button
+        document.querySelectorAll(".category-btn").forEach((btn) => {
+          btn.classList.remove(
+            "active",
+            "bg-gradient-to-r",
+            "from-primary",
+            "to-primary-dark",
+            "text-white",
+            "shadow-green",
+          );
+          btn.classList.add(
+            "text-text-light-secondary",
+            "hover:bg-primary/10",
+            "hover:text-primary",
+          );
+          // Remove filled from icons
+          const icon = btn.querySelector(".material-symbols-outlined");
+          if (icon) icon.classList.remove("filled");
+        });
+
+        button.classList.add(
+          "active",
+          "bg-gradient-to-r",
+          "from-primary",
+          "to-primary-dark",
+          "text-white",
+          "shadow-green",
+        );
+        button.classList.remove(
+          "text-text-light-secondary",
+          "hover:bg-primary/10",
+          "hover:text-primary",
+        );
+        // Add filled to icon
+        const icon = button.querySelector(".material-symbols-outlined");
+        if (icon) icon.classList.add("filled");
+
+        // Scroll to category
+        const categoryId = button.dataset.categoryId;
+        const categorySection = document.getElementById(
+          `category-${categoryId}`,
+        );
+        if (categorySection) {
+          categorySection.scrollIntoView({
+            behavior: "smooth",
+            block: "start",
+          });
+        }
+      }
+
+      // Open item modal with SweetAlert2 (simplified - visual only)
+      function openItemModal(card) {
+        // Check if item is available
+        const isAvailable = card.dataset.itemAvailable === "true";
+        const scheduleStatus = card.dataset.scheduleStatus || "available";
+        const scheduleInfo = card.dataset.scheduleInfo || "";
+        const isUsable = isAvailable && scheduleStatus === "available";
+
+        if (!isAvailable) {
+          // Show "out of stock" message
+          Swal.fire({
+            icon: "error",
+            title: "Producto Agotado",
+            text: "Este producto no está disponible por el momento debido a falta de stock.",
+            confirmButtonColor: "#38e07b",
+            confirmButtonText: "Entendido",
+            background: document.documentElement.classList.contains("dark")
+              ? "#1f2937"
+              : "#ffffff",
+            color: document.documentElement.classList.contains("dark")
+              ? "#f3f4f6"
+              : "#1f2937",
+          });
+          return;
+        }
+
+        if (scheduleStatus === "day_unavailable") {
+          Swal.fire({
+            icon: "warning",
+            title: "No Disponible Hoy",
+            html: `<p>Este producto no se ofrece el día de hoy.</p><p class="text-sm text-gray-500 mt-2">${scheduleInfo}</p>`,
+            confirmButtonColor: "#38e07b",
+            confirmButtonText: "Entendido",
+            background: document.documentElement.classList.contains("dark")
+              ? "#1f2937"
+              : "#ffffff",
+            color: document.documentElement.classList.contains("dark")
+              ? "#f3f4f6"
+              : "#1f2937",
+          });
+          return;
+        }
+
+        if (scheduleStatus === "time_unavailable") {
+          Swal.fire({
+            icon: "warning",
+            title: "Fuera de Horario",
+            html: `<p>Este producto no está disponible en este horario.</p><p class="text-sm text-gray-500 mt-2">${scheduleInfo}</p>`,
+            confirmButtonColor: "#38e07b",
+            confirmButtonText: "Entendido",
+            background: document.documentElement.classList.contains("dark")
+              ? "#1f2937"
+              : "#ffffff",
+            color: document.documentElement.classList.contains("dark")
+              ? "#f3f4f6"
+              : "#1f2937",
+          });
+          return;
+        }
+
+        const itemId = card.dataset.itemId;
+        const itemName = card.dataset.itemName;
+        const itemPrice = parseFloat(card.dataset.itemPrice);
+        const itemDescription = card.dataset.itemDescription;
+        const itemImage = card.dataset.itemImage;
+
+        currentItem = {
+          id: itemId,
+          name: itemName,
+          price: itemPrice,
+          description: itemDescription,
+          image: itemImage,
+        };
+
+        // Default image if not provided
+        const imageUrl =
+          itemImage && itemImage !== "null" && itemImage !== ""
+            ? itemImage
+            : "https://via.placeholder.com/400x300/f3f4f6/9ca3af?text=Sin+Imagen";
+
+        Swal.fire({
+          html: `
+            <div class="flex flex-col md:flex-row gap-6 text-left">
+                <!-- Imagen del producto - Izquierda -->
+                <div class="md:w-1/2 img-skeleton rounded-xl">
+                    <img src="${imageUrl}" alt="${itemName}" class="w-full h-64 md:h-80 object-cover rounded-xl img-fade" onload="this.classList.add('loaded');this.parentElement.classList.remove('img-skeleton')" />
+                </div>
+                
+                <!-- Detalles del producto - Derecha -->
+                <div class="md:w-1/2 flex flex-col">
+                    <h2 class="text-3xl font-black text-gray-900 mb-2">${itemName}</h2>
+                    <p class="text-5xl font-black text-primary mb-4">$${itemPrice.toFixed(
+                      2,
+                    )}</p>
+                    <p class="text-gray-600 mb-6 flex-grow">${
+                      itemDescription || "Sin descripción disponible"
+                    }</p>
+                </div>
+            </div>
+        `,
+          confirmButtonColor: "#38e07b",
+          confirmButtonText: "Cerrar",
+          width: "900px",
+          showCloseButton: true,
+          background: document.documentElement.classList.contains("dark")
+            ? "#1f2937"
+            : "#ffffff",
+          color: document.documentElement.classList.contains("dark")
+            ? "#f3f4f6"
+            : "#1f2937",
+          customClass: {
+            popup: "rounded-2xl",
+            htmlContainer: "p-0",
+            confirmButton: "rounded-xl px-6 py-3 font-bold",
+            actions: "mt-6",
+          },
+          backdrop: "rgba(0,0,0,0.6)",
+        });
+      }
+
+      // Close modal on escape key
+      document.addEventListener("keydown", function (event) {
+        if (event.key === "Escape") {
+          Swal.close();
+        }
+      });
+      /*]]>*/
+    </script>
+
+    <!-- Script del Sistema de Temas -->
+    <div th:replace="~{fragments/theme :: themeScript}"></div>
+  </body>
+</html>

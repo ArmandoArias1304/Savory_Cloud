@@ -1,0 +1,1218 @@
+<!doctype html>
+<html
+  lang="es"
+  xmlns:th="http://www.thymeleaf.org"
+  xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title th:text="${globalSystemConfig.systemName + ' - Clientes Registrados'}">
+      El Gran Sazón - Clientes Registrados
+    </title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@300;400;500;600;700"
+      rel="stylesheet"
+    />
+
+    <!-- Sistema de Temas (Modo Claro/Oscuro) -->
+    <div th:replace="~{fragments/theme :: themeResources}"></div>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: { DEFAULT: "#38e07b", dark: "#2bc866" },
+              "background-light": "#f8faf9",
+              "background-dark": "#0f1713",
+            },
+            fontFamily: {
+              display: ["Work Sans", "system-ui", "sans-serif"],
+            },
+          },
+        },
+      };
+    </script>
+
+    <!-- Sidebar Styles Fragment -->
+    <div th:replace="~{fragments/sidebar :: sidebarStyles}"></div>
+
+    <style>
+      .table-responsive {
+        overflow-x: auto;
+        max-width: 100%;
+      }
+
+      .table-responsive::-webkit-scrollbar {
+        height: 8px;
+      }
+
+      .table-responsive::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 10px;
+      }
+
+      .table-responsive::-webkit-scrollbar-thumb {
+        background: #38e07b;
+        border-radius: 10px;
+      }
+
+      .table-responsive::-webkit-scrollbar-thumb:hover {
+        background: #2bc866;
+      }
+
+      /* Toggle switch */
+      .toggle-checkbox:checked {
+        right: 0;
+        border-color: #38e07b;
+      }
+      .toggle-checkbox:checked + .toggle-label {
+        background-color: #38e07b;
+      }
+      .toggle-checkbox {
+        right: 1.25rem;
+        transition: all 0.3s ease;
+      }
+    </style>
+  </head>
+  <body
+    class="bg-gradient-to-br from-background-light to-gray-50 dark:from-background-dark dark:to-gray-900 font-display text-gray-800 dark:text-gray-200 overflow-hidden"
+  >
+    <!-- Menu Controls Fragment -->
+    <div th:replace="~{fragments/sidebar :: menuControls}"></div>
+
+    <div class="flex min-h-screen h-screen overflow-hidden">
+      <!-- SIDEBAR -->
+      <div
+        th:replace="~{fragments/sidebar :: sidebar(activeMenu='customers')}"
+      ></div>
+
+      <!-- MAIN CONTENT -->
+      <main class="flex-1 overflow-y-auto h-screen">
+        <div class="p-4 sm:p-6 lg:p-8 pt-20 md:pt-20 lg:pt-8 pb-32">
+          <!-- HEADER -->
+          <div
+            class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6 sm:mb-8"
+          >
+            <div>
+              <h2
+                class="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white mb-1 flex items-center gap-3"
+              >
+                <span
+                  class="material-symbols-outlined text-3xl sm:text-4xl text-primary"
+                  >person_search</span
+                >
+                Clientes Registrados
+              </h2>
+              <p class="text-sm sm:text-base text-gray-600 dark:text-gray-400">
+                Visualiza los clientes registrados en la plataforma E-Commerce
+              </p>
+            </div>
+            <div class="flex items-center gap-2">
+              <span
+                class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20 text-primary font-semibold text-sm"
+              >
+                <span class="material-symbols-outlined text-lg"
+                  >storefront</span
+                >
+                Paquete E-Commerce
+              </span>
+            </div>
+          </div>
+
+          <!-- Alerts -->
+          <div
+            th:if="${successMessage}"
+            class="mb-6 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl"
+          >
+            <p
+              class="text-green-800 dark:text-green-300"
+              th:text="${successMessage}"
+            ></p>
+          </div>
+
+          <div
+            th:if="${errorMessage}"
+            class="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl"
+          >
+            <p
+              class="text-red-800 dark:text-red-300"
+              th:text="${errorMessage}"
+            ></p>
+          </div>
+
+          <!-- STATS CARDS -->
+          <div
+            class="mb-6 sm:mb-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6"
+          >
+            <!-- Total Customers -->
+            <div
+              class="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 sm:p-6 shadow-lg"
+            >
+              <div class="flex items-center justify-between mb-3">
+                <h3
+                  class="text-sm font-medium text-gray-600 dark:text-gray-400"
+                >
+                  Total de Clientes
+                </h3>
+                <span
+                  class="material-symbols-outlined text-2xl text-gray-400 dark:text-gray-500"
+                  >groups</span
+                >
+              </div>
+              <p
+                class="text-3xl font-bold text-gray-900 dark:text-white"
+                th:text="${totalCount}"
+              >
+                0
+              </p>
+            </div>
+
+            <!-- Active Customers -->
+            <div
+              class="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 sm:p-6 shadow-lg"
+            >
+              <div class="flex items-center justify-between mb-3">
+                <h3
+                  class="text-sm font-medium text-gray-600 dark:text-gray-400"
+                >
+                  Clientes Activos
+                </h3>
+                <span class="material-symbols-outlined text-2xl text-green-500"
+                  >how_to_reg</span
+                >
+              </div>
+              <p
+                class="text-3xl font-bold text-green-500"
+                th:text="${activeCount}"
+              >
+                0
+              </p>
+            </div>
+
+            <!-- Inactive Customers -->
+            <div
+              class="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 sm:p-6 shadow-lg"
+            >
+              <div class="flex items-center justify-between mb-3">
+                <h3
+                  class="text-sm font-medium text-gray-600 dark:text-gray-400"
+                >
+                  Clientes Inactivos
+                </h3>
+                <span class="material-symbols-outlined text-2xl text-red-500"
+                  >person_off</span
+                >
+              </div>
+              <p
+                class="text-3xl font-bold text-red-500"
+                th:text="${inactiveCount}"
+              >
+                0
+              </p>
+            </div>
+
+            <!-- Verified Email -->
+            <div
+              class="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 sm:p-6 shadow-lg"
+            >
+              <div class="flex items-center justify-between mb-3">
+                <h3
+                  class="text-sm font-medium text-gray-600 dark:text-gray-400"
+                >
+                  Email Verificado
+                </h3>
+                <span class="material-symbols-outlined text-2xl text-blue-500"
+                  >verified</span
+                >
+              </div>
+              <p
+                class="text-3xl font-bold text-blue-500"
+                th:text="${verifiedCount}"
+              >
+                0
+              </p>
+            </div>
+          </div>
+
+          <!-- FILTERS -->
+          <div
+            class="mb-6 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 sm:p-6 shadow-lg"
+          >
+            <h2
+              class="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2"
+            >
+              <span class="material-symbols-outlined text-primary"
+                >filter_alt</span
+              >
+              Filtros de Búsqueda
+            </h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <!-- Search -->
+              <div class="relative">
+                <label
+                  for="searchFilter"
+                  class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                  >Buscar:</label
+                >
+                <div class="relative">
+                  <div
+                    class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3"
+                  >
+                    <span
+                      class="material-symbols-outlined text-gray-400 dark:text-gray-500 text-lg"
+                      >search</span
+                    >
+                  </div>
+                  <input
+                    type="text"
+                    id="searchFilter"
+                    th:value="${searchTerm}"
+                    placeholder="Nombre, email, usuario o teléfono..."
+                    class="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 py-2.5 pl-10 pr-4 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+                  />
+                </div>
+              </div>
+
+              <!-- Status Filter -->
+              <div>
+                <label
+                  for="statusFilter"
+                  class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                  >Estado:</label
+                >
+                <select
+                  id="statusFilter"
+                  class="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 py-2.5 px-3 text-gray-900 dark:text-white focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+                >
+                  <option value="">Todos</option>
+                  <option
+                    value="ACTIVE"
+                    th:selected="${currentFilter == 'ACTIVE'}"
+                  >
+                    Activos
+                  </option>
+                  <option
+                    value="INACTIVE"
+                    th:selected="${currentFilter == 'INACTIVE'}"
+                  >
+                    Inactivos
+                  </option>
+                </select>
+              </div>
+
+              <!-- Email Verification Filter -->
+              <div>
+                <label
+                  for="verifiedFilter"
+                  class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                  >Verificación:</label
+                >
+                <select
+                  id="verifiedFilter"
+                  class="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 py-2.5 px-3 text-gray-900 dark:text-white focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+                >
+                  <option value="">Todos</option>
+                  <option
+                    value="VERIFIED"
+                    th:selected="${currentFilter == 'VERIFIED'}"
+                  >
+                    Verificados
+                  </option>
+                  <option
+                    value="UNVERIFIED"
+                    th:selected="${currentFilter == 'UNVERIFIED'}"
+                  >
+                    No verificados
+                  </option>
+                </select>
+              </div>
+            </div>
+            <div
+              class="mt-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3"
+            >
+              <p class="text-sm text-gray-500 dark:text-gray-400">
+                Mostrando
+                <span
+                  class="font-semibold text-gray-900 dark:text-white"
+                  id="visibleCount"
+                  th:text="${#lists.size(customers)}"
+                  >0</span
+                >
+                de
+                <span
+                  class="font-semibold text-gray-900 dark:text-white"
+                  th:text="${totalCount}"
+                  >0</span
+                >
+                clientes
+              </p>
+              <button
+                onclick="clearFilters()"
+                class="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+              >
+                <span class="material-symbols-outlined text-lg"
+                  >filter_alt_off</span
+                >
+                Limpiar Filtros
+              </button>
+            </div>
+          </div>
+
+          <!-- FILTER TABS -->
+          <div
+            class="mb-6 bg-white dark:bg-gray-900 rounded-2xl shadow-lg p-4 border border-gray-200 dark:border-gray-800"
+          >
+            <div class="flex flex-wrap gap-2">
+              <a
+                th:href="@{/admin/customers}"
+                th:classappend="${currentFilter == 'ALL'} ? 'bg-gradient-to-r from-primary to-primary-dark text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'"
+                class="px-4 py-2 rounded-xl font-semibold transition-all flex items-center gap-2"
+              >
+                <span>Todos</span>
+                <span
+                  th:text="${totalCount}"
+                  class="px-2 py-0.5 rounded-full text-xs bg-white/20"
+                  >0</span
+                >
+              </a>
+              <a
+                th:href="@{/admin/customers(status='ACTIVE')}"
+                th:classappend="${currentFilter == 'ACTIVE'} ? 'bg-gradient-to-r from-green-500 to-green-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'"
+                class="px-4 py-2 rounded-xl font-semibold transition-all flex items-center gap-2"
+              >
+                <span>Activos</span>
+                <span
+                  th:text="${activeCount}"
+                  class="px-2 py-0.5 rounded-full text-xs bg-white/20"
+                  >0</span
+                >
+              </a>
+              <a
+                th:href="@{/admin/customers(status='INACTIVE')}"
+                th:classappend="${currentFilter == 'INACTIVE'} ? 'bg-gradient-to-r from-red-500 to-red-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'"
+                class="px-4 py-2 rounded-xl font-semibold transition-all flex items-center gap-2"
+              >
+                <span>Inactivos</span>
+                <span
+                  th:text="${inactiveCount}"
+                  class="px-2 py-0.5 rounded-full text-xs bg-white/20"
+                  >0</span
+                >
+              </a>
+              <a
+                th:href="@{/admin/customers(status='VERIFIED')}"
+                th:classappend="${currentFilter == 'VERIFIED'} ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'"
+                class="px-4 py-2 rounded-xl font-semibold transition-all flex items-center gap-2"
+              >
+                <span>Verificados</span>
+                <span
+                  th:text="${verifiedCount}"
+                  class="px-2 py-0.5 rounded-full text-xs bg-white/20"
+                  >0</span
+                >
+              </a>
+              <a
+                th:href="@{/admin/customers(status='UNVERIFIED')}"
+                th:classappend="${currentFilter == 'UNVERIFIED'} ? 'bg-gradient-to-r from-yellow-500 to-yellow-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'"
+                class="px-4 py-2 rounded-xl font-semibold transition-all flex items-center gap-2"
+              >
+                <span>No Verificados</span>
+                <span
+                  th:text="${unverifiedCount}"
+                  class="px-2 py-0.5 rounded-full text-xs bg-white/20"
+                  >0</span
+                >
+              </a>
+            </div>
+          </div>
+
+          <!-- CUSTOMERS TABLE (Desktop) -->
+          <div
+            class="hidden lg:block rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-lg overflow-hidden"
+          >
+            <div class="table-responsive">
+              <table class="w-full text-sm">
+                <thead>
+                  <tr
+                    class="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 border-b border-gray-200 dark:border-gray-700"
+                  >
+                    <th
+                      class="text-left py-4 px-6 font-semibold text-gray-700 dark:text-gray-300"
+                    >
+                      Cliente
+                    </th>
+                    <th
+                      class="text-left py-4 px-6 font-semibold text-gray-700 dark:text-gray-300"
+                    >
+                      Usuario
+                    </th>
+                    <th
+                      class="text-left py-4 px-6 font-semibold text-gray-700 dark:text-gray-300"
+                    >
+                      Email
+                    </th>
+                    <th
+                      class="text-left py-4 px-6 font-semibold text-gray-700 dark:text-gray-300"
+                    >
+                      Teléfono
+                    </th>
+                    <th
+                      class="text-center py-4 px-6 font-semibold text-gray-700 dark:text-gray-300"
+                    >
+                      Verificado
+                    </th>
+                    <th
+                      class="text-center py-4 px-6 font-semibold text-gray-700 dark:text-gray-300"
+                    >
+                      Estado
+                    </th>
+                    <th
+                      class="text-left py-4 px-6 font-semibold text-gray-700 dark:text-gray-300"
+                    >
+                      Registro
+                    </th>
+                    <th
+                      class="text-left py-4 px-6 font-semibold text-gray-700 dark:text-gray-300"
+                    >
+                      Último Acceso
+                    </th>
+                    <th
+                      class="text-center py-4 px-6 font-semibold text-gray-700 dark:text-gray-300"
+                    >
+                      Acciones
+                    </th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                  <!-- Empty State -->
+                  <tr th:if="${#lists.isEmpty(customers)}">
+                    <td colspan="9" class="py-16 text-center">
+                      <span
+                        class="material-symbols-outlined text-6xl text-gray-300 dark:text-gray-600 mb-4 block"
+                        >person_off</span
+                      >
+                      <p class="text-gray-600 dark:text-gray-400 text-lg">
+                        No se encontraron clientes
+                      </p>
+                    </td>
+                  </tr>
+
+                  <!-- Customer Row -->
+                  <tr
+                    th:each="customer : ${customers}"
+                    class="customer-row hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                    th:data-name="${customer.fullName.toLowerCase()}"
+                    th:data-email="${customer.email.toLowerCase()}"
+                    th:data-username="${customer.username.toLowerCase()}"
+                    th:data-phone="${customer.phone}"
+                    th:data-status="${customer.active ? 'active' : 'inactive'}"
+                    th:data-verified="${customer.emailVerified ? 'verified' : 'unverified'}"
+                  >
+                    <!-- Customer Name & Avatar -->
+                    <td class="py-4 px-6">
+                      <div class="flex items-center gap-3">
+                        <div
+                          class="w-10 h-10 bg-gradient-to-br from-primary to-primary-dark rounded-full flex items-center justify-center text-white font-bold text-sm shadow-md flex-shrink-0"
+                          th:text="${customer.fullName.substring(0,1).toUpperCase()}"
+                        >
+                          C
+                        </div>
+                        <div>
+                          <p
+                            class="font-semibold text-gray-900 dark:text-white"
+                            th:text="${customer.fullName}"
+                          >
+                            Cliente
+                          </p>
+                        </div>
+                      </div>
+                    </td>
+
+                    <!-- Username -->
+                    <td class="py-4 px-6">
+                      <span
+                        class="text-gray-700 dark:text-gray-300 font-mono text-xs bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded-lg"
+                        th:text="'@' + ${customer.username}"
+                      >
+                        @usuario
+                      </span>
+                    </td>
+
+                    <!-- Email -->
+                    <td class="py-4 px-6">
+                      <span
+                        class="text-gray-700 dark:text-gray-300"
+                        th:text="${customer.email}"
+                      >
+                        email@email.com
+                      </span>
+                    </td>
+
+                    <!-- Phone -->
+                    <td class="py-4 px-6">
+                      <span
+                        class="text-gray-700 dark:text-gray-300"
+                        th:text="${customer.phone}"
+                      >
+                        0000000000
+                      </span>
+                    </td>
+
+                    <!-- Email Verified -->
+                    <td class="py-4 px-6 text-center">
+                      <span
+                        th:if="${customer.emailVerified}"
+                        class="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 rounded-full text-xs font-semibold"
+                      >
+                        <span class="material-symbols-outlined text-sm"
+                          >verified</span
+                        >
+                        Verificado
+                      </span>
+                      <span
+                        th:unless="${customer.emailVerified}"
+                        class="inline-flex items-center gap-1 px-2.5 py-1 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400 rounded-full text-xs font-semibold"
+                      >
+                        <span class="material-symbols-outlined text-sm"
+                          >pending</span
+                        >
+                        Pendiente
+                      </span>
+                    </td>
+
+                    <!-- Status -->
+                    <td class="py-4 px-6 text-center">
+                      <span
+                        th:if="${customer.active}"
+                        class="inline-flex items-center gap-1 px-2.5 py-1 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 rounded-full text-xs font-semibold"
+                      >
+                        <span
+                          class="w-1.5 h-1.5 bg-green-500 rounded-full"
+                        ></span>
+                        Activo
+                      </span>
+                      <span
+                        th:unless="${customer.active}"
+                        class="inline-flex items-center gap-1 px-2.5 py-1 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 rounded-full text-xs font-semibold"
+                      >
+                        <span
+                          class="w-1.5 h-1.5 bg-red-500 rounded-full"
+                        ></span>
+                        Inactivo
+                      </span>
+                    </td>
+
+                    <!-- Created At -->
+                    <td class="py-4 px-6">
+                      <span
+                        class="text-gray-500 dark:text-gray-400 text-xs"
+                        th:text="${customer.createdAt != null ? #temporals.format(customer.createdAt, 'dd/MM/yyyy HH:mm') : 'N/A'}"
+                      >
+                        01/01/2024
+                      </span>
+                    </td>
+
+                    <!-- Last Access -->
+                    <td class="py-4 px-6">
+                      <span
+                        th:if="${customer.lastAccess != null}"
+                        class="text-gray-500 dark:text-gray-400 text-xs"
+                        th:text="${#temporals.format(customer.lastAccess, 'dd/MM/yyyy HH:mm')}"
+                      >
+                        01/01/2024
+                      </span>
+                      <span
+                        th:unless="${customer.lastAccess != null}"
+                        class="text-gray-400 dark:text-gray-600 text-xs italic"
+                      >
+                        Sin acceso
+                      </span>
+                    </td>
+
+                    <!-- Actions -->
+                    <td class="py-4 px-6 text-center">
+                      <div class="flex items-center justify-center gap-2">
+                        <!-- View Details -->
+                        <button
+                          th:onclick="'viewCustomer(' + ${customer.idCustomer} + ')'"
+                          class="w-9 h-9 flex items-center justify-center rounded-lg bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors"
+                          title="Ver detalles"
+                        >
+                          <span class="material-symbols-outlined text-lg"
+                            >visibility</span
+                          >
+                        </button>
+
+                        <!-- Toggle Active -->
+                        <button
+                          sec:authorize="hasRole('ROLE_ADMIN')"
+                          th:if="${customer.active}"
+                          th:onclick="'toggleCustomerStatus(' + ${customer.idCustomer} + ', false)'"
+                          class="w-9 h-9 flex items-center justify-center rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
+                          title="Desactivar cliente"
+                        >
+                          <span class="material-symbols-outlined text-lg"
+                            >person_off</span
+                          >
+                        </button>
+                        <button
+                          sec:authorize="hasRole('ROLE_ADMIN')"
+                          th:unless="${customer.active}"
+                          th:onclick="'toggleCustomerStatus(' + ${customer.idCustomer} + ', true)'"
+                          class="w-9 h-9 flex items-center justify-center rounded-lg bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/40 transition-colors"
+                          title="Activar cliente"
+                        >
+                          <span class="material-symbols-outlined text-lg"
+                            >how_to_reg</span
+                          >
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- CUSTOMERS CARDS (Mobile/Tablet) -->
+          <div class="lg:hidden space-y-4">
+            <!-- Empty State -->
+            <div
+              th:if="${#lists.isEmpty(customers)}"
+              class="bg-white dark:bg-gray-900 rounded-2xl shadow-lg p-12 text-center border border-gray-200 dark:border-gray-800"
+            >
+              <span
+                class="material-symbols-outlined text-6xl text-gray-300 dark:text-gray-600 mb-4 block"
+                >person_off</span
+              >
+              <p class="text-gray-600 dark:text-gray-400 text-lg">
+                No se encontraron clientes
+              </p>
+            </div>
+
+            <!-- Customer Card -->
+            <div
+              th:each="customer : ${customers}"
+              class="customer-row bg-white dark:bg-gray-900 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 overflow-hidden hover:shadow-xl transition-all"
+              th:data-name="${customer.fullName.toLowerCase()}"
+              th:data-email="${customer.email.toLowerCase()}"
+              th:data-username="${customer.username.toLowerCase()}"
+              th:data-phone="${customer.phone}"
+              th:data-status="${customer.active ? 'active' : 'inactive'}"
+              th:data-verified="${customer.emailVerified ? 'verified' : 'unverified'}"
+            >
+              <div class="p-5">
+                <div class="flex items-start justify-between mb-4">
+                  <!-- Customer Info -->
+                  <div class="flex items-center gap-3">
+                    <div
+                      class="w-12 h-12 bg-gradient-to-br from-primary to-primary-dark rounded-full flex items-center justify-center text-white font-bold text-lg shadow-lg flex-shrink-0"
+                      th:text="${customer.fullName.substring(0,1).toUpperCase()}"
+                    >
+                      C
+                    </div>
+                    <div>
+                      <h3
+                        class="font-bold text-gray-900 dark:text-white text-base"
+                        th:text="${customer.fullName}"
+                      >
+                        Cliente
+                      </h3>
+                      <span
+                        class="text-xs font-mono text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-md"
+                        th:text="'@' + ${customer.username}"
+                      >
+                        @usuario
+                      </span>
+                    </div>
+                  </div>
+
+                  <!-- Status Badges -->
+                  <div class="flex flex-col gap-1.5 items-end">
+                    <span
+                      th:if="${customer.active}"
+                      class="inline-flex items-center gap-1 px-2.5 py-1 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 rounded-full text-xs font-semibold"
+                    >
+                      <span
+                        class="w-1.5 h-1.5 bg-green-500 rounded-full"
+                      ></span>
+                      Activo
+                    </span>
+                    <span
+                      th:unless="${customer.active}"
+                      class="inline-flex items-center gap-1 px-2.5 py-1 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 rounded-full text-xs font-semibold"
+                    >
+                      <span class="w-1.5 h-1.5 bg-red-500 rounded-full"></span>
+                      Inactivo
+                    </span>
+                    <span
+                      th:if="${customer.emailVerified}"
+                      class="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 rounded-full text-xs font-semibold"
+                    >
+                      <span class="material-symbols-outlined text-sm"
+                        >verified</span
+                      >
+                      Verificado
+                    </span>
+                    <span
+                      th:unless="${customer.emailVerified}"
+                      class="inline-flex items-center gap-1 px-2.5 py-1 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400 rounded-full text-xs font-semibold"
+                    >
+                      <span class="material-symbols-outlined text-sm"
+                        >pending</span
+                      >
+                      Pendiente
+                    </span>
+                  </div>
+                </div>
+
+                <!-- Details Grid -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+                  <div class="flex items-center gap-2">
+                    <span
+                      class="material-symbols-outlined text-gray-400 dark:text-gray-500 text-lg"
+                      >email</span
+                    >
+                    <span
+                      class="text-sm text-gray-700 dark:text-gray-300 truncate"
+                      th:text="${customer.email}"
+                      >email@email.com</span
+                    >
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <span
+                      class="material-symbols-outlined text-gray-400 dark:text-gray-500 text-lg"
+                      >phone</span
+                    >
+                    <span
+                      class="text-sm text-gray-700 dark:text-gray-300"
+                      th:text="${customer.phone}"
+                      >0000000000</span
+                    >
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <span
+                      class="material-symbols-outlined text-gray-400 dark:text-gray-500 text-lg"
+                      >calendar_today</span
+                    >
+                    <span
+                      class="text-xs text-gray-500 dark:text-gray-400"
+                      th:text="${customer.createdAt != null ? #temporals.format(customer.createdAt, 'dd/MM/yyyy HH:mm') : 'N/A'}"
+                      >Registro</span
+                    >
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <span
+                      class="material-symbols-outlined text-gray-400 dark:text-gray-500 text-lg"
+                      >schedule</span
+                    >
+                    <span
+                      th:if="${customer.lastAccess != null}"
+                      class="text-xs text-gray-500 dark:text-gray-400"
+                      th:text="${#temporals.format(customer.lastAccess, 'dd/MM/yyyy HH:mm')}"
+                    >
+                      Último acceso
+                    </span>
+                    <span
+                      th:unless="${customer.lastAccess != null}"
+                      class="text-xs text-gray-400 dark:text-gray-600 italic"
+                    >
+                      Sin acceso
+                    </span>
+                  </div>
+                </div>
+
+                <!-- Actions -->
+                <div
+                  class="flex items-center gap-2 pt-3 border-t border-gray-100 dark:border-gray-800"
+                >
+                  <button
+                    th:onclick="'viewCustomer(' + ${customer.idCustomer} + ')'"
+                    class="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40 rounded-xl text-sm font-medium transition-colors"
+                  >
+                    <span class="material-symbols-outlined text-lg"
+                      >visibility</span
+                    >
+                    Ver Detalles
+                  </button>
+                  <button
+                    sec:authorize="hasRole('ROLE_ADMIN')"
+                    th:if="${customer.active}"
+                    th:onclick="'toggleCustomerStatus(' + ${customer.idCustomer} + ', false)'"
+                    class="flex items-center justify-center gap-2 px-3 py-2 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-xl text-sm font-medium transition-colors"
+                  >
+                    <span class="material-symbols-outlined text-lg"
+                      >person_off</span
+                    >
+                    Desactivar
+                  </button>
+                  <button
+                    sec:authorize="hasRole('ROLE_ADMIN')"
+                    th:unless="${customer.active}"
+                    th:onclick="'toggleCustomerStatus(' + ${customer.idCustomer} + ', true)'"
+                    class="flex items-center justify-center gap-2 px-3 py-2 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/40 rounded-xl text-sm font-medium transition-colors"
+                  >
+                    <span class="material-symbols-outlined text-lg"
+                      >how_to_reg</span
+                    >
+                    Activar
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <!-- Customer Detail Modal -->
+    <div
+      id="customerDetailModal"
+      class="fixed inset-0 z-50 hidden items-center justify-center p-4"
+    >
+      <div
+        class="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        onclick="closeModal()"
+      ></div>
+      <div
+        class="relative w-full max-w-lg bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800 overflow-hidden"
+      >
+        <!-- Modal Header -->
+        <div
+          class="px-6 py-4 bg-gradient-to-r from-primary/10 to-primary/5 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between"
+        >
+          <h3
+            class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2"
+          >
+            <span class="material-symbols-outlined text-primary">person</span>
+            Detalles del Cliente
+          </h3>
+          <button
+            onclick="closeModal()"
+            class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+          >
+            <span class="material-symbols-outlined text-gray-500">close</span>
+          </button>
+        </div>
+
+        <!-- Modal Body -->
+        <div class="p-6" id="modalBody">
+          <div class="flex justify-center py-8">
+            <div
+              class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"
+            ></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sidebar Scripts Fragment -->
+    <div th:replace="~{fragments/sidebar :: sidebarScripts}"></div>
+    <!-- Theme Script Fragment -->
+    <div th:replace="~{fragments/theme :: themeScript}"></div>
+
+    <script th:inline="javascript">
+      // Client-side filtering
+      const searchFilter = document.getElementById("searchFilter");
+      const statusFilter = document.getElementById("statusFilter");
+      const verifiedFilter = document.getElementById("verifiedFilter");
+
+      function applyFilters() {
+        const search = searchFilter.value.toLowerCase().trim();
+        const status = statusFilter.value.toLowerCase();
+        const verified = verifiedFilter.value.toLowerCase();
+        const rows = document.querySelectorAll(".customer-row");
+        let visible = 0;
+
+        rows.forEach((row) => {
+          const name = row.dataset.name || "";
+          const email = row.dataset.email || "";
+          const username = row.dataset.username || "";
+          const phone = row.dataset.phone || "";
+          const rowStatus = row.dataset.status || "";
+          const rowVerified = row.dataset.verified || "";
+
+          let show = true;
+
+          // Search filter
+          if (search) {
+            const matchesSearch =
+              name.includes(search) ||
+              email.includes(search) ||
+              username.includes(search) ||
+              phone.includes(search);
+            if (!matchesSearch) show = false;
+          }
+
+          // Status filter
+          if (status === "active" && rowStatus !== "active") show = false;
+          if (status === "inactive" && rowStatus !== "inactive") show = false;
+
+          // Verified filter
+          if (verified === "verified" && rowVerified !== "verified")
+            show = false;
+          if (verified === "unverified" && rowVerified !== "unverified")
+            show = false;
+
+          row.style.display = show ? "" : "none";
+          if (show) visible++;
+        });
+
+        const visibleCountEl = document.getElementById("visibleCount");
+        if (visibleCountEl) visibleCountEl.textContent = visible;
+      }
+
+      searchFilter.addEventListener("input", applyFilters);
+      statusFilter.addEventListener("change", applyFilters);
+      verifiedFilter.addEventListener("change", applyFilters);
+
+      function clearFilters() {
+        searchFilter.value = "";
+        statusFilter.value = "";
+        verifiedFilter.value = "";
+        applyFilters();
+      }
+
+      // View customer details
+      function viewCustomer(id) {
+        const modal = document.getElementById("customerDetailModal");
+        const modalBody = document.getElementById("modalBody");
+        const isDark = document.documentElement.classList.contains("dark");
+
+        modal.classList.remove("hidden");
+        modal.classList.add("flex");
+
+        // Loading state
+        modalBody.innerHTML =
+          '<div class="flex justify-center py-8"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>';
+
+        fetch(`/admin/customers/${id}`)
+          .then((res) => res.json())
+          .then((data) => {
+            if (data.success) {
+              const c = data.customer;
+              const createdAt = c.createdAt
+                ? new Date(c.createdAt).toLocaleString("es-MX", {
+                    day: "2-digit",
+                    month: "2-digit",
+                    year: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })
+                : "N/A";
+              const lastAccess = c.lastAccess
+                ? new Date(c.lastAccess).toLocaleString("es-MX", {
+                    day: "2-digit",
+                    month: "2-digit",
+                    year: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })
+                : "Sin acceso registrado";
+
+              const statusBadge = c.active
+                ? '<span class="inline-flex items-center gap-1 px-2.5 py-1 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 rounded-full text-xs font-semibold"><span class="w-1.5 h-1.5 bg-green-500 rounded-full"></span>Activo</span>'
+                : '<span class="inline-flex items-center gap-1 px-2.5 py-1 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 rounded-full text-xs font-semibold"><span class="w-1.5 h-1.5 bg-red-500 rounded-full"></span>Inactivo</span>';
+
+              const verifiedBadge = c.emailVerified
+                ? '<span class="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 rounded-full text-xs font-semibold"><span class="material-symbols-outlined text-sm">verified</span>Verificado</span>'
+                : '<span class="inline-flex items-center gap-1 px-2.5 py-1 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400 rounded-full text-xs font-semibold"><span class="material-symbols-outlined text-sm">pending</span>Pendiente</span>';
+
+              modalBody.innerHTML = `
+                <div class="flex items-center gap-4 mb-6">
+                  <div class="w-16 h-16 bg-gradient-to-br from-primary to-primary-dark rounded-full flex items-center justify-center text-white font-bold text-2xl shadow-lg flex-shrink-0">
+                    ${c.fullName.substring(0, 1).toUpperCase()}
+                  </div>
+                  <div>
+                    <h4 class="text-xl font-bold text-gray-900 dark:text-white">${c.fullName}</h4>
+                    <span class="text-sm font-mono text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-md">@${c.username}</span>
+                  </div>
+                </div>
+                <div class="flex gap-2 mb-6">${statusBadge} ${verifiedBadge}</div>
+                <div class="space-y-4">
+                  <div class="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-xl">
+                    <span class="material-symbols-outlined text-gray-400 dark:text-gray-500">email</span>
+                    <div>
+                      <p class="text-xs text-gray-500 dark:text-gray-400">Correo Electrónico</p>
+                      <p class="text-sm font-medium text-gray-900 dark:text-white">${c.email}</p>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-xl">
+                    <span class="material-symbols-outlined text-gray-400 dark:text-gray-500">phone</span>
+                    <div>
+                      <p class="text-xs text-gray-500 dark:text-gray-400">Teléfono</p>
+                      <p class="text-sm font-medium text-gray-900 dark:text-white">${c.phone}</p>
+                    </div>
+                  </div>
+                  <div class="grid grid-cols-2 gap-3">
+                    <div class="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-xl">
+                      <span class="material-symbols-outlined text-gray-400 dark:text-gray-500">calendar_today</span>
+                      <div>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">Fecha de Registro</p>
+                        <p class="text-sm font-medium text-gray-900 dark:text-white">${createdAt}</p>
+                      </div>
+                    </div>
+                    <div class="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-xl">
+                      <span class="material-symbols-outlined text-gray-400 dark:text-gray-500">schedule</span>
+                      <div>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">Último Acceso</p>
+                        <p class="text-sm font-medium text-gray-900 dark:text-white">${lastAccess}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              `;
+            } else {
+              modalBody.innerHTML = `
+                <div class="text-center py-8">
+                  <span class="material-symbols-outlined text-4xl text-red-400 mb-2 block">error</span>
+                  <p class="text-gray-600 dark:text-gray-400">${data.message}</p>
+                </div>
+              `;
+            }
+          })
+          .catch((err) => {
+            modalBody.innerHTML = `
+              <div class="text-center py-8">
+                <span class="material-symbols-outlined text-4xl text-red-400 mb-2 block">error</span>
+                <p class="text-gray-600 dark:text-gray-400">Error al cargar los detalles del cliente</p>
+              </div>
+            `;
+          });
+      }
+
+      function closeModal() {
+        const modal = document.getElementById("customerDetailModal");
+        modal.classList.add("hidden");
+        modal.classList.remove("flex");
+      }
+
+      // Close modal with Escape key
+      document.addEventListener("keydown", function (e) {
+        if (e.key === "Escape") closeModal();
+      });
+
+      // Toggle customer active status
+      function toggleCustomerStatus(id, activate) {
+        const isDark = document.documentElement.classList.contains("dark");
+        const action = activate ? "activar" : "desactivar";
+        const actionColor = activate ? "#38e07b" : "#ef4444";
+
+        Swal.fire({
+          title: `¿${activate ? "Activar" : "Desactivar"} cliente?`,
+          text: `¿Estás seguro de que deseas ${action} este cliente?`,
+          icon: "question",
+          showCancelButton: true,
+          confirmButtonColor: actionColor,
+          cancelButtonColor: isDark ? "#4b5563" : "#9ca3af",
+          confirmButtonText: `Sí, ${action}`,
+          cancelButtonText: "Cancelar",
+          background: isDark ? "#1f2937" : "#ffffff",
+          color: isDark ? "#f3f4f6" : "#1f2937",
+          customClass: {
+            popup: "rounded-2xl",
+            confirmButton: "rounded-xl px-6 py-2.5 font-semibold",
+            cancelButton: "rounded-xl px-6 py-2.5 font-semibold",
+          },
+        }).then((result) => {
+          if (result.isConfirmed) {
+            const endpoint = activate
+              ? `/admin/customers/${id}/activate`
+              : `/admin/customers/${id}/deactivate`;
+
+            fetch(endpoint, {
+              method: "POST",
+              headers: {
+                Accept: "application/json",
+                "Content-Type": "application/json",
+              },
+            })
+              .then((res) => {
+                if (!res.ok) {
+                  return res.text().then((text) => {
+                    try {
+                      return JSON.parse(text);
+                    } catch (e) {
+                      console.error("Server response:", res.status, text);
+                      throw new Error("Error del servidor: " + res.status);
+                    }
+                  });
+                }
+                return res.json();
+              })
+              .then((data) => {
+                if (data.success) {
+                  Swal.fire({
+                    icon: "success",
+                    title: "¡Éxito!",
+                    text: data.message,
+                    confirmButtonColor: "#38e07b",
+                    background: isDark ? "#1f2937" : "#ffffff",
+                    color: isDark ? "#f3f4f6" : "#1f2937",
+                    customClass: {
+                      popup: "rounded-2xl",
+                      confirmButton: "rounded-xl px-6 py-2.5 font-semibold",
+                    },
+                  }).then(() => {
+                    window.location.reload();
+                  });
+                } else if (data.packageError) {
+                  Swal.fire({
+                    icon: "warning",
+                    title: "Paquete no disponible",
+                    text: data.message,
+                    confirmButtonColor: "#f59e0b",
+                    background: isDark ? "#1f2937" : "#ffffff",
+                    color: isDark ? "#f3f4f6" : "#1f2937",
+                    customClass: {
+                      popup: "rounded-2xl",
+                      confirmButton: "rounded-xl px-6 py-2.5 font-semibold",
+                    },
+                  });
+                } else {
+                  Swal.fire({
+                    icon: "error",
+                    title: "Error",
+                    text: data.message || "Error desconocido",
+                    confirmButtonColor: "#38e07b",
+                    background: isDark ? "#1f2937" : "#ffffff",
+                    color: isDark ? "#f3f4f6" : "#1f2937",
+                    customClass: {
+                      popup: "rounded-2xl",
+                      confirmButton: "rounded-xl px-6 py-2.5 font-semibold",
+                    },
+                  });
+                }
+              })
+              .catch((err) => {
+                console.error("Error en la solicitud:", err);
+                Swal.fire({
+                  icon: "error",
+                  title: "Error",
+                  text:
+                    err.message || "Ocurrió un error al procesar la solicitud",
+                  confirmButtonColor: "#38e07b",
+                  background: isDark ? "#1f2937" : "#ffffff",
+                  color: isDark ? "#f3f4f6" : "#1f2937",
+                  customClass: {
+                    popup: "rounded-2xl",
+                    confirmButton: "rounded-xl px-6 py-2.5 font-semibold",
+                  },
+                });
+              });
+          }
+        });
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,3719 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Editor de Flyers con Capas - Profesional</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bungee&family=Bungee+Inline&family=Bungee+Shade&family=Montserrat:wght@400;700;900&family=Anton&family=Bebas+Neue&family=Righteous&family=Staatliches&family=Patua+One&family=Russo+One&family=Alfa+Slab+One&family=Black+Ops+One&family=Fredoka+One&family=Titan+One&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+      };
+    </script>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        background: linear-gradient(135deg, #38e07b 0%, #2bc866 100%);
+        min-height: 100vh;
+        padding: 20px;
+        font-family: "Work Sans", sans-serif;
+        transition: background 0.3s ease;
+      }
+
+      body.dark {
+        background: linear-gradient(135deg, #0f1713 0%, #1a2520 100%);
+      }
+
+      .container-main {
+        max-width: 1600px;
+        margin: 0 auto;
+      }
+
+      .flyer-container {
+        background: white;
+        border-radius: 15px;
+        padding: 30px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        transition: background 0.3s ease, box-shadow 0.3s ease;
+      }
+
+      body.dark .flyer-container {
+        background: #1e293b;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+      }
+
+      #flyerCanvas {
+        width: 100%;
+        max-width: 600px;
+        aspect-ratio: 3/4;
+        margin: 0 auto;
+        display: block;
+        border-radius: 10px;
+        box-shadow: 0 5px 25px rgba(0, 0, 0, 0.3);
+        position: relative;
+        overflow: hidden;
+      }
+
+      .flyer-content {
+        width: 100%;
+        height: 100%;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+      }
+
+      /* CAPAS DEL FLYER */
+      .background-layer {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 1;
+        background: #ffc107;
+      }
+
+      .background-pattern-svg {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 1;
+        pointer-events: none;
+      }
+
+      .background-image-layer {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 50%;
+        z-index: 2;
+        overflow: visible;
+      }
+
+      .torn-edge {
+        position: absolute;
+        bottom: -2px;
+        left: 0;
+        width: 100%;
+        height: 30px;
+        background: inherit;
+        z-index: 3;
+      }
+
+      .torn-edge svg {
+        width: 100%;
+        height: 100%;
+        display: block;
+      }
+
+      .background-image {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        opacity: 0.4;
+      }
+
+      .decorative-pattern {
+        position: absolute;
+        z-index: 3;
+        opacity: 0.2;
+        font-size: 3em;
+        color: #000;
+      }
+
+      .logo-container {
+        position: absolute;
+        top: 20px;
+        left: 20px;
+        z-index: 10;
+        max-width: 100px;
+        max-height: 100px;
+      }
+
+      .top-right-text {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        z-index: 10;
+        background: rgba(255, 255, 255, 0.95);
+        padding: 12px 20px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        max-width: 250px;
+      }
+
+      .top-right-text span {
+        font-family: "Montserrat", sans-serif;
+        font-size: 0.9em;
+        font-weight: 700;
+        color: #1a1a1a;
+        text-transform: uppercase;
+        display: block;
+        text-align: center;
+        line-height: 1.3;
+      }
+
+      .logo-image {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.3));
+      }
+
+      .custom-icon {
+        position: absolute;
+        z-index: 3;
+        font-size: 2.5em;
+        opacity: 0.2;
+        color: #000;
+      }
+
+      .content-layer {
+        position: relative;
+        z-index: 4;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        padding: 30px;
+      }
+
+      .promo-badge-container {
+        position: absolute;
+        top: 15%;
+        right: 8%;
+        z-index: 10;
+        max-width: 150px;
+        max-height: 150px;
+        width: 150px;
+        height: 150px;
+        filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.4));
+        animation: bounce-badge 2s ease-in-out infinite;
+      }
+
+      .promo-badge-image {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+      }
+
+      @keyframes bounce-badge {
+        0%,
+        100% {
+          transform: translateY(0) rotate(-5deg);
+        }
+        50% {
+          transform: translateY(-10px) rotate(5deg);
+        }
+      }
+
+      .product-container {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        margin-top: -50px;
+      }
+
+      .product-image {
+        max-width: 90%;
+        max-height: 350px;
+        object-fit: contain;
+        filter: drop-shadow(0 15px 25px rgba(0, 0, 0, 0.4));
+        position: relative;
+        z-index: 5;
+        transition: filter 0.3s ease;
+      }
+
+      .text-section {
+        position: relative;
+        z-index: 6;
+        text-align: center;
+        margin-top: 0px;
+      }
+
+      .main-title {
+        font-family: "Bungee", cursive;
+        font-size: 2.8em;
+        font-weight: 900;
+        text-transform: uppercase;
+        line-height: 1;
+        margin-bottom: 15px;
+        color: #1a1a1a;
+        text-shadow: 3px 3px 0px rgba(255, 255, 255, 0.3);
+      }
+
+      .subtitle {
+        font-family: "Montserrat", sans-serif;
+        font-size: 1.1em;
+        font-weight: 600;
+        line-height: 1.3;
+        color: #1a1a1a;
+        margin-bottom: 20px;
+      }
+
+      .delivery-section {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+        margin-top: 20px;
+      }
+
+      .delivery-icon {
+        font-size: 3em;
+        color: #1a1a1a;
+      }
+
+      .delivery-text {
+        font-family: "Montserrat", sans-serif;
+        font-size: 1em;
+        font-weight: 700;
+        text-transform: uppercase;
+        color: #1a1a1a;
+      }
+
+      .delivery-number {
+        background: #1a1a1a;
+        color: #ffc107;
+        padding: 10px 25px;
+        border-radius: 25px;
+        font-family: "Montserrat", sans-serif;
+        font-size: 1.2em;
+        margin-top: 5px;
+        font-weight: 700;
+      }
+
+      /* DECORACIONES */
+      .hamburger-icon {
+        position: absolute;
+        font-size: 2em;
+        opacity: 0.15;
+        z-index: 3;
+      }
+
+      .dollar-icon {
+        position: absolute;
+        bottom: 30px;
+        right: 30px;
+        font-size: 2.5em;
+        color: #1a1a1a;
+        opacity: 0.3;
+        z-index: 3;
+      }
+
+      /* EDITOR */
+      .editor-panel {
+        background: white;
+        border-radius: 15px;
+        padding: 20px;
+        box-shadow: 0 5px 25px rgba(0, 0, 0, 0.2);
+        margin-top: 20px;
+        max-height: 85vh;
+        overflow-y: auto;
+        transition: background 0.3s ease, box-shadow 0.3s ease;
+      }
+
+      body.dark .editor-panel {
+        background: #1e293b;
+        box-shadow: 0 5px 25px rgba(0, 0, 0, 0.5);
+      }
+
+      .editor-header {
+        position: sticky;
+        top: 0;
+        background: white;
+        z-index: 100;
+        padding-bottom: 15px;
+        margin-bottom: 20px;
+        border-bottom: 3px solid #38e07b;
+        transition: background 0.3s ease;
+      }
+
+      body.dark .editor-header {
+        background: #1e293b;
+      }
+
+      .tabs-container {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+      }
+
+      .tab-button {
+        flex: 1;
+        min-width: 110px;
+        padding: 12px 10px;
+        border: none;
+        background: #f8f9fa;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 0.85em;
+        cursor: pointer;
+        transition: all 0.3s;
+        color: #495057;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+      }
+
+      body.dark .tab-button {
+        background: #334155;
+        color: #cbd5e1;
+      }
+
+      .tab-button:hover {
+        background: #e9ecef;
+        transform: translateY(-2px);
+      }
+
+      body.dark .tab-button:hover {
+        background: #475569;
+      }
+
+      .tab-button.active {
+        background: linear-gradient(135deg, #38e07b, #2bc866);
+        color: white;
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+      }
+
+      .tab-content {
+        display: none;
+        animation: fadeIn 0.3s;
+      }
+
+      .tab-content.active {
+        display: block;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .control-group {
+        margin-bottom: 20px;
+        padding: 18px;
+        background: #f8f9fa;
+        border-radius: 10px;
+        border-left: 4px solid #38e07b;
+        transition: all 0.3s;
+      }
+
+      body.dark .control-group {
+        background: #334155;
+      }
+
+      .control-group:hover {
+        background: #e9ecef;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+      }
+
+      body.dark .control-group:hover {
+        background: #475569;
+      }
+
+      .control-group label {
+        font-weight: 600;
+        margin-bottom: 8px;
+        display: block;
+        color: #495057;
+      }
+
+      body.dark .control-group label {
+        color: #cbd5e1;
+      }
+
+      .btn-custom {
+        padding: 12px 30px;
+        border-radius: 8px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        transition: all 0.3s;
+        border: none;
+      }
+
+      .btn-edit {
+        background: #38e07b;
+        color: white;
+      }
+
+      .btn-edit:hover {
+        background: #5568d3;
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+      }
+
+      .btn-save {
+        background: #48bb78;
+        color: white;
+      }
+
+      .btn-save:hover {
+        background: #38a169;
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(72, 187, 120, 0.4);
+      }
+
+      .btn-download {
+        background: #ed8936;
+        color: white;
+      }
+
+      .btn-download:hover {
+        background: #dd6b20;
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(237, 137, 54, 0.4);
+      }
+
+      .image-preview {
+        max-width: 100%;
+        max-height: 150px;
+        margin-top: 10px;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+      }
+
+      .color-picker-group {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-top: 10px;
+      }
+
+      .color-picker-group input[type="color"] {
+        width: 60px;
+        height: 40px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        border: 2px solid #ddd;
+      }
+
+      .range-slider {
+        width: 100%;
+        margin: 10px 0;
+      }
+
+      .range-value {
+        display: inline-block;
+        padding: 5px 15px;
+        background: #38e07b;
+        color: white;
+        border-radius: 5px;
+        font-weight: bold;
+        min-width: 60px;
+        text-align: center;
+        margin-left: 10px;
+      }
+
+      #editMode {
+        display: none;
+      }
+
+      .section-title {
+        background: linear-gradient(135deg, #38e07b, #2bc866);
+        color: white;
+        padding: 10px 15px;
+        border-radius: 8px;
+        margin-bottom: 15px;
+        font-weight: 700;
+      }
+
+      body.dark .section-title {
+        background: linear-gradient(135deg, #2bc866, #22a555);
+      }
+
+      .layer-indicator {
+        display: inline-block;
+        padding: 3px 10px;
+        background: #e9ecef;
+        border-radius: 4px;
+        font-size: 0.85em;
+        margin-left: 10px;
+      }
+
+      .editor-panel::-webkit-scrollbar {
+        width: 8px;
+      }
+
+      .editor-panel::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 10px;
+      }
+
+      .editor-panel::-webkit-scrollbar-thumb {
+        background: #38e07b;
+        border-radius: 10px;
+      }
+
+      .toggle-decorations {
+        margin-top: 10px;
+      }
+
+      .icon-selector {
+        display: grid;
+        grid-template-columns: repeat(6, 1fr);
+        gap: 10px;
+        margin-top: 10px;
+        max-height: 200px;
+        overflow-y: auto;
+        padding: 10px;
+        background: white;
+        border-radius: 8px;
+        border: 2px solid #e9ecef;
+      }
+
+      .icon-option {
+        padding: 10px;
+        text-align: center;
+        font-size: 1.5em;
+        cursor: pointer;
+        border: 2px solid transparent;
+        border-radius: 5px;
+        transition: all 0.2s;
+      }
+
+      .icon-option:hover {
+        background: #f8f9fa;
+        border-color: #38e07b;
+        transform: scale(1.1);
+      }
+
+      .icon-option.selected {
+        background: #38e07b;
+        color: white;
+        border-color: #38e07b;
+      }
+
+      .add-icon-btn {
+        margin-top: 10px;
+        width: 100%;
+      }
+
+      .icon-list {
+        margin-top: 15px;
+      }
+
+      .icon-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px;
+        background: white;
+        border-radius: 5px;
+        margin-bottom: 5px;
+        border: 1px solid #dee2e6;
+      }
+
+      .icon-item-controls {
+        display: flex;
+        gap: 5px;
+      }
+
+      .icon-item-controls button {
+        padding: 5px 10px;
+        border: none;
+        border-radius: 3px;
+        cursor: pointer;
+        font-size: 0.9em;
+      }
+
+      .btn-remove-icon {
+        background: #dc3545;
+        color: white;
+      }
+
+      .search-icons {
+        margin-bottom: 10px;
+      }
+
+      .wave-pattern-1 {
+        background-image: repeating-linear-gradient(
+            45deg,
+            transparent,
+            transparent 35px,
+            rgba(0, 0, 0, 0.05) 35px,
+            rgba(0, 0, 0, 0.05) 70px
+          ),
+          repeating-linear-gradient(
+            -45deg,
+            transparent,
+            transparent 35px,
+            rgba(0, 0, 0, 0.05) 35px,
+            rgba(0, 0, 0, 0.05) 70px
+          );
+      }
+
+      .wave-pattern-2 {
+        background-image: repeating-linear-gradient(
+          0deg,
+          transparent,
+          transparent 20px,
+          rgba(0, 0, 0, 0.04) 20px,
+          rgba(0, 0, 0, 0.04) 40px
+        );
+      }
+
+      .wave-pattern-3 {
+        background-image: radial-gradient(
+            circle at 20% 80%,
+            rgba(0, 0, 0, 0.03) 0%,
+            transparent 50%
+          ),
+          radial-gradient(
+            circle at 80% 20%,
+            rgba(0, 0, 0, 0.03) 0%,
+            transparent 50%
+          ),
+          radial-gradient(
+            circle at 40% 40%,
+            rgba(0, 0, 0, 0.02) 0%,
+            transparent 50%
+          );
+      }
+
+      .wave-pattern-4 {
+        background-image: repeating-linear-gradient(
+            60deg,
+            transparent,
+            transparent 25px,
+            rgba(0, 0, 0, 0.04) 25px,
+            rgba(0, 0, 0, 0.04) 50px
+          ),
+          repeating-linear-gradient(
+            120deg,
+            transparent,
+            transparent 25px,
+            rgba(0, 0, 0, 0.04) 25px,
+            rgba(0, 0, 0, 0.04) 50px
+          ),
+          repeating-linear-gradient(
+            180deg,
+            transparent,
+            transparent 25px,
+            rgba(0, 0, 0, 0.04) 25px,
+            rgba(0, 0, 0, 0.04) 50px
+          );
+      }
+
+      .wave-pattern-5 {
+        background-image: repeating-radial-gradient(
+          circle at 0 0,
+          transparent 0,
+          transparent 40px,
+          rgba(0, 0, 0, 0.03) 40px,
+          rgba(0, 0, 0, 0.03) 80px
+        );
+      }
+
+      .wave-pattern-6 {
+        background-image: radial-gradient(
+          circle at center,
+          rgba(0, 0, 0, 0.08) 2px,
+          transparent 2px
+        );
+        background-size: 20px 20px;
+      }
+
+      .wave-pattern-7 {
+        background-image: repeating-linear-gradient(
+            45deg,
+            transparent,
+            transparent 15px,
+            rgba(0, 0, 0, 0.05) 15px,
+            rgba(0, 0, 0, 0.05) 20px
+          ),
+          repeating-linear-gradient(
+            -45deg,
+            transparent,
+            transparent 15px,
+            rgba(0, 0, 0, 0.05) 15px,
+            rgba(0, 0, 0, 0.05) 20px
+          );
+      }
+
+      .wave-pattern-8 {
+        background-image: linear-gradient(
+            rgba(0, 0, 0, 0.04) 2px,
+            transparent 2px
+          ),
+          linear-gradient(90deg, rgba(0, 0, 0, 0.04) 2px, transparent 2px);
+        background-size: 30px 30px;
+      }
+
+      .wave-pattern-preview {
+        display: inline-block;
+        width: 60px;
+        height: 40px;
+        border: 2px solid #ddd;
+        border-radius: 5px;
+        margin: 5px;
+        cursor: pointer;
+        transition: all 0.3s;
+      }
+
+      .wave-pattern-preview:hover {
+        border-color: #38e07b;
+        transform: scale(1.1);
+      }
+
+      .wave-pattern-preview.active {
+        border-color: #38e07b;
+        border-width: 3px;
+        box-shadow: 0 0 10px rgba(102, 126, 234, 0.5);
+      }
+
+      .torn-edge-preview {
+        width: 100%;
+        height: 50px;
+        margin: 5px 0;
+        cursor: pointer;
+        border: 2px solid #ddd;
+        border-radius: 5px;
+        transition: all 0.3s;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .torn-edge-preview:hover {
+        border-color: #38e07b;
+        transform: scale(1.02);
+      }
+
+      .torn-edge-preview.active {
+        border-color: #38e07b;
+        border-width: 3px;
+        box-shadow: 0 0 10px rgba(102, 126, 234, 0.5);
+      }
+
+      .torn-edge-preview .preview-top {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 60%;
+        background: #8b4513;
+      }
+
+      .torn-edge-preview .preview-bottom {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: 50%;
+        background: #ffc107;
+      }
+
+      .font-selector {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+        margin-top: 10px;
+      }
+
+      .font-option {
+        padding: 15px;
+        text-align: center;
+        border: 2px solid #ddd;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s;
+        background: white;
+        font-size: 1.2em;
+        font-weight: bold;
+      }
+
+      .font-option:hover {
+        border-color: #38e07b;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      }
+
+      .font-option.selected {
+        border-color: #38e07b;
+        background: #f0f4ff;
+        border-width: 3px;
+      }
+
+      body.dark .font-option {
+        background: #334155;
+        border-color: #475569;
+        color: #cbd5e1;
+      }
+
+      body.dark .font-option.selected {
+        border-color: #38e07b;
+        background: #1e3a2f;
+      }
+
+      .custom-font-input {
+        margin-top: 15px;
+      }
+
+      .font-preview-text {
+        font-size: 0.9em;
+        color: #666;
+        margin-top: 5px;
+      }
+
+      body.dark .font-preview-text {
+        color: #94a3b8;
+      }
+
+      .text-muted {
+        color: #6c757d;
+      }
+
+      body.dark .text-muted {
+        color: #94a3b8;
+      }
+
+      .flaticon-results {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+        gap: 10px;
+        max-height: 300px;
+        overflow-y: auto;
+        padding: 10px;
+        background: #f8f9fa;
+        border-radius: 8px;
+        margin-top: 10px;
+      }
+
+      body.dark .flaticon-results {
+        background: #334155;
+      }
+
+      .flaticon-item {
+        background: white;
+        border: 2px solid #ddd;
+        border-radius: 8px;
+        padding: 10px;
+        cursor: pointer;
+        transition: all 0.3s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 80px;
+      }
+
+      body.dark .flaticon-item {
+        background: #1e293b;
+        border-color: #475569;
+      }
+
+      .flaticon-item:hover {
+        border-color: #38e07b;
+        transform: scale(1.05);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      }
+
+      .flaticon-item.selected {
+        border-color: #38e07b;
+        background: #f0f4ff;
+        border-width: 3px;
+      }
+
+      .flaticon-item img {
+        max-width: 100%;
+        max-height: 60px;
+        object-fit: contain;
+      }
+
+      /* Botón de Regreso */
+      .btn-back {
+        position: fixed;
+        top: 20px;
+        left: 20px;
+        background: linear-gradient(135deg, #38e07b 0%, #2bc866 100%);
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: 16px;
+        cursor: pointer;
+        transition: all 0.3s;
+        box-shadow: 0 4px 15px rgba(56, 224, 123, 0.3);
+        z-index: 1000;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .btn-back:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(56, 224, 123, 0.4);
+      }
+
+      .btn-back i {
+        font-size: 18px;
+      }
+
+      /* Dark mode para elementos de Bootstrap */
+      body.dark .form-control,
+      body.dark .form-select {
+        background: #334155;
+        border-color: #475569;
+        color: #cbd5e1;
+      }
+
+      body.dark .form-control:focus,
+      body.dark .form-select:focus {
+        background: #334155;
+        border-color: #38e07b;
+        color: #cbd5e1;
+      }
+
+      body.dark .alert-info {
+        background: #1e3a5f;
+        border-color: #3b82f6;
+        color: #93c5fd;
+      }
+
+      body.dark h3,
+      body.dark h4,
+      body.dark h5 {
+        color: #e2e8f0;
+      }
+
+      body.dark h1 {
+        color: #ffffff !important;
+      }
+
+      body.dark .text-dark {
+        color: #ffffff !important;
+      }
+
+      body.dark p.text-muted {
+        color: #cbd5e1 !important;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Botón de Regreso -->
+    <button class="btn-back" onclick="window.history.back()">
+      <i class="fas fa-arrow-left"></i>
+      Regresar
+    </button>
+
+    <div class="container-main">
+      <div class="flyer-container">
+        <div class="text-center mb-4">
+          <h1 class="display-4 fw-bold text-dark dark:text-white">
+            <i class="fas fa-layer-group"></i> Creador de Flyers
+          </h1>
+          <p class="text-muted dark:text-gray-300">
+            Crea tus diseños de flyers promocionales personalizados de manera
+            fácil.
+          </p>
+        </div>
+
+        <div class="row">
+          <div class="col-lg-6">
+            <div id="flyerCanvas">
+              <div class="flyer-content">
+                <!-- CAPA 1: Fondo de color -->
+                <div class="background-layer" id="backgroundLayer"></div>
+
+                <!-- Patrón SVG superpuesto -->
+                <svg
+                  class="background-pattern-svg"
+                  id="backgroundPatternSvg"
+                  style="display: block"
+                >
+                  <defs>
+                    <!-- Patrón 1: Diagonal Cruzado (Original CSS convertido a SVG) -->
+                    <pattern
+                      id="pattern1"
+                      x="0"
+                      y="0"
+                      width="70"
+                      height="70"
+                      patternUnits="userSpaceOnUse"
+                    >
+                      <!-- Líneas diagonales a 45 grados -->
+                      <line
+                        x1="0"
+                        y1="0"
+                        x2="70"
+                        y2="70"
+                        stroke="rgba(0,0,0,0.05)"
+                        stroke-width="35"
+                      />
+                      <!-- Líneas diagonales a -45 grados -->
+                      <line
+                        x1="70"
+                        y1="0"
+                        x2="0"
+                        y2="70"
+                        stroke="rgba(0,0,0,0.05)"
+                        stroke-width="35"
+                      />
+                    </pattern>
+
+                    <!-- Patrón 2: Líneas Horizontales -->
+                    <pattern
+                      id="pattern2"
+                      x="0"
+                      y="0"
+                      width="100"
+                      height="40"
+                      patternUnits="userSpaceOnUse"
+                    >
+                      <rect
+                        x="0"
+                        y="0"
+                        width="100"
+                        height="20"
+                        fill="transparent"
+                      />
+                      <rect
+                        x="0"
+                        y="20"
+                        width="100"
+                        height="20"
+                        fill="rgba(0,0,0,0.04)"
+                      />
+                    </pattern>
+
+                    <!-- Patrón 3: Círculos Sutiles (radial gradients simulados) -->
+                    <pattern
+                      id="pattern3"
+                      x="0"
+                      y="0"
+                      width="300"
+                      height="300"
+                      patternUnits="userSpaceOnUse"
+                    >
+                      <defs>
+                        <radialGradient id="radial1" cx="20%" cy="80%">
+                          <stop
+                            offset="0%"
+                            style="
+                              stop-color: rgba(0, 0, 0, 0.03);
+                              stop-opacity: 1;
+                            "
+                          />
+                          <stop
+                            offset="50%"
+                            style="
+                              stop-color: rgba(0, 0, 0, 0);
+                              stop-opacity: 1;
+                            "
+                          />
+                        </radialGradient>
+                        <radialGradient id="radial2" cx="80%" cy="20%">
+                          <stop
+                            offset="0%"
+                            style="
+                              stop-color: rgba(0, 0, 0, 0.03);
+                              stop-opacity: 1;
+                            "
+                          />
+                          <stop
+                            offset="50%"
+                            style="
+                              stop-color: rgba(0, 0, 0, 0);
+                              stop-opacity: 1;
+                            "
+                          />
+                        </radialGradient>
+                        <radialGradient id="radial3" cx="40%" cy="40%">
+                          <stop
+                            offset="0%"
+                            style="
+                              stop-color: rgba(0, 0, 0, 0.02);
+                              stop-opacity: 1;
+                            "
+                          />
+                          <stop
+                            offset="50%"
+                            style="
+                              stop-color: rgba(0, 0, 0, 0);
+                              stop-opacity: 1;
+                            "
+                          />
+                        </radialGradient>
+                      </defs>
+                      <rect width="300" height="300" fill="url(#radial1)" />
+                      <rect width="300" height="300" fill="url(#radial2)" />
+                      <rect width="300" height="300" fill="url(#radial3)" />
+                    </pattern>
+
+                    <!-- Patrón 4: Hexagonal (Tres direcciones de líneas) -->
+                    <pattern
+                      id="pattern4"
+                      x="0"
+                      y="0"
+                      width="50"
+                      height="50"
+                      patternUnits="userSpaceOnUse"
+                    >
+                      <!-- Líneas a 60 grados -->
+                      <line
+                        x1="0"
+                        y1="12.5"
+                        x2="50"
+                        y2="12.5"
+                        stroke="rgba(0,0,0,0.04)"
+                        stroke-width="12.5"
+                        transform="rotate(60 25 25)"
+                      />
+                      <!-- Líneas a 120 grados -->
+                      <line
+                        x1="0"
+                        y1="12.5"
+                        x2="50"
+                        y2="12.5"
+                        stroke="rgba(0,0,0,0.04)"
+                        stroke-width="12.5"
+                        transform="rotate(120 25 25)"
+                      />
+                      <!-- Líneas a 180 grados (horizontales) -->
+                      <line
+                        x1="0"
+                        y1="12.5"
+                        x2="50"
+                        y2="12.5"
+                        stroke="rgba(0,0,0,0.04)"
+                        stroke-width="12.5"
+                      />
+                    </pattern>
+
+                    <!-- Patrón 5: Ondas Radiales (círculos concéntricos desde esquina) -->
+                    <pattern
+                      id="pattern5"
+                      x="0"
+                      y="0"
+                      width="80"
+                      height="80"
+                      patternUnits="userSpaceOnUse"
+                    >
+                      <circle
+                        cx="0"
+                        cy="0"
+                        r="20"
+                        fill="transparent"
+                        stroke="rgba(0,0,0,0.03)"
+                        stroke-width="20"
+                      />
+                      <circle
+                        cx="0"
+                        cy="0"
+                        r="40"
+                        fill="transparent"
+                        stroke="rgba(0,0,0,0.03)"
+                        stroke-width="20"
+                      />
+                      <circle
+                        cx="0"
+                        cy="0"
+                        r="60"
+                        fill="transparent"
+                        stroke="rgba(0,0,0,0.03)"
+                        stroke-width="20"
+                      />
+                      <circle
+                        cx="0"
+                        cy="0"
+                        r="80"
+                        fill="transparent"
+                        stroke="rgba(0,0,0,0.03)"
+                        stroke-width="20"
+                      />
+                    </pattern>
+
+                    <!-- Patrón 6: Puntos / Dots -->
+                    <pattern
+                      id="pattern6"
+                      x="0"
+                      y="0"
+                      width="20"
+                      height="20"
+                      patternUnits="userSpaceOnUse"
+                    >
+                      <circle cx="10" cy="10" r="2" fill="rgba(0,0,0,0.08)" />
+                    </pattern>
+
+                    <!-- Patrón 7: Zigzag / Chevron -->
+                    <pattern
+                      id="pattern7"
+                      x="0"
+                      y="0"
+                      width="40"
+                      height="40"
+                      patternUnits="userSpaceOnUse"
+                    >
+                      <polyline
+                        points="0,20 20,0 40,20 40,40 20,20 0,40"
+                        fill="none"
+                        stroke="rgba(0,0,0,0.05)"
+                        stroke-width="8"
+                      />
+                    </pattern>
+
+                    <!-- Patrón 8: Cuadrícula / Grid -->
+                    <pattern
+                      id="pattern8"
+                      x="0"
+                      y="0"
+                      width="30"
+                      height="30"
+                      patternUnits="userSpaceOnUse"
+                    >
+                      <line
+                        x1="0"
+                        y1="0"
+                        x2="0"
+                        y2="30"
+                        stroke="rgba(0,0,0,0.04)"
+                        stroke-width="2"
+                      />
+                      <line
+                        x1="0"
+                        y1="0"
+                        x2="30"
+                        y2="0"
+                        stroke="rgba(0,0,0,0.04)"
+                        stroke-width="2"
+                      />
+                    </pattern>
+                  </defs>
+                  <rect
+                    width="100%"
+                    height="100%"
+                    fill="url(#pattern1)"
+                    id="patternRect"
+                  />
+                </svg>
+
+                <!-- CAPA 2: Imagen de fondo -->
+                <div class="background-image-layer" id="backgroundImageLayer">
+                  <img
+                    src="https://images.unsplash.com/photo-1594212699903-ec8a3eca50f5?w=1000&h=800&fit=crop"
+                    alt="Fondo"
+                    class="background-image"
+                    id="backgroundImage"
+                  />
+                  <div class="torn-edge">
+                    <svg viewBox="0 0 1200 30" preserveAspectRatio="none">
+                      <path
+                        d="M0,0 Q50,25 100,0 T200,0 T300,0 T400,0 T500,0 T600,0 T700,0 T800,0 T900,0 T1000,0 T1100,0 T1200,0 L1200,30 L0,30 Z"
+                        fill="#FFC107"
+                        id="tornEdgePath"
+                      />
+                    </svg>
+                  </div>
+                </div>
+
+                <!-- LOGO -->
+                <div
+                  class="logo-container"
+                  id="logoContainer"
+                  style="display: none"
+                >
+                  <img src="" alt="Logo" class="logo-image" id="logoImage" />
+                </div>
+
+                <!-- TEXTO SUPERIOR DERECHO (Restaurante/Promoción/Vigencia) -->
+                <div
+                  class="top-right-text"
+                  id="topRightText"
+                  style="display: none"
+                >
+                  <span id="topRightTextContent">NOMBRE DEL RESTAURANTE</span>
+                </div>
+
+                <!-- CAPA 3: Decoraciones -->
+                <div id="customIconsContainer"></div>
+                <i class="fas fa-dollar-sign dollar-icon" id="dollarIcon"></i>
+
+                <!-- Badge de Promoción PNG -->
+                <div
+                  class="promo-badge-container"
+                  id="promoBadgeContainer"
+                  style="display: none"
+                >
+                  <img
+                    src=""
+                    alt="Promoción"
+                    class="promo-badge-image"
+                    id="promoBadgeImage"
+                  />
+                </div>
+
+                <!-- CAPA 4: Contenido principal -->
+                <div class="content-layer">
+                  <div class="product-container">
+                    <img
+                      src="/uploads/menu-items/cangreburguer.png"
+                      alt="Producto"
+                      class="product-image"
+                      id="productImage"
+                    />
+                  </div>
+
+                  <div class="text-section">
+                    <div class="main-title" id="mainTitle">
+                      SABOR INIGUALABLE
+                    </div>
+                    <div class="subtitle" id="subtitle">
+                      Celebra el Placer de Comer con Nuestras<br />
+                      Hamburguesas Artesanales
+                    </div>
+
+                    <div class="delivery-section">
+                      <i
+                        class="fas fa-motorcycle delivery-icon"
+                        id="deliveryIcon"
+                      ></i>
+                      <div class="delivery-text" id="deliveryText">
+                        Envío para domicilio
+                      </div>
+                      <div class="delivery-number" id="deliveryNumber">
+                        (+52) 123 456 7890
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="text-center mt-3">
+              <button class="btn btn-custom btn-edit" id="btnEdit">
+                <i class="fas fa-edit"></i> Modo Edición
+              </button>
+              <button class="btn btn-custom btn-download" id="btnDownload">
+                <i class="fas fa-download"></i> Descargar PNG
+              </button>
+            </div>
+          </div>
+
+          <div class="col-lg-6" id="editMode">
+            <div class="editor-panel">
+              <div class="editor-header">
+                <h3 class="mb-3">
+                  <i class="fas fa-tools"></i> Panel de Edición Profesional
+                </h3>
+
+                <div class="tabs-container">
+                  <button class="tab-button active" data-tab="background">
+                    <i class="fas fa-fill-drip"></i> Fondo
+                  </button>
+                  <button class="tab-button" data-tab="images">
+                    <i class="fas fa-image"></i> Imágenes
+                  </button>
+                  <button class="tab-button" data-tab="text">
+                    <i class="fas fa-font"></i> Textos
+                  </button>
+                  <button class="tab-button" data-tab="decorations">
+                    <i class="fas fa-icons"></i> Decoraciones
+                  </button>
+                </div>
+              </div>
+
+              <!-- TAB: FONDO -->
+              <div class="tab-content active" id="tab-background">
+                <!-- CAPA 1: FONDO -->
+                <div class="section-title">
+                  <i class="fas fa-fill-drip"></i> CAPA 1: Color de Fondo
+                </div>
+                <div class="control-group">
+                  <label
+                    ><i class="fas fa-palette"></i> Color Principal del
+                    Fondo</label
+                  >
+                  <div class="color-picker-group">
+                    <input type="color" id="bgColor" value="#FFC107" />
+                    <span class="text-muted"
+                      >Cambia el color base del flyer</span
+                    >
+                  </div>
+
+                  <div class="form-check mt-3">
+                    <input
+                      class="form-check-input"
+                      type="checkbox"
+                      id="showWavyPattern"
+                      checked
+                    />
+                    <label class="form-check-label" for="showWavyPattern">
+                      Mostrar patrón de ondas en el fondo
+                    </label>
+                  </div>
+
+                  <div id="wavePatternSelector" class="mt-3">
+                    <label><i class="fas fa-water"></i> Estilo de Patrón</label>
+                    <div>
+                      <div
+                        class="wave-pattern-preview wave-pattern-1 active"
+                        data-pattern="1"
+                        style="background-color: #ffc107"
+                        title="Patrón Diagonal Cruzado"
+                      ></div>
+                      <div
+                        class="wave-pattern-preview wave-pattern-2"
+                        data-pattern="2"
+                        style="background-color: #ffc107"
+                        title="Líneas Horizontales"
+                      ></div>
+                      <div
+                        class="wave-pattern-preview wave-pattern-3"
+                        data-pattern="3"
+                        style="background-color: #ffc107"
+                        title="Círculos Sutiles"
+                      ></div>
+                      <div
+                        class="wave-pattern-preview wave-pattern-4"
+                        data-pattern="4"
+                        style="background-color: #ffc107"
+                        title="Patrón Hexagonal"
+                      ></div>
+                      <div
+                        class="wave-pattern-preview wave-pattern-5"
+                        data-pattern="5"
+                        style="background-color: #ffc107"
+                        title="Ondas Radiales"
+                      ></div>
+                      <div
+                        class="wave-pattern-preview wave-pattern-6"
+                        data-pattern="6"
+                        style="background-color: #ffc107"
+                        title="Puntos / Dots"
+                      ></div>
+                      <div
+                        class="wave-pattern-preview wave-pattern-7"
+                        data-pattern="7"
+                        style="background-color: #ffc107"
+                        title="Zigzag / Chevron"
+                      ></div>
+                      <div
+                        class="wave-pattern-preview wave-pattern-8"
+                        data-pattern="8"
+                        style="background-color: #ffc107"
+                        title="Cuadrícula / Grid"
+                      ></div>
+                    </div>
+                    <small class="text-muted"
+                      >Haz clic en un patrón para seleccionarlo</small
+                    >
+                  </div>
+
+                  <div class="mt-3">
+                    <label
+                      ><i class="fas fa-cut"></i> Estilo de Borde (Papel
+                      Roto)</label
+                    >
+                    <div id="tornEdgeSelector">
+                      <div class="torn-edge-preview active" data-edge="1">
+                        <div class="preview-top"></div>
+                        <svg
+                          viewBox="0 0 1200 30"
+                          preserveAspectRatio="none"
+                          style="
+                            position: absolute;
+                            bottom: 20%;
+                            width: 100%;
+                            height: 20%;
+                          "
+                        >
+                          <path
+                            d="M0,0 Q50,25 100,0 T200,0 T300,0 T400,0 T500,0 T600,0 T700,0 T800,0 T900,0 T1000,0 T1100,0 T1200,0 L1200,30 L0,30 Z"
+                            fill="#FFC107"
+                          />
+                        </svg>
+                        <div class="preview-bottom"></div>
+                      </div>
+
+                      <div class="torn-edge-preview" data-edge="2">
+                        <div class="preview-top"></div>
+                        <svg
+                          viewBox="0 0 1200 30"
+                          preserveAspectRatio="none"
+                          style="
+                            position: absolute;
+                            bottom: 20%;
+                            width: 100%;
+                            height: 20%;
+                          "
+                        >
+                          <path
+                            d="M0,15 Q30,5 60,15 T120,15 T180,15 T240,15 T300,15 T360,15 T420,15 T480,15 T540,15 T600,15 T660,15 T720,15 T780,15 T840,15 T900,15 T960,15 T1020,15 T1080,15 T1140,15 T1200,15 L1200,30 L0,30 Z"
+                            fill="#FFC107"
+                          />
+                        </svg>
+                        <div class="preview-bottom"></div>
+                      </div>
+
+                      <div class="torn-edge-preview" data-edge="3">
+                        <div class="preview-top"></div>
+                        <svg
+                          viewBox="0 0 1200 30"
+                          preserveAspectRatio="none"
+                          style="
+                            position: absolute;
+                            bottom: 20%;
+                            width: 100%;
+                            height: 20%;
+                          "
+                        >
+                          <path
+                            d="M0,10 L40,5 L80,20 L120,8 L160,18 L200,6 L240,15 L280,10 L320,20 L360,5 L400,15 L440,8 L480,18 L520,10 L560,5 L600,20 L640,8 L680,15 L720,5 L760,18 L800,10 L840,20 L880,8 L920,15 L960,5 L1000,18 L1040,10 L1080,20 L1120,8 L1160,15 L1200,10 L1200,30 L0,30 Z"
+                            fill="#FFC107"
+                          />
+                        </svg>
+                        <div class="preview-bottom"></div>
+                      </div>
+
+                      <div class="torn-edge-preview" data-edge="4">
+                        <div class="preview-top"></div>
+                        <svg
+                          viewBox="0 0 1200 30"
+                          preserveAspectRatio="none"
+                          style="
+                            position: absolute;
+                            bottom: 20%;
+                            width: 100%;
+                            height: 20%;
+                          "
+                        >
+                          <path
+                            d="M0,15 Q100,0 200,15 T400,15 T600,15 T800,15 T1000,15 T1200,15 L1200,30 L0,30 Z"
+                            fill="#FFC107"
+                          />
+                        </svg>
+                        <div class="preview-bottom"></div>
+                      </div>
+
+                      <div class="torn-edge-preview" data-edge="5">
+                        <div class="preview-top"></div>
+                        <svg
+                          viewBox="0 0 1200 30"
+                          preserveAspectRatio="none"
+                          style="
+                            position: absolute;
+                            bottom: 20%;
+                            width: 100%;
+                            height: 20%;
+                          "
+                        >
+                          <path
+                            d="M0,20 C50,5 100,25 150,10 C200,5 250,20 300,10 C350,5 400,25 450,10 C500,5 550,20 600,10 C650,5 700,25 750,10 C800,5 850,20 900,10 C950,5 1000,25 1050,10 C1100,5 1150,20 1200,10 L1200,30 L0,30 Z"
+                            fill="#FFC107"
+                          />
+                        </svg>
+                        <div class="preview-bottom"></div>
+                      </div>
+
+                      <div class="torn-edge-preview" data-edge="6">
+                        <div class="preview-top"></div>
+                        <svg
+                          viewBox="0 0 1200 30"
+                          preserveAspectRatio="none"
+                          style="
+                            position: absolute;
+                            bottom: 20%;
+                            width: 100%;
+                            height: 20%;
+                          "
+                        >
+                          <path
+                            d="M0,15 L50,10 L100,20 L150,8 L200,22 L250,10 L300,18 L350,12 L400,20 L450,8 L500,18 L550,10 L600,22 L650,8 L700,18 L750,12 L800,20 L850,8 L900,18 L950,10 L1000,22 L1050,8 L1100,18 L1150,12 L1200,15 L1200,30 L0,30 Z"
+                            fill="#FFC107"
+                          />
+                        </svg>
+                        <div class="preview-bottom"></div>
+                      </div>
+                    </div>
+                    <small class="text-muted"
+                      >Haz clic en un estilo para seleccionarlo</small
+                    >
+                  </div>
+                </div>
+
+                <!-- LOGO -->
+                <div class="section-title">
+                  <i class="fas fa-image"></i> Logo del Restaurante
+                </div>
+                <div class="control-group">
+                  <label><i class="fas fa-upload"></i> Subir Logo</label>
+                  <input
+                    type="file"
+                    class="form-control"
+                    id="inputLogo"
+                    accept="image/*"
+                  />
+                  <img
+                    id="logoPreview"
+                    class="image-preview"
+                    style="display: none"
+                  />
+
+                  <label class="mt-3"
+                    ><i class="fas fa-expand-arrows-alt"></i> Tamaño del
+                    Logo</label
+                  >
+                  <input
+                    type="range"
+                    class="form-control-range range-slider"
+                    id="logoSize"
+                    min="50"
+                    max="300"
+                    value="100"
+                    step="10"
+                  />
+                  <span class="range-value" id="logoSizeValue">100px</span>
+
+                  <label class="mt-3"
+                    ><i class="fas fa-arrows-alt-h"></i> Posición
+                    Horizontal</label
+                  >
+                  <input
+                    type="range"
+                    class="form-control-range range-slider"
+                    id="logoPositionX"
+                    min="10"
+                    max="90"
+                    value="20"
+                    step="5"
+                  />
+                  <span class="range-value" id="logoPositionXValue">20px</span>
+
+                  <label class="mt-3"
+                    ><i class="fas fa-arrows-alt-v"></i> Posición
+                    Vertical</label
+                  >
+                  <input
+                    type="range"
+                    class="form-control-range range-slider"
+                    id="logoPositionY"
+                    min="10"
+                    max="150"
+                    value="20"
+                    step="5"
+                  />
+                  <span class="range-value" id="logoPositionYValue">20px</span>
+                </div>
+              </div>
+              <!-- FIN TAB: FONDO -->
+
+              <!-- TAB: IMÁGENES -->
+              <div class="tab-content" id="tab-images">
+                <!-- TEXTO SUPERIOR DERECHO -->
+                <div class="section-title">
+                  <i class="fas fa-text-width"></i> Texto Superior Derecho
+                </div>
+                <div class="control-group">
+                  <label><i class="fas fa-info-circle"></i> Información</label>
+                  <small class="text-muted d-block mb-3"
+                    >Usa este texto para: nombre del restaurante, promoción o
+                    vigencia</small
+                  >
+
+                  <div class="form-check mb-3">
+                    <input
+                      class="form-check-input"
+                      type="checkbox"
+                      id="showTopRightText"
+                    />
+                    <label class="form-check-label" for="showTopRightText">
+                      <strong>Mostrar texto superior derecho</strong>
+                    </label>
+                  </div>
+
+                  <label><i class="fas fa-edit"></i> Texto</label>
+                  <textarea
+                    class="form-control"
+                    id="inputTopRightText"
+                    rows="2"
+                    placeholder="Ej: RESTAURANTE LA DELICIA o VÁLIDO HASTA EL 31 DIC"
+                  >
+NOMBRE DEL RESTAURANTE</textarea
+                  >
+                  <small class="text-muted"
+                    >Los cambios se aplican en tiempo real</small
+                  >
+
+                  <label class="mt-3"
+                    ><i class="fas fa-text-height"></i> Tamaño del Texto</label
+                  >
+                  <input
+                    type="range"
+                    class="form-control-range range-slider"
+                    id="topRightTextSize"
+                    min="0.6"
+                    max="1.4"
+                    value="0.9"
+                    step="0.1"
+                  />
+                  <span class="range-value" id="topRightTextSizeValue"
+                    >0.9em</span
+                  >
+
+                  <label class="mt-3"
+                    ><i class="fas fa-palette"></i> Color del Texto</label
+                  >
+                  <div class="color-picker-group">
+                    <input
+                      type="color"
+                      id="topRightTextColor"
+                      value="#1a1a1a"
+                    />
+                    <span class="text-muted">Color del texto</span>
+                  </div>
+
+                  <label class="mt-3"
+                    ><i class="fas fa-fill-drip"></i> Color de Fondo</label
+                  >
+                  <div class="color-picker-group">
+                    <input type="color" id="topRightBgColor" value="#ffffff" />
+                    <span class="text-muted">Color del recuadro</span>
+                  </div>
+
+                  <label class="mt-3"
+                    ><i class="fas fa-adjust"></i> Opacidad del Fondo</label
+                  >
+                  <input
+                    type="range"
+                    class="form-control-range range-slider"
+                    id="topRightBgOpacity"
+                    min="0"
+                    max="100"
+                    value="95"
+                    step="5"
+                  />
+                  <span class="range-value" id="topRightBgOpacityValue"
+                    >95%</span
+                  >
+
+                  <label class="mt-3"><i class="fas fa-font"></i> Fuente</label>
+                  <div class="font-selector" id="topRightFontSelector">
+                    <div
+                      class="font-option selected"
+                      data-font="Montserrat"
+                      style="font-family: 'Montserrat', sans-serif"
+                    >
+                      Montserrat
+                      <div class="font-preview-text">ABC 123</div>
+                    </div>
+                    <div
+                      class="font-option"
+                      data-font="Bebas Neue"
+                      style="font-family: 'Bebas Neue', cursive"
+                    >
+                      Bebas Neue
+                      <div class="font-preview-text">ABC 123</div>
+                    </div>
+                    <div
+                      class="font-option"
+                      data-font="Anton"
+                      style="font-family: 'Anton', sans-serif"
+                    >
+                      Anton
+                      <div class="font-preview-text">ABC 123</div>
+                    </div>
+                    <div
+                      class="font-option"
+                      data-font="Bungee"
+                      style="font-family: 'Bungee', cursive"
+                    >
+                      Bungee
+                      <div class="font-preview-text">ABC 123</div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- CAPA 2: IMAGEN DE FONDO -->
+                <div class="section-title">
+                  <i class="fas fa-image"></i> CAPA 2: Imagen de Fondo
+                </div>
+                <div class="control-group">
+                  <label
+                    ><i class="fas fa-camera"></i> Imagen de Fondo
+                    Superior</label
+                  >
+                  <input
+                    type="file"
+                    class="form-control"
+                    id="inputBackgroundImage"
+                    accept="image/*"
+                  />
+                  <img
+                    id="backgroundImagePreview"
+                    class="image-preview"
+                    style="display: none"
+                  />
+
+                  <label class="mt-3"
+                    ><i class="fas fa-adjust"></i> Opacidad de la Imagen de
+                    Fondo</label
+                  >
+                  <input
+                    type="range"
+                    class="form-control-range range-slider"
+                    id="bgImageOpacity"
+                    min="0"
+                    max="100"
+                    value="40"
+                    step="5"
+                  />
+                  <span class="range-value" id="bgImageOpacityValue">40%</span>
+
+                  <label class="mt-3"
+                    ><i class="fas fa-arrows-alt-v"></i> Altura de Imagen de
+                    Fondo</label
+                  >
+                  <input
+                    type="range"
+                    class="form-control-range range-slider"
+                    id="bgImageHeight"
+                    min="30"
+                    max="70"
+                    value="50"
+                    step="5"
+                  />
+                  <span class="range-value" id="bgImageHeightValue">50%</span>
+                </div>
+
+                <!-- CAPA 3: PRODUCTO -->
+                <div class="section-title">
+                  <i class="fas fa-utensils"></i> CAPA 3: Producto Principal
+                </div>
+                <div class="control-group">
+                  <label
+                    ><i class="fas fa-image"></i> Imagen del Producto</label
+                  >
+                  <input
+                    type="file"
+                    class="form-control"
+                    id="inputProductImage"
+                    accept="image/*"
+                  />
+                  <img
+                    id="productImagePreview"
+                    class="image-preview"
+                    style="display: none"
+                  />
+
+                  <label class="mt-3"
+                    ><i class="fas fa-expand-arrows-alt"></i> Tamaño del
+                    Producto</label
+                  >
+                  <input
+                    type="range"
+                    class="form-control-range range-slider"
+                    id="productSize"
+                    min="50"
+                    max="120"
+                    value="90"
+                    step="5"
+                  />
+                  <span class="range-value" id="productSizeValue">90%</span>
+
+                  <label class="mt-3"
+                    ><i class="fas fa-arrows-alt-v"></i> Posición
+                    Vertical</label
+                  >
+                  <input
+                    type="range"
+                    class="form-control-range range-slider"
+                    id="productPosition"
+                    min="-100"
+                    max="100"
+                    value="-50"
+                    step="10"
+                  />
+                  <span class="range-value" id="productPositionValue"
+                    >-50px</span
+                  >
+
+                  <label class="mt-3"
+                    ><i class="fas fa-moon"></i> Sombra de la Imagen</label
+                  >
+                  <input
+                    type="range"
+                    class="form-control-range range-slider"
+                    id="productShadow"
+                    min="0"
+                    max="50"
+                    value="15"
+                    step="5"
+                  />
+                  <span class="range-value" id="productShadowValue">15px</span>
+                  <small class="text-muted d-block"
+                    >Controla la intensidad de la sombra del producto</small
+                  >
+                </div>
+
+                <!-- BADGE DE PROMOCIÓN (PNG) -->
+                <div class="section-title">
+                  <i class="fas fa-certificate"></i> Badge de Promoción (2X1,
+                  Precio, etc.)
+                </div>
+                <div class="control-group">
+                  <label
+                    ><i class="fas fa-upload"></i> Subir Imagen del Badge (PNG
+                    recomendado)</label
+                  >
+                  <input
+                    type="file"
+                    class="form-control"
+                    id="inputPromoBadge"
+                    accept="image/*"
+                  />
+                  <img
+                    id="promoBadgePreview"
+                    class="image-preview"
+                    style="display: none"
+                  />
+                  <small class="text-muted"
+                    >Sube una imagen PNG de tu promoción (2X1, -50%,
+                    etc.)</small
+                  >
+
+                  <label class="mt-3"
+                    ><i class="fas fa-expand-arrows-alt"></i> Tamaño del
+                    Badge</label
+                  >
+                  <input
+                    type="range"
+                    class="form-control-range range-slider"
+                    id="badgeSize"
+                    min="80"
+                    max="250"
+                    value="150"
+                    step="10"
+                  />
+                  <span class="range-value" id="badgeSizeValue">150px</span>
+
+                  <label class="mt-3"
+                    ><i class="fas fa-arrows-alt-h"></i> Posición Horizontal
+                    (%)</label
+                  >
+                  <input
+                    type="range"
+                    class="form-control-range range-slider"
+                    id="badgePositionX"
+                    min="0"
+                    max="100"
+                    value="85"
+                    step="1"
+                  />
+                  <span class="range-value" id="badgePositionXValue">85%</span>
+
+                  <label class="mt-3"
+                    ><i class="fas fa-arrows-alt-v"></i> Posición Vertical
+                    (%)</label
+                  >
+                  <input
+                    type="range"
+                    class="form-control-range range-slider"
+                    id="badgePositionY"
+                    min="0"
+                    max="100"
+                    value="15"
+                    step="1"
+                  />
+                  <span class="range-value" id="badgePositionYValue">15%</span>
+
+                  <label class="mt-3"
+                    ><i class="fas fa-redo"></i> Rotación del Badge</label
+                  >
+                  <input
+                    type="range"
+                    class="form-control-range range-slider"
+                    id="badgeRotation"
+                    min="-30"
+                    max="30"
+                    value="-5"
+                    step="1"
+                  />
+                  <span class="range-value" id="badgeRotationValue">-5°</span>
+
+                  <div class="alert alert-info mt-3" role="alert">
+                    <i class="fas fa-info-circle"></i> <strong>Tip:</strong> Usa
+                    herramientas como Canva o Photoshop para crear badges
+                    llamativos con textos de promoción.
+                  </div>
+                </div>
+              </div>
+              <!-- FIN TAB: IMÁGENES -->
+
+              <!-- TAB: TEXTOS -->
+              <div class="tab-content" id="tab-text">
+                <!-- TEXTOS -->
+                <div class="section-title">
+                  <i class="fas fa-font"></i> CAPA 4: Textos
+                </div>
+                <div class="control-group">
+                  <label><i class="fas fa-font"></i> Título Principal</label>
+                  <input
+                    type="text"
+                    class="form-control"
+                    id="inputMainTitle"
+                    value="SABOR INIGUALABLE"
+                    placeholder="Título principal"
+                  />
+                  <small class="text-muted"
+                    >Los cambios se aplican en tiempo real</small
+                  >
+
+                  <div class="color-picker-group">
+                    <input type="color" id="mainTitleColor" value="#1a1a1a" />
+                    <span class="text-muted">Color del título</span>
+                  </div>
+
+                  <label class="mt-3"
+                    ><i class="fas fa-text-height"></i> Tamaño del Título</label
+                  >
+                  <input
+                    type="range"
+                    class="form-control-range range-slider"
+                    id="mainTitleSize"
+                    min="1.5"
+                    max="4"
+                    value="2.8"
+                    step="0.1"
+                  />
+                  <span class="range-value" id="mainTitleSizeValue">2.8em</span>
+
+                  <label class="mt-3"
+                    ><i class="fas fa-arrows-alt-v"></i> Posición Vertical del
+                    Título</label
+                  >
+                  <input
+                    type="range"
+                    class="form-control-range range-slider"
+                    id="mainTitlePosition"
+                    min="-100"
+                    max="100"
+                    value="0"
+                    step="5"
+                  />
+                  <span class="range-value" id="mainTitlePositionValue"
+                    >0px</span
+                  >
+                  <small class="text-muted d-block"
+                    >Mueve el título más cerca o más lejos del producto</small
+                  >
+
+                  <label class="mt-3"
+                    ><i class="fas fa-font"></i> Fuente del Título</label
+                  >
+                  <div class="font-selector" id="mainTitleFontSelector">
+                    <div
+                      class="font-option selected"
+                      data-font="Bungee"
+                      style="font-family: 'Bungee', cursive"
+                    >
+                      Bungee
+                      <div class="font-preview-text">ABCD 1234</div>
+                    </div>
+                    <div
+                      class="font-option"
+                      data-font="Anton"
+                      style="font-family: 'Anton', sans-serif"
+                    >
+                      Anton
+                      <div class="font-preview-text">ABCD 1234</div>
+                    </div>
+                    <div
+                      class="font-option"
+                      data-font="Bebas Neue"
+                      style="font-family: 'Bebas Neue', cursive"
+                    >
+                      Bebas Neue
+                      <div class="font-preview-text">ABCD 1234</div>
+                    </div>
+                    <div
+                      class="font-option"
+                      data-font="Righteous"
+                      style="font-family: 'Righteous', cursive"
+                    >
+                      Righteous
+                      <div class="font-preview-text">ABCD 1234</div>
+                    </div>
+                    <div
+                      class="font-option"
+                      data-font="Staatliches"
+                      style="font-family: 'Staatliches', cursive"
+                    >
+                      Staatliches
+                      <div class="font-preview-text">ABCD 1234</div>
+                    </div>
+                    <div
+                      class="font-option"
+                      data-font="Patua One"
+                      style="font-family: 'Patua One', cursive"
+                    >
+                      Patua One
+                      <div class="font-preview-text">ABCD 1234</div>
+                    </div>
+                    <div
+                      class="font-option"
+                      data-font="Russo One"
+                      style="font-family: 'Russo One', sans-serif"
+                    >
+                      Russo One
+                      <div class="font-preview-text">ABCD 1234</div>
+                    </div>
+                    <div
+                      class="font-option"
+                      data-font="Alfa Slab One"
+                      style="font-family: 'Alfa Slab One', cursive"
+                    >
+                      Alfa Slab
+                      <div class="font-preview-text">ABCD 1234</div>
+                    </div>
+                    <div
+                      class="font-option"
+                      data-font="Black Ops One"
+                      style="font-family: 'Black Ops One', cursive"
+                    >
+                      Black Ops
+                      <div class="font-preview-text">ABCD 1234</div>
+                    </div>
+                    <div
+                      class="font-option"
+                      data-font="Fredoka One"
+                      style="font-family: 'Fredoka One', cursive"
+                    >
+                      Fredoka
+                      <div class="font-preview-text">ABCD 1234</div>
+                    </div>
+                    <div
+                      class="font-option"
+                      data-font="Titan One"
+                      style="font-family: 'Titan One', cursive"
+                    >
+                      Titan One
+                      <div class="font-preview-text">ABCD 1234</div>
+                    </div>
+                    <div
+                      class="font-option"
+                      data-font="Montserrat"
+                      style="
+                        font-family: 'Montserrat', sans-serif;
+                        font-weight: 900;
+                      "
+                    >
+                      Montserrat
+                      <div class="font-preview-text">ABCD 1234</div>
+                    </div>
+                  </div>
+
+                  <div class="custom-font-input">
+                    <label
+                      ><i class="fas fa-search"></i> O Busca tu Fuente en Google
+                      Fonts</label
+                    >
+                    <input
+                      type="text"
+                      class="form-control"
+                      id="customMainTitleFont"
+                      placeholder="Escribe el nombre exacto (ej: Pacifico)"
+                    />
+                    <small class="text-muted">
+                      Busca fuentes en
+                      <a href="https://fonts.google.com" target="_blank"
+                        ><strong>Google Fonts</strong></a
+                      >, copia el nombre exacto y pégalo aquí
+                    </small>
+                    <button
+                      class="btn btn-sm btn-primary mt-2"
+                      id="applyCustomMainTitleFont"
+                    >
+                      <i class="fas fa-check"></i> Aplicar Fuente Personalizada
+                    </button>
+                  </div>
+                </div>
+
+                <div class="control-group">
+                  <label
+                    ><i class="fas fa-align-center"></i>
+                    Subtítulo/Descripción</label
+                  >
+                  <textarea class="form-control" id="inputSubtitle" rows="3">
+Celebra el Placer de Comer con Nuestras
+Hamburguesas Artesanales</textarea
+                  >
+                  <small class="text-muted"
+                    >Los cambios se aplican en tiempo real</small
+                  >
+
+                  <div class="color-picker-group">
+                    <input type="color" id="subtitleColor" value="#1a1a1a" />
+                    <span class="text-muted">Color del subtítulo</span>
+                  </div>
+
+                  <label class="mt-3"
+                    ><i class="fas fa-text-height"></i> Tamaño del
+                    Subtítulo</label
+                  >
+                  <input
+                    type="range"
+                    class="form-control-range range-slider"
+                    id="subtitleSize"
+                    min="0.8"
+                    max="1.8"
+                    value="1.1"
+                    step="0.1"
+                  />
+                  <span class="range-value" id="subtitleSizeValue">1.1em</span>
+
+                  <script>
+                    // Color de subtítulo en tiempo real
+                    document
+                      .getElementById("subtitleColor")
+                      .addEventListener("input", function (e) {
+                        document.getElementById("subtitle").style.color =
+                          e.target.value;
+                      });
+                  </script>
+
+                  <label class="mt-3"
+                    ><i class="fas fa-font"></i> Fuente del Subtítulo</label
+                  >
+                  <div class="font-selector" id="subtitleFontSelector">
+                    <div
+                      class="font-option selected"
+                      data-font="Montserrat"
+                      style="font-family: 'Montserrat', sans-serif"
+                    >
+                      Montserrat
+                      <div class="font-preview-text">ABC 123</div>
+                    </div>
+                    <div
+                      class="font-option"
+                      data-font="Anton"
+                      style="font-family: 'Anton', sans-serif"
+                    >
+                      Anton
+                      <div class="font-preview-text">ABC 123</div>
+                    </div>
+                    <div
+                      class="font-option"
+                      data-font="Bebas Neue"
+                      style="font-family: 'Bebas Neue', cursive"
+                    >
+                      Bebas Neue
+                      <div class="font-preview-text">ABC 123</div>
+                    </div>
+                    <div
+                      class="font-option"
+                      data-font="Righteous"
+                      style="font-family: 'Righteous', cursive"
+                    >
+                      Righteous
+                      <div class="font-preview-text">ABC 123</div>
+                    </div>
+                  </div>
+
+                  <div class="custom-font-input">
+                    <input
+                      type="text"
+                      class="form-control"
+                      id="customSubtitleFont"
+                      placeholder="Nombre de fuente de Google Fonts"
+                    />
+                    <button
+                      class="btn btn-sm btn-primary mt-2"
+                      id="applyCustomSubtitleFont"
+                    >
+                      <i class="fas fa-check"></i> Aplicar Fuente Personalizada
+                    </button>
+                  </div>
+                </div>
+
+                <!-- DELIVERY -->
+                <div class="section-title">
+                  <i class="fas fa-shipping-fast"></i> Sección de Delivery
+                </div>
+                <div class="control-group">
+                  <label
+                    ><i class="fas fa-motorcycle"></i> Texto de Entrega</label
+                  >
+                  <input
+                    type="text"
+                    class="form-control"
+                    id="inputDeliveryText"
+                    value="Envío para domicilio"
+                    placeholder="Texto de delivery"
+                  />
+                  <small class="text-muted"
+                    >Los cambios se aplican en tiempo real</small
+                  >
+
+                  <label class="mt-3"
+                    ><i class="fas fa-phone"></i> Número de Teléfono</label
+                  >
+                  <input
+                    type="text"
+                    class="form-control"
+                    id="inputDeliveryNumber"
+                    value="(+52) 123 456 7890"
+                    placeholder="Número de contacto"
+                  />
+                  <small class="text-muted"
+                    >Los cambios se aplican en tiempo real</small
+                  >
+
+                  <label class="mt-3"
+                    ><i class="fas fa-palette"></i> Colores de Delivery</label
+                  >
+                  <div class="color-picker-group">
+                    <input
+                      type="color"
+                      id="deliveryIconColor"
+                      value="#1a1a1a"
+                    />
+                    <input type="color" id="deliveryBgColor" value="#1a1a1a" />
+                    <input
+                      type="color"
+                      id="deliveryTextColor"
+                      value="#FFC107"
+                    />
+                    <span class="text-muted">Ícono / Fondo / Texto</span>
+                  </div>
+
+                  <script>
+                    // Colores de delivery en tiempo real
+                    document
+                      .getElementById("deliveryIconColor")
+                      .addEventListener("input", function (e) {
+                        document.getElementById("deliveryIcon").style.color =
+                          e.target.value;
+                      });
+                    document
+                      .getElementById("deliveryBgColor")
+                      .addEventListener("input", function (e) {
+                        document.getElementById(
+                          "deliveryNumber"
+                        ).style.background = e.target.value;
+                      });
+                    document
+                      .getElementById("deliveryTextColor")
+                      .addEventListener("input", function (e) {
+                        document.getElementById("deliveryNumber").style.color =
+                          e.target.value;
+                      });
+                  </script>
+                </div>
+              </div>
+              <!-- FIN TAB: TEXTOS -->
+
+              <!-- TAB: DECORACIONES -->
+              <div class="tab-content" id="tab-decorations">
+                <!-- DECORACIONES -->
+                <div class="section-title">
+                  <i class="fas fa-icons"></i> Decoraciones e Íconos
+                </div>
+                <div class="control-group">
+                  <label
+                    ><i class="fas fa-search"></i> Buscar Íconos de Font
+                    Awesome</label
+                  >
+                  <input
+                    type="text"
+                    class="form-control search-icons"
+                    id="searchIcons"
+                    placeholder="Busca: hamburger, pizza, coffee, star, etc."
+                  />
+                  <small class="text-muted"
+                    >Visita
+                    <a href="https://fontawesome.com/icons" target="_blank"
+                      >fontawesome.com/icons</a
+                    >
+                    para ver todos los íconos disponibles</small
+                  >
+
+                  <div class="mt-3">
+                    <label><i class="fas fa-list"></i> Íconos Populares</label>
+                    <div class="icon-selector" id="iconSelector">
+                      <div class="icon-option" data-icon="hamburger">
+                        <i class="fas fa-hamburger"></i>
+                      </div>
+                      <div class="icon-option" data-icon="pizza-slice">
+                        <i class="fas fa-pizza-slice"></i>
+                      </div>
+                      <div class="icon-option" data-icon="hotdog">
+                        <i class="fas fa-hotdog"></i>
+                      </div>
+                      <div class="icon-option" data-icon="ice-cream">
+                        <i class="fas fa-ice-cream"></i>
+                      </div>
+                      <div class="icon-option" data-icon="coffee">
+                        <i class="fas fa-coffee"></i>
+                      </div>
+                      <div class="icon-option" data-icon="beer">
+                        <i class="fas fa-beer"></i>
+                      </div>
+                      <div class="icon-option" data-icon="wine-glass">
+                        <i class="fas fa-wine-glass"></i>
+                      </div>
+                      <div class="icon-option" data-icon="cocktail">
+                        <i class="fas fa-cocktail"></i>
+                      </div>
+                      <div class="icon-option" data-icon="drumstick-bite">
+                        <i class="fas fa-drumstick-bite"></i>
+                      </div>
+                      <div class="icon-option" data-icon="cheese">
+                        <i class="fas fa-cheese"></i>
+                      </div>
+                      <div class="icon-option" data-icon="apple-alt">
+                        <i class="fas fa-apple-alt"></i>
+                      </div>
+                      <div class="icon-option" data-icon="carrot">
+                        <i class="fas fa-carrot"></i>
+                      </div>
+                      <div class="icon-option" data-icon="pepper-hot">
+                        <i class="fas fa-pepper-hot"></i>
+                      </div>
+                      <div class="icon-option" data-icon="lemon">
+                        <i class="fas fa-lemon"></i>
+                      </div>
+                      <div class="icon-option" data-icon="bacon">
+                        <i class="fas fa-bacon"></i>
+                      </div>
+                      <div class="icon-option" data-icon="fish">
+                        <i class="fas fa-fish"></i>
+                      </div>
+                      <div class="icon-option" data-icon="cookie">
+                        <i class="fas fa-cookie"></i>
+                      </div>
+                      <div class="icon-option" data-icon="candy-cane">
+                        <i class="fas fa-candy-cane"></i>
+                      </div>
+                      <div class="icon-option" data-icon="star">
+                        <i class="fas fa-star"></i>
+                      </div>
+                      <div class="icon-option" data-icon="heart">
+                        <i class="fas fa-heart"></i>
+                      </div>
+                      <div class="icon-option" data-icon="fire">
+                        <i class="fas fa-fire"></i>
+                      </div>
+                      <div class="icon-option" data-icon="leaf">
+                        <i class="fas fa-leaf"></i>
+                      </div>
+                      <div class="icon-option" data-icon="utensils">
+                        <i class="fas fa-utensils"></i>
+                      </div>
+                      <div class="icon-option" data-icon="birthday-cake">
+                        <i class="fas fa-birthday-cake"></i>
+                      </div>
+                    </div>
+                  </div>
+
+                  <button class="btn btn-primary add-icon-btn" id="addIconBtn">
+                    <i class="fas fa-plus"></i> Agregar Ícono Seleccionado al
+                    Flyer
+                  </button>
+
+                  <div class="icon-list" id="iconList">
+                    <label
+                      ><i class="fas fa-layer-group"></i> Íconos en el
+                      Flyer</label
+                    >
+                    <small class="text-muted d-block mb-2"
+                      >Haz clic en un ícono del flyer para editarlo o
+                      eliminarlo</small
+                    >
+                  </div>
+
+                  <label class="mt-3"
+                    ><i class="fas fa-adjust"></i> Opacidad de
+                    Decoraciones</label
+                  >
+                  <input
+                    type="range"
+                    class="form-control-range range-slider"
+                    id="decorationsOpacity"
+                    min="5"
+                    max="50"
+                    value="20"
+                    step="5"
+                  />
+                  <span class="range-value" id="decorationsOpacityValue"
+                    >20%</span
+                  >
+
+                  <div class="form-check mt-3">
+                    <input
+                      class="form-check-input"
+                      type="checkbox"
+                      id="showDollarIcon"
+                      checked
+                    />
+                    <label class="form-check-label" for="showDollarIcon">
+                      Mostrar ícono de dólar
+                    </label>
+                  </div>
+                </div>
+              </div>
+              <!-- FIN TAB: DECORACIONES -->
+
+              <div
+                class="text-center mt-4 pt-3"
+                style="border-top: 2px solid #e9ecef"
+              >
+                <button class="btn btn-custom btn-save w-100" id="btnSave">
+                  <i class="fas fa-check"></i> Aplicar Todos los Cambios
+                </button>
+                <small class="text-muted d-block mt-2"
+                  >Los textos ya se actualizan en tiempo real</small
+                >
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script>
+      // Esperar a que el DOM esté completamente cargado
+      document.addEventListener("DOMContentLoaded", function () {
+        console.log("DOM cargado - Inicializando editor de flyers");
+
+        // Referencias a elementos
+        const btnEdit = document.getElementById("btnEdit");
+        const btnSave = document.getElementById("btnSave");
+        const btnDownload = document.getElementById("btnDownload");
+        const editMode = document.getElementById("editMode");
+        const flyerCanvas = document.getElementById("flyerCanvas");
+
+        // Variables para el sistema de íconos
+        let selectedIcon = null;
+        let customIcons = [];
+        let iconIdCounter = 0;
+        let selectedTornEdge = 1;
+        let mainTitleFont = "Bungee";
+        let subtitleFont = "Montserrat";
+        let topRightFont = "Montserrat";
+
+        console.log("Elementos principales encontrados:", {
+          btnEdit: !!btnEdit,
+          btnSave: !!btnSave,
+          btnDownload: !!btnDownload,
+          editMode: !!editMode,
+          flyerCanvas: !!flyerCanvas,
+        });
+
+        // CONTROLES DEL TEXTO SUPERIOR DERECHO
+        document
+          .getElementById("showTopRightText")
+          .addEventListener("change", function (e) {
+            const topRightText = document.getElementById("topRightText");
+            if (e.target.checked) {
+              topRightText.style.display = "block";
+            } else {
+              topRightText.style.display = "none";
+            }
+          });
+
+        // Texto en tiempo real
+        document
+          .getElementById("inputTopRightText")
+          .addEventListener("input", function (e) {
+            document.getElementById("topRightTextContent").innerHTML =
+              e.target.value.replace(/\n/g, "<br>");
+          });
+
+        // Tamaño del texto
+        document
+          .getElementById("topRightTextSize")
+          .addEventListener("input", function (e) {
+            const size = e.target.value;
+            document.getElementById("topRightTextSizeValue").textContent =
+              size + "em";
+            document.getElementById("topRightTextContent").style.fontSize =
+              size + "em";
+          });
+
+        // Color del texto en tiempo real
+        document
+          .getElementById("topRightTextColor")
+          .addEventListener("input", function (e) {
+            document.getElementById("topRightTextContent").style.color =
+              e.target.value;
+          });
+
+        // Color de fondo en tiempo real
+        document
+          .getElementById("topRightBgColor")
+          .addEventListener("input", function (e) {
+            const color = e.target.value;
+            const opacity =
+              document.getElementById("topRightBgOpacity").value / 100;
+            updateTopRightBackground(color, opacity);
+          });
+
+        // Opacidad del fondo en tiempo real
+        document
+          .getElementById("topRightBgOpacity")
+          .addEventListener("input", function (e) {
+            const opacity = e.target.value;
+            document.getElementById("topRightBgOpacityValue").textContent =
+              opacity + "%";
+            const color = document.getElementById("topRightBgColor").value;
+            updateTopRightBackground(color, opacity / 100);
+          });
+
+        function updateTopRightBackground(color, opacity) {
+          const topRightText = document.getElementById("topRightText");
+          const r = parseInt(color.slice(1, 3), 16);
+          const g = parseInt(color.slice(3, 5), 16);
+          const b = parseInt(color.slice(5, 7), 16);
+          topRightText.style.background = `rgba(${r}, ${g}, ${b}, ${opacity})`;
+        }
+
+        // Selector de fuente para texto superior derecho
+        document
+          .querySelectorAll("#topRightFontSelector .font-option")
+          .forEach((option) => {
+            option.addEventListener("click", function () {
+              document
+                .querySelectorAll("#topRightFontSelector .font-option")
+                .forEach((opt) => opt.classList.remove("selected"));
+              this.classList.add("selected");
+              topRightFont = this.getAttribute("data-font");
+              document.getElementById(
+                "topRightTextContent"
+              ).style.fontFamily = `'${topRightFont}', sans-serif`;
+            });
+          });
+
+        // SISTEMA DE SELECCIÓN DE ÍCONOS
+        document.querySelectorAll(".icon-option").forEach((option) => {
+          option.addEventListener("click", function () {
+            document
+              .querySelectorAll(".icon-option")
+              .forEach((opt) => opt.classList.remove("selected"));
+            this.classList.add("selected");
+            selectedIcon = this.getAttribute("data-icon");
+          });
+        });
+
+        // AGREGAR ÍCONO AL FLYER
+        document
+          .getElementById("addIconBtn")
+          .addEventListener("click", function () {
+            if (!selectedIcon) {
+              alert("⚠️ Por favor selecciona un ícono primero");
+              return;
+            }
+
+            const iconId = "icon-" + iconIdCounter++;
+            const randomTop = Math.random() * 70 + 15; // 15% a 85%
+            const randomLeft = Math.random() * 80 + 10; // 10% a 90%
+            const randomSize = Math.random() * 1.5 + 2; // 2em a 3.5em
+
+            const iconElement = document.createElement("i");
+            iconElement.className = `fas fa-${selectedIcon} custom-icon`;
+            iconElement.id = iconId;
+            iconElement.style.top = randomTop + "%";
+            iconElement.style.left = randomLeft + "%";
+            iconElement.style.fontSize = randomSize + "em";
+            iconElement.style.opacity =
+              document.getElementById("decorationsOpacity").value / 100;
+            iconElement.style.cursor = "pointer";
+
+            // Hacer el ícono arrastrable y editable
+            iconElement.addEventListener("click", function (e) {
+              e.stopPropagation();
+              const newSize = prompt("Tamaño del ícono (2-5):", randomSize);
+              if (newSize !== null && newSize >= 1 && newSize <= 6) {
+                this.style.fontSize = newSize + "em";
+              }
+            });
+
+            iconElement.addEventListener("contextmenu", function (e) {
+              e.preventDefault();
+              if (confirm("¿Eliminar este ícono?")) {
+                this.remove();
+                customIcons = customIcons.filter((icon) => icon.id !== iconId);
+                updateIconList();
+              }
+            });
+
+            document
+              .getElementById("customIconsContainer")
+              .appendChild(iconElement);
+
+            customIcons.push({
+              id: iconId,
+              icon: selectedIcon,
+              top: randomTop,
+              left: randomLeft,
+              size: randomSize,
+            });
+
+            updateIconList();
+            alert(
+              "✅ Ícono agregado! Clic = Cambiar tamaño | Clic derecho = Eliminar"
+            );
+          });
+
+        // SELECTOR DE FUENTES - TÍTULO PRINCIPAL
+        document
+          .querySelectorAll("#mainTitleFontSelector .font-option")
+          .forEach((option) => {
+            option.addEventListener("click", function () {
+              document
+                .querySelectorAll("#mainTitleFontSelector .font-option")
+                .forEach((opt) => opt.classList.remove("selected"));
+              this.classList.add("selected");
+              mainTitleFont = this.getAttribute("data-font");
+              document.getElementById(
+                "mainTitle"
+              ).style.fontFamily = `'${mainTitleFont}', cursive`;
+            });
+          });
+
+        // APLICAR FUENTE PERSONALIZADA - TÍTULO
+        document
+          .getElementById("applyCustomMainTitleFont")
+          .addEventListener("click", function () {
+            const customFont = document
+              .getElementById("customMainTitleFont")
+              .value.trim();
+            if (customFont) {
+              // Cargar fuente de Google Fonts
+              const link = document.createElement("link");
+              link.href = `https://fonts.googleapis.com/css2?family=${customFont.replace(
+                / /g,
+                "+"
+              )}:wght@400;700;900&display=swap`;
+              link.rel = "stylesheet";
+              document.head.appendChild(link);
+
+              // Aplicar fuente
+              mainTitleFont = customFont;
+              document.getElementById(
+                "mainTitle"
+              ).style.fontFamily = `'${customFont}', cursive`;
+
+              // Deseleccionar opciones predefinidas
+              document
+                .querySelectorAll("#mainTitleFontSelector .font-option")
+                .forEach((opt) => opt.classList.remove("selected"));
+
+              alert(`✅ Fuente "${customFont}" aplicada al título!`);
+            } else {
+              alert("⚠️ Por favor escribe el nombre de la fuente");
+            }
+          });
+
+        // SELECTOR DE FUENTES - SUBTÍTULO
+        document
+          .querySelectorAll("#subtitleFontSelector .font-option")
+          .forEach((option) => {
+            option.addEventListener("click", function () {
+              document
+                .querySelectorAll("#subtitleFontSelector .font-option")
+                .forEach((opt) => opt.classList.remove("selected"));
+              this.classList.add("selected");
+              subtitleFont = this.getAttribute("data-font");
+              document.getElementById(
+                "subtitle"
+              ).style.fontFamily = `'${subtitleFont}', sans-serif`;
+              // Aplicar también a textos de delivery
+              document.getElementById(
+                "deliveryText"
+              ).style.fontFamily = `'${subtitleFont}', sans-serif`;
+              document.getElementById(
+                "deliveryNumber"
+              ).style.fontFamily = `'${subtitleFont}', sans-serif`;
+            });
+          });
+
+        // APLICAR FUENTE PERSONALIZADA - SUBTÍTULO
+        document
+          .getElementById("applyCustomSubtitleFont")
+          .addEventListener("click", function () {
+            const customFont = document
+              .getElementById("customSubtitleFont")
+              .value.trim();
+            if (customFont) {
+              // Cargar fuente de Google Fonts
+              const link = document.createElement("link");
+              link.href = `https://fonts.googleapis.com/css2?family=${customFont.replace(
+                / /g,
+                "+"
+              )}:wght@400;700&display=swap`;
+              link.rel = "stylesheet";
+              document.head.appendChild(link);
+
+              // Aplicar fuente al subtítulo y delivery
+              subtitleFont = customFont;
+              document.getElementById(
+                "subtitle"
+              ).style.fontFamily = `'${customFont}', sans-serif`;
+              document.getElementById(
+                "deliveryText"
+              ).style.fontFamily = `'${customFont}', sans-serif`;
+              document.getElementById(
+                "deliveryNumber"
+              ).style.fontFamily = `'${customFont}', sans-serif`;
+
+              // Deseleccionar opciones predefinidas
+              document
+                .querySelectorAll("#subtitleFontSelector .font-option")
+                .forEach((opt) => opt.classList.remove("selected"));
+
+              alert(
+                `✅ Fuente "${customFont}" aplicada al subtítulo y textos de delivery!`
+              );
+            } else {
+              alert("⚠️ Por favor escribe el nombre de la fuente");
+            }
+          });
+
+        // SELECTOR DE BORDES ROTOS
+        document.querySelectorAll(".torn-edge-preview").forEach((preview) => {
+          preview.addEventListener("click", function () {
+            document
+              .querySelectorAll(".torn-edge-preview")
+              .forEach((p) => p.classList.remove("active"));
+            this.classList.add("active");
+            selectedTornEdge = parseInt(this.getAttribute("data-edge"));
+            applyTornEdge(selectedTornEdge);
+          });
+        });
+
+        function applyTornEdge(edgeStyle) {
+          const tornEdgeSvg = document.querySelector(".torn-edge svg path");
+          const bgColor = document.getElementById("bgColor").value;
+
+          let pathD = "";
+
+          switch (edgeStyle) {
+            case 1: // Ondas suaves (original)
+              pathD =
+                "M0,0 Q50,25 100,0 T200,0 T300,0 T400,0 T500,0 T600,0 T700,0 T800,0 T900,0 T1000,0 T1100,0 T1200,0 L1200,30 L0,30 Z";
+              break;
+            case 2: // Ondas pequeñas frecuentes
+              pathD =
+                "M0,15 Q30,5 60,15 T120,15 T180,15 T240,15 T300,15 T360,15 T420,15 T480,15 T540,15 T600,15 T660,15 T720,15 T780,15 T840,15 T900,15 T960,15 T1020,15 T1080,15 T1140,15 T1200,15 L1200,30 L0,30 Z";
+              break;
+            case 3: // Papel muy roto (zigzag irregular)
+              pathD =
+                "M0,10 L40,5 L80,20 L120,8 L160,18 L200,6 L240,15 L280,10 L320,20 L360,5 L400,15 L440,8 L480,18 L520,10 L560,5 L600,20 L640,8 L680,15 L720,5 L760,18 L800,10 L840,20 L880,8 L920,15 L960,5 L1000,18 L1040,10 L1080,20 L1120,8 L1160,15 L1200,10 L1200,30 L0,30 Z";
+              break;
+            case 4: // Ondas grandes amplias
+              pathD =
+                "M0,15 Q100,0 200,15 T400,15 T600,15 T800,15 T1000,15 T1200,15 L1200,30 L0,30 Z";
+              break;
+            case 5: // Ondas curvas irregulares
+              pathD =
+                "M0,20 C50,5 100,25 150,10 C200,5 250,20 300,10 C350,5 400,25 450,10 C500,5 550,20 600,10 C650,5 700,25 750,10 C800,5 850,20 900,10 C950,5 1000,25 1050,10 C1100,5 1150,20 1200,10 L1200,30 L0,30 Z";
+              break;
+            case 6: // Zigzag más ordenado
+              pathD =
+                "M0,15 L50,10 L100,20 L150,8 L200,22 L250,10 L300,18 L350,12 L400,20 L450,8 L500,18 L550,10 L600,22 L650,8 L700,18 L750,12 L800,20 L850,8 L900,18 L950,10 L1000,22 L1050,8 L1100,18 L1150,12 L1200,15 L1200,30 L0,30 Z";
+              break;
+          }
+
+          tornEdgeSvg.setAttribute("d", pathD);
+          tornEdgeSvg.setAttribute("fill", bgColor);
+        }
+
+        // Toggle modo edición
+        btnEdit.addEventListener("click", function () {
+          if (
+            editMode.style.display === "none" ||
+            editMode.style.display === ""
+          ) {
+            editMode.style.display = "block";
+            btnEdit.innerHTML = '<i class="fas fa-eye"></i> Vista Previa';
+            btnEdit.classList.remove("btn-edit");
+            btnEdit.classList.add("btn-save");
+          } else {
+            editMode.style.display = "none";
+            btnEdit.innerHTML = '<i class="fas fa-edit"></i> Modo Edición';
+            btnEdit.classList.remove("btn-save");
+            btnEdit.classList.add("btn-edit");
+          }
+        });
+
+        // SISTEMA DE PESTAÑAS (TABS)
+        document.querySelectorAll(".tab-button").forEach((button) => {
+          button.addEventListener("click", function () {
+            const targetTab = this.getAttribute("data-tab");
+
+            // Remover active de todos los botones y contenidos
+            document
+              .querySelectorAll(".tab-button")
+              .forEach((btn) => btn.classList.remove("active"));
+            document
+              .querySelectorAll(".tab-content")
+              .forEach((content) => content.classList.remove("active"));
+
+            // Activar el botón y contenido seleccionado
+            this.classList.add("active");
+            document.getElementById("tab-" + targetTab).classList.add("active");
+          });
+        });
+
+        // ACTUALIZACIÓN DE TEXTOS EN TIEMPO REAL
+        document
+          .getElementById("inputMainTitle")
+          .addEventListener("input", function (e) {
+            document.getElementById("mainTitle").textContent = e.target.value;
+          });
+
+        document
+          .getElementById("inputSubtitle")
+          .addEventListener("input", function (e) {
+            document.getElementById("subtitle").innerHTML =
+              e.target.value.replace(/\n/g, "<br>");
+          });
+
+        document
+          .getElementById("inputDeliveryText")
+          .addEventListener("input", function (e) {
+            const iconHtml = document
+              .getElementById("deliveryText")
+              .querySelector("i")
+              ? '<i class="fas fa-motorcycle"></i> '
+              : "";
+            document.getElementById("deliveryText").innerHTML =
+              iconHtml + e.target.value;
+          });
+
+        document
+          .getElementById("inputDeliveryNumber")
+          .addEventListener("input", function (e) {
+            document.getElementById("deliveryNumber").textContent =
+              e.target.value;
+          });
+
+        // CAMBIO DE IMAGEN DE FONDO
+        document
+          .getElementById("inputBackgroundImage")
+          .addEventListener("change", function (e) {
+            const file = e.target.files[0];
+            if (file) {
+              const reader = new FileReader();
+              reader.onload = function (event) {
+                document.getElementById("backgroundImagePreview").src =
+                  event.target.result;
+                document.getElementById(
+                  "backgroundImagePreview"
+                ).style.display = "block";
+                document.getElementById("backgroundImage").src =
+                  event.target.result;
+              };
+              reader.readAsDataURL(file);
+            }
+          });
+
+        // CAMBIO DE IMAGEN DE PRODUCTO
+        document
+          .getElementById("inputProductImage")
+          .addEventListener("change", function (e) {
+            const file = e.target.files[0];
+            if (file) {
+              const reader = new FileReader();
+              reader.onload = function (event) {
+                document.getElementById("productImagePreview").src =
+                  event.target.result;
+                document.getElementById("productImagePreview").style.display =
+                  "block";
+                document.getElementById("productImage").src =
+                  event.target.result;
+              };
+              reader.readAsDataURL(file);
+            }
+          });
+
+        // CAMBIO DE LOGO
+        document
+          .getElementById("inputLogo")
+          .addEventListener("change", function (e) {
+            const file = e.target.files[0];
+            if (file) {
+              const reader = new FileReader();
+              reader.onload = function (event) {
+                document.getElementById("logoPreview").src =
+                  event.target.result;
+                document.getElementById("logoPreview").style.display = "block";
+                document.getElementById("logoImage").src = event.target.result;
+                document.getElementById("logoContainer").style.display =
+                  "block";
+              };
+              reader.readAsDataURL(file);
+            }
+          });
+
+        // CAMBIO DE BADGE DE PROMOCIÓN (PNG)
+        document
+          .getElementById("inputPromoBadge")
+          .addEventListener("change", function (e) {
+            const file = e.target.files[0];
+            if (file) {
+              const reader = new FileReader();
+              reader.onload = function (event) {
+                document.getElementById("promoBadgePreview").src =
+                  event.target.result;
+                document.getElementById("promoBadgePreview").style.display =
+                  "block";
+                document.getElementById("promoBadgeImage").src =
+                  event.target.result;
+                document.getElementById("promoBadgeContainer").style.display =
+                  "block";
+              };
+              reader.readAsDataURL(file);
+            }
+          });
+
+        // CONTROLES DE LOGO
+        document
+          .getElementById("logoSize")
+          .addEventListener("input", function (e) {
+            const size = e.target.value;
+            document.getElementById("logoSizeValue").textContent = size + "px";
+            document.getElementById("logoContainer").style.maxWidth =
+              size + "px";
+            document.getElementById("logoContainer").style.maxHeight =
+              size + "px";
+          });
+
+        document
+          .getElementById("logoPositionX")
+          .addEventListener("input", function (e) {
+            const position = e.target.value;
+            document.getElementById("logoPositionXValue").textContent =
+              position + "px";
+            document.getElementById("logoContainer").style.left =
+              position + "px";
+          });
+
+        document
+          .getElementById("logoPositionY")
+          .addEventListener("input", function (e) {
+            const position = e.target.value;
+            document.getElementById("logoPositionYValue").textContent =
+              position + "px";
+            document.getElementById("logoContainer").style.top =
+              position + "px";
+          });
+
+        // CONTROLES DEL BADGE DE PROMOCIÓN
+        // CONTROLES DEL BADGE DE PROMOCIÓN
+        document
+          .getElementById("badgeSize")
+          .addEventListener("input", function (e) {
+            const size = e.target.value;
+            document.getElementById("badgeSizeValue").textContent = size + "px";
+            const badge = document.getElementById("promoBadgeContainer");
+            badge.style.maxWidth = size + "px";
+            badge.style.maxHeight = size + "px";
+            badge.style.width = size + "px";
+            badge.style.height = size + "px";
+          });
+
+        document
+          .getElementById("badgePositionX")
+          .addEventListener("input", function (e) {
+            const position = e.target.value;
+            document.getElementById("badgePositionXValue").textContent =
+              position + "%";
+            const badge = document.getElementById("promoBadgeContainer");
+            if (position <= 50) {
+              badge.style.left = position + "%";
+              badge.style.right = "auto";
+            } else {
+              badge.style.right = 100 - position + "%";
+              badge.style.left = "auto";
+            }
+          });
+
+        document
+          .getElementById("badgePositionY")
+          .addEventListener("input", function (e) {
+            const position = e.target.value;
+            document.getElementById("badgePositionYValue").textContent =
+              position + "%";
+            document.getElementById("promoBadgeContainer").style.top =
+              position + "%";
+          });
+
+        document
+          .getElementById("badgeRotation")
+          .addEventListener("input", function (e) {
+            const rotation = e.target.value;
+            document.getElementById("badgeRotationValue").textContent =
+              rotation + "°";
+            document.getElementById(
+              "promoBadgeContainer"
+            ).style.transform = `rotate(${rotation}deg)`;
+          });
+
+        // CONTROLES EN TIEMPO REAL
+        document
+          .getElementById("bgImageOpacity")
+          .addEventListener("input", function (e) {
+            const opacity = e.target.value / 100;
+            document.getElementById("bgImageOpacityValue").textContent =
+              e.target.value + "%";
+            document.getElementById("backgroundImage").style.opacity = opacity;
+          });
+
+        // Actualizar color de fondo en tiempo real
+        document
+          .getElementById("bgColor")
+          .addEventListener("input", function (e) {
+            const bgColor = e.target.value;
+            const bgLayer = document.getElementById("backgroundLayer");
+            bgLayer.style.background = bgColor;
+            document
+              .getElementById("tornEdgePath")
+              .setAttribute("fill", bgColor);
+
+            // Actualizar previews de patrones con el nuevo color
+            document
+              .querySelectorAll(".wave-pattern-preview")
+              .forEach((preview) => {
+                preview.style.backgroundColor = bgColor;
+              });
+
+            // Reaplicar el patrón si está activado (ahora con SVG)
+            if (document.getElementById("showWavyPattern").checked) {
+              applyWavePattern(true, selectedWavePattern);
+            }
+          });
+
+        document
+          .getElementById("bgImageHeight")
+          .addEventListener("input", function (e) {
+            const height = e.target.value;
+            document.getElementById("bgImageHeightValue").textContent =
+              height + "%";
+            document.getElementById("backgroundImageLayer").style.height =
+              height + "%";
+          });
+
+        document
+          .getElementById("productSize")
+          .addEventListener("input", function (e) {
+            const size = e.target.value;
+            document.getElementById("productSizeValue").textContent =
+              size + "%";
+            document.getElementById("productImage").style.maxWidth = size + "%";
+          });
+
+        document
+          .getElementById("productPosition")
+          .addEventListener("input", function (e) {
+            const position = e.target.value;
+            document.getElementById("productPositionValue").textContent =
+              position + "px";
+            document.querySelector(".product-container").style.marginTop =
+              position + "px";
+          });
+
+        // Control de sombra de producto
+        document
+          .getElementById("productShadow")
+          .addEventListener("input", function (e) {
+            const shadow = e.target.value;
+            document.getElementById("productShadowValue").textContent =
+              shadow + "px";
+            const productImage = document.getElementById("productImage");
+            if (shadow == 0) {
+              productImage.style.filter = "none";
+            } else {
+              productImage.style.filter = `drop-shadow(0 ${shadow}px ${
+                shadow * 1.5
+              }px rgba(0,0,0,1.5))`;
+            }
+          });
+
+        document
+          .getElementById("mainTitleSize")
+          .addEventListener("input", function (e) {
+            const size = e.target.value;
+            document.getElementById("mainTitleSizeValue").textContent =
+              size + "em";
+            document.getElementById("mainTitle").style.fontSize = size + "em";
+          });
+
+        // Control de posición vertical del título principal
+        document
+          .getElementById("mainTitlePosition")
+          .addEventListener("input", function (e) {
+            const position = e.target.value;
+            document.getElementById("mainTitlePositionValue").textContent =
+              position + "px";
+            document.querySelector(".text-section").style.marginTop =
+              position + "px";
+          });
+
+        document
+          .getElementById("subtitleSize")
+          .addEventListener("input", function (e) {
+            const size = e.target.value;
+            document.getElementById("subtitleSizeValue").textContent =
+              size + "em";
+            document.getElementById("subtitle").style.fontSize = size + "em";
+          });
+
+        document
+          .getElementById("decorationsOpacity")
+          .addEventListener("input", function (e) {
+            const opacity = e.target.value / 100;
+            document.getElementById("decorationsOpacityValue").textContent =
+              e.target.value + "%";
+            document.querySelectorAll(".custom-icon").forEach((icon) => {
+              icon.style.opacity = opacity;
+            });
+            document.getElementById("dollarIcon").style.opacity = opacity * 2;
+          });
+
+        // ACTUALIZAR LISTA DE ÍCONOS
+        function updateIconList() {
+          const listContainer = document.getElementById("iconList");
+          const existingItems = listContainer.querySelectorAll(".icon-item");
+          existingItems.forEach((item) => item.remove());
+
+          customIcons.forEach((icon) => {
+            const item = document.createElement("div");
+            item.className = "icon-item";
+            item.innerHTML = `
+                  <span><i class="fas fa-${icon.icon}"></i> ${icon.icon}</span>
+                  <div class="icon-item-controls">
+                      <button class="btn-remove-icon" onclick="removeIcon('${icon.id}')">
+                          <i class="fas fa-trash"></i>
+                      </button>
+                  </div>
+              `;
+            listContainer.appendChild(item);
+          });
+        }
+
+        // ELIMINAR ÍCONO
+        window.removeIcon = function (iconId) {
+          document.getElementById(iconId)?.remove();
+          customIcons = customIcons.filter((icon) => icon.id !== iconId);
+          updateIconList();
+        };
+
+        // BÚSQUEDA DE ÍCONOS
+        document
+          .getElementById("searchIcons")
+          .addEventListener("input", function (e) {
+            const searchTerm = e.target.value.toLowerCase();
+            document.querySelectorAll(".icon-option").forEach((option) => {
+              const iconName = option.getAttribute("data-icon");
+              if (iconName.includes(searchTerm)) {
+                option.style.display = "block";
+              } else {
+                option.style.display = "none";
+              }
+            });
+          });
+
+        // OPACIDAD DE DECORACIONES
+        document
+          .getElementById("decorationsOpacity")
+          .addEventListener("input", function (e) {
+            const opacity = e.target.value / 100;
+            document.getElementById("decorationsOpacityValue").textContent =
+              e.target.value + "%";
+            document.querySelectorAll(".custom-icon").forEach((icon) => {
+              icon.style.opacity = opacity;
+            });
+            document.getElementById("dollarIcon").style.opacity = opacity * 2;
+          });
+
+        // TOGGLE PATRÓN DE ONDAS Y SELECTOR
+        let selectedWavePattern = 1;
+
+        console.log("═══════════════════════════════════════");
+        console.log("⚙️ INICIALIZANDO SISTEMA DE PATRONES");
+        console.log("═══════════════════════════════════════");
+
+        const checkboxPattern = document.getElementById("showWavyPattern");
+        console.log("📋 Estado inicial del checkbox:");
+        console.log("   - Checkbox encontrado:", !!checkboxPattern);
+        console.log("   - Checked:", checkboxPattern?.checked);
+        console.log("   - Display:", checkboxPattern?.style.display);
+
+        if (checkboxPattern) {
+          checkboxPattern.addEventListener("change", function (e) {
+            console.log("═══════════════════════════════════════");
+            console.log("☑️ CHECKBOX CAMBIADO");
+            console.log("   - Nuevo estado:", e.target.checked);
+            console.log("   - Patrón actual:", selectedWavePattern);
+            applyWavePattern(e.target.checked, selectedWavePattern);
+          });
+        } else {
+          console.error("❌ ERROR: Checkbox showWavyPattern NO encontrado!");
+        }
+
+        // SELECTOR DE PATRÓN DE ONDAS
+        const patternPreviews = document.querySelectorAll(
+          ".wave-pattern-preview"
+        );
+        console.log("🔍 Patrones encontrados:", patternPreviews.length);
+
+        patternPreviews.forEach((preview, index) => {
+          const patternNum = preview.getAttribute("data-pattern");
+          console.log(`   Patrón ${index + 1}: data-pattern="${patternNum}"`);
+
+          preview.addEventListener("click", function () {
+            console.log("🖱️ CLICK en patrón!");
+            console.log("   - Elemento clickeado:", this);
+            console.log(
+              "   - data-pattern:",
+              this.getAttribute("data-pattern")
+            );
+
+            // Remover active de todos
+            document.querySelectorAll(".wave-pattern-preview").forEach((p) => {
+              console.log("   - Removiendo active de:", p);
+              p.classList.remove("active");
+            });
+
+            // Agregar active al seleccionado
+            this.classList.add("active");
+            console.log("   - Active agregado a:", this);
+
+            // Obtener el número de patrón
+            selectedWavePattern = parseInt(this.getAttribute("data-pattern"));
+            console.log(
+              "   - selectedWavePattern actualizado a:",
+              selectedWavePattern
+            );
+
+            // Si el checkbox está marcado, aplicar el patrón inmediatamente
+            const checkbox = document.getElementById("showWavyPattern");
+            console.log("   - Checkbox encontrado:", !!checkbox);
+            console.log("   - Checkbox checked:", checkbox?.checked);
+
+            if (checkbox && checkbox.checked) {
+              console.log("   ✅ Checkbox marcado, aplicando patrón...");
+              applyWavePattern(true, selectedWavePattern);
+            } else {
+              console.log("   ⚠️ Checkbox NO marcado o no encontrado");
+            }
+          });
+        });
+
+        function applyWavePattern(show, pattern) {
+          console.log("═══════════════════════════════════════");
+          console.log("🎨 applyWavePattern INICIADO");
+          console.log("   - show:", show);
+          console.log("   - pattern:", pattern);
+
+          const patternSvg = document.getElementById("backgroundPatternSvg");
+          const patternRect = document.getElementById("patternRect");
+
+          console.log("   - patternSvg encontrado:", !!patternSvg);
+          console.log("   - patternRect encontrado:", !!patternRect);
+
+          if (!patternSvg || !patternRect) {
+            console.error("❌ Pattern SVG elements not found");
+            console.log("   patternSvg:", patternSvg);
+            console.log("   patternRect:", patternRect);
+            return;
+          }
+
+          if (!show) {
+            console.log("🚫 Ocultando patrón");
+            patternSvg.style.display = "none";
+            console.log("═══════════════════════════════════════");
+            return;
+          }
+
+          console.log("📝 Estado ANTES del cambio:");
+          console.log("   - display:", patternSvg.style.display);
+          console.log("   - fill actual:", patternRect.getAttribute("fill"));
+
+          // Cambiar el patrón
+          const newFill = `url(#pattern${pattern})`;
+          console.log("   - fill nuevo:", newFill);
+          patternRect.setAttribute("fill", newFill);
+
+          console.log("📝 Estado DESPUÉS del setAttribute:");
+          console.log(
+            "   - fill establecido:",
+            patternRect.getAttribute("fill")
+          );
+
+          // Forzar re-render del SVG completo
+          console.log("🔄 Forzando re-render...");
+          console.log("   - Ocultando SVG...");
+          patternSvg.style.display = "none";
+
+          console.log("   - Trigger reflow...");
+          const height = patternSvg.offsetHeight;
+          console.log("   - offsetHeight:", height);
+
+          console.log("   - Mostrando SVG...");
+          patternSvg.style.display = "block";
+
+          console.log("📝 Estado FINAL:");
+          console.log("   - display:", patternSvg.style.display);
+          console.log("   - fill:", patternRect.getAttribute("fill"));
+
+          // Verificar que el patrón existe
+          const patternElement = document.getElementById(`pattern${pattern}`);
+          console.log(
+            "   - Patrón #pattern" + pattern + " existe:",
+            !!patternElement
+          );
+
+          console.log(`✅ Patrón aplicado: pattern${pattern}`);
+          console.log("═══════════════════════════════════════");
+        }
+
+        // Aplicar patrón inicial cuando el DOM esté listo
+        setTimeout(() => {
+          console.log("═══════════════════════════════════════");
+          console.log("🚀 APLICANDO PATRÓN INICIAL");
+          const checkbox = document.getElementById("showWavyPattern");
+          console.log("   - Checkbox encontrado:", !!checkbox);
+          console.log("   - Checkbox checked:", checkbox?.checked);
+          if (checkbox && checkbox.checked) {
+            console.log("   - Aplicando patrón 1 por defecto...");
+            applyWavePattern(true, 1);
+          } else {
+            console.log("   - Checkbox no marcado, no se aplica patrón");
+          }
+          console.log("═══════════════════════════════════════");
+        }, 100);
+
+        // TOGGLE DECORACIONES
+        document
+          .getElementById("showDollarIcon")
+          .addEventListener("change", function (e) {
+            document.getElementById("dollarIcon").style.display = e.target
+              .checked
+              ? "block"
+              : "none";
+          });
+
+        // GUARDAR CAMBIOS
+        btnSave.addEventListener("click", function () {
+          // Color de fondo
+          const bgColor = document.getElementById("bgColor").value;
+          const bgLayer = document.getElementById("backgroundLayer");
+          bgLayer.style.background = bgColor;
+          document.getElementById("tornEdgePath").setAttribute("fill", bgColor);
+
+          // Reaplicar el patrón de ondas si está activado
+          if (document.getElementById("showWavyPattern").checked) {
+            applyWavePattern(true, selectedWavePattern);
+          }
+
+          // Reaplicar el borde rasgado seleccionado
+          applyTornEdge(selectedTornEdge);
+
+          // Textos
+          document.getElementById("mainTitle").textContent =
+            document.getElementById("inputMainTitle").value;
+          document.getElementById("mainTitle").style.color =
+            document.getElementById("mainTitleColor").value;
+
+          document.getElementById("subtitle").innerHTML = document
+            .getElementById("inputSubtitle")
+            .value.replace(/\n/g, "<br>");
+          document.getElementById("subtitle").style.color =
+            document.getElementById("subtitleColor").value;
+
+          // Delivery
+          document.getElementById("deliveryText").textContent =
+            document.getElementById("inputDeliveryText").value;
+          document.getElementById("deliveryNumber").textContent =
+            document.getElementById("inputDeliveryNumber").value;
+          document.getElementById("deliveryIcon").style.color =
+            document.getElementById("deliveryIconColor").value;
+          document.getElementById("deliveryNumber").style.background =
+            document.getElementById("deliveryBgColor").value;
+          document.getElementById("deliveryNumber").style.color =
+            document.getElementById("deliveryTextColor").value;
+
+          alert("✅ Todos los cambios han sido aplicados exitosamente!");
+        });
+
+        // DESCARGAR
+        btnDownload.addEventListener("click", function () {
+          // Mensaje de carga
+          const originalText = btnDownload.innerHTML;
+          btnDownload.innerHTML =
+            '<i class="fas fa-spinner fa-spin"></i> Generando...';
+          btnDownload.disabled = true;
+
+          // Pequeño delay para asegurar que todo se renderice
+          setTimeout(() => {
+            html2canvas(flyerCanvas, {
+              scale: 3,
+              useCORS: true,
+              allowTaint: true,
+              backgroundColor: null,
+              logging: false,
+              foreignObjectRendering: false,
+              imageTimeout: 0,
+              removeContainer: true,
+            })
+              .then((canvas) => {
+                const link = document.createElement("a");
+                link.download = "flyer-profesional.png";
+                link.href = canvas.toDataURL("image/png", 1.0);
+                link.click();
+
+                // Restaurar botón
+                btnDownload.innerHTML = originalText;
+                btnDownload.disabled = false;
+              })
+              .catch((error) => {
+                console.error("Error al generar imagen:", error);
+                alert(
+                  "Error al generar la imagen. Por favor intenta de nuevo."
+                );
+                btnDownload.innerHTML = originalText;
+                btnDownload.disabled = false;
+              });
+          }, 100);
+        });
+
+        // AGREGAR ÍCONOS INICIALES
+        window.addEventListener("load", function () {
+          const defaultIcons = [
+            { icon: "hamburger", top: 15, left: 5, size: 2.5 },
+            { icon: "pizza-slice", top: 25, left: 10, size: 2.5 },
+            { icon: "hamburger", top: 35, right: 8, size: 2.5 },
+            { icon: "hotdog", top: 65, left: 8, size: 2.5 },
+            { icon: "pizza-slice", top: 70, right: 10, size: 2.5 },
+            { icon: "drumstick-bite", top: 45, left: 92, size: 2.5 },
+          ];
+
+          defaultIcons.forEach((iconData) => {
+            const iconId = "icon-" + iconIdCounter++;
+            const iconElement = document.createElement("i");
+            iconElement.className = `fas fa-${iconData.icon} custom-icon`;
+            iconElement.id = iconId;
+            iconElement.style.top = iconData.top + "%";
+            if (iconData.left !== undefined) {
+              iconElement.style.left = iconData.left + "%";
+            } else {
+              iconElement.style.right = iconData.right + "%";
+            }
+            iconElement.style.fontSize = iconData.size + "em";
+            iconElement.style.opacity = "0.2";
+            iconElement.style.cursor = "pointer";
+
+            iconElement.addEventListener("click", function (e) {
+              e.stopPropagation();
+              const newSize = prompt("Tamaño del ícono (1-6):", iconData.size);
+              if (newSize !== null && newSize >= 1 && newSize <= 6) {
+                this.style.fontSize = newSize + "em";
+              }
+            });
+
+            iconElement.addEventListener("contextmenu", function (e) {
+              e.preventDefault();
+              if (confirm("¿Eliminar este ícono?")) {
+                this.remove();
+                customIcons = customIcons.filter((icon) => icon.id !== iconId);
+                updateIconList();
+              }
+            });
+
+            document
+              .getElementById("customIconsContainer")
+              .appendChild(iconElement);
+
+            customIcons.push({
+              id: iconId,
+              icon: iconData.icon,
+              top: iconData.top,
+              left: iconData.left,
+              size: iconData.size,
+            });
+          });
+
+          updateIconList();
+        });
+
+        // Fin del DOMContentLoaded
+      }); // <-- Cierre del DOMContentLoaded
+    </script>
+
+    <!-- Script para detectar y aplicar el tema desde localStorage -->
+    <script>
+      // Función para aplicar el tema
+      function applyTheme() {
+        const theme = localStorage.getItem("elgransazon-theme") || "light";
+        if (theme === "dark") {
+          document.body.classList.add("dark");
+        } else {
+          document.body.classList.remove("dark");
+        }
+      }
+
+      // Aplicar tema al cargar la página
+      applyTheme();
+
+      // Escuchar cambios en el localStorage (cuando se cambia desde otra pestaña/ventana)
+      window.addEventListener("storage", function (e) {
+        if (e.key === "elgransazon-theme") {
+          applyTheme();
+        }
+      });
+
+      // Observar cambios en el localStorage de la misma pestaña
+      const originalSetItem = localStorage.setItem;
+      localStorage.setItem = function (key, value) {
+        const event = new Event("localStorageChange");
+        event.key = key;
+        event.newValue = value;
+        window.dispatchEvent(event);
+        originalSetItem.apply(this, arguments);
+      };
+
+      window.addEventListener("localStorageChange", function (e) {
+        if (e.key === "elgransazon-theme") {
+          applyTheme();
+        }
+      });
+    </script>
+  </body>
+</html>

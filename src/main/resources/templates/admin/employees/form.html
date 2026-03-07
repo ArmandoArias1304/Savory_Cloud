@@ -1,0 +1,1878 @@
+<!doctype html>
+<html
+  lang="es"
+  xmlns:th="http://www.thymeleaf.org"
+  xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title
+      th:text="${globalSystemConfig.systemName + ' - ' + (employee.idEmpleado != null ? 'Editar Empleado' : 'Nuevo Empleado')}"
+    >
+      El Gran Sazón - Empleado
+    </title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@300;400;500;600;700"
+      rel="stylesheet"
+    />
+
+    <!-- Sistema de Temas (Modo Claro/Oscuro) -->
+    <div th:replace="~{fragments/theme :: themeResources}"></div>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#38e07b",
+              "primary-dark": "#2bc866",
+              "background-light": "#f8faf9",
+              "background-dark": "#0f1713",
+            },
+            fontFamily: {
+              display: ["Work Sans"],
+            },
+            borderRadius: {
+              DEFAULT: "0.5rem",
+              lg: "0.75rem",
+              xl: "1rem",
+              "2xl": "1.5rem",
+              full: "9999px",
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      .material-symbols-outlined {
+        font-variation-settings:
+          "FILL" 0,
+          "wght" 400,
+          "GRAD" 0,
+          "opsz" 24;
+      }
+    </style>
+  </head>
+  <body
+    class="bg-gradient-to-br from-background-light to-gray-50 dark:from-background-dark dark:to-gray-900 font-display text-gray-800 dark:text-gray-200"
+  >
+    <div class="min-h-screen">
+      <!-- Header -->
+      <header
+        class="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 shadow-lg sticky top-0 z-30"
+      >
+        <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+          <div
+            class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+          >
+            <div class="flex items-center gap-3 sm:gap-4">
+              <a
+                th:href="@{/admin/employees}"
+                class="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+              >
+                <span
+                  class="material-symbols-outlined text-gray-600 dark:text-gray-400 text-xl sm:text-2xl"
+                  >arrow_back</span
+                >
+              </a>
+              <div class="flex items-center gap-3">
+                <div
+                  th:if="${employee.idEmpleado != null}"
+                  class="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-amber-500 to-amber-600 rounded-xl flex items-center justify-center shadow-lg shadow-amber-500/30"
+                >
+                  <span
+                    class="material-symbols-outlined text-white text-xl sm:text-2xl"
+                    >edit</span
+                  >
+                </div>
+                <div
+                  th:unless="${employee.idEmpleado != null}"
+                  class="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-primary to-primary-dark rounded-xl flex items-center justify-center shadow-lg shadow-primary/30"
+                >
+                  <span
+                    class="material-symbols-outlined text-white text-xl sm:text-2xl"
+                    >person_add</span
+                  >
+                </div>
+                <div>
+                  <h1
+                    class="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white"
+                    th:text="${employee.idEmpleado != null} ? 'Editar Empleado' : 'Nuevo Empleado'"
+                  >
+                    Nuevo Empleado
+                  </h1>
+                  <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                    Complete la información del empleado
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- Main Content -->
+      <main class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+        <!-- Error Alert -->
+        <div
+          th:if="${errorMessage}"
+          class="bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 text-red-800 dark:text-red-300 px-4 sm:px-6 py-4 rounded-lg mb-6 flex items-start gap-3 shadow-sm"
+        >
+          <span
+            class="material-symbols-outlined text-red-500 text-xl flex-shrink-0 mt-0.5"
+            >error</span
+          >
+          <span class="text-sm sm:text-base" th:text="${errorMessage}"></span>
+        </div>
+
+        <!-- User Limit Information (Only for new employee creation) -->
+        <div
+          th:if="${employee.idEmpleado == null}"
+          class="bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500 text-blue-800 dark:text-blue-300 px-4 sm:px-6 py-4 rounded-lg mb-6 flex items-start gap-3 shadow-sm"
+        >
+          <span
+            class="material-symbols-outlined text-blue-500 text-xl flex-shrink-0 mt-0.5"
+            >info</span
+          >
+          <div class="flex-1">
+            <p class="font-semibold mb-1">Límite de usuarios</p>
+            <p class="text-sm" th:if="${hasUserLimit}">
+              Actualmente tienes
+              <span class="font-bold" th:text="${currentActiveUsers}"></span>
+              de
+              <span class="font-bold" th:text="${maxUsers}"></span>
+              usuarios activos.
+              <span
+                th:if="${canCreateMore}"
+                class="text-green-600 dark:text-green-400 font-semibold"
+              >
+                Puedes crear
+                <span th:text="${maxUsers - currentActiveUsers}"></span>
+                usuario(s) más.
+              </span>
+            </p>
+            <p class="text-sm" th:unless="${hasUserLimit}">
+              <span class="inline-flex items-center gap-1">
+                <span class="material-symbols-outlined text-base"
+                  >all_inclusive</span
+                >
+                <span class="font-semibold text-green-600 dark:text-green-400"
+                  >Tu licencia no tiene límite de usuarios.</span
+                >
+              </span>
+            </p>
+          </div>
+        </div>
+
+        <!-- Form Card -->
+        <div
+          class="bg-white dark:bg-gray-900 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-800 overflow-hidden"
+        >
+          <form
+            th:action="@{${formAction}}"
+            th:object="${employee}"
+            method="post"
+            id="employeeForm"
+          >
+            <!-- Hidden field for employee ID (used in edit mode) -->
+            <input
+              type="hidden"
+              name="idEmpleado"
+              th:value="${employee.idEmpleado}"
+            />
+
+            <div class="p-6 sm:p-8 space-y-8">
+              <!-- Personal Information Section -->
+              <div>
+                <div class="flex items-center gap-3 mb-6">
+                  <div
+                    class="w-12 h-12 bg-blue-500/10 rounded-xl flex items-center justify-center"
+                  >
+                    <span
+                      class="material-symbols-outlined text-blue-500 text-2xl"
+                      >person</span
+                    >
+                  </div>
+                  <h2 class="text-xl font-bold text-gray-900 dark:text-white">
+                    Información Personal
+                  </h2>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <!-- First Name -->
+                  <div>
+                    <label
+                      for="nombre"
+                      class="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+                    >
+                      <span
+                        class="material-symbols-outlined text-lg text-primary"
+                        >badge</span
+                      >
+                      Nombre
+                      <span class="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      th:field="*{nombre}"
+                      id="nombre"
+                      required
+                      minlength="2"
+                      maxlength="100"
+                      class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
+                      placeholder="Ej: Juan"
+                      title="El nombre debe tener entre 2 y 100 caracteres"
+                    />
+                    <p
+                      th:if="${#fields.hasErrors('nombre')}"
+                      th:errors="*{nombre}"
+                      class="mt-2 text-xs text-red-600 dark:text-red-400"
+                    ></p>
+                  </div>
+
+                  <!-- Last Name -->
+                  <div>
+                    <label
+                      for="apellido"
+                      class="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+                    >
+                      <span
+                        class="material-symbols-outlined text-lg text-primary"
+                        >badge</span
+                      >
+                      Apellido
+                      <span class="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      th:field="*{apellido}"
+                      id="apellido"
+                      required
+                      minlength="2"
+                      maxlength="100"
+                      class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
+                      placeholder="Ej: Pérez"
+                      title="El apellido debe tener entre 2 y 100 caracteres"
+                    />
+                    <p
+                      th:if="${#fields.hasErrors('apellido')}"
+                      th:errors="*{apellido}"
+                      class="mt-2 text-xs text-red-600 dark:text-red-400"
+                    ></p>
+                  </div>
+
+                  <!-- Username -->
+                  <div>
+                    <label
+                      for="username"
+                      class="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+                    >
+                      <span
+                        class="material-symbols-outlined text-lg text-primary"
+                        >account_circle</span
+                      >
+                      Usuario
+                      <span class="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      th:field="*{username}"
+                      id="username"
+                      required
+                      minlength="3"
+                      maxlength="50"
+                      pattern="[A-Za-z0-9_]{3,50}"
+                      class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
+                      placeholder="Ej: jperez"
+                      title="El usuario debe tener entre 3 y 50 caracteres (letras, números y guiones bajos)"
+                    />
+                    <p
+                      class="mt-2 text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1"
+                    >
+                      <span class="material-symbols-outlined text-sm"
+                        >info</span
+                      >
+                      Nombre único de usuario para el login
+                    </p>
+                    <p
+                      th:if="${#fields.hasErrors('username')}"
+                      th:errors="*{username}"
+                      class="mt-2 text-xs text-red-600 dark:text-red-400"
+                    ></p>
+                  </div>
+
+                  <!-- Edad -->
+                  <div>
+                    <label
+                      for="edad"
+                      class="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+                    >
+                      <span
+                        class="material-symbols-outlined text-lg text-primary"
+                        >calendar_today</span
+                      >
+                      Edad
+                    </label>
+                    <input
+                      type="number"
+                      th:field="*{edad}"
+                      id="edad"
+                      min="18"
+                      max="100"
+                      class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
+                      placeholder="Ej: 25"
+                      title="La edad debe estar entre 18 y 100 años"
+                    />
+                    <p
+                      class="mt-2 text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1"
+                    >
+                      <span class="material-symbols-outlined text-sm"
+                        >info</span
+                      >
+                      Opcional - Edad en años (entre 18 y 100)
+                    </p>
+                    <p
+                      th:if="${#fields.hasErrors('edad')}"
+                      th:errors="*{edad}"
+                      class="mt-2 text-xs text-red-600 dark:text-red-400"
+                    ></p>
+                  </div>
+
+                  <!-- Phone -->
+                  <div>
+                    <label
+                      for="telefono"
+                      class="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+                    >
+                      <span
+                        class="material-symbols-outlined text-lg text-primary"
+                        >phone</span
+                      >
+                      Teléfono
+                    </label>
+                    <input
+                      type="tel"
+                      th:field="*{telefono}"
+                      id="telefono"
+                      placeholder="1234567890"
+                      pattern="[0-9]{10}"
+                      minlength="10"
+                      maxlength="10"
+                      inputmode="numeric"
+                      onkeypress="return /[0-9]/.test(event.key);"
+                      class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
+                      title="El teléfono debe tener exactamente 10 dígitos (solo números)"
+                    />
+                    <p
+                      class="mt-2 text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1"
+                    >
+                      <span class="material-symbols-outlined text-sm"
+                        >info</span
+                      >
+                      Opcional - Si se proporciona, debe ser un número de 10
+                      dígitos
+                    </p>
+                    <p
+                      th:if="${#fields.hasErrors('telefono')}"
+                      th:errors="*{telefono}"
+                      class="mt-2 text-xs text-red-600 dark:text-red-400"
+                    ></p>
+                  </div>
+
+                  <!-- Password (Only for new employees) -->
+                  <div th:if="${employee.idEmpleado == null}">
+                    <label
+                      for="password"
+                      class="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+                    >
+                      <span
+                        class="material-symbols-outlined text-lg text-primary"
+                        >lock</span
+                      >
+                      Contraseña
+                      <span class="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="password"
+                      name="password"
+                      id="password"
+                      required
+                      minlength="6"
+                      class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
+                      placeholder="••••••••"
+                      title="La contraseña debe tener al menos 6 caracteres"
+                    />
+                    <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                      Mínimo 6 caracteres
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Work Information Section -->
+              <div>
+                <div class="flex items-center gap-3 mb-6">
+                  <div
+                    class="w-12 h-12 bg-purple-500/10 rounded-xl flex items-center justify-center"
+                  >
+                    <span
+                      class="material-symbols-outlined text-purple-500 text-2xl"
+                      >work</span
+                    >
+                  </div>
+                  <h2 class="text-xl font-bold text-gray-900 dark:text-white">
+                    Información Laboral
+                  </h2>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <!-- Role - Only ADMIN can edit (except for ADMIN employees) -->
+                  <div>
+                    <label
+                      for="role"
+                      class="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+                    >
+                      <span
+                        class="material-symbols-outlined text-lg text-primary"
+                        >workspace_premium</span
+                      >
+                      Rol
+                      <span class="text-red-500">*</span>
+                      <span
+                        sec:authorize="hasRole('ROLE_MANAGER')"
+                        class="text-xs font-normal text-gray-500"
+                        >(Solo lectura)</span
+                      >
+                      <span
+                        th:if="${isAdminEmployee}"
+                        class="text-xs font-normal text-yellow-600 dark:text-yellow-400"
+                        >(Rol protegido)</span
+                      >
+                    </label>
+
+                    <!-- Editable select for non-ADMIN employees (only visible to ADMIN users) -->
+                    <select
+                      th:if="${!isAdminEmployee}"
+                      id="role"
+                      name="roleId"
+                      required
+                      sec:authorize="hasRole('ROLE_ADMIN')"
+                      class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
+                    >
+                      <option value="">Seleccionar rol...</option>
+                      <option
+                        th:each="role : ${availableRoles}"
+                        th:if="${role.nombreRol != 'ROLE_PROGRAMMER' && role.nombreRol != 'ROLE_CUSTOMER' && role.nombreRol != 'ROLE_CLIENT'}"
+                        th:value="${role.idRol}"
+                        th:text="${role.getDisplayName()}"
+                        th:selected="${employee.primaryRole == role.nombreRol}"
+                      ></option>
+                    </select>
+
+                    <!-- Read-only display for ADMIN employees (locked) -->
+                    <div th:if="${isAdminEmployee}" class="relative">
+                      <input
+                        type="text"
+                        value="Administrador"
+                        disabled
+                        class="w-full px-4 py-3 rounded-xl border-2 border-yellow-400 dark:border-yellow-500 bg-yellow-50 dark:bg-yellow-900/20 text-gray-900 dark:text-yellow-300 font-semibold cursor-not-allowed"
+                      />
+                      <span
+                        class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-yellow-600 dark:text-yellow-400"
+                        >lock</span
+                      >
+                    </div>
+
+                    <!-- Read-only display for MANAGER -->
+                    <input
+                      th:if="${!isAdminEmployee}"
+                      sec:authorize="hasRole('ROLE_MANAGER')"
+                      type="text"
+                      th:value="${employee.roleDisplayName}"
+                      disabled
+                      class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-900 text-gray-700 dark:text-gray-400 cursor-not-allowed"
+                    />
+                    <p
+                      th:if="${!isAdminEmployee}"
+                      class="mt-2 text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1"
+                    >
+                      <span class="material-symbols-outlined text-sm"
+                        >info</span
+                      >
+                      El rol determina los permisos del empleado
+                    </p>
+                    <p
+                      th:if="${isAdminEmployee}"
+                      class="mt-2 text-xs text-yellow-700 dark:text-yellow-400 flex items-center gap-1"
+                    >
+                      <span class="material-symbols-outlined text-sm"
+                        >lock</span
+                      >
+                      El rol de Administrador no puede ser modificado por
+                      seguridad
+                    </p>
+                  </div>
+
+                  <!-- Salary - Only ADMIN can edit -->
+                  <div>
+                    <label
+                      for="salario"
+                      class="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+                    >
+                      <span
+                        class="material-symbols-outlined text-lg text-primary"
+                        >payments</span
+                      >
+                      Salario
+                      <span
+                        sec:authorize="hasRole('ROLE_MANAGER')"
+                        class="text-xs font-normal text-gray-500"
+                        >(Solo lectura)</span
+                      >
+                    </label>
+                    <div class="relative">
+                      <span
+                        class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                        >attach_money</span
+                      >
+                      <input
+                        type="number"
+                        th:field="*{salario}"
+                        id="salario"
+                        step="0.01"
+                        min="0"
+                        sec:authorize="hasRole('ROLE_ADMIN')"
+                        class="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
+                        placeholder="0.00"
+                        title="El salario debe ser un número positivo"
+                      />
+                      <!-- Read-only display for MANAGER -->
+                      <input
+                        sec:authorize="hasRole('ROLE_MANAGER')"
+                        type="text"
+                        th:value="${employee.formattedSalary}"
+                        disabled
+                        class="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-900 text-gray-700 dark:text-gray-400 cursor-not-allowed"
+                      />
+                    </div>
+                    <p
+                      th:if="${#fields.hasErrors('salario')}"
+                      th:errors="*{salario}"
+                      class="mt-2 text-xs text-red-600 dark:text-red-400"
+                    ></p>
+                  </div>
+
+                  <!-- Supervisor Section -->
+                  <div th:unless="${isAdminEmployee}">
+                    <!-- Hide for Admins -->
+                    <label
+                      for="supervisor"
+                      class="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+                    >
+                      <span
+                        class="material-symbols-outlined text-lg text-primary"
+                        >supervisor_account</span
+                      >
+                      Supervisor
+                      <span
+                        sec:authorize="hasRole('ROLE_MANAGER')"
+                        class="text-xs font-normal text-gray-500"
+                        >(Solo lectura)</span
+                      >
+                    </label>
+                    <div class="relative">
+                      <select
+                        sec:authorize="hasRole('ROLE_ADMIN')"
+                        id="supervisor"
+                        name="supervisorId"
+                        class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-primary transition-colors appearance-none"
+                      >
+                        <option value="">
+                          Seleccionar supervisor (Por defecto: Admin)...
+                        </option>
+                        <option
+                          th:each="supervisor : ${supervisors}"
+                          th:value="${supervisor.idEmpleado}"
+                          th:text="${supervisor.fullName + ' (' + supervisor.roleDisplayName + ')'}"
+                          th:selected="${employee.supervisor != null and employee.supervisor.idEmpleado == supervisor.idEmpleado}"
+                        ></option>
+                      </select>
+                      <div
+                        sec:authorize="hasRole('ROLE_ADMIN')"
+                        class="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none"
+                      >
+                        <span class="material-symbols-outlined text-gray-500"
+                          >expand_more</span
+                        >
+                      </div>
+                    </div>
+
+                    <!-- Read-only display for MANAGER -->
+                    <input
+                      sec:authorize="hasRole('ROLE_MANAGER')"
+                      type="text"
+                      th:value="${employee.supervisorName != null ? employee.supervisorName : 'Sin supervisor asignado'}"
+                      disabled
+                      class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-900 text-gray-700 dark:text-gray-400 cursor-not-allowed"
+                    />
+                    <p
+                      sec:authorize="hasRole('ROLE_ADMIN')"
+                      class="mt-2 text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1"
+                    >
+                      <span class="material-symbols-outlined text-sm"
+                        >info</span
+                      >
+                      Si no se selecciona, se asignará el administrador por
+                      defecto
+                    </p>
+                  </div>
+
+                  <!-- Admin Supervisor Display -->
+                  <div th:if="${isAdminEmployee}">
+                    <label
+                      class="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+                    >
+                      <span
+                        class="material-symbols-outlined text-lg text-primary"
+                        >supervisor_account</span
+                      >
+                      Supervisor
+                    </label>
+                    <input
+                      type="text"
+                      value="Autosupervisado (Admin)"
+                      disabled
+                      class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-900 text-gray-700 dark:text-gray-400 cursor-not-allowed"
+                    />
+                    <p
+                      class="mt-2 text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1"
+                    >
+                      <span class="material-symbols-outlined text-sm"
+                        >info</span
+                      >
+                      Los administradores se supervisan a sí mismos.
+                    </p>
+                  </div>
+
+                  <!-- Shift -->
+                  <div>
+                    <label
+                      class="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+                    >
+                      <span
+                        class="material-symbols-outlined text-lg text-primary"
+                        >schedule</span
+                      >
+                      Turnos
+                    </label>
+
+                    <!-- Create Mode -->
+                    <div th:if="${employee.idEmpleado == null}">
+                      <select
+                        id="shift"
+                        name="shiftId"
+                        class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
+                      >
+                        <option value="">Sin turno asignado...</option>
+                        <option
+                          th:each="shift : ${shifts}"
+                          th:value="${shift.id}"
+                          th:text="${shift.name + ' (' + shift.timeRange + ')'}"
+                        ></option>
+                      </select>
+                      <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                        Solo se puede asignar un turno en la creación
+                      </p>
+                    </div>
+
+                    <!-- Edit Mode -->
+                    <div th:if="${employee.idEmpleado != null}">
+                      <button
+                        type="button"
+                        onclick="openShiftModal()"
+                        class="w-full px-4 py-3 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl hover:border-primary hover:bg-primary/5 text-gray-600 dark:text-gray-400 hover:text-primary font-semibold transition-all flex items-center justify-center gap-2"
+                      >
+                        <span class="material-symbols-outlined"
+                          >add_circle</span
+                        >
+                        Gestionar Turnos
+                      </button>
+                      <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                        Actualmente:
+                        <span
+                          class="font-semibold text-gray-700 dark:text-gray-300"
+                          th:text="${employee.shifts != null and !employee.shifts.isEmpty()} ? ${employee.shiftNames} : 'Ninguno'"
+                          >Ninguno</span
+                        >
+                      </p>
+                      <p
+                        class="mt-1 text-xs text-amber-600 dark:text-amber-400 flex items-start gap-1"
+                      >
+                        <span class="material-symbols-outlined text-sm mt-0.5"
+                          >warning</span
+                        >
+                        <span
+                          >Solo se pueden agregar turnos aquí. Para remover, ir
+                          al módulo de Turnos</span
+                        >
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Enabled Status (Only for Edit, not for ADMIN or PROGRAMMER employees) -->
+              <div th:if="${employee.idEmpleado != null}">
+                <!-- Show state switch only for non-ADMIN and non-PROGRAMMER employees -->
+                <div
+                  th:unless="${employee.hasRole('ROLE_ADMIN') or employee.hasRole('ROLE_PROGRAMMER')}"
+                >
+                  <div class="flex items-center gap-3 mb-6">
+                    <div
+                      class="w-12 h-12 bg-green-500/10 rounded-xl flex items-center justify-center"
+                    >
+                      <span
+                        class="material-symbols-outlined text-green-500 text-2xl"
+                        >toggle_on</span
+                      >
+                    </div>
+                    <h2 class="text-xl font-bold text-gray-900 dark:text-white">
+                      Estado
+                    </h2>
+                  </div>
+
+                  <!-- ADMIN can modify enabled status -->
+                  <div
+                    sec:authorize="hasRole('ROLE_ADMIN')"
+                    class="flex items-center p-4 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-800 rounded-xl border border-gray-200 dark:border-gray-700"
+                  >
+                    <input
+                      type="checkbox"
+                      th:field="*{enabled}"
+                      id="enabled"
+                      class="w-5 h-5 text-primary bg-gray-100 border-gray-300 rounded focus:ring-2 focus:ring-primary transition-colors cursor-pointer"
+                    />
+                    <label
+                      for="enabled"
+                      class="ml-3 text-sm font-semibold text-gray-700 dark:text-gray-300 cursor-pointer"
+                    >
+                      Empleado activo
+                    </label>
+                  </div>
+
+                  <!-- MANAGER can only view enabled status (read-only) -->
+                  <div
+                    sec:authorize="hasRole('ROLE_MANAGER')"
+                    class="flex items-center p-4 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-800 rounded-xl border border-gray-200 dark:border-gray-700"
+                  >
+                    <input
+                      type="checkbox"
+                      th:checked="*{enabled}"
+                      disabled
+                      class="w-5 h-5 text-gray-400 bg-gray-100 border-gray-300 rounded cursor-not-allowed opacity-50"
+                    />
+                    <input type="hidden" th:field="*{enabled}" />
+                    <label
+                      class="ml-3 text-sm font-semibold text-gray-500 dark:text-gray-400 cursor-not-allowed"
+                    >
+                      Empleado activo (solo lectura)
+                    </label>
+                  </div>
+
+                  <p
+                    class="mt-2 text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1"
+                  >
+                    <span class="material-symbols-outlined text-sm">info</span>
+                    <span sec:authorize="hasRole('ROLE_ADMIN')"
+                      >Los empleados inactivos no pueden acceder al
+                      sistema</span
+                    >
+                    <span sec:authorize="hasRole('ROLE_MANAGER')"
+                      >Solo el administrador puede activar/desactivar
+                      empleados</span
+                    >
+                  </p>
+                </div>
+
+                <!-- Info message for ADMIN employees (always active) -->
+                <div th:if="${employee.hasRole('ROLE_ADMIN')}">
+                  <div
+                    class="p-4 bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500 rounded-xl flex items-start gap-3"
+                  >
+                    <span
+                      class="material-symbols-outlined text-blue-500 text-xl flex-shrink-0 mt-0.5"
+                      >shield_person</span
+                    >
+                    <div class="flex-1">
+                      <p
+                        class="font-semibold text-blue-800 dark:text-blue-300 mb-1"
+                      >
+                        Empleado Administrador
+                      </p>
+                      <p class="text-sm text-blue-700 dark:text-blue-400">
+                        Los empleados con rol <strong>ADMIN</strong> están
+                        siempre activos y no pueden ser desactivados para
+                        garantizar el acceso administrativo al sistema.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Info message for PROGRAMMER employees (always active) -->
+                <div th:if="${employee.hasRole('ROLE_PROGRAMMER')}">
+                  <div
+                    class="p-4 bg-purple-50 dark:bg-purple-900/20 border-l-4 border-purple-500 rounded-xl flex items-start gap-3"
+                  >
+                    <span
+                      class="material-symbols-outlined text-purple-500 text-xl flex-shrink-0 mt-0.5"
+                      >code</span
+                    >
+                    <div class="flex-1">
+                      <p
+                        class="font-semibold text-purple-800 dark:text-purple-300 mb-1"
+                      >
+                        Usuario del Sistema
+                      </p>
+                      <p class="text-sm text-purple-700 dark:text-purple-400">
+                        Este es un usuario del sistema con rol
+                        <strong>PROGRAMMER</strong> que está siempre activo y no
+                        puede ser desactivado.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Form Actions -->
+            <div
+              class="px-6 sm:px-8 py-5 bg-gray-50 dark:bg-gray-800 border-t-2 border-gray-200 dark:border-gray-700 flex flex-col-reverse sm:flex-row justify-between items-stretch sm:items-center gap-3"
+            >
+              <a
+                th:href="@{/admin/employees}"
+                class="inline-flex items-center justify-center gap-2 px-6 py-3 border-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-xl font-semibold hover:bg-gray-100 dark:hover:bg-gray-700 transition-all"
+              >
+                <span class="material-symbols-outlined">close</span>
+                Cancelar
+              </a>
+              <button
+                type="submit"
+                class="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold shadow-md transition-all"
+                th:classappend="${employee.idEmpleado != null} ? 'bg-gradient-to-r from-amber-500 to-amber-600 hover:shadow-lg hover:shadow-amber-500/30 text-white' : 'bg-gradient-to-r from-primary to-primary-dark hover:shadow-lg hover:shadow-primary/30 text-white'"
+              >
+                <span
+                  class="material-symbols-outlined"
+                  th:text="${employee.idEmpleado != null} ? 'save' : 'person_add'"
+                  >save</span
+                >
+                <span
+                  th:text="${employee.idEmpleado != null} ? 'Actualizar Empleado' : 'Crear Empleado'"
+                  >Crear Empleado</span
+                >
+              </button>
+            </div>
+          </form>
+
+          <!-- Change Password Section (Only for Edit) -->
+          <form
+            th:if="${employee.idEmpleado != null}"
+            th:action="@{/admin/employees/{id}/change-password(id=${employee.idEmpleado})}"
+            method="post"
+            class="px-6 sm:px-8 py-6 border-t-2 border-gray-200 dark:border-gray-700 bg-gradient-to-br from-orange-50/50 to-amber-50/50 dark:from-orange-900/10 dark:to-amber-900/10"
+            id="changePasswordForm"
+          >
+            <div class="max-w-2xl">
+              <div class="flex items-center gap-3 mb-6">
+                <div
+                  class="w-12 h-12 bg-gradient-to-br from-orange-500 to-amber-500 rounded-xl flex items-center justify-center shadow-lg"
+                >
+                  <span class="material-symbols-outlined text-white text-2xl"
+                    >lock_reset</span
+                  >
+                </div>
+                <div>
+                  <h2 class="text-xl font-bold text-gray-900 dark:text-white">
+                    Cambiar Contraseña
+                  </h2>
+                  <p class="text-sm text-gray-600 dark:text-gray-400">
+                    Actualiza la contraseña del empleado
+                  </p>
+                </div>
+              </div>
+
+              <div class="space-y-4">
+                <!-- New Password -->
+                <div>
+                  <label
+                    for="newPassword"
+                    class="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+                  >
+                    <span
+                      class="material-symbols-outlined text-lg text-orange-500"
+                      >vpn_key</span
+                    >
+                    Nueva Contraseña
+                    <span class="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="password"
+                    name="newPassword"
+                    id="newPassword"
+                    required
+                    minlength="6"
+                    class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
+                    placeholder="••••••••"
+                  />
+                  <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                    Mínimo 6 caracteres
+                  </p>
+                </div>
+
+                <!-- Confirm Password -->
+                <div>
+                  <label
+                    for="confirmPassword"
+                    class="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+                  >
+                    <span
+                      class="material-symbols-outlined text-lg text-orange-500"
+                      >check_circle</span
+                    >
+                    Confirmar Contraseña
+                    <span class="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="password"
+                    name="confirmPassword"
+                    id="confirmPassword"
+                    required
+                    minlength="6"
+                    class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
+                    placeholder="••••••••"
+                  />
+                </div>
+
+                <!-- Submit Button -->
+                <div class="flex gap-3 pt-4">
+                  <button
+                    type="submit"
+                    class="inline-flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white rounded-xl font-semibold shadow-md hover:shadow-lg transition-all"
+                  >
+                    <span class="material-symbols-outlined">lock_reset</span>
+                    Cambiar Contraseña
+                  </button>
+                </div>
+
+                <!-- Info message -->
+                <div
+                  class="mt-4 flex items-start gap-3 p-4 bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500 rounded-lg"
+                >
+                  <span
+                    class="material-symbols-outlined text-blue-600 dark:text-blue-400 text-xl"
+                    >info</span
+                  >
+                  <p class="text-sm text-blue-800 dark:text-blue-300">
+                    <strong>Importante:</strong> El empleado deberá usar la
+                    nueva contraseña en su próximo inicio de sesión.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </form>
+
+          <!-- Delete Button (Only for Edit) -->
+          <form
+            th:if="${employee.idEmpleado != null}"
+            th:action="@{/admin/employees/{id}/delete(id=${employee.idEmpleado})}"
+            method="post"
+            class="px-6 sm:px-8 py-6 border-t-2 border-gray-200 dark:border-gray-700"
+            id="deleteForm"
+          >
+            <div
+              class="flex items-start gap-3 p-4 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 rounded-xl"
+            >
+              <span
+                class="material-symbols-outlined text-red-600 dark:text-red-400 text-xl flex-shrink-0 mt-0.5"
+                >warning</span
+              >
+              <div class="flex-1">
+                <h3
+                  class="font-bold text-red-900 dark:text-red-300 mb-1 text-sm sm:text-base"
+                >
+                  Zona Peligrosa
+                </h3>
+                <p
+                  class="text-xs sm:text-sm text-red-700 dark:text-red-400 mb-3"
+                >
+                  Esta acción eliminará permanentemente el empleado del sistema.
+                </p>
+                <button
+                  type="button"
+                  onclick="confirmDelete()"
+                  class="inline-flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold transition-colors text-sm"
+                >
+                  <span class="material-symbols-outlined text-lg"
+                    >delete_forever</span
+                  >
+                  Eliminar Empleado
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </main>
+    </div>
+
+    <!-- Shift Assignment Modal -->
+    <div
+      th:if="${employee.idEmpleado != null}"
+      id="shiftModal"
+      class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm overflow-y-auto h-full w-full z-50"
+    >
+      <div
+        class="relative top-20 mx-auto p-5 max-w-2xl"
+        onclick="event.stopPropagation()"
+      >
+        <div
+          class="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800"
+        >
+          <!-- Modal Header -->
+          <div
+            class="flex justify-between items-center px-6 py-4 bg-gradient-to-r from-primary to-primary-dark rounded-t-2xl"
+          >
+            <div class="flex items-center gap-3">
+              <div
+                class="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center"
+              >
+                <span class="material-symbols-outlined text-white text-xl"
+                  >schedule</span
+                >
+              </div>
+              <h3 class="text-xl font-bold text-white">Gestionar Turnos</h3>
+            </div>
+            <button
+              onclick="closeShiftModal()"
+              class="text-white/80 hover:text-white transition-colors"
+            >
+              <span class="material-symbols-outlined text-2xl">close</span>
+            </button>
+          </div>
+
+          <!-- Modal Body -->
+          <div class="p-6">
+            <!-- Info Message -->
+            <div
+              class="mb-6 p-4 bg-blue-50 dark:bg-blue-500/10 border-l-4 border-blue-500 rounded-xl"
+            >
+              <div class="flex items-start gap-2">
+                <span
+                  class="material-symbols-outlined text-blue-600 dark:text-blue-400 text-lg mt-0.5"
+                  >info</span
+                >
+                <p class="text-sm text-blue-800 dark:text-blue-200">
+                  <strong>Nota:</strong> Los turnos ya asignados (marcados) no
+                  se pueden deseleccionar desde aquí. Para remover turnos, debes
+                  ir al módulo de Turnos.
+                </p>
+              </div>
+            </div>
+
+            <!-- Shifts List -->
+            <form id="shiftAssignmentForm">
+              <input
+                type="hidden"
+                name="employeeId"
+                th:value="${employee.idEmpleado}"
+              />
+
+              <div class="max-h-96 overflow-y-auto space-y-3">
+                <label
+                  th:each="shift : ${shifts}"
+                  class="flex items-center p-4 border-2 border-gray-200 dark:border-gray-700 rounded-xl hover:border-primary hover:bg-primary/5 transition-all cursor-pointer group"
+                  th:classappend="${employee.shifts != null and employee.shifts.contains(shift)} ? 'bg-green-50 dark:bg-green-500/10 border-green-300 dark:border-green-500/30' : ''"
+                >
+                  <input
+                    type="checkbox"
+                    th:id="'shift-' + ${shift.id}"
+                    th:value="${shift.id}"
+                    name="shiftIds"
+                    th:checked="${employee.shifts != null and employee.shifts.contains(shift)}"
+                    th:disabled="${employee.shifts != null and employee.shifts.contains(shift)}"
+                    class="w-5 h-5 text-primary bg-gray-100 border-gray-300 rounded focus:ring-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  />
+                  <div class="ml-4 flex-1">
+                    <div class="flex items-center gap-2">
+                      <span
+                        class="material-symbols-outlined text-gray-400 group-hover:text-primary transition-colors"
+                        >schedule</span
+                      >
+                      <div
+                        class="font-bold text-gray-900 dark:text-white"
+                        th:text="${shift.name}"
+                      >
+                        Turno Mañana
+                      </div>
+                    </div>
+                    <div
+                      class="text-sm text-gray-600 dark:text-gray-400 mt-1"
+                      th:text="${shift.timeRange}"
+                    >
+                      08:00 - 16:00
+                    </div>
+                    <div
+                      th:if="${shift.workDays != null and !shift.workDays.isEmpty()}"
+                      class="flex flex-wrap gap-1 mt-2"
+                    >
+                      <span
+                        th:each="day : ${shift.workDays}"
+                        class="px-2 py-0.5 text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded"
+                        th:text="${day.getDisplayName()}"
+                      >
+                        Lunes
+                      </span>
+                    </div>
+                  </div>
+                  <span
+                    th:if="${employee.shifts != null and employee.shifts.contains(shift)}"
+                    class="ml-2 inline-flex items-center gap-1 px-3 py-1 text-xs font-bold bg-green-100 dark:bg-green-500/20 text-green-700 dark:text-green-300 rounded-full"
+                  >
+                    <span class="material-symbols-outlined text-sm"
+                      >check_circle</span
+                    >
+                    Asignado
+                  </span>
+                </label>
+
+                <!-- Empty State -->
+                <div
+                  th:if="${shifts == null or shifts.isEmpty()}"
+                  class="text-center py-12"
+                >
+                  <div
+                    class="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-3"
+                  >
+                    <span
+                      class="material-symbols-outlined text-4xl text-gray-300 dark:text-gray-600"
+                      >schedule</span
+                    >
+                  </div>
+                  <p class="text-gray-500 dark:text-gray-400 font-medium">
+                    No hay turnos disponibles
+                  </p>
+                </div>
+              </div>
+            </form>
+          </div>
+
+          <!-- Modal Footer -->
+          <div
+            class="flex flex-col-reverse sm:flex-row justify-end gap-3 px-6 py-4 bg-gray-50 dark:bg-gray-800 border-t-2 border-gray-200 dark:border-gray-700 rounded-b-2xl"
+          >
+            <button
+              onclick="closeShiftModal()"
+              class="inline-flex items-center justify-center gap-2 px-6 py-3 border-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-xl font-semibold hover:bg-gray-100 dark:hover:bg-gray-700 transition-all"
+            >
+              <span class="material-symbols-outlined">close</span>
+              Cancelar
+            </button>
+            <button
+              onclick="assignShifts()"
+              class="inline-flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-primary to-primary-dark text-white rounded-xl font-semibold hover:shadow-lg hover:shadow-primary/30 transition-all"
+            >
+              <span class="material-symbols-outlined">person_add</span>
+              Asignar Turnos
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script th:inline="javascript">
+      // Check for password success alert on page load
+      document.addEventListener("DOMContentLoaded", function () {
+        const showPasswordSuccessAlert = /*[[${showPasswordSuccessAlert}]]*/ false;
+        if (showPasswordSuccessAlert) {
+          Swal.fire({
+            icon: "success",
+            title: "¡Contraseña actualizada!",
+            text: "La contraseña del empleado se ha cambiado exitosamente",
+            confirmButtonColor: "#f97316",
+            timer: 3000,
+            timerProgressBar: true,
+            background: document.documentElement.classList.contains("dark")
+              ? "#1f2937"
+              : "#ffffff",
+            color: document.documentElement.classList.contains("dark")
+              ? "#f3f4f6"
+              : "#1f2937",
+          });
+        }
+      });
+
+      // Form Validation
+      function validateForm(event) {
+        const form = document.getElementById("employeeForm");
+        const username = form
+          .querySelector('input[name="username"]')
+          .value.trim();
+        const nombre = form.querySelector('input[name="nombre"]').value.trim();
+        const apellido = form
+          .querySelector('input[name="apellido"]')
+          .value.trim();
+        const edad = form.querySelector('input[name="edad"]')?.value || "";
+        const password =
+          form.querySelector('input[name="password"]')?.value || "";
+        const telefono = form
+          .querySelector('input[name="telefono"]')
+          .value.trim();
+        const salario = form
+          .querySelector('input[name="salario"]')
+          .value.trim();
+        const roleId = form.querySelector('select[name="roleId"]').value;
+        const employeeId = form.querySelector(
+          'input[name="idEmpleado"]',
+        )?.value;
+        const isEdit = !!employeeId;
+
+        // Validate username
+        if (!username || username.length < 3 || username.length > 50) {
+          event.preventDefault();
+          Swal.fire({
+            title: "Usuario inválido",
+            html: "El <strong>usuario</strong> debe tener entre <strong>3 y 50 caracteres</strong>.",
+            icon: "warning",
+            confirmButtonColor: "#38e07b",
+            confirmButtonText: "Entendido",
+            background: document.documentElement.classList.contains("dark")
+              ? "#1f2937"
+              : "#ffffff",
+            color: document.documentElement.classList.contains("dark")
+              ? "#f3f4f6"
+              : "#1f2937",
+            customClass: {
+              popup: "rounded-2xl",
+              title: "text-xl font-bold",
+              confirmButton: "rounded-xl px-6 py-2.5 font-semibold",
+            },
+          });
+          return false;
+        }
+
+        // Validate nombre
+        if (!nombre || nombre.length < 2 || nombre.length > 100) {
+          event.preventDefault();
+          Swal.fire({
+            title: "Nombre inválido",
+            html: "El <strong>nombre</strong> debe tener entre <strong>2 y 100 caracteres</strong>.",
+            icon: "warning",
+            confirmButtonColor: "#38e07b",
+            confirmButtonText: "Entendido",
+            background: document.documentElement.classList.contains("dark")
+              ? "#1f2937"
+              : "#ffffff",
+            color: document.documentElement.classList.contains("dark")
+              ? "#f3f4f6"
+              : "#1f2937",
+            customClass: {
+              popup: "rounded-2xl",
+              title: "text-xl font-bold",
+              confirmButton: "rounded-xl px-6 py-2.5 font-semibold",
+            },
+          });
+          return false;
+        }
+
+        // Validate apellido
+        if (!apellido || apellido.length < 2 || apellido.length > 100) {
+          event.preventDefault();
+          Swal.fire({
+            title: "Apellido inválido",
+            html: "El <strong>apellido</strong> debe tener entre <strong>2 y 100 caracteres</strong>.",
+            icon: "warning",
+            confirmButtonColor: "#38e07b",
+            confirmButtonText: "Entendido",
+            background: document.documentElement.classList.contains("dark")
+              ? "#1f2937"
+              : "#ffffff",
+            color: document.documentElement.classList.contains("dark")
+              ? "#f3f4f6"
+              : "#1f2937",
+            customClass: {
+              popup: "rounded-2xl",
+              title: "text-xl font-bold",
+              confirmButton: "rounded-xl px-6 py-2.5 font-semibold",
+            },
+          });
+          return false;
+        }
+
+        // Validate edad (opcional)
+        if (edad && (parseInt(edad) < 18 || parseInt(edad) > 100)) {
+          event.preventDefault();
+          Swal.fire({
+            title: "Edad inválida",
+            html: "La <strong>edad</strong> debe estar entre <strong>18 y 100 años</strong>.",
+            icon: "warning",
+            confirmButtonColor: "#38e07b",
+            confirmButtonText: "Entendido",
+            background: document.documentElement.classList.contains("dark")
+              ? "#1f2937"
+              : "#ffffff",
+            color: document.documentElement.classList.contains("dark")
+              ? "#f3f4f6"
+              : "#1f2937",
+            customClass: {
+              popup: "rounded-2xl",
+              title: "text-xl font-bold",
+              confirmButton: "rounded-xl px-6 py-2.5 font-semibold",
+            },
+          });
+          return false;
+        }
+
+        // Validate password (only for new employees now)
+        if (!isEdit && (!password || password.length < 6)) {
+          event.preventDefault();
+          Swal.fire({
+            title: "Contraseña inválida",
+            html: "La <strong>contraseña</strong> debe tener al menos <strong>6 caracteres</strong>.",
+            icon: "warning",
+            confirmButtonColor: "#38e07b",
+            confirmButtonText: "Entendido",
+            background: document.documentElement.classList.contains("dark")
+              ? "#1f2937"
+              : "#ffffff",
+            color: document.documentElement.classList.contains("dark")
+              ? "#f3f4f6"
+              : "#1f2937",
+            customClass: {
+              popup: "rounded-2xl",
+              title: "text-xl font-bold",
+              confirmButton: "rounded-xl px-6 py-2.5 font-semibold",
+            },
+          });
+          return false;
+        }
+
+        // Validate telefono (optional but must be 10 digits if provided)
+        if (telefono && !/^[0-9]{10}$/.test(telefono)) {
+          event.preventDefault();
+          Swal.fire({
+            title: "Teléfono inválido",
+            html: "El <strong>teléfono</strong> debe contener exactamente <strong>10 dígitos</strong> sin espacios ni guiones.",
+            icon: "warning",
+            confirmButtonColor: "#38e07b",
+            confirmButtonText: "Entendido",
+            background: document.documentElement.classList.contains("dark")
+              ? "#1f2937"
+              : "#ffffff",
+            color: document.documentElement.classList.contains("dark")
+              ? "#f3f4f6"
+              : "#1f2937",
+            customClass: {
+              popup: "rounded-2xl",
+              title: "text-xl font-bold",
+              confirmButton: "rounded-xl px-6 py-2.5 font-semibold",
+            },
+          });
+          return false;
+        }
+
+        // Check if phone has error (duplicate)
+        const phoneErrorMsg = form.querySelector(".phone-error-msg");
+        if (phoneErrorMsg) {
+          event.preventDefault();
+          Swal.fire({
+            title: "Teléfono duplicado",
+            html: "El <strong>teléfono</strong> que ingresaste ya está registrado por otro empleado. Por favor usa un número diferente.",
+            icon: "error",
+            confirmButtonColor: "#38e07b",
+            confirmButtonText: "Entendido",
+            background: document.documentElement.classList.contains("dark")
+              ? "#1f2937"
+              : "#ffffff",
+            color: document.documentElement.classList.contains("dark")
+              ? "#f3f4f6"
+              : "#1f2937",
+            customClass: {
+              popup: "rounded-2xl",
+              title: "text-xl font-bold",
+              confirmButton: "rounded-xl px-6 py-2.5 font-semibold",
+            },
+          });
+          return false;
+        }
+
+        // Validate salario (optional but must be positive if provided)
+        if (salario && (isNaN(salario) || parseFloat(salario) < 0)) {
+          event.preventDefault();
+          Swal.fire({
+            title: "Salario inválido",
+            html: "El <strong>salario</strong> debe ser un número positivo.",
+            icon: "warning",
+            confirmButtonColor: "#38e07b",
+            confirmButtonText: "Entendido",
+            background: document.documentElement.classList.contains("dark")
+              ? "#1f2937"
+              : "#ffffff",
+            color: document.documentElement.classList.contains("dark")
+              ? "#f3f4f6"
+              : "#1f2937",
+            customClass: {
+              popup: "rounded-2xl",
+              title: "text-xl font-bold",
+              confirmButton: "rounded-xl px-6 py-2.5 font-semibold",
+            },
+          });
+          return false;
+        }
+
+        // Validate role selection
+        if (!roleId) {
+          event.preventDefault();
+          Swal.fire({
+            title: "Rol requerido",
+            html: "Debes seleccionar un <strong>rol</strong> para el empleado.",
+            icon: "warning",
+            confirmButtonColor: "#38e07b",
+            confirmButtonText: "Entendido",
+            background: document.documentElement.classList.contains("dark")
+              ? "#1f2937"
+              : "#ffffff",
+            color: document.documentElement.classList.contains("dark")
+              ? "#f3f4f6"
+              : "#1f2937",
+            customClass: {
+              popup: "rounded-2xl",
+              title: "text-xl font-bold",
+              confirmButton: "rounded-xl px-6 py-2.5 font-semibold",
+            },
+          });
+          return false;
+        }
+
+        return true;
+      }
+
+      // Attach validation to form submit
+      document
+        .getElementById("employeeForm")
+        .addEventListener("submit", validateForm);
+
+      // Real-time validation feedback
+      const usernameInput = document.getElementById("username");
+      const nombreInput = document.getElementById("nombre");
+      const apellidoInput = document.getElementById("apellido");
+      const edadInput = document.getElementById("edad");
+      const passwordInput = document.querySelector('input[name="password"]');
+      const salarioInput = document.getElementById("salario");
+
+      // Username validation
+      usernameInput?.addEventListener("blur", function () {
+        const value = this.value.trim();
+        if (value && (value.length < 3 || value.length > 50)) {
+          this.classList.add("border-red-500");
+          this.classList.remove("border-gray-300", "dark:border-gray-600");
+        } else {
+          this.classList.remove("border-red-500");
+          this.classList.add("border-gray-300", "dark:border-gray-600");
+        }
+      });
+
+      // Nombre validation
+      nombreInput?.addEventListener("blur", function () {
+        const value = this.value.trim();
+        if (value && (value.length < 2 || value.length > 100)) {
+          this.classList.add("border-red-500");
+          this.classList.remove("border-gray-300", "dark:border-gray-600");
+        } else {
+          this.classList.remove("border-red-500");
+          this.classList.add("border-gray-300", "dark:border-gray-600");
+        }
+      });
+
+      // Apellido validation
+      apellidoInput?.addEventListener("blur", function () {
+        const value = this.value.trim();
+        if (value && (value.length < 2 || value.length > 100)) {
+          this.classList.add("border-red-500");
+          this.classList.remove("border-gray-300", "dark:border-gray-600");
+        } else {
+          this.classList.remove("border-red-500");
+          this.classList.add("border-gray-300", "dark:border-gray-600");
+        }
+      });
+
+      // Email validation
+      emailInput?.addEventListener("blur", function () {
+        const value = this.value.trim();
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (value && !emailRegex.test(value)) {
+          this.classList.add("border-red-500");
+          this.classList.remove("border-gray-300", "dark:border-gray-600");
+        } else {
+          this.classList.remove("border-red-500");
+          this.classList.add("border-gray-300", "dark:border-gray-600");
+        }
+      });
+
+      // Password validation
+      passwordInput?.addEventListener("blur", function () {
+        const value = this.value;
+        if (value && value.length > 0 && value.length < 6) {
+          this.classList.add("border-red-500");
+          this.classList.remove("border-gray-300", "dark:border-gray-600");
+        } else {
+          this.classList.remove("border-red-500");
+          this.classList.add("border-gray-300", "dark:border-gray-600");
+        }
+      });
+
+      // Salario validation
+      salarioInput?.addEventListener("blur", function () {
+        const value = this.value.trim();
+        if (value && (isNaN(value) || parseFloat(value) < 0)) {
+          this.classList.add("border-red-500");
+          this.classList.remove("border-gray-300", "dark:border-gray-600");
+        } else {
+          this.classList.remove("border-red-500");
+          this.classList.add("border-gray-300", "dark:border-gray-600");
+        }
+      });
+
+      // Phone validation
+      const telefonoInput = document.getElementById("telefono");
+      let phoneCheckTimeout;
+
+      telefonoInput.addEventListener("input", function (e) {
+        // Only allow digits, max 10
+        this.value = this.value.replace(/\D/g, "").substring(0, 10);
+
+        // Clear previous timeout
+        clearTimeout(phoneCheckTimeout);
+
+        // Check uniqueness after user stops typing (debounce)
+        if (this.value.length === 10) {
+          phoneCheckTimeout = setTimeout(() => {
+            checkPhoneUniqueness(this.value);
+          }, 500);
+        }
+      });
+
+      // Function to check phone uniqueness via AJAX
+      async function checkPhoneUniqueness(telefono) {
+        const employeeIdInput = document.querySelector(
+          'input[name="idEmpleado"]',
+        );
+        const employeeId = employeeIdInput ? employeeIdInput.value : null;
+
+        try {
+          const params = new URLSearchParams({ telefono });
+          if (employeeId) {
+            params.append("employeeId", employeeId);
+          }
+
+          const response = await fetch(
+            `/admin/employees/check-phone?${params}`,
+          );
+          const data = await response.json();
+
+          const telefonoInput = document.getElementById("telefono");
+
+          if (!data.available) {
+            telefonoInput.classList.add("border-red-500");
+            telefonoInput.classList.remove(
+              "border-gray-300",
+              "dark:border-gray-600",
+            );
+
+            // Show error message below input
+            let errorMsg =
+              telefonoInput.parentElement.querySelector(".phone-error-msg");
+            if (!errorMsg) {
+              errorMsg = document.createElement("p");
+              errorMsg.className =
+                "phone-error-msg mt-2 text-xs text-red-600 dark:text-red-400 flex items-center gap-1";
+              errorMsg.innerHTML =
+                '<span class="material-symbols-outlined text-sm">error</span> Este teléfono ya está registrado';
+              telefonoInput.parentElement.appendChild(errorMsg);
+            }
+          } else {
+            telefonoInput.classList.remove("border-red-500");
+            telefonoInput.classList.add(
+              "border-gray-300",
+              "dark:border-gray-600",
+            );
+
+            // Remove error message if exists
+            const errorMsg =
+              telefonoInput.parentElement.querySelector(".phone-error-msg");
+            if (errorMsg) {
+              errorMsg.remove();
+            }
+          }
+        } catch (error) {
+          console.error("Error checking phone uniqueness:", error);
+        }
+      }
+
+      // Shift Modal Functions
+      function openShiftModal() {
+        document.getElementById("shiftModal").classList.remove("hidden");
+      }
+
+      function closeShiftModal() {
+        document.getElementById("shiftModal").classList.add("hidden");
+      }
+
+      function assignShifts() {
+        const form = document.getElementById("shiftAssignmentForm");
+        const employeeId = form.querySelector('input[name="employeeId"]').value;
+        const checkboxes = form.querySelectorAll(
+          'input[name="shiftIds"]:checked:not(:disabled)',
+        );
+
+        const selectedShiftIds = Array.from(checkboxes).map((cb) => cb.value);
+
+        if (selectedShiftIds.length === 0) {
+          Swal.fire({
+            title: "Sin selección",
+            text: "No hay nuevos turnos seleccionados para asignar.",
+            icon: "warning",
+            confirmButtonColor: "#38e07b",
+            confirmButtonText: "Entendido",
+            background: document.documentElement.classList.contains("dark")
+              ? "#1f2937"
+              : "#ffffff",
+            color: document.documentElement.classList.contains("dark")
+              ? "#f3f4f6"
+              : "#1f2937",
+            customClass: {
+              popup: "rounded-2xl",
+              title: "text-xl font-bold",
+              confirmButton: "rounded-xl px-6 py-2.5 font-semibold",
+            },
+          });
+          return;
+        }
+
+        Swal.fire({
+          title: "Asignando turnos...",
+          text: "Por favor espera",
+          icon: "info",
+          allowOutsideClick: false,
+          showConfirmButton: false,
+          background: document.documentElement.classList.contains("dark")
+            ? "#1f2937"
+            : "#ffffff",
+          color: document.documentElement.classList.contains("dark")
+            ? "#f3f4f6"
+            : "#1f2937",
+          customClass: {
+            popup: "rounded-2xl",
+          },
+          didOpen: () => {
+            Swal.showLoading();
+          },
+        });
+
+        const assignmentPromises = selectedShiftIds.map((shiftId) => {
+          return fetch(`/admin/shifts/${shiftId}/assign`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/x-www-form-urlencoded",
+            },
+            body: `employeeIds=${employeeId}`,
+          });
+        });
+
+        Promise.all(assignmentPromises)
+          .then((responses) => {
+            const allSuccessful = responses.every((r) => r.ok);
+            if (allSuccessful) {
+              Swal.fire({
+                title: "¡Éxito!",
+                html: `<strong>${selectedShiftIds.length}</strong> turno(s) asignado(s) exitosamente.<br>La página se recargará.`,
+                icon: "success",
+                confirmButtonColor: "#38e07b",
+                confirmButtonText: "Continuar",
+                background: document.documentElement.classList.contains("dark")
+                  ? "#1f2937"
+                  : "#ffffff",
+                color: document.documentElement.classList.contains("dark")
+                  ? "#f3f4f6"
+                  : "#1f2937",
+                customClass: {
+                  popup: "rounded-2xl",
+                  title: "text-xl font-bold",
+                  confirmButton: "rounded-xl px-6 py-2.5 font-semibold",
+                },
+              }).then(() => {
+                window.location.reload();
+              });
+            } else {
+              throw new Error("Algunos turnos no pudieron ser asignados");
+            }
+          })
+          .catch((error) => {
+            console.error("Error:", error);
+            Swal.fire({
+              title: "Error",
+              text: "Error al asignar los turnos. Por favor, intente nuevamente.",
+              icon: "error",
+              confirmButtonColor: "#38e07b",
+              confirmButtonText: "Entendido",
+              background: document.documentElement.classList.contains("dark")
+                ? "#1f2937"
+                : "#ffffff",
+              color: document.documentElement.classList.contains("dark")
+                ? "#f3f4f6"
+                : "#1f2937",
+              customClass: {
+                popup: "rounded-2xl",
+                title: "text-xl font-bold",
+                confirmButton: "rounded-xl px-6 py-2.5 font-semibold",
+              },
+            });
+          });
+      }
+
+      // Close modal when clicking outside
+      document
+        .getElementById("shiftModal")
+        ?.addEventListener("click", function (e) {
+          if (e.target === this) {
+            closeShiftModal();
+          }
+        });
+
+      // Confirm delete
+      function confirmDelete() {
+        Swal.fire({
+          title: "¿Eliminar empleado?",
+          html: "Esta acción es <strong>permanente</strong> y no se puede deshacer. ¿Estás seguro?",
+          icon: "warning",
+          showCancelButton: true,
+          confirmButtonColor: "#ef4444",
+          cancelButtonColor: "#6b7280",
+          confirmButtonText:
+            '<span class="flex items-center gap-2"><span class="material-symbols-outlined text-lg">delete_forever</span> Sí, eliminar</span>',
+          cancelButtonText: "Cancelar",
+          reverseButtons: true,
+          background: document.documentElement.classList.contains("dark")
+            ? "#1f2937"
+            : "#ffffff",
+          color: document.documentElement.classList.contains("dark")
+            ? "#f3f4f6"
+            : "#1f2937",
+          customClass: {
+            popup: "rounded-2xl",
+            title: "text-xl font-bold",
+            htmlContainer: "text-sm",
+            confirmButton: "rounded-xl px-6 py-2.5 font-semibold shadow-md",
+            cancelButton: "rounded-xl px-6 py-2.5 font-semibold",
+          },
+          buttonsStyling: true,
+        }).then((result) => {
+          if (result.isConfirmed) {
+            document.getElementById("deleteForm").submit();
+          }
+        });
+      }
+
+      // Password Change Form Validation
+      const changePasswordForm = document.getElementById("changePasswordForm");
+      if (changePasswordForm) {
+        changePasswordForm.addEventListener("submit", function (event) {
+          const newPassword = document.getElementById("newPassword").value;
+          const confirmPassword =
+            document.getElementById("confirmPassword").value;
+
+          // Validate minimum length
+          if (newPassword.length < 6) {
+            event.preventDefault();
+            Swal.fire({
+              title: "Contraseña muy corta",
+              html: "La <strong>contraseña</strong> debe tener al menos <strong>6 caracteres</strong>.",
+              icon: "warning",
+              confirmButtonColor: "#38e07b",
+              confirmButtonText: "Entendido",
+              background: document.documentElement.classList.contains("dark")
+                ? "#1f2937"
+                : "#ffffff",
+              color: document.documentElement.classList.contains("dark")
+                ? "#f3f4f6"
+                : "#1f2937",
+              customClass: {
+                popup: "rounded-2xl",
+                title: "text-xl font-bold",
+                confirmButton: "rounded-xl px-6 py-2.5 font-semibold",
+              },
+            });
+            return false;
+          }
+
+          // Validate passwords match
+          if (newPassword !== confirmPassword) {
+            event.preventDefault();
+            Swal.fire({
+              title: "Las contraseñas no coinciden",
+              html: "Asegúrate de que ambas contraseñas sean <strong>exactamente iguales</strong>.",
+              icon: "error",
+              confirmButtonColor: "#38e07b",
+              confirmButtonText: "Entendido",
+              background: document.documentElement.classList.contains("dark")
+                ? "#1f2937"
+                : "#ffffff",
+              color: document.documentElement.classList.contains("dark")
+                ? "#f3f4f6"
+                : "#1f2937",
+              customClass: {
+                popup: "rounded-2xl",
+                title: "text-xl font-bold",
+                confirmButton: "rounded-xl px-6 py-2.5 font-semibold",
+              },
+            });
+            return false;
+          }
+        });
+
+        // Real-time password match validation
+        const newPasswordInput = document.getElementById("newPassword");
+        const confirmPasswordInput = document.getElementById("confirmPassword");
+
+        function validatePasswordMatch() {
+          const newPassword = newPasswordInput.value;
+          const confirmPassword = confirmPasswordInput.value;
+
+          if (confirmPassword && newPassword !== confirmPassword) {
+            confirmPasswordInput.classList.add("border-red-500");
+            confirmPasswordInput.classList.remove(
+              "border-gray-300",
+              "dark:border-gray-700",
+            );
+          } else {
+            confirmPasswordInput.classList.remove("border-red-500");
+            confirmPasswordInput.classList.add(
+              "border-gray-300",
+              "dark:border-gray-700",
+            );
+          }
+        }
+
+        newPasswordInput?.addEventListener("input", validatePasswordMatch);
+        confirmPasswordInput?.addEventListener("input", validatePasswordMatch);
+      }
+    </script>
+
+    <!-- Script del Sistema de Temas -->
+    <div th:replace="~{fragments/theme :: themeScript}"></div>
+  </body>
+</html>

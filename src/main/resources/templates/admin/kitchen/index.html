@@ -1,0 +1,736 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title th:text="${globalSystemConfig.systemName + ' - Cocina'}">
+      El Gran Sazón - Cocina
+    </title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@300;400;500;600;700"
+      rel="stylesheet"
+    />
+
+    <!-- Sistema de Temas (Modo Claro/Oscuro) -->
+    <div th:replace="~{fragments/theme :: themeResources}"></div>
+    <!-- Sidebar Styles Fragment -->
+    <div th:replace="~{fragments/sidebar :: sidebarStyles}"></div>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#38e07b",
+              "primary-dark": "#2bc866",
+              "background-light": "#f8faf9",
+              "background-dark": "#0f1713",
+            },
+            fontFamily: {
+              display: ["Work Sans"],
+            },
+            borderRadius: {
+              DEFAULT: "0.5rem",
+              lg: "0.75rem",
+              xl: "1rem",
+              "2xl": "1.5rem",
+              full: "9999px",
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      .order-card {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      .order-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+      }
+
+      .pending-glow {
+        animation: glow 2s ease-in-out infinite;
+      }
+
+      @keyframes glow {
+        0%,
+        100% {
+          box-shadow: 0 0 20px rgba(251, 146, 60, 0.4);
+        }
+        50% {
+          box-shadow: 0 0 30px rgba(251, 146, 60, 0.6);
+        }
+      }
+    </style>
+  </head>
+  <body
+    class="bg-gradient-to-br from-background-light to-gray-50 dark:from-background-dark dark:to-gray-900 font-display text-gray-800 dark:text-gray-200 overflow-hidden"
+  >
+    <!-- Menu Controls Fragment -->
+    <div th:replace="~{fragments/sidebar :: menuControls}"></div>
+
+    <div class="flex min-h-screen h-screen overflow-hidden">
+      <!-- SIDEBAR -->
+      <div
+        th:replace="~{fragments/sidebar :: sidebar(activeMenu='kitchen')}"
+      ></div>
+
+      <main class="flex-1 overflow-y-auto h-screen">
+        <div class="p-4 sm:p-6 lg:p-8 pt-20 md:pt-20 lg:pt-8 pb-32">
+          <!-- Header -->
+          <header
+            class="mb-6 sm:mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4"
+          >
+            <div>
+              <h2
+                class="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white mb-1"
+              >
+                👨‍🍳 Gestión de Cocina
+              </h2>
+              <p class="text-sm sm:text-base text-gray-600 dark:text-gray-400">
+                Monitoreo de todos los pedidos activos
+              </p>
+            </div>
+            <div class="flex items-center gap-3 sm:gap-4 w-full sm:w-auto">
+              <div
+                class="flex items-center gap-2 px-3 sm:px-4 py-2 bg-white dark:bg-gray-900 rounded-xl shadow-md flex-1 sm:flex-none"
+              >
+                <div
+                  class="w-2 h-2 bg-primary rounded-full animate-pulse"
+                ></div>
+                <p
+                  class="text-xs sm:text-sm text-gray-600 dark:text-gray-300 font-medium"
+                >
+                  En vivo
+                </p>
+              </div>
+              <a
+                th:href="@{/admin/kitchen/all-orders}"
+                class="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-primary to-primary-dark text-white rounded-xl font-semibold text-sm hover:shadow-lg transition-all"
+              >
+                <span class="material-symbols-outlined">history</span>
+                <span class="hidden sm:inline">Ver Historial</span>
+              </a>
+            </div>
+          </header>
+
+          <!-- Statistics Cards -->
+          <section
+            class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8"
+          >
+            <!-- Pending Orders -->
+            <div
+              class="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20 p-4 sm:p-6 rounded-2xl border-2 border-orange-200 dark:border-orange-700 shadow-lg"
+            >
+              <div class="flex justify-between items-start mb-3">
+                <div
+                  class="w-12 h-12 bg-orange-500 rounded-xl flex items-center justify-center shadow-lg"
+                >
+                  <span class="material-symbols-outlined text-white text-2xl"
+                    >pending_actions</span
+                  >
+                </div>
+                <span
+                  class="px-3 py-1 bg-orange-200 dark:bg-orange-700 text-orange-800 dark:text-orange-200 rounded-full text-xs font-bold"
+                >
+                  PENDIENTE
+                </span>
+              </div>
+              <p
+                class="text-3xl sm:text-4xl font-bold text-orange-600 dark:text-orange-400 mb-1"
+                th:text="${pendingCount}"
+              >
+                0
+              </p>
+              <p class="text-sm text-orange-700 dark:text-orange-300">
+                Sin asignar
+              </p>
+            </div>
+
+            <!-- In Preparation -->
+            <div
+              class="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 p-4 sm:p-6 rounded-2xl border-2 border-blue-200 dark:border-blue-700 shadow-lg"
+            >
+              <div class="flex justify-between items-start mb-3">
+                <div
+                  class="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center shadow-lg"
+                >
+                  <span class="material-symbols-outlined text-white text-2xl"
+                    >cooking</span
+                  >
+                  >
+                </div>
+                <span
+                  class="px-3 py-1 bg-blue-200 dark:bg-blue-700 text-blue-800 dark:text-blue-200 rounded-full text-xs font-bold"
+                >
+                  EN COCINA
+                </span>
+              </div>
+              <p
+                class="text-3xl sm:text-4xl font-bold text-blue-600 dark:text-blue-400 mb-1"
+                th:text="${inPreparationCount}"
+              >
+                0
+              </p>
+              <p class="text-sm text-blue-700 dark:text-blue-300">
+                Preparándose
+              </p>
+            </div>
+
+            <!-- Active Chefs -->
+            <div
+              class="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 p-4 sm:p-6 rounded-2xl border-2 border-purple-200 dark:border-purple-700 shadow-lg"
+            >
+              <div class="flex justify-between items-start mb-3">
+                <div
+                  class="w-12 h-12 bg-purple-500 rounded-xl flex items-center justify-center shadow-lg"
+                >
+                  <span class="material-symbols-outlined text-white text-2xl"
+                    >group</span
+                  >
+                </div>
+                <span
+                  class="px-3 py-1 bg-purple-200 dark:bg-purple-700 text-purple-800 dark:text-purple-200 rounded-full text-xs font-bold"
+                >
+                  ACTIVOS
+                </span>
+              </div>
+              <p
+                class="text-3xl sm:text-4xl font-bold text-purple-600 dark:text-purple-400 mb-1"
+                th:text="${activeChefsCount}"
+              >
+                0
+              </p>
+              <p class="text-sm text-purple-700 dark:text-purple-300">
+                Chefs trabajando
+              </p>
+            </div>
+
+            <!-- Active Baristas -->
+            <div
+              class="bg-gradient-to-br from-primary/10 to-primary/20 dark:from-primary/20 dark:to-primary/30 p-4 sm:p-6 rounded-2xl border-2 border-primary/30 dark:border-primary/40 shadow-lg"
+            >
+              <div class="flex justify-between items-start mb-3">
+                <div
+                  class="w-12 h-12 bg-primary rounded-xl flex items-center justify-center shadow-lg"
+                >
+                  <span class="material-symbols-outlined text-white text-2xl"
+                    >local_cafe</span
+                  >
+                </div>
+                <span
+                  class="px-3 py-1 bg-primary/20 dark:bg-primary/30 text-primary-dark dark:text-primary rounded-full text-xs font-bold"
+                >
+                  ACTIVOS
+                </span>
+              </div>
+              <p
+                class="text-3xl sm:text-4xl font-bold text-primary-dark dark:text-primary mb-1"
+                th:text="${activeBaristasCount}"
+              >
+                0
+              </p>
+              <p class="text-sm text-gray-700 dark:text-gray-300">
+                Baristas trabajando
+              </p>
+            </div>
+          </section>
+
+          <!-- Filter Tabs -->
+          <div class="mb-6">
+            <div
+              class="flex flex-wrap gap-2 sm:gap-3 bg-white dark:bg-gray-900 p-2 rounded-xl shadow-md border border-gray-200 dark:border-gray-700"
+            >
+              <button
+                onclick="filterOrders('all')"
+                class="filter-btn px-4 py-2 rounded-lg font-semibold text-sm transition-all bg-primary text-white"
+                data-filter="all"
+              >
+                <span class="material-symbols-outlined text-sm mr-1"
+                  >visibility</span
+                >
+                Todos (<span th:text="${pendingCount + inPreparationCount}"
+                  >0</span
+                >)
+              </button>
+              <button
+                onclick="filterOrders('pending')"
+                class="filter-btn px-4 py-2 rounded-lg font-semibold text-sm transition-all text-gray-700 dark:text-gray-300 hover:bg-orange-100 dark:hover:bg-orange-900/30"
+                data-filter="pending"
+              >
+                <span class="material-symbols-outlined text-sm mr-1"
+                  >pending_actions</span
+                >
+                Pendientes (<span th:text="${pendingCount}">0</span>)
+              </button>
+              <button
+                onclick="filterOrders('in-preparation')"
+                class="filter-btn px-4 py-2 rounded-lg font-semibold text-sm transition-all text-gray-700 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/30"
+                data-filter="in-preparation"
+              >
+                <span class="material-symbols-outlined text-sm mr-1"
+                  >restaurant</span
+                >
+                En Preparación (<span th:text="${inPreparationCount}">0</span>)
+              </button>
+            </div>
+          </div>
+
+          <!-- Orders Grid -->
+          <div
+            th:if="${allOrders != null and !allOrders.isEmpty()}"
+            class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6"
+          >
+            <div
+              th:each="order : ${allOrders}"
+              th:data-status="${order.status.name() == 'PENDING' ? 'pending' : 'in-preparation'}"
+              th:classappend="${order.status.name() == 'PENDING' ? 'pending-glow' : ''}"
+              class="order-card bg-white dark:bg-gray-800 rounded-2xl shadow-lg border-2 overflow-hidden"
+              th:attr="data-order-status=${order.status.name() == 'PENDING' ? 'pending' : 'in-preparation'}"
+            >
+              <!-- Card Header -->
+              <div
+                th:classappend="${order.status.name() == 'PENDING' ? 'bg-gradient-to-r from-orange-500 to-orange-600' : 'bg-gradient-to-r from-blue-500 to-blue-600'}"
+                class="px-4 py-3 text-white"
+              >
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-2">
+                    <span class="material-symbols-outlined">receipt</span>
+                    <span
+                      class="font-bold text-lg"
+                      th:text="'#' + ${order.orderNumber}"
+                      >Pedido #001</span
+                    >
+                  </div>
+                  <span
+                    th:classappend="${order.status.name() == 'PENDING' ? 'bg-orange-200 text-orange-800' : 'bg-blue-200 text-blue-800'}"
+                    class="px-3 py-1 rounded-full text-xs font-bold"
+                    th:text="${order.status.name() == 'PENDING' ? 'PENDIENTE' : 'EN PREPARACIÓN'}"
+                  >
+                    ESTADO
+                  </span>
+                </div>
+              </div>
+
+              <!-- Card Body -->
+              <div class="p-4">
+                <!-- Table/Delivery Info -->
+                <div
+                  class="flex items-center gap-2 mb-3 pb-3 border-b border-gray-200 dark:border-gray-700"
+                >
+                  <span class="material-symbols-outlined text-primary">
+                    <span th:if="${order.orderType.name() == 'DINE_IN'}"
+                      >table_restaurant</span
+                    >
+                    <span th:if="${order.orderType.name() == 'TAKEOUT'}"
+                      >shopping_bag</span
+                    >
+                    <span th:if="${order.orderType.name() == 'DELIVERY'}"
+                      >two_wheeler</span
+                    >
+                  </span>
+                  <span
+                    class="font-semibold text-gray-900 dark:text-white"
+                    th:text="${order.orderType.name() == 'DINE_IN' ? 'Mesa ' + order.table.tableNumber : order.orderType.displayName}"
+                  >
+                    Mesa 5
+                  </span>
+                  <span
+                    class="ml-auto text-xs text-gray-500 dark:text-gray-400"
+                  >
+                    <span class="material-symbols-outlined text-sm align-middle"
+                      >schedule</span
+                    >
+                    <span
+                      th:text="${#temporals.format(order.createdAt, 'HH:mm')}"
+                      >12:30</span
+                    >
+                  </span>
+                </div>
+
+                <!-- Chef/Barista Assignment -->
+                <div
+                  class="mb-3 pb-3 border-b border-gray-200 dark:border-gray-700"
+                >
+                  <!-- Check if order has items requiring chef preparation -->
+                  <th:block
+                    th:with="hasChefItems=${#lists.size(order.orderDetails.?[itemMenu.requiresPreparation]) > 0}, 
+                             hasBaristaItems=${#lists.size(order.orderDetails.?[itemMenu.requiresBaristaPreparation]) > 0}"
+                  >
+                    <!-- Chef Section (only show if order has items requiring chef preparation) -->
+                    <th:block th:if="${hasChefItems}">
+                      <div
+                        th:if="${order.preparedBy != null}"
+                        class="flex items-center gap-3"
+                      >
+                        <div
+                          class="w-10 h-10 bg-gradient-to-br from-purple-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold shadow-lg"
+                        >
+                          <span
+                            th:text="${order.preparedBy.nombre != null ? order.preparedBy.nombre.substring(0,1).toUpperCase() + (order.preparedBy.apellido != null ? order.preparedBy.apellido.substring(0,1).toUpperCase() : '') : '?'}"
+                            >JD</span
+                          >
+                        </div>
+                        <div class="flex-1 min-w-0">
+                          <p class="text-xs text-gray-500 dark:text-gray-400">
+                            <span class="material-symbols-outlined text-purple-500 text-xs align-middle mr-1">restaurant</span>Chef:
+                          </p>
+                          <p
+                            class="font-semibold text-gray-900 dark:text-white truncate"
+                            th:text="${order.preparedBy.nombre + ' ' + order.preparedBy.apellido}"
+                          >
+                            Chef Name
+                          </p>
+                        </div>
+                      </div>
+                      <div
+                        th:if="${order.preparedBy == null}"
+                        class="flex items-center gap-3 text-orange-600 dark:text-orange-400"
+                      >
+                        <span class="material-symbols-outlined">restaurant</span>
+                        <span class="text-sm font-semibold">Sin chef asignado</span>
+                      </div>
+                    </th:block>
+                    
+                    <!-- Spacer between Chef and Barista sections if both exist -->
+                    <div th:if="${hasChefItems and hasBaristaItems}" class="my-2"></div>
+
+                    <!-- Barista Section (only show if order has items requiring barista preparation) -->
+                    <th:block th:if="${hasBaristaItems}">
+                      <div
+                        th:if="${order.preparedByBarista != null}"
+                        class="flex items-center gap-3"
+                      >
+                        <div
+                          class="w-10 h-10 bg-gradient-to-br from-primary to-primary-dark rounded-full flex items-center justify-center text-white font-bold shadow-lg"
+                        >
+                          <span
+                            th:text="${order.preparedByBarista.nombre != null ? order.preparedByBarista.nombre.substring(0,1).toUpperCase() + (order.preparedByBarista.apellido != null ? order.preparedByBarista.apellido.substring(0,1).toUpperCase() : '') : '?'}"
+                            >JD</span
+                          >
+                        </div>
+                        <div class="flex-1 min-w-0">
+                          <p class="text-xs text-gray-500 dark:text-gray-400">
+                            <span class="material-symbols-outlined text-primary text-xs align-middle mr-1">local_cafe</span>Barista:
+                          </p>
+                          <p
+                            class="font-semibold text-gray-900 dark:text-white truncate"
+                            th:text="${order.preparedByBarista.nombre + ' ' + order.preparedByBarista.apellido}"
+                          >
+                            Barista Name
+                          </p>
+                        </div>
+                      </div>
+                      <div
+                        th:if="${order.preparedByBarista == null}"
+                        class="flex items-center gap-3 text-primary dark:text-primary"
+                      >
+                        <span class="material-symbols-outlined">local_cafe</span>
+                        <span class="text-sm font-semibold">Sin barista asignado</span>
+                      </div>
+                    </th:block>
+                  </th:block>
+                </div>
+
+                <!-- Order Items -->
+                <div class="mb-4">
+                  <p
+                    class="text-xs text-gray-500 dark:text-gray-400 mb-2 font-semibold"
+                  >
+                    Items del pedido:
+                  </p>
+                  <div class="space-y-1.5 max-h-32 overflow-y-auto">
+                    <div
+                      th:each="detail : ${order.orderDetails}"
+                      class="flex items-center justify-between text-sm bg-gray-50 dark:bg-gray-700/50 px-2 py-1.5 rounded-lg"
+                    >
+                      <span class="flex items-center gap-1.5 flex-1 min-w-0">
+                        <span
+                          class="w-6 h-6 bg-primary/20 rounded-full flex items-center justify-center text-primary font-bold text-xs flex-shrink-0"
+                          th:text="${detail.quantity}"
+                          >2</span
+                        >
+                        <span
+                          class="text-gray-700 dark:text-gray-300 truncate"
+                          th:text="${detail.itemMenu.name}"
+                          >Item</span
+                        >
+                      </span>
+                      <span
+                        th:if="${detail.itemMenu.requiresPreparation}"
+                        class="material-symbols-outlined text-orange-500 text-sm ml-2 flex-shrink-0"
+                        title="Requiere preparación"
+                        >restaurant</span
+                      >
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Total -->
+                <div
+                  class="flex items-center justify-between mb-4 py-2 px-3 bg-gray-100 dark:bg-gray-700 rounded-lg"
+                >
+                  <span
+                    class="text-sm font-semibold text-gray-700 dark:text-gray-300"
+                    >Total:</span
+                  >
+                  <span
+                    class="text-lg font-bold text-primary-dark dark:text-primary"
+                    th:text="'$' + ${#numbers.formatDecimal(order.total, 1, 2)}"
+                    >$0.00</span
+                  >
+                </div>
+
+                <!-- Actions -->
+                <div class="flex gap-2">
+                  <a
+                    th:href="@{/admin/orders/view/{id}(id=${order.idOrder})}"
+                    class="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-primary to-primary-dark text-white rounded-xl font-semibold text-sm hover:shadow-lg transition-all"
+                  >
+                    <span class="material-symbols-outlined text-lg"
+                      >visibility</span
+                    >
+                    Ver Detalle
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Empty State -->
+          <div
+            th:if="${allOrders == null or allOrders.isEmpty()}"
+            class="flex flex-col items-center justify-center py-16 bg-white dark:bg-gray-900 rounded-2xl shadow-lg border-2 border-dashed border-gray-300 dark:border-gray-700"
+          >
+            <div
+              class="w-24 h-24 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-4"
+            >
+              <span class="material-symbols-outlined text-gray-400 text-5xl"
+                >soup_kitchen</span
+              >
+            </div>
+            <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-2">
+              No hay pedidos activos
+            </h3>
+            <p class="text-gray-600 dark:text-gray-400 text-center max-w-md">
+              Todos los pedidos han sido procesados. Los nuevos pedidos
+              aparecerán aquí automáticamente.
+            </p>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <!-- Sidebar Scripts Fragment -->
+    <div th:replace="~{fragments/sidebar :: sidebarScripts}"></div>
+
+    <!-- Filter Script -->
+    <script>
+      function filterOrders(status) {
+        const orderCards = document.querySelectorAll("[data-order-status]");
+        const filterBtns = document.querySelectorAll(".filter-btn");
+
+        // Update button styles
+        filterBtns.forEach((btn) => {
+          if (btn.dataset.filter === status) {
+            btn.classList.add("bg-primary", "text-white");
+            btn.classList.remove(
+              "text-gray-700",
+              "dark:text-gray-300",
+              "hover:bg-orange-100",
+              "dark:hover:bg-orange-900/30",
+              "hover:bg-blue-100",
+              "dark:hover:bg-blue-900/30",
+            );
+          } else {
+            btn.classList.remove("bg-primary", "text-white");
+            btn.classList.add("text-gray-700", "dark:text-gray-300");
+          }
+        });
+
+        // Filter orders
+        orderCards.forEach((card) => {
+          if (status === "all") {
+            card.style.display = "";
+          } else {
+            card.style.display =
+              card.dataset.orderStatus === status ? "" : "none";
+          }
+        });
+      }
+    </script>
+
+    <!-- WebSocket Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+    <script th:inline="javascript">
+      /*<![CDATA[*/
+      const companyId = /*[[${systemConfig.company != null ? systemConfig.company.idCompany : 0}]]*/ 0;
+      /*]]>*/
+    </script>
+    <script>
+      let stompClient = null;
+      let reconnectAttempts = 0;
+      const MAX_RECONNECT_ATTEMPTS = 5;
+      const RECONNECT_DELAY = 3000;
+
+      function connectWebSocket() {
+        const socket = new SockJS("/ws");
+        stompClient = Stomp.over(socket);
+
+        // Disable debug logging
+        stompClient.debug = null;
+
+        stompClient.connect(
+          {},
+          function (frame) {
+            reconnectAttempts = 0;
+            updateConnectionStatus(true);
+
+            // Subscribe to admin kitchen channel
+            stompClient.subscribe(`/topic/admin/kitchen/${companyId}`, function (message) {
+              const notification = JSON.parse(message.body);
+              handleKitchenNotification(notification);
+            });
+
+            // Subscribe to kitchen stats
+            stompClient.subscribe(`/topic/kitchen/stats/${companyId}`, function (message) {
+              const stats = JSON.parse(message.body);
+              updateKitchenStats(stats);
+            });
+          },
+          function (error) {
+            console.error("WebSocket Error: ", error);
+            updateConnectionStatus(false);
+            attemptReconnect();
+          },
+        );
+
+        socket.onclose = function () {
+          updateConnectionStatus(false);
+          attemptReconnect();
+        };
+      }
+
+      function attemptReconnect() {
+        if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+          reconnectAttempts++;
+          setTimeout(connectWebSocket, RECONNECT_DELAY);
+        } else {
+          console.error("Max reconnection attempts reached");
+          showNotification(
+            "Conexión perdida",
+            "No se pudo reconectar al servidor. Por favor recarga la página.",
+            "error",
+          );
+        }
+      }
+
+      function updateConnectionStatus(connected) {
+        // Add a connection status indicator if needed
+        const statusIndicator = document.getElementById("ws-status");
+        if (statusIndicator) {
+          statusIndicator.className = connected ? "connected" : "disconnected";
+          statusIndicator.title = connected ? "Conectado" : "Desconectado";
+        }
+      }
+
+      function handleKitchenNotification(notification) {
+
+        // Show notification based on type
+        if (notification.notificationType === "NEW_ORDER") {
+          showNotification(
+            "🔔 Nuevo Pedido",
+            `Pedido #${notification.orderNumber} - ${notification.orderType} - ${notification.itemCount} items - Total: $${notification.total}`,
+            "info",
+          );
+        } else if (notification.notificationType === "STATUS_CHANGE") {
+          showNotification(
+            "📊 Estado Actualizado",
+            `Pedido #${notification.orderNumber} - ${notification.message}`,
+            "success",
+          );
+        } else if (notification.notificationType === "ORDER_DELETED") {
+          showNotification(
+            "🗑️ Pedido Eliminado",
+            notification.message,
+            "warning",
+          );
+        }
+
+        // Play notification sound
+        playNotificationSound();
+
+        // Don't reload - WebSocket updates are sufficient
+        // Updates will be reflected on next navigation or manual refresh
+      }
+
+      function updateKitchenStats(stats) {
+
+        // Update stats in UI if they exist
+        const pendingCountEl = document.querySelector('[data-stat="pending"]');
+        const inPrepCountEl = document.querySelector('[data-stat="inprep"]');
+        const activeChefsEl = document.querySelector('[data-stat="chefs"]');
+        const avgTimeEl = document.querySelector('[data-stat="avgtime"]');
+
+        if (pendingCountEl) pendingCountEl.textContent = stats.pendingCount;
+        if (inPrepCountEl) inPrepCountEl.textContent = stats.inPreparationCount;
+        if (activeChefsEl) activeChefsEl.textContent = stats.activeChefsCount;
+        if (avgTimeEl)
+          avgTimeEl.textContent = stats.avgPreparationTime + " min";
+      }
+
+      function showNotification(title, message, type) {
+        Swal.fire({
+          icon: type,
+          title: title,
+          text: message,
+          toast: true,
+          position: "top-end",
+          showConfirmButton: false,
+          timer: 5000,
+          timerProgressBar: true,
+          background: document.documentElement.classList.contains("dark")
+            ? "#1f2937"
+            : "#ffffff",
+          color: document.documentElement.classList.contains("dark")
+            ? "#f3f4f6"
+            : "#1f2937",
+        });
+      }
+
+      function playNotificationSound() {
+        try {
+          const audio = new Audio("/sounds/notification.mp3");
+          audio.volume = 0.5;
+          audio.play().catch((e) => {});
+        } catch (e) {
+        }
+      }
+
+      // Initialize WebSocket on page load
+      document.addEventListener("DOMContentLoaded", function () {
+        connectWebSocket();
+      });
+
+      // Cleanup on page unload
+      window.addEventListener("beforeunload", function () {
+        if (stompClient !== null) {
+          stompClient.disconnect();
+        }
+      });
+    </script>
+
+    <!-- Script del Sistema de Temas -->
+    <div th:replace="~{fragments/theme :: themeScript}"></div>
+  </body>
+</html>

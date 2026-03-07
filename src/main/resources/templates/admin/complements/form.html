@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title
+      th:text="${globalSystemConfig.systemName + ' - ' + (complement.idComplement != null ? 'Editar Complemento' : 'Nuevo Complemento')}"
+    >
+      El Gran Sazón - Complemento
+    </title>
+    <link crossorigin="" href="https://fonts.gstatic.com/" rel="preconnect" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@300;400;500;600;700"
+      rel="stylesheet"
+    />
+
+    <!-- Sistema de Temas (Modo Claro/Oscuro) -->
+    <div th:replace="~{fragments/theme :: themeResources}"></div>
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#38e07b",
+              "primary-dark": "#2bc866",
+              "background-light": "#f8faf9",
+              "background-dark": "#0f1713",
+            },
+            fontFamily: {
+              display: ["Work Sans"],
+            },
+          },
+        },
+      };
+    </script>
+  </head>
+  <body
+    class="bg-gradient-to-br from-background-light to-gray-50 dark:from-background-dark dark:to-gray-900 font-display text-gray-800 dark:text-gray-200 min-h-screen"
+  >
+    <!-- Main Content Centered -->
+    <div class="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
+      <div class="max-w-2xl mx-auto">
+        <!-- Header -->
+        <div class="text-center mb-8">
+          <a
+            th:href="@{/admin/complements}"
+            class="inline-flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-primary dark:hover:text-primary transition-colors mb-4"
+          >
+            <span class="material-symbols-outlined">arrow_back</span>
+            <span class="font-medium">Volver a complementos</span>
+          </a>
+          <h1
+            class="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-2"
+            th:text="${complement.idComplement != null ? 'Editar Complemento' : 'Nuevo Complemento'}"
+          >
+            Complemento
+          </h1>
+          <p class="text-base text-gray-600 dark:text-gray-400">
+            Complete la información del complemento
+          </p>
+        </div>
+
+        <!-- Alert Messages -->
+        <div
+          th:if="${successMessage}"
+          class="mb-6 p-4 rounded-xl bg-green-100 dark:bg-green-900/30 border border-green-200 dark:border-green-800 flex items-center gap-3"
+        >
+          <span
+            class="material-symbols-outlined text-green-600 dark:text-green-400"
+            >check_circle</span
+          >
+          <p
+            class="text-green-800 dark:text-green-300 font-medium"
+            th:text="${successMessage}"
+          ></p>
+        </div>
+
+        <div
+          th:if="${errorMessage}"
+          class="mb-6 p-4 rounded-xl bg-red-100 dark:bg-red-900/30 border border-red-200 dark:border-red-800 flex items-center gap-3"
+        >
+          <span class="material-symbols-outlined text-red-600 dark:text-red-400"
+            >error</span
+          >
+          <p
+            class="text-red-800 dark:text-red-300 font-medium"
+            th:text="${errorMessage}"
+          ></p>
+        </div>
+
+        <!-- Form -->
+        <form
+          th:action="${formAction}"
+          method="post"
+          th:object="${complement}"
+          class="space-y-6"
+        >
+          <!-- Hidden ID Field -->
+          <input type="hidden" th:field="*{idComplement}" />
+
+          <!-- Información Básica -->
+          <div
+            class="bg-white dark:bg-gray-900 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 p-6"
+          >
+            <h2
+              class="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2"
+            >
+              <div
+                class="w-10 h-10 bg-primary/10 dark:bg-primary/20 rounded-xl flex items-center justify-center"
+              >
+                <span class="material-symbols-outlined text-primary">info</span>
+              </div>
+              <span>Información Básica</span>
+            </h2>
+
+            <div class="space-y-4">
+              <!-- Nombre -->
+              <div>
+                <label
+                  for="name"
+                  class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+                >
+                  Nombre del Complemento <span class="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  id="name"
+                  th:field="*{name}"
+                  required
+                  maxlength="100"
+                  placeholder="Ej: Salsa BBQ, Extra Queso, Mango Habanero"
+                  class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                />
+              </div>
+
+              <!-- Descripción -->
+              <div>
+                <label
+                  for="description"
+                  class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+                >
+                  Descripción
+                </label>
+                <textarea
+                  id="description"
+                  th:field="*{description}"
+                  rows="3"
+                  maxlength="500"
+                  placeholder="Descripción del complemento"
+                  class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-primary focus:border-transparent resize-none transition-all"
+                ></textarea>
+              </div>
+
+              <!-- Precio Extra -->
+              <div>
+                <label
+                  for="extraPrice"
+                  class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+                >
+                  Precio Extra <span class="text-red-500">*</span>
+                </label>
+                <div class="relative">
+                  <span
+                    class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 font-semibold"
+                    >$</span
+                  >
+                  <input
+                    type="number"
+                    id="extraPrice"
+                    th:field="*{extraPrice}"
+                    required
+                    step="0.01"
+                    min="0"
+                    placeholder="0.00"
+                    class="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                  />
+                </div>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Ingrese 0 si el complemento es gratuito
+                </p>
+              </div>
+
+              <!-- URL de Imagen -->
+              <div>
+                <label
+                  for="imageUrl"
+                  class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+                >
+                  URL de Imagen
+                </label>
+                <input
+                  type="url"
+                  id="imageUrl"
+                  th:field="*{imageUrl}"
+                  maxlength="500"
+                  placeholder="https://ejemplo.com/imagen.jpg"
+                  class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                />
+              </div>
+
+              <!-- Estado Activo -->
+              <div
+                class="flex items-center gap-3 p-4 bg-gray-50 dark:bg-gray-800 rounded-xl"
+              >
+                <!-- Hidden field para enviar false cuando el checkbox no está marcado -->
+                <input type="hidden" name="_active" value="on" />
+                <input
+                  type="checkbox"
+                  id="active"
+                  th:field="*{active}"
+                  class="w-5 h-5 rounded border-gray-300 dark:border-gray-600 text-primary focus:ring-primary focus:ring-offset-0"
+                />
+                <div>
+                  <label
+                    for="active"
+                    class="font-semibold text-gray-700 dark:text-gray-300"
+                  >
+                    Complemento Activo
+                  </label>
+                  <p class="text-sm text-gray-500 dark:text-gray-400">
+                    Si está activo, el complemento estará disponible para
+                    asociar a items del menú
+                  </p>
+                </div>
+              </div>
+
+              <!-- Es Salsa -->
+              <div
+                class="flex items-center gap-3 p-4 bg-orange-50 dark:bg-orange-900/20 rounded-xl border border-orange-200 dark:border-orange-800"
+              >
+                <!-- Hidden field para enviar false cuando el checkbox no está marcado -->
+                <input type="hidden" name="_isSauce" value="on" />
+                <input
+                  type="checkbox"
+                  id="isSauce"
+                  th:field="*{isSauce}"
+                  class="w-5 h-5 rounded border-orange-300 dark:border-orange-600 text-orange-500 focus:ring-orange-500 focus:ring-offset-0"
+                />
+                <div>
+                  <label
+                    for="isSauce"
+                    class="font-semibold text-orange-700 dark:text-orange-300 flex items-center gap-2"
+                  >
+                    <span class="material-symbols-outlined text-lg"
+                      >local_fire_department</span
+                    >
+                    Es una Salsa
+                  </label>
+                  <p class="text-sm text-orange-600 dark:text-orange-400">
+                    Marcar si este complemento es una salsa. Las salsas tienen
+                    un límite máximo por item del menú.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Info sobre ingredientes -->
+          <div
+            th:if="${complement.idComplement != null}"
+            class="bg-blue-50 dark:bg-blue-900/20 rounded-2xl border border-blue-200 dark:border-blue-800 p-6"
+          >
+            <div class="flex items-start gap-4">
+              <div
+                class="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center flex-shrink-0"
+              >
+                <span
+                  class="material-symbols-outlined text-blue-600 dark:text-blue-400"
+                  >info</span
+                >
+              </div>
+              <div>
+                <h3 class="font-semibold text-blue-800 dark:text-blue-300 mb-1">
+                  ¿Necesitas agregar ingredientes?
+                </h3>
+                <p class="text-sm text-blue-700 dark:text-blue-400 mb-3">
+                  Para gestionar los ingredientes de la receta de este
+                  complemento, guarda los cambios y luego usa el botón de
+                  ingredientes.
+                </p>
+                <a
+                  th:href="@{/admin/complements/{id}/ingredients(id=${complement.idComplement})}"
+                  class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-colors font-medium text-sm"
+                >
+                  <span class="material-symbols-outlined text-lg"
+                    >restaurant</span
+                  >
+                  Gestionar Ingredientes
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <!-- Botones de Acción -->
+          <div class="flex flex-col sm:flex-row gap-3 justify-center pt-4">
+            <button
+              type="submit"
+              class="flex-1 sm:flex-none px-8 py-3 bg-gradient-to-r from-primary to-primary-dark text-white font-bold rounded-xl hover:shadow-lg hover:shadow-primary/30 transition-all flex items-center justify-center gap-2"
+            >
+              <span class="material-symbols-outlined">save</span>
+              <span
+                th:text="${complement.idComplement != null ? 'Actualizar' : 'Crear Complemento'}"
+                >Guardar</span
+              >
+            </button>
+
+            <a
+              th:href="@{/admin/complements}"
+              class="flex-1 sm:flex-none px-8 py-3 bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-semibold rounded-xl transition-colors flex items-center justify-center gap-2"
+            >
+              <span class="material-symbols-outlined">cancel</span>
+              <span>Cancelar</span>
+            </a>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Script del Sistema de Temas -->
+    <div th:replace="~{fragments/theme :: themeScript}"></div>
+  </body>
+</html>

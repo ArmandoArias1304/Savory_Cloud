@@ -1,0 +1,2955 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title
+      th:text="${globalSystemConfig.systemName + ' - ' + (itemMenu.idItemMenu != null ? 'Editar Item del Menú' : 'Nuevo Item del Menú')}"
+    >
+      El Gran Sazón - Item del Menú
+    </title>
+    <link crossorigin="" href="https://fonts.gstatic.com/" rel="preconnect" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@300;400;500;600;700"
+      rel="stylesheet"
+    />
+
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <!-- Sistema de Temas (Modo Claro/Oscuro) -->
+    <div th:replace="~{fragments/theme :: themeResources}"></div>
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#38e07b",
+              "primary-dark": "#2bc866",
+              "background-light": "#f8faf9",
+              "background-dark": "#0f1713",
+            },
+            fontFamily: {
+              display: ["Work Sans"],
+            },
+            borderRadius: {
+              DEFAULT: "0.5rem",
+              lg: "0.75rem",
+              xl: "1rem",
+              "2xl": "1.5rem",
+              full: "9999px",
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      .ingredient-row {
+        animation: slideIn 0.3s ease-out;
+      }
+      @keyframes slideIn {
+        from {
+          opacity: 0;
+          transform: translateY(-10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+    </style>
+  </head>
+  <body
+    class="bg-gradient-to-br from-background-light to-gray-50 dark:from-background-dark dark:to-gray-900 font-display text-gray-800 dark:text-gray-200 min-h-screen"
+  >
+    <!-- Main Content Centered -->
+    <div class="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
+      <div class="max-w-4xl mx-auto">
+        <!-- Header -->
+        <div class="text-center mb-8">
+          <a
+            th:href="@{/admin/menu-items}"
+            class="inline-flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-primary dark:hover:text-primary transition-colors mb-4"
+          >
+            <span class="material-symbols-outlined">arrow_back</span>
+            <span class="font-medium">Volver al menú</span>
+          </a>
+          <h1
+            class="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-2"
+            th:text="${itemMenu.idItemMenu != null ? 'Editar Item del Menú' : 'Nuevo Item del Menú'}"
+          >
+            Item del Menú
+          </h1>
+          <p class="text-base text-gray-600 dark:text-gray-400">
+            Complete la información del item y su receta de ingredientes
+          </p>
+        </div>
+
+        <!-- Alert Messages -->
+        <div
+          th:if="${successMessage}"
+          class="mb-6 p-4 rounded-xl bg-green-100 dark:bg-green-900/30 border border-green-200 dark:border-green-800 flex items-center gap-3"
+        >
+          <span
+            class="material-symbols-outlined text-green-600 dark:text-green-400"
+            >check_circle</span
+          >
+          <p
+            class="text-green-800 dark:text-green-300 font-medium"
+            th:text="${successMessage}"
+          ></p>
+        </div>
+
+        <!-- Error alert removed: duplicate ingredient validation now handled by SweetAlert modal only -->
+
+        <!-- Form -->
+        <form
+          th:action="${formAction}"
+          method="post"
+          th:object="${itemMenu}"
+          enctype="multipart/form-data"
+          class="space-y-6"
+        >
+          <!-- Hidden ID Field -->
+          <input type="hidden" th:field="*{idItemMenu}" />
+
+          <!-- Sección 1: Información Básica -->
+          <div
+            class="bg-white dark:bg-gray-900 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 p-6"
+          >
+            <h2
+              class="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2"
+            >
+              <div
+                class="w-10 h-10 bg-primary/10 dark:bg-primary/20 rounded-xl flex items-center justify-center"
+              >
+                <span class="material-symbols-outlined text-primary">info</span>
+              </div>
+              <span>Información Básica</span>
+            </h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <!-- Nombre -->
+              <div class="md:col-span-2">
+                <label
+                  for="name"
+                  class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+                >
+                  Nombre del Platillo <span class="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  id="name"
+                  th:field="*{name}"
+                  required
+                  maxlength="200"
+                  placeholder="Ej: Hamburguesa Clásica, Coca-Cola 355ml"
+                  class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                />
+              </div>
+
+              <!-- Descripción -->
+              <div class="md:col-span-2">
+                <label
+                  for="description"
+                  class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+                >
+                  Descripción
+                </label>
+                <textarea
+                  id="description"
+                  th:field="*{description}"
+                  rows="3"
+                  maxlength="1000"
+                  placeholder="Descripción del platillo, ingredientes destacados, etc."
+                  class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-primary focus:border-transparent resize-none transition-all"
+                ></textarea>
+              </div>
+
+              <!-- Precio -->
+              <div>
+                <label
+                  for="price"
+                  class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+                >
+                  Precio <span class="text-red-500">*</span>
+                </label>
+                <div class="relative">
+                  <span
+                    class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 font-semibold"
+                    >$</span
+                  >
+                  <input
+                    type="number"
+                    id="price"
+                    th:field="*{price}"
+                    required
+                    step="0.01"
+                    min="0"
+                    placeholder="0.00"
+                    class="w-full pl-8 pr-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                  />
+                </div>
+              </div>
+
+              <!-- Imagen del Platillo -->
+              <div class="md:col-span-2">
+                <label
+                  class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 text-center"
+                >
+                  Imagen del Platillo
+                </label>
+
+                <div class="flex justify-center">
+                  <div class="relative w-full max-w-sm">
+                    <!-- Área de carga de imagen (se oculta cuando hay preview) -->
+                    <label
+                      id="uploadArea"
+                      for="imageFile"
+                      class="flex flex-col items-center justify-center w-full h-64 px-4 py-6 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl cursor-pointer hover:border-primary hover:bg-primary/5 dark:hover:bg-primary/10 transition-all group"
+                    >
+                      <span
+                        class="material-symbols-outlined text-6xl text-gray-400 dark:text-gray-500 group-hover:text-primary transition-colors"
+                      >
+                        upload
+                      </span>
+                      <span
+                        class="text-base font-medium text-gray-600 dark:text-gray-400 group-hover:text-primary transition-colors mt-3"
+                      >
+                        Click para seleccionar imagen
+                      </span>
+                      <span
+                        class="text-sm text-gray-500 dark:text-gray-500 mt-2"
+                      >
+                        JPG, PNG, GIF o WEBP - Máximo 5MB
+                      </span>
+                    </label>
+
+                    <!-- Preview de la imagen (oculto por defecto) -->
+                    <div id="imagePreviewContainer" class="hidden">
+                      <div
+                        class="relative w-full h-64 rounded-xl overflow-hidden border-2 border-primary dark:border-primary bg-gray-100 dark:bg-gray-800"
+                      >
+                        <img
+                          id="imagePreview"
+                          alt="Preview"
+                          class="w-full h-full object-contain"
+                        />
+                        <!-- Overlay con botones -->
+                        <div
+                          class="absolute inset-0 bg-black/0 hover:bg-black/40 transition-all group"
+                        >
+                          <div
+                            class="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <button
+                              type="button"
+                              onclick="clearImagePreview()"
+                              class="px-3 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg flex items-center gap-1 text-sm font-medium transition-colors shadow-lg"
+                              title="Eliminar imagen"
+                            >
+                              <span class="material-symbols-outlined text-base"
+                                >delete</span
+                              >
+                              <span>Eliminar</span>
+                            </button>
+                            <label
+                              for="imageFile"
+                              class="px-3 py-2 bg-primary hover:bg-primary-dark text-white rounded-lg flex items-center gap-1 text-sm font-medium transition-colors shadow-lg cursor-pointer"
+                              title="Cambiar imagen"
+                            >
+                              <span class="material-symbols-outlined text-base"
+                                >sync</span
+                              >
+                              <span>Cambiar</span>
+                            </label>
+                          </div>
+                        </div>
+                      </div>
+                      <p
+                        id="imageFileName"
+                        class="text-xs text-gray-600 dark:text-gray-400 mt-2 text-center"
+                      ></p>
+                    </div>
+
+                    <input
+                      type="file"
+                      id="imageFile"
+                      name="imageFile"
+                      accept="image/jpeg,image/png,image/gif,image/webp"
+                      class="hidden"
+                      onchange="previewImage(event)"
+                    />
+                  </div>
+                </div>
+
+                <!-- Hidden field para mantener la URL actual si no se sube nueva imagen -->
+                <input
+                  type="hidden"
+                  th:field="*{imageUrl}"
+                  id="currentImageUrl"
+                />
+              </div>
+
+              <!-- Estado Activo -->
+              <div class="md:col-span-2">
+                <div
+                  class="flex items-center gap-3 p-4 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
+                >
+                  <input
+                    type="checkbox"
+                    id="active"
+                    th:field="*{active}"
+                    class="w-5 h-5 text-primary bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-primary"
+                  />
+                  <label
+                    for="active"
+                    class="text-sm font-medium text-gray-700 dark:text-gray-300"
+                  >
+                    Item activo y visible en el menú
+                  </label>
+                </div>
+              </div>
+
+              <!-- Requiere Preparación del Chef -->
+              <div class="md:col-span-2">
+                <div
+                  class="flex items-center gap-3 p-4 rounded-xl bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800"
+                >
+                  <!-- Spring MVC checkbox convention: hidden field with prefix _ -->
+                  <input type="hidden" name="_requiresPreparation" value="on" />
+                  <input
+                    type="checkbox"
+                    id="requiresPreparation"
+                    name="requiresPreparation"
+                    th:checked="${itemMenu.requiresPreparation}"
+                    class="w-5 h-5 text-orange-600 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-orange-500"
+                  />
+                  <div>
+                    <label
+                      for="requiresPreparation"
+                      class="text-sm font-semibold text-gray-900 dark:text-white block"
+                    >
+                      ¿Requiere preparación del chef?
+                    </label>
+                    <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                      <span class="font-medium">Marcado:</span> El chef debe
+                      preparar este item (pizzas, hamburguesas, platos
+                      calientes).
+                      <br />
+                      <span class="font-medium">Desmarcado:</span> Item listo
+                      para servir (refrescos, bebidas embotelladas, postres
+                      comprados).
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Requiere Preparación del Barista -->
+              <div class="md:col-span-2">
+                <div
+                  class="flex items-center gap-3 p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800"
+                >
+                  <!-- Spring MVC checkbox convention: hidden field with prefix _ -->
+                  <input
+                    type="hidden"
+                    name="_requiresBaristaPreparation"
+                    value="on"
+                  />
+                  <input
+                    type="checkbox"
+                    id="requiresBaristaPreparation"
+                    name="requiresBaristaPreparation"
+                    th:checked="${itemMenu.requiresBaristaPreparation}"
+                    class="w-5 h-5 text-blue-600 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500"
+                  />
+                  <div>
+                    <label
+                      for="requiresBaristaPreparation"
+                      class="text-sm font-semibold text-gray-900 dark:text-white block"
+                    >
+                      ¿Requiere preparación del barista?
+                    </label>
+                    <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                      <span class="font-medium">Marcado:</span> El barista debe
+                      preparar este item (café, espresso, cappuccino, smoothies,
+                      bebidas especiales).
+                      <br />
+                      <span class="font-medium">Desmarcado:</span> Item no
+                      requiere preparación de barista.
+                      <br />
+                      <span class="text-orange-600 font-medium">Nota:</span> Un
+                      item solo puede ser preparado por Chef O Barista, no
+                      ambos.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- ¿Es Buffet? -->
+              <div class="md:col-span-2">
+                <div
+                  class="flex items-center gap-3 p-4 rounded-xl bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800"
+                >
+                  <!-- Spring MVC checkbox convention: hidden field with prefix _ -->
+                  <input type="hidden" name="_isBuffet" value="on" />
+                  <input
+                    type="checkbox"
+                    id="isBuffet"
+                    name="isBuffet"
+                    th:checked="${itemMenu.isBuffet}"
+                    class="w-5 h-5 text-purple-600 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-purple-500"
+                  />
+                  <div>
+                    <label
+                      for="isBuffet"
+                      class="text-sm font-semibold text-gray-900 dark:text-white block"
+                    >
+                      ¿Es buffet?
+                    </label>
+                    <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                      <span class="font-medium">Marcado:</span> Item de buffet,
+                      no requiere ingredientes y solo estará disponible para
+                      pedidos "Para comer aquí".
+                      <br />
+                      <span class="font-medium">Desmarcado:</span> Item regular
+                      que requiere al menos un ingrediente en su receta.
+                      <br />
+                      <span class="text-purple-600 font-medium">Nota:</span> Los
+                      items de buffet no aparecen en el menú para pedidos de
+                      "Para llevar" o "Delivery".
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- ¿Es Combo? -->
+              <div class="md:col-span-2">
+                <div
+                  class="flex items-center gap-3 p-4 rounded-xl bg-teal-50 dark:bg-teal-900/20 border border-teal-200 dark:border-teal-800"
+                >
+                  <!-- Spring MVC checkbox convention: hidden field with prefix _ -->
+                  <input type="hidden" name="_isCombo" value="on" />
+                  <input
+                    type="checkbox"
+                    id="isCombo"
+                    name="isCombo"
+                    th:checked="${itemMenu.isCombo}"
+                    class="w-5 h-5 text-teal-600 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-teal-500"
+                  />
+                  <div>
+                    <label
+                      for="isCombo"
+                      class="text-sm font-semibold text-gray-900 dark:text-white block"
+                    >
+                      🍱 ¿Es Combo?
+                    </label>
+                    <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                      <span class="font-medium">Marcado:</span> Este item es un
+                      combo que agrupa varios items del menú a un precio
+                      especial.
+                      <br />
+                      <span class="font-medium">Desmarcado:</span> Item regular
+                      con su propia receta de ingredientes.
+                      <br />
+                      <span class="text-teal-600 font-medium">Nota:</span> Los
+                      combos no requieren ingredientes propios. El stock se
+                      calcula a partir de los items hijos. Cada item hijo se
+                      envía al chef/barista por separado.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Máximo de Salsas -->
+              <div class="md:col-span-2">
+                <div
+                  class="p-3 sm:p-4 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800"
+                >
+                  <div class="flex items-start gap-3 sm:gap-4">
+                    <div
+                      class="hidden sm:flex w-10 h-10 bg-amber-100 dark:bg-amber-900/40 rounded-xl items-center justify-center flex-shrink-0"
+                    >
+                      <span
+                        class="material-symbols-outlined text-amber-600 dark:text-amber-400"
+                        >local_fire_department</span
+                      >
+                    </div>
+                    <div class="flex-1 min-w-0">
+                      <label
+                        for="maxSauces"
+                        class="text-sm font-semibold text-gray-900 dark:text-white block mb-2"
+                      >
+                        <span
+                          class="sm:hidden material-symbols-outlined text-amber-600 dark:text-amber-400 text-base align-middle mr-1"
+                          >local_fire_department</span
+                        >
+                        Máximo de Salsas Permitidas
+                      </label>
+                      <div class="flex items-center gap-3">
+                        <input
+                          type="number"
+                          id="maxSauces"
+                          th:field="*{maxSauces}"
+                          min="0"
+                          max="20"
+                          placeholder="Sin límite"
+                          class="w-28 sm:w-32 px-3 sm:px-4 py-2 rounded-xl border border-amber-300 dark:border-amber-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all text-sm"
+                        />
+                        <span class="text-sm text-gray-600 dark:text-gray-400"
+                          >salsas</span
+                        >
+                      </div>
+                      <p
+                        class="text-xs text-amber-700 dark:text-amber-400 mt-2 break-words"
+                      >
+                        <span class="font-medium">Ejemplo:</span> Si un platillo
+                        de boneless solo permite 2 salsas, ingrese "2".
+                        <br />
+                        <span class="font-medium">Vacío o 0:</span> Sin límite
+                        de salsas (el cliente puede elegir todas las
+                        disponibles).
+                        <br />
+                        <span class="font-medium">Nota:</span> Este límite solo
+                        aplica a complementos marcados como "salsa", no a
+                        complementos regulares.
+                      </p>
+
+                      <!-- Checkbox para asociar todas las salsas activas -->
+                      <div
+                        class="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-amber-200 dark:border-amber-700"
+                      >
+                        <label
+                          class="flex items-start gap-2 sm:gap-3 cursor-pointer group"
+                        >
+                          <input
+                            type="checkbox"
+                            name="associateAllSauces"
+                            value="true"
+                            class="mt-1 w-4 h-4 sm:w-5 sm:h-5 rounded border-amber-300 dark:border-amber-600 text-amber-600 focus:ring-amber-500 dark:bg-gray-800 cursor-pointer flex-shrink-0"
+                          />
+                          <div class="min-w-0">
+                            <span
+                              class="text-sm font-semibold text-gray-900 dark:text-white group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors"
+                            >
+                              🌶️ Asociar todas las salsas activas
+                            </span>
+                            <p
+                              class="text-xs text-amber-700 dark:text-amber-400 mt-1 break-words"
+                            >
+                              Al marcar esta opción, se asociarán
+                              automáticamente todas las salsas activas del
+                              sistema a este item.
+                              <br />
+                              <span class="font-medium">Útil para:</span> Items
+                              como boneless, alitas, nachos que permiten elegir
+                              salsas.
+                              <br />
+                              <span class="font-medium">Nota:</span> Las salsas
+                              ya asociadas no se duplicarán.
+                            </p>
+                          </div>
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Sección 2: Horario de Disponibilidad (Opcional) -->
+          <div
+            class="bg-white dark:bg-gray-900 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 p-6"
+          >
+            <h2
+              class="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2"
+            >
+              <div
+                class="w-10 h-10 bg-teal-100 dark:bg-teal-900/30 rounded-xl flex items-center justify-center"
+              >
+                <span
+                  class="material-symbols-outlined text-teal-600 dark:text-teal-400"
+                  >schedule</span
+                >
+              </div>
+              <span>Horario de Disponibilidad</span>
+              <span class="text-sm font-normal text-gray-500 dark:text-gray-400"
+                >(Opcional)</span
+              >
+            </h2>
+
+            <!-- Checkbox para habilitar configuración de horario personalizado -->
+            <div class="mb-6">
+              <label
+                class="flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all hover:border-teal-400"
+                th:classappend="${itemMenu.hasCustomSchedule != null && itemMenu.hasCustomSchedule ? ' border-teal-500 bg-teal-50 dark:bg-teal-900/30' : ' border-gray-200 dark:border-gray-700'}"
+                id="customScheduleLabel"
+              >
+                <input
+                  type="checkbox"
+                  name="hasCustomSchedule"
+                  id="hasCustomScheduleCheckbox"
+                  value="true"
+                  th:checked="${itemMenu.hasCustomSchedule}"
+                  class="mt-1 w-5 h-5 text-teal-600 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-teal-500"
+                  onchange="toggleCustomSchedule()"
+                />
+                <div>
+                  <span class="font-medium text-gray-900 dark:text-white block">
+                    <span
+                      class="material-symbols-outlined text-sm align-middle mr-1"
+                      >edit_calendar</span
+                    >
+                    Configurar horario personalizado
+                  </span>
+                  <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    Si no se marca, el item estará disponible siempre que el
+                    restaurante esté abierto.
+                  </p>
+                </div>
+              </label>
+            </div>
+
+            <!-- Información cuando NO hay horario personalizado -->
+            <div
+              id="noCustomScheduleInfo"
+              class="p-4 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700"
+            >
+              <div class="flex items-start gap-3">
+                <span
+                  class="material-symbols-outlined text-gray-500 dark:text-gray-400"
+                  >info</span
+                >
+                <div class="text-sm text-gray-600 dark:text-gray-400">
+                  <p class="font-medium mb-1">Sin restricción de horario</p>
+                  <p class="text-xs">
+                    Este item estará disponible para ordenar en cualquier
+                    momento que el restaurante esté abierto. La validación de
+                    horario laborable se aplica automáticamente al crear una
+                    orden.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Configuración de Horario por Día (se muestra solo si el checkbox está marcado) -->
+            <div id="customScheduleSection" class="hidden">
+              <label
+                class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3"
+              >
+                Horario por Día <span class="text-red-500">*</span>
+              </label>
+              <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">
+                <span class="material-symbols-outlined text-sm align-middle"
+                  >info</span
+                >
+                Seleccione los días y configure el horario específico para cada
+                uno.
+              </p>
+
+              <div class="space-y-3">
+                <div th:each="dayInfo : ${daysWithHours}" class="relative">
+                  <div
+                    th:class="${dayInfo.isWorkDay ? 'p-4 rounded-xl border-2 transition-all' : 'p-4 rounded-xl border-2 opacity-50 bg-gray-100 dark:bg-gray-800'}"
+                    th:classappend="${dayInfo.isSelected ? ' border-teal-500 bg-teal-50/50 dark:bg-teal-900/20' : ' border-gray-200 dark:border-gray-700'}"
+                    th:id="'manualDay_' + ${dayInfo.day.name()}"
+                  >
+                    <div class="flex flex-wrap items-center gap-4">
+                      <!-- Checkbox del día -->
+                      <div class="flex items-center gap-2 min-w-[140px]">
+                        <input
+                          type="checkbox"
+                          th:name="'manualDay_' + ${dayInfo.day.name()}"
+                          th:id="'manualDayCheck_' + ${dayInfo.day.name()}"
+                          th:value="${dayInfo.day.name()}"
+                          th:checked="${dayInfo.isSelected}"
+                          th:disabled="${!dayInfo.isWorkDay}"
+                          th:data-day="${dayInfo.day.name()}"
+                          class="manual-day-checkbox w-5 h-5 text-teal-600 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-teal-500"
+                          onchange="toggleManualDayInputs(this)"
+                        />
+                        <div class="flex flex-col">
+                          <span
+                            class="text-sm font-medium"
+                            th:class="${dayInfo.isWorkDay ? 'text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-500'}"
+                            th:text="${dayInfo.displayName}"
+                            >Día</span
+                          >
+                          <span
+                            th:if="${dayInfo.isWorkDay}"
+                            class="text-xs text-gray-500 dark:text-gray-400"
+                            th:text="'Restaurante: ' + (${dayInfo.openTime != null ? dayInfo.openTime.toString() + ' - ' + dayInfo.closeTime.toString() : 'Sin horario'})"
+                          ></span>
+                          <span
+                            th:unless="${dayInfo.isWorkDay}"
+                            class="text-xs text-red-500"
+                            >Cerrado</span
+                          >
+                        </div>
+                      </div>
+
+                      <!-- Campos de hora (solo si es día laborable) -->
+                      <div
+                        th:if="${dayInfo['isWorkDay']}"
+                        class="flex items-center gap-3 flex-1 min-w-[300px]"
+                      >
+                        <div class="flex-1">
+                          <label
+                            class="block text-xs text-gray-600 dark:text-gray-400 mb-1"
+                            >Inicio</label
+                          >
+                          <input
+                            type="time"
+                            th:name="'manualStartTime_' + ${dayInfo['day'].name()}"
+                            th:id="'manualStartTime_' + ${dayInfo['day'].name()}"
+                            th:value="${dayInfo['selectedStartTime'] != null ? dayInfo['selectedStartTime'].toString() : ''}"
+                            th:min="${dayInfo['openTime'] != null ? dayInfo['openTime'].toString() : ''}"
+                            th:max="${dayInfo['closeTime'] != null ? dayInfo['closeTime'].toString() : ''}"
+                            th:disabled="${!dayInfo['isSelected']}"
+                            class="manual-time-input w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-teal-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                          />
+                        </div>
+                        <span class="text-gray-400 mt-5">a</span>
+                        <div class="flex-1">
+                          <label
+                            class="block text-xs text-gray-600 dark:text-gray-400 mb-1"
+                            >Fin</label
+                          >
+                          <input
+                            type="time"
+                            th:name="'manualEndTime_' + ${dayInfo['day'].name()}"
+                            th:id="'manualEndTime_' + ${dayInfo['day'].name()}"
+                            th:value="${dayInfo['selectedEndTime'] != null ? dayInfo['selectedEndTime'].toString() : ''}"
+                            th:min="${dayInfo['openTime'] != null ? dayInfo['openTime'].toString() : ''}"
+                            th:max="${dayInfo['closeTime'] != null ? dayInfo['closeTime'].toString() : ''}"
+                            th:disabled="${!dayInfo['isSelected']}"
+                            class="manual-time-input w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-teal-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                          />
+                        </div>
+                        <!-- Botón para usar horario del restaurante -->
+                        <button
+                          type="button"
+                          th:id="'syncBtn_' + ${dayInfo.day.name()}"
+                          th:data-day="${dayInfo.day.name()}"
+                          th:data-open="${dayInfo.openTime}"
+                          th:data-close="${dayInfo.closeTime}"
+                          onclick="applyRestaurantHours(this)"
+                          th:disabled="${!dayInfo.isSelected}"
+                          class="mt-5 px-3 py-2 text-xs bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          title="Usar horario del restaurante"
+                        >
+                          <span class="material-symbols-outlined text-sm"
+                            >sync</span
+                          >
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Nota informativa -->
+              <div
+                class="mt-4 p-4 rounded-xl bg-teal-50 dark:bg-teal-900/20 border border-teal-200 dark:border-teal-800"
+              >
+                <div class="flex items-start gap-3">
+                  <span
+                    class="material-symbols-outlined text-teal-600 dark:text-teal-400"
+                    >lightbulb</span
+                  >
+                  <div class="text-sm text-teal-800 dark:text-teal-300">
+                    <p class="font-medium mb-1">
+                      ¿Cómo funciona el horario personalizado?
+                    </p>
+                    <ul
+                      class="list-disc list-inside text-xs space-y-1 text-teal-700 dark:text-teal-400"
+                    >
+                      <li>
+                        Seleccione los días en que el item estará disponible.
+                      </li>
+                      <li>
+                        Configure un horario <strong>específico</strong> para
+                        cada día.
+                      </li>
+                      <li>
+                        Los campos de tiempo solo aceptan horas dentro del
+                        horario del restaurante.
+                      </li>
+                      <li>
+                        Use el botón
+                        <span
+                          class="material-symbols-outlined text-xs align-middle"
+                          >sync</span
+                        >
+                        para copiar el horario del restaurante automáticamente.
+                      </li>
+                      <li>
+                        Si deja los campos de hora vacíos, el item estará
+                        disponible todo el horario del día.
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Sección 3: Categoría -->
+          <div
+            class="bg-white dark:bg-gray-900 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 p-6"
+          >
+            <h2
+              class="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2"
+            >
+              <div
+                class="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-xl flex items-center justify-center"
+              >
+                <span
+                  class="material-symbols-outlined text-purple-600 dark:text-purple-400"
+                  >category</span
+                >
+              </div>
+              <span>Categoría</span>
+            </h2>
+
+            <div>
+              <label
+                for="categorySelect"
+                class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+              >
+                Seleccione la Categoría <span class="text-red-500">*</span>
+              </label>
+              <select
+                id="categorySelect"
+                th:field="*{category.idCategory}"
+                required
+                class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+              >
+                <option value="">-- Seleccione una categoría --</option>
+                <option
+                  th:each="category : ${categories}"
+                  th:value="${category.idCategory}"
+                  th:text="${category.name} + ${!category.active ? ' (DESACTIVADA)' : ''}"
+                  th:attr="data-active=${category.active}"
+                  th:selected="${itemMenu.category != null && itemMenu.category.idCategory == category.idCategory}"
+                  th:classappend="${!category.active ? 'text-red-500 dark:text-red-400' : ''}"
+                >
+                  Categoría
+                </option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Buffet Mode Notice (replaces ingredient section when buffet is checked) -->
+          <div
+            id="buffetNotice"
+            class="bg-white dark:bg-gray-900 rounded-2xl shadow-lg border-2 border-purple-300 dark:border-purple-700 p-6 hidden"
+          >
+            <div class="flex items-start gap-4">
+              <div
+                class="w-12 h-12 bg-purple-100 dark:bg-purple-900/40 rounded-xl flex items-center justify-center flex-shrink-0"
+              >
+                <span
+                  class="material-symbols-outlined text-purple-600 dark:text-purple-400 text-2xl"
+                  >brunch_dining</span
+                >
+              </div>
+              <div>
+                <h3
+                  class="text-lg font-bold text-purple-900 dark:text-purple-200 mb-2"
+                >
+                  🍽️ Item de Buffet
+                </h3>
+                <p class="text-sm text-purple-700 dark:text-purple-300">
+                  Este item está marcado como <strong>buffet</strong>. Los items
+                  de buffet:
+                </p>
+                <ul
+                  class="text-sm text-purple-700 dark:text-purple-300 mt-2 space-y-1 list-disc list-inside"
+                >
+                  <li>No requieren ingredientes asociados (receta).</li>
+                  <li>
+                    Solo estarán disponibles para pedidos
+                    <strong>"Para comer aquí"</strong>.
+                  </li>
+                  <li>
+                    No aparecerán en el menú de pedidos para llevar ni delivery.
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <!-- Combo Mode Notice and Item Selection (shown when combo is checked) -->
+          <div
+            id="comboSection"
+            class="bg-white dark:bg-gray-900 rounded-2xl shadow-lg border-2 border-teal-300 dark:border-teal-700 p-6 hidden"
+          >
+            <div class="flex items-start gap-4 mb-6">
+              <div
+                class="w-12 h-12 bg-teal-100 dark:bg-teal-900/40 rounded-xl flex items-center justify-center flex-shrink-0"
+              >
+                <span
+                  class="material-symbols-outlined text-teal-600 dark:text-teal-400 text-2xl"
+                  >inventory_2</span
+                >
+              </div>
+              <div>
+                <h3
+                  class="text-lg font-bold text-teal-900 dark:text-teal-200 mb-2"
+                >
+                  🍱 Combo - Items incluidos
+                </h3>
+                <p class="text-sm text-teal-700 dark:text-teal-300">
+                  Busque y agregue los items del menú que formarán parte de este
+                  combo. El stock del combo se calculará automáticamente a
+                  partir de los items seleccionados.
+                </p>
+              </div>
+            </div>
+
+            <!-- Combo Item Search -->
+            <div class="mb-4">
+              <div class="flex gap-2">
+                <div class="flex-1 relative">
+                  <input
+                    type="text"
+                    id="comboItemSearch"
+                    class="w-full px-4 py-2.5 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-teal-500 dark:focus:ring-teal-400"
+                    placeholder="🔍 Buscar item por nombre... (ejemplo: Hamburguesa, Pizza, etc.)"
+                    autocomplete="off"
+                  />
+                  <!-- Dropdown de Resultados -->
+                  <div
+                    id="comboItemDropdown"
+                    class="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg shadow-lg hidden max-h-64 overflow-y-auto"
+                  >
+                    <!-- Los resultados se llenarán dinámicamente -->
+                  </div>
+                </div>
+                <input
+                  type="number"
+                  id="comboItemQuantityInput"
+                  min="1"
+                  value="1"
+                  class="w-20 px-3 py-2.5 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl text-sm text-center"
+                  placeholder="Qty"
+                />
+              </div>
+              <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                💡 Escriba para buscar items disponibles. Haga clic en un
+                resultado para agregarlo al combo.
+              </p>
+            </div>
+
+            <!-- Combo Items Table -->
+            <div id="comboItemsContainer" class="space-y-2">
+              <!-- Existing combo items will be rendered here by Thymeleaf or JS -->
+            </div>
+
+            <div
+              id="comboEmptyMessage"
+              class="text-center py-8 text-gray-500 dark:text-gray-400"
+            >
+              <span class="material-symbols-outlined text-4xl mb-2 block"
+                >inventory_2</span
+              >
+              <p>
+                No hay items en el combo. Use el buscador para agregar items del
+                menú.
+              </p>
+            </div>
+          </div>
+
+          <!-- Sección 4: Ingredientes (Receta) -->
+          <div
+            id="ingredientSection"
+            class="bg-white dark:bg-gray-900 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 p-6"
+          >
+            <div
+              class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-6"
+            >
+              <h2
+                class="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2"
+              >
+                <div
+                  class="w-10 h-10 bg-orange-100 dark:bg-orange-900/30 rounded-xl flex items-center justify-center"
+                >
+                  <span
+                    class="material-symbols-outlined text-orange-600 dark:text-orange-400"
+                    >restaurant</span
+                  >
+                </div>
+                <span>Ingredientes de la Receta</span>
+              </h2>
+              <button
+                type="button"
+                onclick="addIngredientRow()"
+                class="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-primary to-primary-dark text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-primary/30 transition-all"
+              >
+                <span class="material-symbols-outlined text-lg">add</span>
+                <span>Agregar Ingrediente</span>
+              </button>
+            </div>
+
+            <!-- Container de ingredientes -->
+            <div id="ingredientsContainer" class="space-y-3">
+              <!-- Mensaje cuando no hay ingredientes -->
+              <div
+                id="noIngredientsMessage"
+                class="text-center py-8 text-gray-500 dark:text-gray-400"
+              >
+                <span class="material-symbols-outlined text-5xl mb-2"
+                  >restaurant</span
+                >
+                <p>
+                  No hay ingredientes agregados. Haz clic en "Agregar
+                  Ingrediente"
+                </p>
+              </div>
+
+              <!-- Ingredientes existentes (en edición) -->
+              <div
+                th:if="${recipe != null && !#lists.isEmpty(recipe)}"
+                th:each="recipeItem : ${recipe}"
+              >
+                <div
+                  class="ingredient-row flex flex-col sm:flex-row gap-3 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600"
+                >
+                  <div class="flex-1">
+                    <label
+                      class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1"
+                      >Ingrediente</label
+                    >
+                    <select
+                      name="ingredientIds"
+                      required
+                      class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">Seleccionar...</option>
+                      <option
+                        th:each="ing : ${ingredients}"
+                        th:value="${ing.idIngredient}"
+                        th:selected="${recipeItem.ingredient.idIngredient == ing.idIngredient}"
+                        th:text="${ing.name + ' (Stock: ' + ing.currentStock + ' ' + ing.unitOfMeasure + ')'}"
+                      ></option>
+                    </select>
+                  </div>
+                  <div class="w-full sm:w-28">
+                    <label
+                      class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1"
+                      >Cantidad</label
+                    >
+                    <input
+                      type="number"
+                      name="quantities"
+                      th:value="${recipeItem.quantity}"
+                      step="0.001"
+                      min="0"
+                      required
+                      placeholder="0.000"
+                      class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div class="w-full sm:w-28">
+                    <label
+                      class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1"
+                      >Unidad</label
+                    >
+                    <input
+                      type="text"
+                      name="units"
+                      th:value="${recipeItem.unit}"
+                      required
+                      readonly
+                      placeholder="Automático"
+                      class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-600 text-gray-700 dark:text-gray-300 text-sm cursor-not-allowed"
+                    />
+                  </div>
+                  <div class="flex items-end">
+                    <button
+                      type="button"
+                      onclick="removeIngredientRow(this)"
+                      class="px-3 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors"
+                    >
+                      <span class="material-symbols-outlined">delete</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Template para nuevos ingredientes (hidden) -->
+              <div
+                id="ingredientTemplate"
+                class="ingredient-row hidden grid grid-cols-1 md:grid-cols-12 gap-3 p-4 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700"
+              >
+                <div class="md:col-span-5 relative">
+                  <label
+                    class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1"
+                    >Ingrediente</label
+                  >
+                  <!-- Hidden input for ingredient ID -->
+                  <input
+                    type="hidden"
+                    name="ingredientIds"
+                    class="ingredient-id-input"
+                  />
+
+                  <!-- Search input -->
+                  <div class="relative">
+                    <input
+                      type="text"
+                      class="ingredient-search w-full px-3 py-2 pr-8 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
+                      placeholder="Buscar ingrediente..."
+                      autocomplete="off"
+                    />
+                    <span
+                      class="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 text-sm pointer-events-none"
+                    >
+                      search
+                    </span>
+                  </div>
+
+                  <!-- Dropdown results -->
+                  <div
+                    class="ingredient-dropdown hidden absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg max-h-60 overflow-y-auto"
+                  >
+                    <!-- Results will be inserted here dynamically -->
+                  </div>
+                </div>
+
+                <div class="md:col-span-3">
+                  <label
+                    class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1"
+                    >Cantidad</label
+                  >
+                  <input
+                    type="number"
+                    name="quantities"
+                    step="0.01"
+                    min="0.01"
+                    placeholder="0.00"
+                    class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
+                  />
+                </div>
+
+                <div class="md:col-span-3">
+                  <label
+                    class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1"
+                    >Unidad</label
+                  >
+                  <input
+                    type="text"
+                    name="units"
+                    readonly
+                    placeholder="kg, L, pz"
+                    class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm"
+                  />
+                </div>
+
+                <div class="md:col-span-1 flex items-end">
+                  <button
+                    type="button"
+                    onclick="removeIngredientRow(this)"
+                    class="w-full p-2 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
+                    title="Eliminar"
+                  >
+                    <span
+                      class="material-symbols-outlined text-red-600 dark:text-red-400"
+                      >delete</span
+                    >
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Botones de Acción -->
+          <div class="flex flex-col sm:flex-row gap-3 justify-center pt-4">
+            <button
+              type="submit"
+              class="flex-1 sm:flex-none px-8 py-3 bg-gradient-to-r from-primary to-primary-dark text-white font-bold rounded-xl hover:shadow-lg hover:shadow-primary/30 transition-all flex items-center justify-center gap-2"
+            >
+              <span class="material-symbols-outlined">save</span>
+              <span
+                th:text="${itemMenu.idItemMenu != null ? 'Actualizar Item' : 'Crear Item'}"
+                >Guardar</span
+              >
+            </button>
+
+            <a
+              th:href="@{/admin/menu-items}"
+              class="flex-1 sm:flex-none px-8 py-3 bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-semibold rounded-xl transition-colors flex items-center justify-center gap-2"
+            >
+              <span class="material-symbols-outlined">cancel</span>
+              <span>Cancelar</span>
+            </a>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <script th:inline="javascript">
+      // ========== Datos de Ingredientes ==========
+      /*<![CDATA[*/
+      const allIngredients = /*[[${ingredientsDTO}]]*/ [];
+      const daysWithHours = /*[[${daysWithHours}]]*/ [];
+      /*]]*/
+
+      // ========== Validación de Horario de Disponibilidad ==========
+      function updateScheduleWarning() {
+        const checkboxes = document.querySelectorAll(
+          'input[name="availableDays"]:checked',
+        );
+        const warningDiv = document.getElementById("scheduleWarning");
+        const warningText = document.getElementById("scheduleWarningText");
+        const startTimeInput = document.getElementById("availabilityStartTime");
+        const endTimeInput = document.getElementById("availabilityEndTime");
+
+        // Si los elementos no existen en el DOM, salir sin error
+        if (!warningDiv || !startTimeInput || !endTimeInput) {
+          return;
+        }
+
+        if (checkboxes.length === 0) {
+          warningDiv.classList.add("hidden");
+          return;
+        }
+
+        // Encontrar días con ajustes automáticos necesarios
+        const selectedStart = startTimeInput.value;
+        const selectedEnd = endTimeInput.value;
+        let adjustments = [];
+
+        checkboxes.forEach((cb) => {
+          const dayName = cb.value;
+          const dayInfo = daysWithHours.find(
+            (d) => d.day && d.day.name === dayName,
+          );
+
+          if (
+            dayInfo &&
+            dayInfo.isWorkDay &&
+            dayInfo.openTime &&
+            dayInfo.closeTime
+          ) {
+            const openStr = dayInfo.openTime.toString().substring(0, 5);
+            const closeStr = dayInfo.closeTime.toString().substring(0, 5);
+
+            let dayAdjustments = [];
+
+            // Verificar si necesita ajuste de hora inicio
+            if (selectedStart && selectedStart < openStr) {
+              dayAdjustments.push(`inicio → ${openStr}`);
+            }
+
+            // Verificar si necesita ajuste de hora fin
+            if (selectedEnd && selectedEnd > closeStr) {
+              dayAdjustments.push(`fin → ${closeStr}`);
+            }
+
+            if (dayAdjustments.length > 0) {
+              adjustments.push({
+                day: dayInfo.displayName,
+                changes: dayAdjustments.join(", "),
+                openTime: openStr,
+                closeTime: closeStr,
+              });
+            }
+          }
+        });
+
+        // Mostrar información de ajustes
+        if (adjustments.length > 0) {
+          warningDiv.classList.remove("hidden");
+
+          let adjustmentsList = adjustments
+            .map(
+              (a) =>
+                `<li><strong>${a.day}:</strong> ${a.changes} (horario del restaurante: ${a.openTime}-${a.closeTime})</li>`,
+            )
+            .join("");
+
+          warningText.innerHTML = `
+            <p class="mb-2">Los siguientes días se ajustarán automáticamente al horario del restaurante:</p>
+            <ul class="list-disc list-inside space-y-1">${adjustmentsList}</ul>
+            <p class="mt-2 text-blue-600 dark:text-blue-300">✓ No te preocupes, el sistema guardará el horario correcto para cada día.</p>
+          `;
+        } else if (checkboxes.length > 1) {
+          // Mostrar info si hay múltiples días pero sin conflictos
+          warningDiv.classList.add("hidden");
+        } else {
+          warningDiv.classList.add("hidden");
+        }
+      }
+
+      // Inicializar listeners para horario
+      document.addEventListener("DOMContentLoaded", function () {
+        const dayCheckboxes = document.querySelectorAll(
+          'input[name="availableDays"]',
+        );
+        const startTimeInput = document.getElementById("availabilityStartTime");
+        const endTimeInput = document.getElementById("availabilityEndTime");
+
+        dayCheckboxes.forEach((cb) => {
+          cb.addEventListener("change", updateScheduleWarning);
+        });
+
+        if (startTimeInput) {
+          startTimeInput.addEventListener("change", updateScheduleWarning);
+        }
+        if (endTimeInput) {
+          endTimeInput.addEventListener("change", updateScheduleWarning);
+        }
+
+        // Ejecutar una vez al cargar
+        updateScheduleWarning();
+
+        // Inicializar estado del checkbox de horario personalizado
+        toggleCustomSchedule();
+
+        // Inicializar estado del checkbox de buffet
+        toggleBuffetMode();
+
+        // Añadir validación de horarios a los campos de tiempo manual
+        document.querySelectorAll(".manual-time-input").forEach((timeInput) => {
+          timeInput.addEventListener("change", function () {
+            const inputId = this.id;
+            // Detectar si es campo de inicio o fin
+            if (inputId.includes("manualStartTime_")) {
+              const dayName = inputId.replace("manualStartTime_", "");
+              const endInput = document.getElementById(
+                "manualEndTime_" + dayName,
+              );
+              if (endInput && endInput.value) {
+                validateTimeRange(this, endInput, dayName);
+              }
+            } else if (inputId.includes("manualEndTime_")) {
+              const dayName = inputId.replace("manualEndTime_", "");
+              const startInput = document.getElementById(
+                "manualStartTime_" + dayName,
+              );
+              if (startInput && startInput.value) {
+                validateTimeRange(startInput, this, dayName);
+              }
+            }
+          });
+        });
+      });
+
+      // ========== Función para Modo Buffet ==========
+
+      /**
+       * Alterna la visibilidad de la sección de ingredientes según el modo buffet
+       */
+      function toggleBuffetMode() {
+        const buffetCheckbox = document.getElementById("isBuffet");
+        const ingredientSection = document.getElementById("ingredientSection");
+        const buffetNotice = document.getElementById("buffetNotice");
+
+        if (!buffetCheckbox || !ingredientSection || !buffetNotice) return;
+
+        const isBuffet = buffetCheckbox.checked;
+
+        if (isBuffet) {
+          // Hide ingredient section, show buffet notice
+          ingredientSection.classList.add("hidden");
+          buffetNotice.classList.remove("hidden");
+
+          // Clear all ingredient rows when switching to buffet mode
+          const container = document.getElementById("ingredientsContainer");
+          if (container) {
+            const rows = container.querySelectorAll(
+              ".ingredient-row:not(#ingredientTemplate)",
+            );
+            rows.forEach((row) => row.remove());
+          }
+        } else {
+          // Show ingredient section, hide buffet notice
+          ingredientSection.classList.remove("hidden");
+          buffetNotice.classList.add("hidden");
+
+          // If no ingredient rows exist, add one default row
+          const container = document.getElementById("ingredientsContainer");
+          if (container) {
+            const rows = container.querySelectorAll(
+              ".ingredient-row:not(#ingredientTemplate)",
+            );
+            if (rows.length === 0) {
+              addIngredientRow();
+            }
+          }
+        }
+      }
+
+      // ========== Función para Modo Combo ==========
+
+      /**
+       * Alterna la visibilidad de la sección de combo vs ingredientes
+       */
+      function toggleComboMode() {
+        const comboCheckbox = document.getElementById("isCombo");
+        const ingredientSection = document.getElementById("ingredientSection");
+        const comboSection = document.getElementById("comboSection");
+
+        if (!comboCheckbox || !ingredientSection || !comboSection) return;
+
+        const isCombo = comboCheckbox.checked;
+
+        if (isCombo) {
+          // Hide ingredient section, show combo section
+          ingredientSection.classList.add("hidden");
+          comboSection.classList.remove("hidden");
+
+          // Clear all ingredient rows when switching to combo mode
+          const container = document.getElementById("ingredientsContainer");
+          if (container) {
+            const rows = container.querySelectorAll(
+              ".ingredient-row:not(#ingredientTemplate)",
+            );
+            rows.forEach((row) => row.remove());
+          }
+
+          // Load available combo items and setup search
+          loadAvailableComboItems();
+          setupComboItemSearch();
+
+          // Load existing combo items if editing
+          loadExistingComboItems();
+        } else {
+          // Hide combo section, show ingredient section (only if not buffet)
+          comboSection.classList.add("hidden");
+          const buffetCheckbox = document.getElementById("isBuffet");
+          if (!buffetCheckbox || !buffetCheckbox.checked) {
+            ingredientSection.classList.remove("hidden");
+
+            // If no ingredient rows exist, add one default row
+            const container = document.getElementById("ingredientsContainer");
+            if (container) {
+              const rows = container.querySelectorAll(
+                ".ingredient-row:not(#ingredientTemplate)",
+              );
+              if (rows.length === 0) {
+                addIngredientRow();
+              }
+            }
+          }
+        }
+      }
+
+      // Available items for combo (loaded from server)
+      let availableComboItems = [];
+
+      /**
+       * Load available combo items via AJAX
+       */
+      function loadAvailableComboItems() {
+        // Get current item ID (if editing)
+        let excludeId = null;
+        const match = window.location.pathname.match(/\/edit\/(\d+)/);
+        if (match) excludeId = match[1];
+
+        fetch(
+          `/admin/menu-items/available-for-combo${excludeId ? "?excludeId=" + excludeId : ""}`,
+        )
+          .then((res) => res.json())
+          .then((items) => {
+            availableComboItems = items;
+          })
+          .catch((err) => {
+            console.error("Error loading combo items:", err);
+          });
+      }
+
+      /**
+       * Setup search functionality for combo items
+       */
+      function setupComboItemSearch() {
+        const searchInput = document.getElementById("comboItemSearch");
+        const dropdown = document.getElementById("comboItemDropdown");
+
+        if (!searchInput || !dropdown) return;
+
+        let searchTimeout;
+
+        // Search event
+        searchInput.addEventListener("input", function () {
+          clearTimeout(searchTimeout);
+          const query = this.value.trim().toLowerCase();
+
+          if (query.length === 0) {
+            dropdown.classList.add("hidden");
+            return;
+          }
+
+          searchTimeout = setTimeout(() => {
+            // Filter items
+            const filtered = availableComboItems.filter((item) => {
+              const name = (item.name || "").toLowerCase();
+              const category = (item.categoryName || "").toLowerCase();
+              return name.includes(query) || category.includes(query);
+            });
+
+            // Display results
+            if (filtered.length > 0) {
+              dropdown.innerHTML = filtered
+                .map((item) => {
+                  // Get icon based on item type
+                  let icon = "📦";
+                  if (item.requiresPreparation) icon = "👨‍🍳";
+                  else if (item.requiresBaristaPreparation) icon = "☕";
+                  else if (item.isBuffet) icon = "🍽️";
+                  else if (item.isCombo) icon = "🍱";
+
+                  return `
+                  <div
+                    class="p-3 hover:bg-teal-50 dark:hover:bg-teal-900/30 cursor-pointer border-b border-gray-200 dark:border-gray-700 last:border-b-0 transition-colors"
+                    onclick="selectComboItemFromDropdown(${item.id}, '${item.name.replace(/'/g, "\\'")}')"
+                  >
+                    <div class="flex justify-between items-start">
+                      <div class="flex-1">
+                        <div class="font-semibold text-gray-800 dark:text-gray-200">
+                          ${icon} ${item.name}
+                        </div>
+                        <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          ${item.categoryName || "Sin categoría"}
+                        </div>
+                      </div>
+                      <div class="text-sm font-bold text-teal-600 dark:text-teal-400 ml-3">
+                        S/ ${parseFloat(item.price).toFixed(2)}
+                      </div>
+                    </div>
+                  </div>
+                `;
+                })
+                .join("");
+              dropdown.classList.remove("hidden");
+            } else {
+              dropdown.innerHTML = `
+                <div class="p-4 text-center text-gray-500 dark:text-gray-400 text-sm">
+                  <span class="material-symbols-outlined text-3xl mb-2 block">search_off</span>
+                  <p>No se encontraron items con "${query}"</p>
+                </div>
+              `;
+              dropdown.classList.remove("hidden");
+            }
+          }, 300);
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener("click", function (e) {
+          if (!searchInput.contains(e.target) && !dropdown.contains(e.target)) {
+            dropdown.classList.add("hidden");
+          }
+        });
+
+        // Focus on search opens dropdown if has content
+        searchInput.addEventListener("focus", function () {
+          if (
+            this.value.trim().length > 0 &&
+            dropdown.innerHTML.trim() !== ""
+          ) {
+            dropdown.classList.remove("hidden");
+          }
+        });
+      }
+
+      /**
+       * Select an item from the dropdown
+       */
+      function selectComboItemFromDropdown(itemId, itemName) {
+        const searchInput = document.getElementById("comboItemSearch");
+        const dropdown = document.getElementById("comboItemDropdown");
+        const quantityInput = document.getElementById("comboItemQuantityInput");
+
+        // Check if already added
+        const existing = document.querySelector(
+          `.combo-item-row[data-item-id="${itemId}"]`,
+        );
+        if (existing) {
+          Swal.fire({
+            title: "Item ya agregado",
+            text: `${itemName} ya está en el combo. Puedes modificar su cantidad directamente.`,
+            icon: "info",
+            confirmButtonText: "Entendido",
+            confirmButtonColor: "#0d9488",
+            customClass: { popup: "dark:bg-gray-800 dark:text-white" },
+          });
+          dropdown.classList.add("hidden");
+          searchInput.value = "";
+          return;
+        }
+
+        // Find the item details including active status
+        const item = availableComboItems.find((i) => i.id == itemId);
+        const price = item ? parseFloat(item.price).toFixed(2) : "0.00";
+        const isActive = item
+          ? item.active === true || item.active === "true"
+          : true;
+        const quantity = parseInt(quantityInput.value) || 1;
+
+        // Show warning if item is inactive
+        if (!isActive) {
+          const isDarkMode =
+            document.documentElement.classList.contains("dark");
+          Swal.fire({
+            icon: "warning",
+            title: "Item Inactivo",
+            html: `
+              <div class="text-left">
+                <p class="mb-3">El item <strong class="text-amber-600 dark:text-amber-400">${itemName}</strong> está <span class="text-red-600 dark:text-red-400 font-semibold">INACTIVO</span>.</p>
+                <div class="bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 rounded-lg p-3">
+                  <p class="text-sm text-amber-800 dark:text-amber-200">
+                    <strong>⚠️ Advertencia:</strong> No podrá guardar este combo hasta que reactive el item o lo elimine del combo.
+                  </p>
+                </div>
+              </div>
+            `,
+            showCancelButton: true,
+            confirmButtonText: "Agregar de todas formas",
+            cancelButtonText: "Cancelar",
+            confirmButtonColor: "#F59E0B",
+            cancelButtonColor: "#6B7280",
+            background: isDarkMode ? "#1F2937" : "#FFFFFF",
+            color: isDarkMode ? "#F3F4F6" : "#1F2937",
+            customClass: {
+              popup: "dark:bg-gray-800 dark:text-white",
+              title: "dark:text-white",
+            },
+          }).then((result) => {
+            if (result.isConfirmed) {
+              addComboItemRow(itemId, itemName, quantity, price, isActive);
+              updateComboEmptyMessage();
+              // Reset search
+              searchInput.value = "";
+              dropdown.classList.add("hidden");
+              quantityInput.value = "1";
+            } else {
+              dropdown.classList.add("hidden");
+              searchInput.value = "";
+            }
+          });
+        } else {
+          addComboItemRow(itemId, itemName, quantity, price, isActive);
+          updateComboEmptyMessage();
+          // Reset search
+          searchInput.value = "";
+          dropdown.classList.add("hidden");
+          quantityInput.value = "1";
+        }
+      }
+
+      /**
+       * Load existing combo items when editing a combo
+       */
+      function loadExistingComboItems() {
+        const match = window.location.pathname.match(/\/edit\/(\d+)/);
+        if (!match) return;
+
+        const itemId = match[1];
+        fetch(`/admin/menu-items/${itemId}/combo-items`)
+          .then((res) => res.json())
+          .then((data) => {
+            if (data.success && data.comboItems && data.comboItems.length > 0) {
+              const container = document.getElementById("comboItemsContainer");
+              container.innerHTML = "";
+              data.comboItems.forEach((ci) => {
+                addComboItemRow(
+                  ci.childItemId,
+                  ci.childItemName,
+                  ci.quantity,
+                  ci.childItemPrice,
+                  ci.childActive,
+                );
+              });
+              updateComboEmptyMessage();
+            }
+          })
+          .catch((err) => {
+            console.error("Error loading existing combo items:", err);
+          });
+      }
+
+      // Función addComboItem removida - Ya no se usa con el sistema de búsqueda
+
+      /**
+       * Add a combo item row to the container
+       */
+      function addComboItemRow(
+        itemId,
+        itemName,
+        quantity,
+        price,
+        isActive = true,
+      ) {
+        const container = document.getElementById("comboItemsContainer");
+        const row = document.createElement("div");
+
+        // Determine styling based on active status
+        const baseClass = isActive
+          ? "combo-item-row flex items-center gap-3 p-3 bg-teal-50 dark:bg-teal-900/20 rounded-xl border border-teal-200 dark:border-teal-700"
+          : "combo-item-row flex items-center gap-3 p-3 bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-300 dark:border-red-700";
+
+        row.className = baseClass;
+        row.setAttribute("data-item-id", itemId);
+        row.setAttribute("data-item-active", isActive);
+
+        // Clean name: remove emoji prefix if present from selector
+        const cleanName =
+          typeof itemName === "string"
+            ? itemName.replace(/^[👨‍🍳☕🍽️📦]\s*/, "")
+            : itemName;
+
+        // Warning badge for inactive items
+        const inactiveWarning = !isActive
+          ? `
+          <div class="flex items-center gap-1 px-2 py-1 bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-400 rounded-lg text-xs font-semibold">
+            <span class="material-symbols-outlined text-sm">warning</span>
+            <span>INACTIVO</span>
+          </div>
+        `
+          : "";
+
+        row.innerHTML = `
+          <input type="hidden" name="comboItemIds" value="${itemId}" />
+          <input type="hidden" name="comboItemQuantities" value="${quantity}" />
+          <div class="flex-1">
+            <p class="text-sm font-semibold text-gray-900 dark:text-white">${cleanName}</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400">Precio individual: $${price}</p>
+            ${inactiveWarning}
+          </div>
+          <div class="flex items-center gap-2">
+            <label class="text-xs text-gray-600 dark:text-gray-400">Qty:</label>
+            <input type="number" min="1" value="${quantity}" 
+              onchange="updateComboItemQuantity(this)"
+              class="w-16 px-2 py-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-center" />
+          </div>
+          <button type="button" onclick="removeComboItem(this)"
+            class="p-2 text-red-500 hover:text-red-700 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg transition-colors">
+            <span class="material-symbols-outlined text-lg">delete</span>
+          </button>
+        `;
+
+        container.appendChild(row);
+      }
+
+      /**
+       * Update the hidden quantity field when input changes
+       */
+      function updateComboItemQuantity(input) {
+        const row = input.closest(".combo-item-row");
+        const hiddenQty = row.querySelector(
+          'input[name="comboItemQuantities"]',
+        );
+        hiddenQty.value = input.value;
+      }
+
+      /**
+       * Remove a combo item row
+       */
+      function removeComboItem(button) {
+        const row = button.closest(".combo-item-row");
+        row.remove();
+        updateComboEmptyMessage();
+      }
+
+      /**
+       * Show/hide empty message for combo items
+       */
+      function updateComboEmptyMessage() {
+        const container = document.getElementById("comboItemsContainer");
+        const emptyMsg = document.getElementById("comboEmptyMessage");
+        const rows = container
+          ? container.querySelectorAll(".combo-item-row")
+          : [];
+        if (emptyMsg) {
+          emptyMsg.classList.toggle("hidden", rows.length > 0);
+        }
+      }
+
+      // ========== Funciones de Horario Personalizado ==========
+
+      /**
+       * Alterna la visibilidad de la sección de horario personalizado
+       */
+      function toggleCustomSchedule() {
+        const checkbox = document.getElementById("hasCustomScheduleCheckbox");
+        const customSection = document.getElementById("customScheduleSection");
+        const noScheduleInfo = document.getElementById("noCustomScheduleInfo");
+        const label = document.getElementById("customScheduleLabel");
+
+        const isEnabled = checkbox && checkbox.checked;
+
+        if (isEnabled) {
+          // Mostrar sección de configuración
+          customSection.classList.remove("hidden");
+          noScheduleInfo.classList.add("hidden");
+
+          // Actualizar estilos del label
+          label.classList.add(
+            "border-teal-500",
+            "bg-teal-50",
+            "dark:bg-teal-900/30",
+          );
+          label.classList.remove("border-gray-200", "dark:border-gray-700");
+
+          // Habilitar campos manuales y sincronizar estado
+          document.querySelectorAll(".manual-day-checkbox").forEach((cb) => {
+            if (!cb.dataset.closed) {
+              cb.name = "manualDay_" + cb.dataset.day;
+              toggleManualDayInputs(cb);
+            }
+          });
+        } else {
+          // Ocultar sección de configuración
+          customSection.classList.add("hidden");
+          noScheduleInfo.classList.remove("hidden");
+
+          // Actualizar estilos del label
+          label.classList.remove(
+            "border-teal-500",
+            "bg-teal-50",
+            "dark:bg-teal-900/30",
+          );
+          label.classList.add("border-gray-200", "dark:border-gray-700");
+
+          // Deshabilitar campos manuales para que no se envíen
+          document.querySelectorAll(".manual-day-checkbox").forEach((cb) => {
+            cb.name = "manualDay_" + cb.dataset.day + "_disabled";
+          });
+          document.querySelectorAll(".manual-time-input").forEach((input) => {
+            input.disabled = true;
+          });
+        }
+      }
+
+      /**
+       * Habilita/deshabilita los campos de tiempo de un día manual
+       */
+      function toggleManualDayInputs(checkbox) {
+        const dayName = checkbox.dataset.day || checkbox.value;
+        const startInput = document.getElementById(
+          "manualStartTime_" + dayName,
+        );
+        const endInput = document.getElementById("manualEndTime_" + dayName);
+        const dayContainer = document.getElementById("manualDay_" + dayName);
+        const syncBtn = document.getElementById("syncBtn_" + dayName);
+
+        if (startInput && endInput) {
+          startInput.disabled = !checkbox.checked;
+          endInput.disabled = !checkbox.checked;
+
+          if (syncBtn) {
+            syncBtn.disabled = !checkbox.checked;
+          }
+
+          // Actualizar estilos del contenedor
+          if (checkbox.checked) {
+            dayContainer.classList.add(
+              "border-teal-500",
+              "bg-teal-50/50",
+              "dark:bg-teal-900/20",
+            );
+            dayContainer.classList.remove(
+              "border-gray-200",
+              "dark:border-gray-700",
+            );
+          } else {
+            dayContainer.classList.remove(
+              "border-teal-500",
+              "bg-teal-50/50",
+              "dark:bg-teal-900/20",
+            );
+            dayContainer.classList.add(
+              "border-gray-200",
+              "dark:border-gray-700",
+            );
+          }
+        }
+      }
+
+      /**
+       * Aplica el horario del restaurante desde los atributos data-
+       */
+      function applyRestaurantHours(button) {
+        const dayName = button.getAttribute("data-day");
+        const openTime = button.getAttribute("data-open");
+        const closeTime = button.getAttribute("data-close");
+
+        useRestaurantHours(dayName, openTime, closeTime);
+      }
+
+      /**
+       * Copia el horario del restaurante a los campos de un día
+       */
+      function useRestaurantHours(dayName, openTime, closeTime) {
+        const startInput = document.getElementById(
+          "manualStartTime_" + dayName,
+        );
+        const endInput = document.getElementById("manualEndTime_" + dayName);
+
+        // Clean up possible null strings
+        if (openTime === "null") openTime = null;
+        if (closeTime === "null") closeTime = null;
+
+        if (startInput && endInput && openTime && closeTime) {
+          // Formatear hora a HH:mm
+          const formatTime = (timeStr) => {
+            if (!timeStr) return "";
+            // Si ya está en formato HH:mm, retornar
+            if (timeStr.length === 5) return timeStr;
+            // Si está en formato HH:mm:ss, recortar
+            if (timeStr.length > 5) return timeStr.substring(0, 5);
+            return timeStr;
+          };
+
+          startInput.value = formatTime(openTime);
+          endInput.value = formatTime(closeTime);
+
+          // Feedback visual
+          startInput.classList.add("ring-2", "ring-teal-500");
+          endInput.classList.add("ring-2", "ring-teal-500");
+
+          setTimeout(() => {
+            startInput.classList.remove("ring-2", "ring-teal-500");
+            endInput.classList.remove("ring-2", "ring-teal-500");
+          }, 1000);
+        }
+      }
+
+      /**
+       * Valida que la hora de inicio sea menor que la hora de fin
+       * @param startInput - Input de hora de inicio
+       * @param endInput - Input de hora de fin
+       * @param dayName - Nombre del día (para mensajes de error)
+       * @returns true si es válido, false si no
+       */
+      function validateTimeRange(startInput, endInput, dayName) {
+        if (!startInput || !endInput) return true;
+
+        const startValue = startInput.value;
+        const endValue = endInput.value;
+
+        // Si alguno está vacío, no validar aún
+        if (!startValue || !endValue) return true;
+
+        // Mapeo de nombres de días en inglés a español
+        const dayNamesES = {
+          MONDAY: "Lunes",
+          TUESDAY: "Martes",
+          WEDNESDAY: "Miércoles",
+          THURSDAY: "Jueves",
+          FRIDAY: "Viernes",
+          SATURDAY: "Sábado",
+          SUNDAY: "Domingo",
+        };
+
+        // Obtener nombre en español
+        const dayNameES = dayNamesES[dayName] || dayName;
+
+        // Comparar horarios
+        if (startValue >= endValue) {
+          // Detectar modo oscuro
+          const isDarkMode =
+            document.documentElement.classList.contains("dark");
+
+          // Mostrar error
+          Swal.fire({
+            icon: "error",
+            title: "⏰ Horario Inválido",
+            html: `
+              <div style="text-align: left;">
+                <p class="${isDarkMode ? "text-gray-300" : "text-gray-700"} mb-3">
+                  ${dayNameES ? `Para <strong class="text-red-600 dark:text-red-400">${dayNameES}</strong>:` : ""} 
+                  La <strong>hora de inicio</strong> (${startValue}) debe ser <strong>menor</strong> que la <strong>hora de fin</strong> (${endValue}).
+                </p>
+                <div class="${isDarkMode ? "bg-red-900/20 border-red-800" : "bg-red-50 border-red-200"} p-3 rounded-lg border">
+                  <p class="text-sm ${isDarkMode ? "text-red-400" : "text-red-700"}">
+                    ℹ️ Los horarios que cruzan medianoche (ej: 10:00 PM a 2:00 AM) no están soportados. Configure el item para que termine antes de medianoche.
+                  </p>
+                </div>
+              </div>
+            `,
+            confirmButtonText: "Corregir",
+            confirmButtonColor: "#EF4444",
+            customClass: {
+              popup: isDarkMode ? "dark:bg-gray-800 dark:text-white" : "",
+              title: isDarkMode ? "dark:text-white" : "",
+            },
+          });
+
+          // Limpiar el campo de fin para forzar corrección
+          endInput.value = "";
+          endInput.focus();
+
+          return false;
+        }
+
+        return true;
+      }
+
+      // ========== Búsqueda en Tiempo Real de Ingredientes ==========
+      function setupIngredientSearch(row) {
+        const searchInput = row.querySelector(".ingredient-search");
+        const hiddenInput = row.querySelector(".ingredient-id-input");
+        const dropdown = row.querySelector(".ingredient-dropdown");
+        const unitInput = row.querySelector('input[name="units"]');
+
+        let searchTimeout;
+
+        // Evento de búsqueda
+        searchInput.addEventListener("input", function () {
+          clearTimeout(searchTimeout);
+          const query = this.value.trim().toLowerCase();
+
+          if (query.length === 0) {
+            dropdown.classList.add("hidden");
+            return;
+          }
+
+          searchTimeout = setTimeout(() => {
+            // Filtrar ingredientes
+            const filtered = allIngredients.filter(
+              (ing) =>
+                ing.name.toLowerCase().includes(query) ||
+                ing.category?.name?.toLowerCase().includes(query),
+            );
+
+            // Mostrar resultados
+            if (filtered.length > 0) {
+              dropdown.innerHTML = filtered
+                .map(
+                  (ing) => `
+                <div class="ingredient-option px-3 py-2 hover:bg-primary/10 dark:hover:bg-primary/20 cursor-pointer flex items-center justify-between border-b border-gray-100 dark:border-gray-700 last:border-b-0"
+                     data-id="${ing.idIngredient}"
+                     data-name="${ing.name}"
+                     data-unit="${ing.unitOfMeasure}"
+                     data-stock="${ing.currentStock}">
+                  <div>
+                    <div class="font-medium text-gray-900 dark:text-white text-sm">${ing.name}</div>
+                    <div class="text-xs text-gray-500 dark:text-gray-400">Stock: ${ing.currentStock} ${ing.unitOfMeasure}</div>
+                  </div>
+                  <span class="material-symbols-outlined text-primary text-sm">add_circle</span>
+                </div>
+              `,
+                )
+                .join("");
+
+              dropdown.classList.remove("hidden");
+
+              // Agregar eventos de clic a las opciones
+              dropdown
+                .querySelectorAll(".ingredient-option")
+                .forEach((option) => {
+                  option.addEventListener("click", function () {
+                    const id = this.dataset.id;
+                    const name = this.dataset.name;
+                    const unit = this.dataset.unit;
+
+
+                    // Verificar si el ingrediente ya está agregado
+                    const existingRow = isIngredientDuplicated(id);
+
+
+                    if (existingRow) {
+                      // Mostrar SweetAlert pidiendo confirmar actualización de cantidad
+                      const existingQuantity = existingRow.querySelector(
+                        'input[name="quantities"]',
+                      ).value;
+                      const existingUnit = existingRow.querySelector(
+                        'input[name="units"]',
+                      ).value;
+
+
+                      Swal.fire({
+                        icon: "warning",
+                        title: "⚠️ Ingrediente Duplicado",
+                        html: `
+                          <div style="text-align: left;" class="space-y-3">
+                            <p class="text-gray-700 dark:text-gray-300 mb-3">
+                              El ingrediente <strong class="text-blue-600 dark:text-blue-400">${name}</strong> ya está en la receta.
+                            </p>
+                            <div class="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-200 dark:border-blue-800">
+                              <p class="text-sm font-semibold text-blue-800 dark:text-blue-300 mb-1">📊 Cantidad actual:</p>
+                              <p class="text-lg font-bold text-blue-600 dark:text-blue-400">${existingQuantity} ${existingUnit}</p>
+                            </div>
+                            <p class="text-sm text-gray-600 dark:text-gray-400 mt-3">
+                              Si necesita más cantidad de este ingrediente, edite la cantidad en la fila existente.
+                            </p>
+                          </div>
+                        `,
+                        confirmButtonText: "Entendido",
+                        confirmButtonColor: "#3B82F6",
+                        showCancelButton: false,
+                        customClass: {
+                          popup: "dark:bg-gray-800 dark:text-white",
+                          title: "dark:text-white",
+                          htmlContainer: "dark:text-gray-300",
+                        },
+                      }).then(() => {
+                        // Limpiar el campo de búsqueda
+                        searchInput.value = "";
+                        hiddenInput.value = "";
+
+                        // Resaltar la fila existente
+                        existingRow.scrollIntoView({
+                          behavior: "smooth",
+                          block: "center",
+                        });
+                        existingRow.classList.add(
+                          "ring-4",
+                          "ring-yellow-400",
+                          "dark:ring-yellow-600",
+                        );
+                        setTimeout(() => {
+                          existingRow.classList.remove(
+                            "ring-4",
+                            "ring-yellow-400",
+                            "dark:ring-yellow-600",
+                          );
+                        }, 3000);
+                      });
+
+                      dropdown.classList.add("hidden");
+                      return;
+                    }
+
+                    // Si no es duplicado, agregar normalmente
+                    // Establecer valores
+                    hiddenInput.value = id;
+                    searchInput.value = name;
+                    unitInput.value = unit;
+
+                    // Marcar como requerido
+                    hiddenInput.setAttribute("required", "required");
+
+                    // Ocultar dropdown
+                    dropdown.classList.add("hidden");
+                  });
+                });
+            } else {
+              dropdown.innerHTML = `
+                <div class="px-3 py-4 text-center text-gray-500 dark:text-gray-400 text-sm">
+                  <span class="material-symbols-outlined text-gray-400 dark:text-gray-500 block mb-1">search_off</span>
+                  No se encontraron ingredientes
+                </div>
+              `;
+              dropdown.classList.remove("hidden");
+            }
+          }, 300);
+        });
+
+        // Cerrar dropdown al hacer clic fuera
+        document.addEventListener("click", function (e) {
+          if (!row.contains(e.target)) {
+            dropdown.classList.add("hidden");
+          }
+        });
+
+        // Focus en búsqueda abre dropdown si hay resultados
+        searchInput.addEventListener("focus", function () {
+          if (this.value.trim().length > 0) {
+            const event = new Event("input");
+            this.dispatchEvent(event);
+          }
+        });
+      }
+
+      // ========== Cargar Unidad de Medida al seleccionar Ingrediente (LEGACY - para ingredientes existentes) ==========
+      function loadIngredientUnit(selectElement) {
+        const ingredientId = selectElement.value;
+        const row = selectElement.closest(".ingredient-row");
+        const unitInput = row.querySelector('input[name="units"]');
+
+        if (!ingredientId) {
+          unitInput.value = "";
+          return;
+        }
+
+        // Mostrar loading
+        unitInput.value = "Cargando...";
+
+        // Fetch ingredient details
+        fetch(`/admin/menu-items/ingredient/${ingredientId}`)
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.success) {
+              unitInput.value = data.unitOfMeasure || "N/A";
+            } else {
+              unitInput.value = "Error";
+              console.error("Error loading ingredient unit:", data.error);
+            }
+          })
+          .catch((error) => {
+            console.error("Error loading ingredient unit:", error);
+            unitInput.value = "Error";
+          });
+      }
+
+      // ========== Gestión de Ingredientes ==========
+
+      // Función para verificar si un ingrediente ya está en la lista
+      function isIngredientDuplicated(ingredientId) {
+        const container = document.getElementById("ingredientsContainer");
+        const existingRows = container.querySelectorAll(
+          ".ingredient-row:not(#ingredientTemplate)",
+        );
+
+        for (let row of existingRows) {
+          // Verificar en ingredientes nuevos (input hidden con clase ingredient-id-input)
+          const hiddenInput = row.querySelector(".ingredient-id-input");
+          if (hiddenInput && hiddenInput.value == ingredientId) {
+            return row;
+          }
+
+          // Verificar en ingredientes existentes (select con name="ingredientIds")
+          const selectInput = row.querySelector('select[name="ingredientIds"]');
+          if (selectInput && selectInput.value == ingredientId) {
+            return row;
+          }
+        }
+        return null;
+      }
+
+      // Función para actualizar la cantidad de un ingrediente existente
+      function updateIngredientQuantity(row, newQuantity) {
+        const quantityInput = row.querySelector('input[name="quantities"]');
+        if (quantityInput) {
+          const currentQuantity = parseFloat(quantityInput.value) || 0;
+          const totalQuantity = currentQuantity + parseFloat(newQuantity);
+          quantityInput.value = totalQuantity;
+
+          // Animación para resaltar el cambio
+          row.classList.add("bg-yellow-50", "dark:bg-yellow-900/20");
+          setTimeout(() => {
+            row.classList.remove("bg-yellow-50", "dark:bg-yellow-900/20");
+          }, 2000);
+        }
+      }
+
+      function addIngredientRow() {
+        const container = document.getElementById("ingredientsContainer");
+        const template = document.getElementById("ingredientTemplate");
+        const noMessage = document.getElementById("noIngredientsMessage");
+
+        // Ocultar mensaje de "no hay ingredientes"
+        if (noMessage) {
+          noMessage.style.display = "none";
+        }
+
+        // Clonar el template
+        const newRow = template.cloneNode(true);
+        newRow.id = "";
+        newRow.classList.remove("hidden");
+
+        // Configurar búsqueda de ingredientes para la nueva fila
+        setupIngredientSearch(newRow);
+
+        // Agregar atributo required a los campos clonados
+        const hiddenInput = newRow.querySelector(".ingredient-id-input");
+        const quantityInput = newRow.querySelector('input[name="quantities"]');
+        const unitInput = newRow.querySelector('input[name="units"]');
+
+        if (hiddenInput) {
+          hiddenInput.setAttribute("required", "required");
+        }
+
+        if (quantityInput) {
+          quantityInput.setAttribute("required", "required");
+        }
+
+        if (unitInput) {
+          unitInput.setAttribute("required", "required");
+        }
+
+        // Agregar al contenedor
+        container.appendChild(newRow);
+      }
+
+      function removeIngredientRow(button) {
+        const row = button.closest(".ingredient-row");
+        const container = document.getElementById("ingredientsContainer");
+        const noMessage = document.getElementById("noIngredientsMessage");
+
+        // Obtener información del ingrediente para mostrar en el modal
+        const ingredientName =
+          row.querySelector(".ingredient-search")?.value ||
+          row.querySelector('select[name="ingredientIds"] option:checked')
+            ?.text ||
+          "este ingrediente";
+
+        // Detectar si está en modo oscuro
+        const isDarkMode = document.documentElement.classList.contains("dark");
+
+        // Mostrar confirmación con SweetAlert
+        Swal.fire({
+          title: "¿Eliminar Ingrediente?",
+          html: `
+            <div style="text-align: left;">
+              <p class="text-gray-700 dark:text-gray-300 mb-3">
+                ¿Está seguro de que desea eliminar <strong class="text-red-600 dark:text-red-400">${ingredientName}</strong> de la receta?
+              </p>
+              <div class="bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded-lg border border-yellow-200 dark:border-yellow-800">
+                <p class="text-sm text-yellow-700 dark:text-yellow-400">
+                  ⚠️ Esta acción no se puede deshacer. El ingrediente será removido de la receta del platillo.
+                </p>
+              </div>
+            </div>
+          `,
+          icon: "warning",
+          showCancelButton: true,
+          confirmButtonColor: "#EF4444",
+          cancelButtonColor: "#6B7280",
+          confirmButtonText:
+            '<span class="flex items-center gap-2"><span class="material-symbols-outlined text-sm">delete</span><span>Sí, eliminar</span></span>',
+          cancelButtonText:
+            '<span class="flex items-center gap-2"><span class="material-symbols-outlined text-sm">cancel</span><span>Cancelar</span></span>',
+          customClass: {
+            popup: isDarkMode ? "dark:bg-gray-800 dark:text-white" : "",
+            title: isDarkMode ? "dark:text-white" : "",
+            htmlContainer: isDarkMode ? "dark:text-gray-300" : "",
+            confirmButton: "font-semibold",
+            cancelButton: "font-semibold",
+          },
+          background: isDarkMode ? "#1F2937" : "#FFFFFF",
+          color: isDarkMode ? "#F3F4F6" : "#1F2937",
+        }).then((result) => {
+          if (result.isConfirmed) {
+            // Eliminar la fila
+            row.remove();
+
+            // Mostrar mensaje si no quedan ingredientes
+            const remainingRows = container.querySelectorAll(
+              ".ingredient-row:not(#ingredientTemplate)",
+            );
+            if (remainingRows.length === 0 && noMessage) {
+              noMessage.style.display = "block";
+            }
+
+            // Mostrar confirmación de eliminación
+            Swal.fire({
+              title: "¡Eliminado!",
+              text: "El ingrediente ha sido removido de la receta.",
+              icon: "success",
+              timer: 2000,
+              showConfirmButton: false,
+              customClass: {
+                popup: isDarkMode ? "dark:bg-gray-800 dark:text-white" : "",
+              },
+              background: isDarkMode ? "#1F2937" : "#FFFFFF",
+              color: isDarkMode ? "#F3F4F6" : "#1F2937",
+            });
+          }
+        });
+      }
+
+      // ========== Compresión de imagen client-side ==========
+      // Redimensiona imágenes grandes antes de enviar al servidor para reducir
+      // el tiempo de upload. Max 1200px de lado mayor, calidad 0.85 JPEG.
+      const IMG_MAX_DIMENSION = 1200;
+      const IMG_COMPRESS_QUALITY = 0.85;
+      // Flag: true si el usuario seleccionó una imagen nueva
+      let _imageChanged = false;
+
+      function compressImage(file) {
+        return new Promise((resolve) => {
+          // GIFs no se comprimen (pierden animación)
+          if (file.type === "image/gif") {
+            resolve(file);
+            return;
+          }
+
+          const img = new Image();
+          img.onload = function () {
+            let { width, height } = img;
+
+            // Si ya es pequeña, no comprimir
+            if (
+              width <= IMG_MAX_DIMENSION &&
+              height <= IMG_MAX_DIMENSION &&
+              file.size < 500 * 1024
+            ) {
+              resolve(file);
+              return;
+            }
+
+            // Calcular nuevas dimensiones manteniendo aspect ratio
+            if (width > height) {
+              if (width > IMG_MAX_DIMENSION) {
+                height = Math.round((height * IMG_MAX_DIMENSION) / width);
+                width = IMG_MAX_DIMENSION;
+              }
+            } else {
+              if (height > IMG_MAX_DIMENSION) {
+                width = Math.round((width * IMG_MAX_DIMENSION) / height);
+                height = IMG_MAX_DIMENSION;
+              }
+            }
+
+            const canvas = document.createElement("canvas");
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext("2d");
+            ctx.drawImage(img, 0, 0, width, height);
+
+            canvas.toBlob(
+              (blob) => {
+                if (blob && blob.size < file.size) {
+                  // Comprimido es más pequeño → usar comprimido
+                  const compressed = new File([blob], file.name, {
+                    type: "image/jpeg",
+                    lastModified: Date.now(),
+                  });
+                  resolve(compressed);
+                } else {
+                  // Original es más pequeño → mantener original
+                  resolve(file);
+                }
+              },
+              "image/jpeg",
+              IMG_COMPRESS_QUALITY,
+            );
+          };
+          img.onerror = () => resolve(file); // fallback: usar original
+          img.src = URL.createObjectURL(file);
+        });
+      }
+
+      // Reemplaza el archivo en el input con el comprimido
+      function setFileInput(inputEl, file) {
+        const dt = new DataTransfer();
+        dt.items.add(file);
+        inputEl.files = dt.files;
+      }
+
+      // ========== Funciones para Preview de Imagen ==========
+      function previewImage(event) {
+        const file = event.target.files[0];
+        if (file) {
+          // Validar tamaño
+          const maxSize = 5 * 1024 * 1024; // 5MB
+          if (file.size > maxSize) {
+            alert("La imagen es demasiado grande. El tamaño máximo es 5MB.");
+            clearImagePreview();
+            return;
+          }
+
+          // Validar tipo
+          const validTypes = [
+            "image/jpeg",
+            "image/png",
+            "image/gif",
+            "image/webp",
+          ];
+          if (!validTypes.includes(file.type)) {
+            alert(
+              "Tipo de archivo no válido. Solo se permiten JPG, PNG, GIF o WEBP.",
+            );
+            clearImagePreview();
+            return;
+          }
+
+          _imageChanged = true;
+
+          // Comprimir imagen antes de preview
+          compressImage(file).then((compressed) => {
+            const input = document.getElementById("imageFile");
+            setFileInput(input, compressed);
+
+            // Mostrar preview
+            const reader = new FileReader();
+            reader.onload = function (e) {
+              const preview = document.getElementById("imagePreview");
+              const container = document.getElementById(
+                "imagePreviewContainer",
+              );
+              const uploadArea = document.getElementById("uploadArea");
+              const fileName = document.getElementById("imageFileName");
+
+              preview.src = e.target.result;
+              const sizeMB = (compressed.size / 1024 / 1024).toFixed(2);
+              fileName.textContent = compressed.name + " (" + sizeMB + " MB)";
+
+              // Ocultar área de carga y mostrar preview
+              uploadArea.classList.add("hidden");
+              container.classList.remove("hidden");
+            };
+            reader.readAsDataURL(compressed);
+          });
+        }
+      }
+
+      function clearImagePreview() {
+        const input = document.getElementById("imageFile");
+        const preview = document.getElementById("imagePreview");
+        const container = document.getElementById("imagePreviewContainer");
+        const uploadArea = document.getElementById("uploadArea");
+        const fileName = document.getElementById("imageFileName");
+
+        input.value = "";
+        preview.src = "";
+        fileName.textContent = "";
+        _imageChanged = false;
+
+        // Limpiar el campo hidden para que el backend sepa que se eliminó la imagen
+        const currentImageUrl = document.getElementById("currentImageUrl");
+        if (currentImageUrl) {
+          currentImageUrl.value = "";
+        }
+
+        // Mostrar área de carga y ocultar preview
+        container.classList.add("hidden");
+        uploadArea.classList.remove("hidden");
+      }
+
+      // Cargar imagen actual si existe (modo edición)
+      window.addEventListener("DOMContentLoaded", function () {
+        const currentImageUrl = document.getElementById("currentImageUrl");
+        const preview = document.getElementById("imagePreview");
+        const container = document.getElementById("imagePreviewContainer");
+        const uploadArea = document.getElementById("uploadArea");
+        const fileName = document.getElementById("imageFileName");
+
+        if (
+          currentImageUrl &&
+          currentImageUrl.value &&
+          currentImageUrl.value.trim() !== ""
+        ) {
+          preview.src = currentImageUrl.value;
+          fileName.textContent = "Imagen actual del producto";
+          uploadArea.classList.add("hidden");
+          container.classList.remove("hidden");
+        }
+      });
+
+      // ========== Inicialización ==========
+      window.addEventListener("DOMContentLoaded", function () {
+        // Mutual exclusion logic for Chef vs Barista vs Buffet vs Combo (only one can be selected)
+        const chefCheckbox = document.getElementById("requiresPreparation");
+        const baristaCheckbox = document.getElementById(
+          "requiresBaristaPreparation",
+        );
+        const buffetCheckbox = document.getElementById("isBuffet");
+        const comboCheckbox = document.getElementById("isCombo");
+
+        function updateExclusionState() {
+          if (
+            !chefCheckbox ||
+            !baristaCheckbox ||
+            !buffetCheckbox ||
+            !comboCheckbox
+          )
+            return;
+
+          const allBoxes = [
+            chefCheckbox,
+            baristaCheckbox,
+            buffetCheckbox,
+            comboCheckbox,
+          ];
+          const anyChecked = allBoxes.some((cb) => cb.checked);
+
+          if (anyChecked) {
+            allBoxes.forEach((cb) => {
+              if (!cb.checked) {
+                cb.disabled = true;
+                cb.parentElement.classList.add("opacity-50");
+              } else {
+                cb.disabled = false;
+                cb.parentElement.classList.remove("opacity-50");
+              }
+            });
+          } else {
+            // None checked: enable all
+            allBoxes.forEach((cb) => {
+              cb.disabled = false;
+              cb.parentElement.classList.remove("opacity-50");
+            });
+          }
+        }
+
+        if (
+          chefCheckbox &&
+          baristaCheckbox &&
+          buffetCheckbox &&
+          comboCheckbox
+        ) {
+          chefCheckbox.addEventListener("change", function () {
+            if (this.checked) {
+              baristaCheckbox.checked = false;
+              buffetCheckbox.checked = false;
+              comboCheckbox.checked = false;
+              toggleBuffetMode();
+              toggleComboMode();
+            }
+            updateExclusionState();
+          });
+
+          baristaCheckbox.addEventListener("change", function () {
+            if (this.checked) {
+              chefCheckbox.checked = false;
+              buffetCheckbox.checked = false;
+              comboCheckbox.checked = false;
+              toggleBuffetMode();
+              toggleComboMode();
+            }
+            updateExclusionState();
+          });
+
+          buffetCheckbox.addEventListener("change", function () {
+            if (this.checked) {
+              chefCheckbox.checked = false;
+              baristaCheckbox.checked = false;
+              comboCheckbox.checked = false;
+              toggleComboMode();
+            }
+            toggleBuffetMode();
+            updateExclusionState();
+          });
+
+          comboCheckbox.addEventListener("change", function () {
+            if (this.checked) {
+              chefCheckbox.checked = false;
+              baristaCheckbox.checked = false;
+              buffetCheckbox.checked = false;
+              toggleBuffetMode();
+            }
+            toggleComboMode();
+            updateExclusionState();
+          });
+
+          // Run on load
+          updateExclusionState();
+          toggleComboMode();
+        }
+        const categorySelect = document.getElementById("categorySelect");
+        const container = document.getElementById("ingredientsContainer");
+        const noMessage = document.getElementById("noIngredientsMessage");
+        const existingRows = container.querySelectorAll(
+          ".ingredient-row:not(#ingredientTemplate)",
+        );
+
+        // Cargar presentaciones si ya hay categoría seleccionada (en edición)
+        if (categorySelect.value) {
+          categorySelect.dispatchEvent(new Event("change"));
+        }
+
+        // Agregar eventos a filas existentes (modo edición)
+        existingRows.forEach((row) => {
+          const ingredientSelect = row.querySelector(
+            'select[name="ingredientIds"]',
+          );
+          if (ingredientSelect) {
+            ingredientSelect.addEventListener("change", function () {
+              loadIngredientUnit(this);
+            });
+          }
+        });
+
+        // Si no hay ingredientes existentes (modo crear), agregar una fila por defecto
+        // PERO solo si NO está en modo buffet ni modo combo
+        const buffetCheckboxInit = document.getElementById("isBuffet");
+        const comboCheckboxInit = document.getElementById("isCombo");
+        const isBuffetMode = buffetCheckboxInit && buffetCheckboxInit.checked;
+        const isComboMode = comboCheckboxInit && comboCheckboxInit.checked;
+
+        if (existingRows.length === 0 && !isBuffetMode && !isComboMode) {
+          addIngredientRow();
+        } else if (existingRows.length > 0) {
+          // Ocultar mensaje si hay ingredientes
+          if (noMessage) {
+            noMessage.style.display = "none";
+          }
+        }
+      });
+
+      // ========== Validación antes de enviar ==========
+      document.querySelector("form").addEventListener("submit", function (e) {
+        // Si no se cambió la imagen, deshabilitar el file input para que no se envíe
+        // Esto evita enviar datos multipart innecesarios cuando solo se editan otros campos
+        const imageFileInput = document.getElementById("imageFile");
+        if (!_imageChanged && imageFileInput) {
+          imageFileInput.disabled = true;
+        }
+
+        // Validar que la categoría esté activa
+        const categorySelect = document.getElementById("categorySelect");
+        if (categorySelect && categorySelect.value) {
+          const selectedOption =
+            categorySelect.options[categorySelect.selectedIndex];
+          const isActive = selectedOption.getAttribute("data-active");
+
+          if (isActive === "false") {
+            e.preventDefault();
+            const categoryName = selectedOption.text.replace(
+              " (DESACTIVADA)",
+              "",
+            );
+            const isDarkMode =
+              document.documentElement.classList.contains("dark");
+
+            Swal.fire({
+              icon: "error",
+              title: "Categoría Desactivada",
+              html: `
+                <div class="text-left">
+                  <p class="mb-3">No se puede crear un item en la categoría <strong class="text-red-600 dark:text-red-400">${categoryName}</strong> porque está desactivada.</p>
+                  <div class="bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-700 rounded-lg p-3 mt-3">
+                    <p class="text-sm text-yellow-800 dark:text-yellow-200">
+                      <strong>💡 Solución:</strong> Por favor, active la categoría primero desde el módulo de categorías o seleccione otra categoría activa.
+                    </p>
+                  </div>
+                </div>
+              `,
+              confirmButtonText: "Entendido",
+              confirmButtonColor: "#EF4444",
+              background: isDarkMode ? "#1F2937" : "#FFFFFF",
+              color: isDarkMode ? "#F3F4F6" : "#1F2937",
+              customClass: {
+                popup: "dark:bg-gray-800 dark:text-white",
+                title: "dark:text-white",
+              },
+            });
+            return false;
+          }
+        }
+
+        // Validar horarios manuales si el checkbox de horario personalizado está activado
+        const hasCustomScheduleCheckbox = document.getElementById(
+          "hasCustomScheduleCheckbox",
+        );
+        if (hasCustomScheduleCheckbox && hasCustomScheduleCheckbox.checked) {
+          // Obtener todos los checkboxes de días seleccionados
+          const selectedDayCheckboxes = document.querySelectorAll(
+            ".manual-day-checkbox:checked",
+          );
+
+          for (let dayCheckbox of selectedDayCheckboxes) {
+            const dayName = dayCheckbox.dataset.day;
+            const startInput = document.getElementById(
+              "manualStartTime_" + dayName,
+            );
+            const endInput = document.getElementById(
+              "manualEndTime_" + dayName,
+            );
+
+            if (startInput && endInput && startInput.value && endInput.value) {
+              if (!validateTimeRange(startInput, endInput, dayName)) {
+                e.preventDefault();
+                return false;
+              }
+            }
+          }
+        }
+
+        const buffetCheckbox = document.getElementById("isBuffet");
+        const isBuffet = buffetCheckbox && buffetCheckbox.checked;
+        const comboCheckboxVal = document.getElementById("isCombo");
+        const isComboVal = comboCheckboxVal && comboCheckboxVal.checked;
+
+        // If combo mode, validate combo items instead of ingredients
+        if (isComboVal) {
+          const comboContainer = document.getElementById("comboItemsContainer");
+          const comboRows = comboContainer
+            ? comboContainer.querySelectorAll(".combo-item-row")
+            : [];
+
+          // Check for inactive items in combo
+          const inactiveItems = [];
+          comboRows.forEach((row) => {
+            const isActive = row.getAttribute("data-item-active") === "true";
+            if (!isActive) {
+              const itemName = row.querySelector(
+                ".text-sm.font-semibold",
+              ).textContent;
+              inactiveItems.push(itemName);
+            }
+          });
+
+          if (inactiveItems.length > 0) {
+            e.preventDefault();
+            const isDarkMode =
+              document.documentElement.classList.contains("dark");
+            const itemsList = inactiveItems
+              .map(
+                (name) =>
+                  `<li class="text-red-600 dark:text-red-400">• ${name}</li>`,
+              )
+              .join("");
+
+            Swal.fire({
+              icon: "error",
+              title: "Items Inactivos Detectados",
+              html: `
+                <div class="text-left">
+                  <p class="mb-3">No se puede crear/actualizar el combo porque contiene items inactivos:</p>
+                  <ul class="mb-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-700 rounded-lg p-3">
+                    ${itemsList}
+                  </ul>
+                  <div class="bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-700 rounded-lg p-3 mt-3">
+                    <p class="text-sm text-yellow-800 dark:text-yellow-200">
+                      <strong>💡 Solución:</strong> Por favor, elimine los items inactivos del combo o reactive dichos items primero desde el módulo de items del menú.
+                    </p>
+                  </div>
+                </div>
+              `,
+              confirmButtonText: "Entendido",
+              confirmButtonColor: "#EF4444",
+              background: isDarkMode ? "#1F2937" : "#FFFFFF",
+              color: isDarkMode ? "#F3F4F6" : "#1F2937",
+              customClass: {
+                popup: "dark:bg-gray-800 dark:text-white",
+                title: "dark:text-white",
+              },
+            });
+            return false;
+          }
+
+          if (comboRows.length === 0) {
+            e.preventDefault();
+            Swal.fire({
+              icon: "error",
+              title: "❌ Combo Incompleto",
+              text: "Debe agregar al menos 1 item del menú al combo",
+              confirmButtonColor: "#3B82F6",
+              customClass: {
+                popup: "dark:bg-gray-800 dark:text-white",
+              },
+            });
+            return false;
+          }
+          return true;
+        }
+
+        // If buffet mode, skip ingredient validation
+        if (isBuffet) {
+          return true;
+        }
+
+        const container = document.getElementById("ingredientsContainer");
+        const ingredientRows = container.querySelectorAll(
+          ".ingredient-row:not(#ingredientTemplate)",
+        );
+
+        if (ingredientRows.length === 0) {
+          e.preventDefault();
+          Swal.fire({
+            icon: "error",
+            title: "❌ Receta Incompleta",
+            text: "Debe agregar al menos un ingrediente a la receta",
+            confirmButtonColor: "#3B82F6",
+            customClass: {
+              popup: "dark:bg-gray-800 dark:text-white",
+            },
+          });
+          return false;
+        }
+
+        // Validar ingredientes duplicados antes de enviar
+        const ingredientIds = [];
+        let hasDuplicates = false;
+        let duplicateIngredient = null;
+
+        ingredientRows.forEach((row) => {
+          const hiddenInput = row.querySelector(".ingredient-id-input");
+          const searchInput = row.querySelector(".ingredient-search");
+          if (hiddenInput && hiddenInput.value) {
+            const ingredientId = hiddenInput.value;
+            if (ingredientIds.includes(ingredientId)) {
+              hasDuplicates = true;
+              duplicateIngredient = searchInput.value;
+            } else {
+              ingredientIds.push(ingredientId);
+            }
+          }
+        });
+
+        if (hasDuplicates) {
+          e.preventDefault();
+          Swal.fire({
+            icon: "error",
+            title: "⚠️ Ingredientes Duplicados",
+            html: `
+              <div style="text-align: left;">
+                <p class="text-gray-700 dark:text-gray-300 mb-3">
+                  El ingrediente <strong class="text-red-600 dark:text-red-400">${duplicateIngredient}</strong> está repetido en la receta.
+                </p>
+                <div class="bg-red-50 dark:bg-red-900/20 p-3 rounded-lg border border-red-200 dark:border-red-800">
+                  <p class="text-sm text-red-700 dark:text-red-400">
+                    ℹ️ Si necesita más cantidad, edite la cantidad en la fila existente en lugar de agregar el mismo ingrediente varias veces.
+                  </p>
+                </div>
+              </div>
+            `,
+            confirmButtonText: "Corregir",
+            confirmButtonColor: "#EF4444",
+            customClass: {
+              popup: "dark:bg-gray-800 dark:text-white",
+              title: "dark:text-white",
+            },
+          });
+          return false;
+        }
+      });
+
+      // Auto-hide alerts
+      document.addEventListener("DOMContentLoaded", function () {
+        const alerts = document.querySelectorAll(".bg-green-100, .bg-red-100");
+
+        alerts.forEach((alert) => {
+          setTimeout(() => {
+            alert.style.transition =
+              "opacity 0.5s ease-out, transform 0.5s ease-out";
+            alert.style.opacity = "0";
+            alert.style.transform = "translateY(-20px)";
+            setTimeout(() => {
+              alert.remove();
+            }, 500);
+          }, 3000);
+        });
+
+        // Show error message with SweetAlert if exists
+        /*<![CDATA[*/
+        const errorMessage = /*[[${errorMessage}]]*/ null;
+        /*]]>*/
+        if (errorMessage) {
+          const isDarkMode =
+            document.documentElement.classList.contains("dark");
+          Swal.fire({
+            icon: "error",
+            title: "Error de Validación",
+            html: `
+              <div class="text-left">
+                <p class="mb-3">${errorMessage}</p>
+                <div class="bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-700 rounded-lg p-3 mt-3">
+                  <p class="text-sm text-yellow-800 dark:text-yellow-200">
+                    <strong>💡 Sugerencia:</strong> Si seleccionaste días con diferentes horarios de cierre, 
+                    ajusta la hora de fin para que sea compatible con el día que cierra más temprano.
+                  </p>
+                </div>
+              </div>
+            `,
+            confirmButtonText: "Entendido",
+            confirmButtonColor: "#EF4444",
+            background: isDarkMode ? "#1F2937" : "#FFFFFF",
+            color: isDarkMode ? "#F3F4F6" : "#1F2937",
+            customClass: {
+              popup: "dark:bg-gray-800 dark:text-white",
+              title: "dark:text-white",
+            },
+          });
+        }
+      });
+    </script>
+
+    <!-- Script del Sistema de Temas -->
+    <div th:replace="~{fragments/theme :: themeScript}"></div>
+  </body>
+</html>

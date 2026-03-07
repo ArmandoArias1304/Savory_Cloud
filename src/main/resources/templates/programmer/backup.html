@@ -1,0 +1,1393 @@
+<!doctype html>
+<html xmlns:th="http://www.thymeleaf.org" lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title th:text="${globalSystemConfig.systemName + ' - Respaldos'}">
+      SavoryCloud - Respaldos
+    </title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@300;400;500;600;700"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#38e07b",
+              "primary-dark": "#2bc866",
+              "background-light": "#f8faf9",
+              "background-dark": "#0f1713",
+            },
+            fontFamily: {
+              display: ["Work Sans"],
+            },
+            borderRadius: {
+              DEFAULT: "0.5rem",
+              lg: "0.75rem",
+              xl: "1rem",
+              "2xl": "1.5rem",
+              full: "9999px",
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      @keyframes slideIn {
+        from {
+          opacity: 0;
+          transform: translateY(-10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .animate-slide-in {
+        animation: slideIn 0.5s ease-out forwards;
+      }
+
+      .stat-card {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      .stat-card:hover {
+        transform: translateY(-4px);
+        box-shadow:
+          0 20px 25px -5px rgba(56, 224, 123, 0.1),
+          0 10px 10px -5px rgba(56, 224, 123, 0.04);
+      }
+
+      .material-symbols-outlined {
+        font-variation-settings:
+          "FILL" 0,
+          "wght" 400,
+          "GRAD" 0,
+          "opsz" 24;
+      }
+
+      .backup-calendar {
+        user-select: none;
+      }
+      .backup-calendar .aspect-square {
+        position: relative;
+      }
+      .backup-calendar .aspect-square:hover {
+        transform: scale(1.05);
+      }
+    </style>
+  </head>
+  <body
+    class="bg-gradient-to-br from-background-light to-gray-50 dark:from-background-dark dark:to-gray-900 font-display text-gray-800 dark:text-gray-200"
+  >
+    <div class="min-h-screen">
+      <!-- Header -->
+      <header
+        class="bg-gradient-to-r from-primary to-primary-dark text-white shadow-lg sticky top-0 z-30"
+      >
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div
+            class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4"
+          >
+            <div class="flex items-center gap-4">
+              <div
+                class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm"
+              >
+                <span class="material-symbols-outlined text-3xl">backup</span>
+              </div>
+              <div>
+                <h1 class="text-2xl sm:text-3xl font-bold">
+                  Respaldos de Base de Datos
+                </h1>
+                <p class="text-white/80 text-sm">
+                  Gestión de backups del sistema
+                </p>
+              </div>
+            </div>
+            <div class="flex items-center gap-3">
+              <a
+                href="/programmer/dashboard"
+                class="inline-flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-xl transition-all backdrop-blur-sm"
+              >
+                <span class="material-symbols-outlined">arrow_back</span>
+                <span class="font-semibold">Volver al Panel</span>
+              </a>
+              <a
+                href="/logout"
+                class="inline-flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-xl transition-all backdrop-blur-sm"
+              >
+                <span class="material-symbols-outlined">logout</span>
+                <span class="font-semibold">Salir</span>
+              </a>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Alert Messages -->
+        <div
+          th:if="${successMessage}"
+          class="mb-6 bg-green-50 dark:bg-green-900/20 border-l-4 border-green-500 text-green-800 dark:text-green-300 px-6 py-4 rounded-xl shadow-sm animate-slide-in"
+        >
+          <div class="flex items-start gap-3">
+            <span
+              class="material-symbols-outlined text-green-500 text-2xl flex-shrink-0"
+              >check_circle</span
+            >
+            <span
+              class="text-sm sm:text-base"
+              th:text="${successMessage}"
+            ></span>
+          </div>
+        </div>
+        <div
+          th:if="${warningMessage}"
+          class="mb-6 bg-yellow-50 dark:bg-yellow-900/20 border-l-4 border-yellow-500 text-yellow-800 dark:text-yellow-300 px-6 py-4 rounded-xl shadow-sm animate-slide-in"
+        >
+          <div class="flex items-start gap-3">
+            <span
+              class="material-symbols-outlined text-yellow-500 text-2xl flex-shrink-0"
+              >warning</span
+            >
+            <span
+              class="text-sm sm:text-base"
+              th:text="${warningMessage}"
+            ></span>
+          </div>
+        </div>
+        <div
+          th:if="${errorMessage}"
+          class="mb-6 bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 text-red-800 dark:text-red-300 px-6 py-4 rounded-xl shadow-sm animate-slide-in"
+        >
+          <div class="flex items-start gap-3">
+            <span
+              class="material-symbols-outlined text-red-500 text-2xl flex-shrink-0"
+              >error</span
+            >
+            <span class="text-sm sm:text-base" th:text="${errorMessage}"></span>
+          </div>
+        </div>
+
+        <!-- ALERT: Days without backup -->
+        <div
+          th:if="${daysSinceLastBackup >= daysWithoutBackupWarning}"
+          class="mb-6 bg-orange-50 dark:bg-orange-900/20 border-l-4 border-orange-500 text-orange-800 dark:text-orange-300 px-6 py-4 rounded-xl shadow-sm animate-slide-in"
+        >
+          <div class="flex items-start gap-3">
+            <span
+              class="material-symbols-outlined text-orange-500 text-2xl flex-shrink-0"
+              >schedule</span
+            >
+            <div>
+              <p class="font-semibold">
+                Han pasado <span th:text="${daysSinceLastBackup}">0</span> días
+                sin hacer un respaldo
+              </p>
+              <p class="text-sm text-orange-700 dark:text-orange-400 mt-1">
+                Se recomienda hacer respaldos frecuentes para proteger tus
+                datos.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- ALERT: No backups ever -->
+        <div
+          th:if="${daysSinceLastBackup == -1}"
+          class="mb-6 bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 text-red-800 dark:text-red-300 px-6 py-4 rounded-xl shadow-sm animate-slide-in"
+        >
+          <div class="flex items-start gap-3">
+            <span
+              class="material-symbols-outlined text-red-500 text-2xl flex-shrink-0"
+              >warning</span
+            >
+            <div>
+              <p class="font-semibold">
+                Nunca se ha realizado un respaldo de la base de datos
+              </p>
+              <p class="text-sm text-red-700 dark:text-red-400 mt-1">
+                ¡Crea tu primer respaldo ahora para proteger tus datos!
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- ALERT: Low disk space -->
+        <div
+          th:if="${diskSpace.isLow}"
+          class="mb-6 bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 text-red-800 dark:text-red-300 px-6 py-4 rounded-xl shadow-sm animate-slide-in"
+        >
+          <div class="flex items-start gap-3">
+            <span
+              class="material-symbols-outlined text-red-500 text-2xl flex-shrink-0"
+              >disc_full</span
+            >
+            <div>
+              <p class="font-semibold">Espacio en disco bajo</p>
+              <p class="text-sm text-red-700 dark:text-red-400 mt-1">
+                Solo quedan
+                <span
+                  th:text="${#numbers.formatDecimal(diskSpace.freeGb, 1, 2)}"
+                  >0</span
+                >
+                GB disponibles. Considera eliminar respaldos antiguos.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- STATISTICS CARDS -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6">
+          <!-- Total Backups -->
+          <div
+            class="stat-card bg-white dark:bg-gray-900 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 p-4 sm:p-6"
+          >
+            <div class="flex items-center gap-3">
+              <div
+                class="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900 dark:to-blue-800 flex items-center justify-center"
+              >
+                <span
+                  class="material-symbols-outlined text-blue-600 dark:text-blue-300 text-2xl"
+                  >inventory_2</span
+                >
+              </div>
+              <div>
+                <p
+                  class="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white"
+                  th:text="${stats.totalCount}"
+                >
+                  0
+                </p>
+                <p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+                  Total respaldos
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Total Size -->
+          <div
+            class="stat-card bg-white dark:bg-gray-900 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 p-4 sm:p-6"
+          >
+            <div class="flex items-center gap-3">
+              <div
+                class="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-100 to-purple-200 dark:from-purple-900 dark:to-purple-800 flex items-center justify-center"
+              >
+                <span
+                  class="material-symbols-outlined text-purple-600 dark:text-purple-300 text-2xl"
+                  >hard_drive</span
+                >
+              </div>
+              <div>
+                <p
+                  class="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white"
+                >
+                  <span
+                    th:text="${#numbers.formatDecimal(stats.totalSizeMb, 1, 1)}"
+                    >0</span
+                  >
+                  <span class="text-sm font-normal">MB</span>
+                </p>
+                <p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+                  Espacio usado
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Avg Size -->
+          <div
+            class="stat-card bg-white dark:bg-gray-900 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 p-4 sm:p-6"
+          >
+            <div class="flex items-center gap-3">
+              <div
+                class="w-12 h-12 rounded-xl bg-gradient-to-br from-green-100 to-green-200 dark:from-green-900 dark:to-green-800 flex items-center justify-center"
+              >
+                <span
+                  class="material-symbols-outlined text-green-600 dark:text-green-300 text-2xl"
+                  >analytics</span
+                >
+              </div>
+              <div>
+                <p
+                  class="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white"
+                >
+                  <span
+                    th:text="${#numbers.formatDecimal(stats.avgSizeMb, 1, 1)}"
+                    >0</span
+                  >
+                  <span class="text-sm font-normal">MB</span>
+                </p>
+                <p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+                  Tamaño promedio
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Disk Space -->
+          <div
+            class="stat-card bg-white dark:bg-gray-900 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 p-4 sm:p-6"
+          >
+            <div class="flex items-center gap-3">
+              <div
+                class="w-12 h-12 rounded-xl flex items-center justify-center"
+                th:classappend="${diskSpace.isLow} ? 'bg-gradient-to-br from-red-100 to-red-200 dark:from-red-900 dark:to-red-800' : 'bg-gradient-to-br from-teal-100 to-teal-200 dark:from-teal-900 dark:to-teal-800'"
+              >
+                <span
+                  class="material-symbols-outlined text-2xl"
+                  th:classappend="${diskSpace.isLow} ? 'text-red-600 dark:text-red-300' : 'text-teal-600 dark:text-teal-300'"
+                  >storage</span
+                >
+              </div>
+              <div>
+                <p
+                  class="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white"
+                >
+                  <span
+                    th:text="${#numbers.formatDecimal(diskSpace.freeGb, 1, 1)}"
+                    >0</span
+                  >
+                  <span class="text-sm font-normal">GB</span>
+                </p>
+                <p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+                  Espacio libre
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- MAIN GRID -->
+        <div class="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-6">
+          <!-- LEFT COLUMN: Configuration & Manual Backup -->
+          <div class="xl:col-span-1 space-y-6">
+            <!-- MANUAL BACKUP CARD -->
+            <div
+              class="bg-white dark:bg-gray-900 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 overflow-hidden animate-slide-in"
+            >
+              <div
+                class="bg-gradient-to-r from-primary/10 to-primary/5 dark:from-primary/20 dark:to-primary/10 px-6 py-4 border-b border-gray-200 dark:border-gray-800"
+              >
+                <h3
+                  class="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2"
+                >
+                  <span class="material-symbols-outlined text-primary"
+                    >add_circle</span
+                  >
+                  Respaldo Manual
+                </h3>
+              </div>
+              <div class="p-6">
+                <p class="text-gray-600 dark:text-gray-400 mb-4 text-sm">
+                  Crea un respaldo completo de la base de datos ahora mismo. El
+                  archivo se guardará comprimido (.gz).
+                </p>
+
+                <!-- Last Backup Info -->
+                <div
+                  th:if="${config.lastBackupDate}"
+                  class="mb-4 p-4 rounded-xl bg-gray-50 dark:bg-gray-800"
+                >
+                  <div class="flex items-center gap-2 mb-2">
+                    <span
+                      class="material-symbols-outlined text-sm"
+                      th:classappend="${config.lastBackupStatus == 'SUCCESS'} ? 'text-green-500' : 'text-red-500'"
+                    >
+                      <span
+                        th:text="${config.lastBackupStatus == 'SUCCESS'} ? 'check_circle' : 'error'"
+                        >check_circle</span
+                      >
+                    </span>
+                    <span
+                      class="text-sm font-medium text-gray-700 dark:text-gray-300"
+                      >Último respaldo:</span
+                    >
+                  </div>
+                  <p
+                    class="text-xs text-gray-500 dark:text-gray-400"
+                    th:text="${#temporals.format(config.lastBackupDate, 'dd/MM/yyyy HH:mm')}"
+                  >
+                    01/01/2024 14:30
+                  </p>
+                  <p
+                    th:if="${config.lastBackupFilename}"
+                    class="text-xs text-gray-500 dark:text-gray-400 truncate"
+                    th:text="${config.lastBackupFilename}"
+                  >
+                    backup_db_2024.sql.gz
+                  </p>
+                  <p
+                    th:if="${config.lastBackupSizeMb > 0}"
+                    class="text-xs text-gray-500 dark:text-gray-400"
+                  >
+                    Tamaño:
+                    <span
+                      th:text="${#numbers.formatDecimal(config.lastBackupSizeMb, 1, 2)}"
+                      >0.00</span
+                    >
+                    MB
+                  </p>
+                </div>
+
+                <form th:action="@{/programmer/backup/create}" method="post">
+                  <button
+                    type="submit"
+                    th:disabled="${backupInProgress}"
+                    th:classappend="${backupInProgress} ? 'opacity-50 cursor-not-allowed' : ''"
+                    class="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-primary text-white font-semibold hover:bg-primary-dark transition-all shadow-lg hover:shadow-xl"
+                  >
+                    <span
+                      class="material-symbols-outlined"
+                      th:text="${backupInProgress} ? 'sync' : 'backup'"
+                      >backup</span
+                    >
+                    <span
+                      th:text="${backupInProgress} ? 'Creando respaldo...' : 'Crear Respaldo Ahora'"
+                      >Crear Respaldo Ahora</span
+                    >
+                  </button>
+                </form>
+              </div>
+            </div>
+
+            <!-- CONFIGURATION CARD -->
+            <div
+              class="bg-white dark:bg-gray-900 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 overflow-hidden animate-slide-in"
+            >
+              <div
+                class="bg-gradient-to-r from-gray-100 to-gray-50 dark:from-gray-800 dark:to-gray-900 px-6 py-4 border-b border-gray-200 dark:border-gray-800"
+              >
+                <h3
+                  class="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2"
+                >
+                  <span class="material-symbols-outlined text-primary"
+                    >settings</span
+                  >
+                  Configuración Automática
+                </h3>
+              </div>
+              <div class="p-6">
+                <form
+                  th:action="@{/programmer/backup/config}"
+                  method="post"
+                  class="space-y-4"
+                >
+                  <!-- Enable Toggle -->
+                  <div
+                    class="flex items-center justify-between p-4 rounded-xl border border-gray-200 dark:border-gray-700"
+                  >
+                    <div class="flex items-center gap-3">
+                      <div
+                        class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900 dark:to-blue-800 flex items-center justify-center"
+                      >
+                        <span
+                          class="material-symbols-outlined text-blue-600 dark:text-blue-300"
+                          >schedule</span
+                        >
+                      </div>
+                      <div>
+                        <p
+                          class="font-semibold text-gray-900 dark:text-white text-sm"
+                        >
+                          Respaldo Automático
+                        </p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">
+                          Activar respaldos programados
+                        </p>
+                      </div>
+                    </div>
+                    <label
+                      class="relative inline-flex items-center cursor-pointer"
+                    >
+                      <input
+                        type="checkbox"
+                        name="enabled"
+                        th:checked="${config.enabled}"
+                        class="sr-only peer"
+                      />
+                      <div
+                        class="w-14 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/20 dark:peer-focus:ring-primary/40 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all dark:border-gray-600 peer-checked:bg-primary shadow-inner"
+                      ></div>
+                    </label>
+                  </div>
+
+                  <!-- Frequency -->
+                  <div>
+                    <label
+                      class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+                      >Frecuencia (días)</label
+                    >
+                    <select
+                      name="frequencyDays"
+                      th:value="${config.frequencyDays}"
+                      class="w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent"
+                    >
+                      <option
+                        value="1"
+                        th:selected="${config.frequencyDays == 1}"
+                      >
+                        Diario
+                      </option>
+                      <option
+                        value="7"
+                        th:selected="${config.frequencyDays == 7}"
+                      >
+                        Semanal
+                      </option>
+                      <option
+                        value="15"
+                        th:selected="${config.frequencyDays == 15}"
+                      >
+                        Quincenal
+                      </option>
+                      <option
+                        value="30"
+                        th:selected="${config.frequencyDays == 30}"
+                      >
+                        Mensual
+                      </option>
+                    </select>
+                  </div>
+
+                  <!-- Backup Time -->
+                  <div>
+                    <label
+                      class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+                      >Hora del respaldo</label
+                    >
+                    <input
+                      type="time"
+                      name="backupTime"
+                      th:value="${config.backupTime}"
+                      class="w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent"
+                    />
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                      Recomendado: Horario de baja actividad (ej: 02:00 AM)
+                    </p>
+                  </div>
+
+                  <!-- Retention Count -->
+                  <div>
+                    <label
+                      class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+                      >Respaldos a conservar</label
+                    >
+                    <input
+                      type="number"
+                      name="retentionCount"
+                      th:value="${config.retentionCount}"
+                      min="1"
+                      max="30"
+                      class="w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent"
+                    />
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                      Cantidad máxima de archivos a mantener (los más antiguos
+                      se eliminan automáticamente)
+                    </p>
+                  </div>
+
+                  <!-- Backup Path -->
+                  <div>
+                    <label
+                      class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+                      >Carpeta de respaldos</label
+                    >
+                    <input
+                      type="text"
+                      name="backupPath"
+                      th:value="${config.backupPath}"
+                      placeholder="elgransazon_backups"
+                      class="w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent"
+                    />
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                      Ruta relativa a tu carpeta de usuario o ruta absoluta
+                    </p>
+                  </div>
+
+                  <!-- Current Directory Info -->
+                  <div
+                    class="p-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
+                  >
+                    <p class="text-xs text-gray-600 dark:text-gray-400">
+                      <span class="font-semibold">Directorio actual:</span>
+                    </p>
+                    <p
+                      class="text-xs text-gray-500 dark:text-gray-500 break-all"
+                      th:text="${backupDir}"
+                    >
+                      C:\Users\...\elgransazon_backups
+                    </p>
+                  </div>
+
+                  <!-- Save Button -->
+                  <button
+                    type="submit"
+                    class="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-gray-800 dark:bg-gray-700 text-white font-semibold hover:bg-gray-900 dark:hover:bg-gray-600 transition-colors"
+                  >
+                    <span class="material-symbols-outlined">save</span>
+                    <span>Guardar Configuración</span>
+                  </button>
+                </form>
+              </div>
+            </div>
+          </div>
+
+          <!-- RIGHT COLUMN: Backup List -->
+          <div class="xl:col-span-2">
+            <div
+              class="bg-white dark:bg-gray-900 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 overflow-hidden animate-slide-in"
+            >
+              <div
+                class="bg-gradient-to-r from-gray-100 to-gray-50 dark:from-gray-800 dark:to-gray-900 px-6 py-4 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between"
+              >
+                <h3
+                  class="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2"
+                >
+                  <span class="material-symbols-outlined text-primary"
+                    >folder</span
+                  >
+                  Respaldos Disponibles
+                </h3>
+                <form
+                  th:action="@{/programmer/backup/clean}"
+                  method="post"
+                  class="inline"
+                  onsubmit="return false;"
+                >
+                  <button
+                    type="button"
+                    th:attr="data-retention=${config.retentionCount}"
+                    onclick="confirmCleanBackups(this)"
+                    class="flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                  >
+                    <span class="material-symbols-outlined text-sm"
+                      >delete_sweep</span
+                    >
+                    <span>Limpiar antiguos</span>
+                  </button>
+                </form>
+              </div>
+              <div class="p-6">
+                <!-- Empty State -->
+                <div
+                  th:if="${#lists.isEmpty(backups)}"
+                  class="text-center py-12"
+                >
+                  <div
+                    class="w-20 h-20 mx-auto mb-4 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center"
+                  >
+                    <span
+                      class="material-symbols-outlined text-4xl text-gray-400"
+                      >folder_off</span
+                    >
+                  </div>
+                  <p class="text-gray-600 dark:text-gray-400 font-medium">
+                    No hay respaldos disponibles
+                  </p>
+                  <p class="text-sm text-gray-500 dark:text-gray-500 mt-1">
+                    Crea tu primer respaldo usando el botón de arriba
+                  </p>
+                </div>
+
+                <!-- Backup List -->
+                <div th:unless="${#lists.isEmpty(backups)}" class="space-y-3">
+                  <div
+                    th:each="backup : ${backups}"
+                    class="flex items-center justify-between p-4 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-primary hover:shadow-md transition-all"
+                  >
+                    <div class="flex items-center gap-3 flex-1 min-w-0">
+                      <div
+                        class="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
+                        th:classappend="${backup.filename().endsWith('.gz')} ? 'bg-gradient-to-br from-purple-100 to-purple-200 dark:from-purple-900 dark:to-purple-800' : 'bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900 dark:to-blue-800'"
+                      >
+                        <span
+                          class="material-symbols-outlined text-xl"
+                          th:classappend="${backup.filename().endsWith('.gz')} ? 'text-purple-600 dark:text-purple-300' : 'text-blue-600 dark:text-blue-300'"
+                          >database</span
+                        >
+                      </div>
+                      <div class="flex-1 min-w-0">
+                        <p
+                          class="font-semibold text-gray-900 dark:text-white text-sm truncate"
+                          th:text="${backup.filename()}"
+                        >
+                          backup_db_2024-01-01_140000.sql.gz
+                        </p>
+                        <div
+                          class="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400"
+                        >
+                          <span th:text="${backup.formattedDate()}"
+                            >01/01/2024 14:00</span
+                          >
+                          <span>•</span>
+                          <span th:text="${backup.formattedSize()}"
+                            >1.5 MB</span
+                          >
+                          <span
+                            th:if="${backup.filename().endsWith('.gz')}"
+                            class="px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 text-xs"
+                            >Comprimido</span
+                          >
+                        </div>
+                      </div>
+                    </div>
+                    <div class="flex items-center gap-2 ml-4">
+                      <!-- Download Button -->
+                      <a
+                        th:href="@{/programmer/backup/download/{filename}(filename=${backup.filename()})}"
+                        class="p-2 rounded-lg text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                        title="Descargar"
+                      >
+                        <span class="material-symbols-outlined">download</span>
+                      </a>
+                      <!-- Delete Button -->
+                      <form
+                        th:action="@{/programmer/backup/delete/{filename}(filename=${backup.filename()})}"
+                        method="post"
+                        class="inline"
+                        onsubmit="return false;"
+                      >
+                        <button
+                          type="button"
+                          th:attr="data-filename=${backup.filename()}"
+                          onclick="confirmDeleteBackup(this)"
+                          class="p-2 rounded-lg text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                          title="Eliminar"
+                        >
+                          <span class="material-symbols-outlined">delete</span>
+                        </button>
+                      </form>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- INFO CARD -->
+            <div
+              class="mt-6 p-6 rounded-2xl bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border border-blue-200 dark:border-blue-800 animate-slide-in"
+            >
+              <div class="flex items-start gap-4">
+                <div
+                  class="w-12 h-12 rounded-xl bg-blue-500 flex items-center justify-center flex-shrink-0"
+                >
+                  <span class="material-symbols-outlined text-white">info</span>
+                </div>
+                <div>
+                  <h4 class="font-bold text-blue-900 dark:text-blue-100 mb-2">
+                    Información Importante
+                  </h4>
+                  <ul
+                    class="text-sm text-blue-800 dark:text-blue-200 space-y-1 list-disc list-inside"
+                  >
+                    <li>
+                      Los respaldos se crean usando
+                      <code class="bg-blue-200 dark:bg-blue-800 px-1 rounded"
+                        >mysqldump</code
+                      >
+                      y se comprimen automáticamente (.gz)
+                    </li>
+                    <li>
+                      Asegúrate de que MySQL esté instalado y accesible desde la
+                      línea de comandos
+                    </li>
+                    <li>
+                      Los respaldos automáticos se ejecutan a la hora
+                      configurada según la frecuencia seleccionada
+                    </li>
+                    <li>
+                      Para restaurar:
+                      <code class="bg-blue-200 dark:bg-blue-800 px-1 rounded"
+                        >mysql -u root -p bd_restaurant &lt; archivo.sql</code
+                      >
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- CHARTS AND CALENDAR SECTION -->
+        <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+          <!-- SIZE CHART -->
+          <div
+            class="bg-white dark:bg-gray-900 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 overflow-hidden animate-slide-in"
+          >
+            <div
+              class="bg-gradient-to-r from-gray-100 to-gray-50 dark:from-gray-800 dark:to-gray-900 px-6 py-4 border-b border-gray-200 dark:border-gray-800"
+            >
+              <h3
+                class="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2"
+              >
+                <span class="material-symbols-outlined text-primary"
+                  >show_chart</span
+                >
+                Historial de Tamaño
+              </h3>
+              <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                Evolución del tamaño de respaldos en el tiempo
+              </p>
+            </div>
+            <div class="p-6">
+              <div th:if="${stats.totalCount == 0}" class="text-center py-12">
+                <div
+                  class="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center"
+                >
+                  <span class="material-symbols-outlined text-3xl text-gray-400"
+                    >insert_chart_outlined</span
+                  >
+                </div>
+                <p class="text-gray-600 dark:text-gray-400">
+                  No hay datos suficientes para mostrar la gráfica
+                </p>
+              </div>
+              <div th:unless="${stats.totalCount == 0}" class="h-64">
+                <canvas id="backupSizeChart"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <!-- BACKUP CALENDAR -->
+          <div
+            class="bg-white dark:bg-gray-900 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 overflow-hidden animate-slide-in"
+          >
+            <div
+              class="bg-gradient-to-r from-gray-100 to-gray-50 dark:from-gray-800 dark:to-gray-900 px-6 py-4 border-b border-gray-200 dark:border-gray-800"
+            >
+              <h3
+                class="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2"
+              >
+                <span class="material-symbols-outlined text-primary"
+                  >calendar_month</span
+                >
+                Calendario de Respaldos
+              </h3>
+              <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                Días en que se realizaron respaldos
+              </p>
+            </div>
+            <div class="p-6">
+              <div id="backup-calendar" class="backup-calendar"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="fixed top-4 right-4 z-50 space-y-2"></div>
+
+    <!-- WebSocket Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <script>
+      // Get current theme for SweetAlert2
+      function isDarkMode() {
+        return document.documentElement.classList.contains("dark");
+      }
+
+      function getSweetAlertTheme() {
+        return {
+          background: isDarkMode() ? "#1f2937" : "#ffffff",
+          color: isDarkMode() ? "#e5e7eb" : "#111827",
+          confirmButtonColor: "#38e07b",
+          cancelButtonColor: "#ef4444",
+        };
+      }
+
+      // Confirm delete single backup
+      async function confirmDeleteBackup(button) {
+        const filename = button.getAttribute("data-filename");
+        const form = button.closest("form");
+
+        const result = await Swal.fire({
+          title: "¿Eliminar respaldo?",
+          html: `<p class="text-sm ${isDarkMode() ? "text-gray-300" : "text-gray-600"}">¿Estás seguro de eliminar este respaldo?</p>
+                   <p class="text-xs font-mono mt-2 ${isDarkMode() ? "text-gray-400" : "text-gray-500"}">${filename}</p>`,
+          icon: "warning",
+          showCancelButton: true,
+          confirmButtonText: "Sí, eliminar",
+          cancelButtonText: "Cancelar",
+          ...getSweetAlertTheme(),
+          customClass: {
+            popup: "rounded-2xl",
+            confirmButton: "rounded-xl px-6 py-2.5 font-semibold shadow-lg",
+            cancelButton: "rounded-xl px-6 py-2.5 font-semibold",
+          },
+        });
+
+        if (result.isConfirmed) {
+          form.submit();
+        }
+      }
+
+      // Confirm clean old backups
+      async function confirmCleanBackups(button) {
+        const retention = button.getAttribute("data-retention");
+        const form = button.closest("form");
+
+        const result = await Swal.fire({
+          title: "¿Limpiar respaldos antiguos?",
+          html: `<p class="${isDarkMode() ? "text-gray-300" : "text-gray-600"}">Se conservarán los últimos <strong class="text-primary">${retention}</strong> archivos.</p>
+                   <p class="text-sm mt-2 ${isDarkMode() ? "text-gray-400" : "text-gray-500"}">Los respaldos más antiguos serán eliminados permanentemente.</p>`,
+          icon: "warning",
+          showCancelButton: true,
+          confirmButtonText: "Sí, limpiar",
+          cancelButtonText: "Cancelar",
+          ...getSweetAlertTheme(),
+          customClass: {
+            popup: "rounded-2xl",
+            confirmButton: "rounded-xl px-6 py-2.5 font-semibold shadow-lg",
+            cancelButton: "rounded-xl px-6 py-2.5 font-semibold",
+          },
+        });
+
+        if (result.isConfirmed) {
+          form.submit();
+        }
+      }
+
+      // WebSocket connection for real-time backup notifications
+      let stompClient = null;
+      let reconnectAttempts = 0;
+      const maxReconnectAttempts = 5;
+
+      function connectWebSocket() {
+        const socket = new SockJS("/ws");
+        stompClient = Stomp.over(socket);
+
+        // Disable debug logging
+        stompClient.debug = null;
+
+        stompClient.connect(
+          {},
+          function (frame) {
+            reconnectAttempts = 0;
+
+            // Subscribe to backup topic
+            stompClient.subscribe("/topic/backup", function (message) {
+              const notification = JSON.parse(message.body);
+              handleBackupNotification(notification);
+            });
+          },
+          function (error) {
+            // Try to reconnect
+            if (reconnectAttempts < maxReconnectAttempts) {
+              reconnectAttempts++;
+              setTimeout(connectWebSocket, 3000);
+            }
+          },
+        );
+      }
+
+      function handleBackupNotification(notification) {
+        switch (notification.status) {
+          case "STARTED":
+            showToast(notification.message, "info", true);
+            showProgressOverlay();
+            break;
+          case "PROGRESS":
+            updateProgressMessage(notification.message);
+            break;
+          case "COMPLETED":
+            hideProgressOverlay();
+            showToast(notification.message, "success");
+            // Auto-refresh backup list after 1 second
+            setTimeout(() => {
+              location.reload();
+            }, 1500);
+            break;
+          case "FAILED":
+            hideProgressOverlay();
+            showToast(notification.message, "error");
+            break;
+        }
+      }
+
+      function showToast(message, type = "info", persistent = false) {
+        const container = document.getElementById("toast-container");
+        const toast = document.createElement("div");
+
+        const colors = {
+          info: "bg-blue-500",
+          success: "bg-green-500",
+          error: "bg-red-500",
+          warning: "bg-yellow-500",
+        };
+
+        const icons = {
+          info: "info",
+          success: "check_circle",
+          error: "error",
+          warning: "warning",
+        };
+
+        toast.className = `${colors[type]} text-white px-6 py-4 rounded-xl shadow-2xl flex items-center gap-3 transform transition-all duration-300 translate-x-full opacity-0`;
+        toast.innerHTML = `
+            <span class="material-symbols-outlined">${icons[type]}</span>
+            <span class="font-medium">${message}</span>
+            ${persistent ? '<span class="material-symbols-outlined animate-spin ml-2">sync</span>' : ""}
+        `;
+
+        container.appendChild(toast);
+
+        // Animate in
+        setTimeout(() => {
+          toast.classList.remove("translate-x-full", "opacity-0");
+        }, 10);
+
+        // Auto remove after 5 seconds (unless persistent)
+        if (!persistent) {
+          setTimeout(() => {
+            toast.classList.add("translate-x-full", "opacity-0");
+            setTimeout(() => toast.remove(), 300);
+          }, 5000);
+        }
+
+        return toast;
+      }
+
+      function showProgressOverlay() {
+        // Check if overlay already exists
+        if (document.getElementById("backup-progress-overlay")) return;
+
+        const overlay = document.createElement("div");
+        overlay.id = "backup-progress-overlay";
+        overlay.className =
+          "fixed inset-0 bg-black/50 flex items-center justify-center z-40";
+        overlay.innerHTML = `
+            <div class="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-2xl text-center max-w-sm mx-4">
+                <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-primary/20 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-4xl text-primary animate-spin">sync</span>
+                </div>
+                <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-2">Creando Respaldo</h3>
+                <p id="progress-message" class="text-gray-600 dark:text-gray-400">Exportando base de datos...</p>
+            </div>
+        `;
+        document.body.appendChild(overlay);
+      }
+
+      function updateProgressMessage(message) {
+        const el = document.getElementById("progress-message");
+        if (el) el.textContent = message;
+      }
+
+      function hideProgressOverlay() {
+        const overlay = document.getElementById("backup-progress-overlay");
+        if (overlay) {
+          overlay.classList.add("opacity-0");
+          setTimeout(() => overlay.remove(), 300);
+        }
+
+        // Also remove persistent toasts
+        document.querySelectorAll("#toast-container > div").forEach((toast) => {
+          if (toast.querySelector(".animate-spin")) {
+            toast.classList.add("translate-x-full", "opacity-0");
+            setTimeout(() => toast.remove(), 300);
+          }
+        });
+      }
+
+      // Connect on page load
+      document.addEventListener("DOMContentLoaded", function () {
+        connectWebSocket();
+        initBackupChart();
+        initBackupCalendar();
+      });
+
+      // ============ BACKUP SIZE CHART ============
+      let backupChart = null;
+
+      async function initBackupChart() {
+        const canvas = document.getElementById("backupSizeChart");
+        if (!canvas) return;
+
+        try {
+          const response = await fetch("/programmer/backup/api/chart");
+          const data = await response.json();
+
+          if (!data.labels || data.labels.length === 0) return;
+
+          const isDark = isDarkMode();
+          const gridColor = isDark
+            ? "rgba(255, 255, 255, 0.05)"
+            : "rgba(0, 0, 0, 0.05)";
+          const textColor = isDark ? "#9ca3af" : "#6b7280";
+
+          // Create gradient for bars
+          const ctx = canvas.getContext("2d");
+          const gradient = ctx.createLinearGradient(0, 0, 0, 250);
+          gradient.addColorStop(0, "rgba(56, 224, 123, 0.9)");
+          gradient.addColorStop(1, "rgba(56, 224, 123, 0.3)");
+
+          // Format labels to show only day
+          const formattedLabels = data.labels.map((label) => {
+            const date = new Date(label);
+            return date.toLocaleDateString("es-MX", {
+              day: "2-digit",
+              month: "short",
+            });
+          });
+
+          backupChart = new Chart(canvas, {
+            type: "bar",
+            data: {
+              labels: formattedLabels,
+              datasets: [
+                {
+                  label: "Tamaño (MB)",
+                  data: data.sizes,
+                  backgroundColor: gradient,
+                  borderColor: "#38e07b",
+                  borderWidth: 2,
+                  borderRadius: 8,
+                  borderSkipped: false,
+                  hoverBackgroundColor: "#38e07b",
+                  hoverBorderColor: "#2bc466",
+                  hoverBorderWidth: 3,
+                },
+              ],
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: { display: false },
+                tooltip: {
+                  backgroundColor: isDark ? "#1f2937" : "#ffffff",
+                  titleColor: isDark ? "#f3f4f6" : "#111827",
+                  bodyColor: isDark ? "#d1d5db" : "#4b5563",
+                  borderColor: "#38e07b",
+                  borderWidth: 2,
+                  cornerRadius: 12,
+                  padding: 14,
+                  displayColors: false,
+                  titleFont: { size: 14, weight: "bold" },
+                  bodyFont: { size: 13 },
+                  callbacks: {
+                    title: function (context) {
+                      return "📦 Respaldo";
+                    },
+                    label: function (context) {
+                      return "Tamaño: " + context.raw.toFixed(3) + " MB";
+                    },
+                  },
+                },
+              },
+              scales: {
+                x: {
+                  grid: { display: false },
+                  ticks: {
+                    color: textColor,
+                    font: { size: 11, weight: "500" },
+                  },
+                },
+                y: {
+                  beginAtZero: true,
+                  grid: { color: gridColor, drawBorder: false },
+                  ticks: {
+                    color: textColor,
+                    font: { size: 11 },
+                    callback: function (value) {
+                      return value.toFixed(2) + " MB";
+                    },
+                    maxTicksLimit: 6,
+                  },
+                },
+              },
+              animation: { duration: 1000, easing: "easeOutQuart" },
+            },
+          });
+        } catch (error) {
+          console.error("Error loading chart data:", error);
+        }
+      }
+
+      // ============ BACKUP CALENDAR ============
+      async function initBackupCalendar() {
+        const calendarEl = document.getElementById("backup-calendar");
+        if (!calendarEl) return;
+
+        try {
+          const response = await fetch("/programmer/backup/api/calendar");
+          const events = await response.json();
+
+          // Get current date info
+          const now = new Date();
+          const currentYear = now.getFullYear();
+          const currentMonth = now.getMonth();
+
+          // Build calendar HTML
+          renderCalendar(calendarEl, currentYear, currentMonth, events);
+        } catch (error) {
+          console.error("Error loading calendar data:", error);
+          calendarEl.innerHTML =
+            '<p class="text-center text-gray-500 py-4">Error al cargar el calendario</p>';
+        }
+      }
+
+      function renderCalendar(container, year, month, events) {
+        const months = [
+          "Enero",
+          "Febrero",
+          "Marzo",
+          "Abril",
+          "Mayo",
+          "Junio",
+          "Julio",
+          "Agosto",
+          "Septiembre",
+          "Octubre",
+          "Noviembre",
+          "Diciembre",
+        ];
+        const days = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+
+        const firstDay = new Date(year, month, 1);
+        const lastDay = new Date(year, month + 1, 0);
+        const startingDay = firstDay.getDay();
+        const totalDays = lastDay.getDate();
+
+        // Create backup dates set for quick lookup
+        const backupDates = new Set(events.map((e) => e.date));
+
+        let html = `
+            <div class="flex items-center justify-between mb-4">
+                <button onclick="changeMonth(-1)" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                    <span class="material-symbols-outlined text-gray-600 dark:text-gray-400">chevron_left</span>
+                </button>
+                <h4 class="font-semibold text-gray-900 dark:text-white">${months[month]} ${year}</h4>
+                <button onclick="changeMonth(1)" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                    <span class="material-symbols-outlined text-gray-600 dark:text-gray-400">chevron_right</span>
+                </button>
+            </div>
+            <div class="grid grid-cols-7 gap-1 mb-2">
+                ${days.map((d) => `<div class="text-center text-xs font-semibold text-gray-500 dark:text-gray-400 py-1">${d}</div>`).join("")}
+            </div>
+            <div class="grid grid-cols-7 gap-1">
+        `;
+
+        // Empty cells before first day
+        for (let i = 0; i < startingDay; i++) {
+          html += '<div class="aspect-square"></div>';
+        }
+
+        const today = new Date();
+        const isCurrentMonth =
+          today.getFullYear() === year && today.getMonth() === month;
+
+        // Calendar days
+        for (let day = 1; day <= totalDays; day++) {
+          const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+          const hasBackup = backupDates.has(dateStr);
+          const isToday = isCurrentMonth && today.getDate() === day;
+
+          // Get backup info for tooltip
+          const backupEvent = events.find((e) => e.date === dateStr);
+          const tooltip = backupEvent
+            ? `${backupEvent.count} respaldo(s) - ${backupEvent.totalSizeMb.toFixed(2)} MB`
+            : "";
+
+          let cellClass =
+            "aspect-square flex flex-col items-center justify-center text-sm rounded-xl transition-all duration-200 cursor-default relative ";
+
+          if (hasBackup) {
+            cellClass +=
+              "bg-gradient-to-br from-primary/30 to-primary/10 text-primary font-bold hover:from-primary/40 hover:to-primary/20 cursor-pointer shadow-sm ";
+          } else {
+            cellClass +=
+              "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 ";
+          }
+
+          if (isToday) {
+            cellClass +=
+              "ring-2 ring-primary ring-offset-2 dark:ring-offset-gray-900 ";
+          }
+
+          // Build cell content
+          let cellContent = "";
+          if (hasBackup) {
+            cellContent = `
+                    <span class="text-base font-bold">${day}</span>
+                    <span class="material-symbols-outlined text-xs" style="font-size: 14px;">backup</span>
+                `;
+          } else {
+            cellContent = `<span>${day}</span>`;
+          }
+
+          html += `<div class="${cellClass}" ${tooltip ? `title="${tooltip}"` : ""}>${cellContent}</div>`;
+        }
+
+        html += "</div>";
+
+        // Legend
+        html += `
+            <div class="mt-4 flex items-center justify-center gap-6 text-xs text-gray-500 dark:text-gray-400">
+                <div class="flex items-center gap-2">
+                    <div class="w-6 h-6 rounded-lg bg-gradient-to-br from-primary/30 to-primary/10 flex items-center justify-center">
+                        <span class="material-symbols-outlined text-primary" style="font-size: 12px;">backup</span>
+                    </div>
+                    <span>Con respaldo</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <div class="w-6 h-6 rounded-lg ring-2 ring-primary bg-transparent"></div>
+                    <span>Hoy</span>
+                </div>
+            </div>
+        `;
+
+        container.innerHTML = html;
+
+        // Store state for navigation
+        container.dataset.year = year;
+        container.dataset.month = month;
+        container.dataset.events = JSON.stringify(events);
+      }
+
+      function changeMonth(delta) {
+        const container = document.getElementById("backup-calendar");
+        let year = parseInt(container.dataset.year);
+        let month = parseInt(container.dataset.month) + delta;
+
+        if (month < 0) {
+          month = 11;
+          year--;
+        } else if (month > 11) {
+          month = 0;
+          year++;
+        }
+
+        const events = JSON.parse(container.dataset.events);
+        renderCalendar(container, year, month, events);
+      }
+
+      // Cleanup on page unload
+      window.addEventListener("beforeunload", function () {
+        if (stompClient !== null) {
+          stompClient.disconnect();
+        }
+      });
+    </script>
+  </body>
+</html>

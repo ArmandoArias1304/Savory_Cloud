@@ -1,0 +1,1248 @@
+<!doctype html>
+<html
+  lang="es"
+  xmlns:th="http://www.thymeleaf.org"
+  xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title th:text="${globalSystemConfig.systemName + ' - Empleados'}">
+      El Gran Sazón - Empleados
+    </title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@300;400;500;600;700"
+      rel="stylesheet"
+    />
+
+    <!-- Sistema de Temas (Modo Claro/Oscuro) -->
+    <div th:replace="~{fragments/theme :: themeResources}"></div>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#38e07b",
+              "primary-dark": "#2bc866",
+              "background-light": "#f8faf9",
+              "background-dark": "#0f1713",
+            },
+            fontFamily: {
+              display: ["Work Sans"],
+            },
+            borderRadius: {
+              DEFAULT: "0.5rem",
+              lg: "0.75rem",
+              xl: "1rem",
+              "2xl": "1.5rem",
+              full: "9999px",
+            },
+          },
+        },
+      };
+    </script>
+
+    <!-- Sidebar Styles Fragment -->
+    <div th:replace="~{fragments/sidebar :: sidebarStyles}"></div>
+
+    <style>
+      .table-responsive {
+        overflow-x: auto;
+        max-width: 100%;
+      }
+
+      .table-responsive::-webkit-scrollbar {
+        height: 8px;
+      }
+
+      .table-responsive::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 10px;
+      }
+
+      .table-responsive::-webkit-scrollbar-thumb {
+        background: #38e07b;
+        border-radius: 10px;
+      }
+
+      .table-responsive::-webkit-scrollbar-thumb:hover {
+        background: #2bc866;
+      }
+    </style>
+  </head>
+  <body
+    class="bg-gradient-to-br from-background-light to-gray-50 dark:from-background-dark dark:to-gray-900 font-display text-gray-800 dark:text-gray-200 overflow-hidden"
+  >
+    <!-- Menu Controls Fragment -->
+    <div th:replace="~{fragments/sidebar :: menuControls}"></div>
+
+    <div class="flex min-h-screen h-screen overflow-hidden">
+      <!-- SIDEBAR - Using Fragment -->
+      <div
+        th:replace="~{fragments/sidebar :: sidebar(activeMenu='employees')}"
+      ></div>
+
+      <!-- MAIN CONTENT -->
+      <main class="flex-1 overflow-y-auto h-screen">
+        <div class="p-4 sm:p-6 lg:p-8 pt-20 md:pt-20 lg:pt-8 pb-32">
+          <!-- HEADER -->
+          <div
+            class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6 sm:mb-8"
+          >
+            <div>
+              <h2
+                class="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white mb-1"
+              >
+                Gestión de Empleados
+              </h2>
+              <p class="text-sm sm:text-base text-gray-600 dark:text-gray-400">
+                Administra el personal del restaurante
+              </p>
+            </div>
+            <div class="flex flex-col sm:flex-row gap-3">
+              <!-- Only ADMIN can create employees -->
+              <div
+                sec:authorize="hasRole('ROLE_ADMIN')"
+                class="flex flex-col items-end"
+              >
+                <!-- Button enabled when more users can be created -->
+                <a
+                  th:if="${canCreateMoreUsers}"
+                  th:href="@{/admin/employees/new}"
+                  class="flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl bg-gradient-to-r from-primary to-primary-dark text-white font-semibold hover:shadow-lg hover:shadow-primary/30 transition-all shadow-md text-sm sm:text-base"
+                >
+                  <span class="material-symbols-outlined text-lg">add</span>
+                  Añadir Nuevo Empleado
+                </a>
+
+                <!-- Button disabled when limit reached -->
+                <button
+                  th:if="${!canCreateMoreUsers}"
+                  disabled
+                  class="flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 font-semibold shadow-md text-sm sm:text-base cursor-not-allowed opacity-60"
+                  title="Has alcanzado el límite de usuarios"
+                >
+                  <span class="material-symbols-outlined text-lg">lock</span>
+                  Límite Alcanzado
+                </button>
+
+                <!-- User limit information (always visible for ADMIN) -->
+                <div class="mt-2 flex items-center gap-2">
+                  <span
+                    class="material-symbols-outlined text-sm"
+                    th:classappend="${hasUserLimit} ? 'text-blue-500 dark:text-blue-400' : 'text-gray-400 dark:text-gray-500'"
+                    >info</span
+                  >
+                  <p
+                    class="text-xs font-medium"
+                    th:classappend="${!canCreateMoreUsers} ? 'text-red-600 dark:text-red-400' : 'text-gray-600 dark:text-gray-400'"
+                  >
+                    <span th:if="${hasUserLimit}">
+                      Usuarios activos:
+                      <span class="font-bold" th:text="${enabledCount}"></span>
+                      <span>/</span>
+                      <span class="font-bold" th:text="${maxUsers}"></span>
+                    </span>
+                    <span
+                      th:unless="${hasUserLimit}"
+                      class="text-green-600 dark:text-green-400 font-semibold"
+                    >
+                      <span
+                        class="material-symbols-outlined text-sm align-middle"
+                        >all_inclusive</span
+                      >
+                      Sin límite de usuarios
+                    </span>
+                  </p>
+                </div>
+              </div>
+              <a
+                th:href="@{/admin/shifts}"
+                class="flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white font-semibold hover:bg-gray-50 dark:hover:bg-gray-800 transition-all shadow-md text-sm sm:text-base"
+              >
+                <span class="material-symbols-outlined text-lg">schedule</span>
+                Gestionar Turnos
+              </a>
+            </div>
+          </div>
+
+          <!-- User Limit Exceeded Warning Banner -->
+          <div
+            th:if="${session.userLimitExceeded}"
+            id="userLimitBanner"
+            class="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border-2 border-red-300 dark:border-red-700 rounded-2xl shadow-lg"
+          >
+            <div class="flex items-start gap-3">
+              <span
+                class="material-symbols-outlined text-red-500 text-3xl flex-shrink-0 mt-0.5"
+                >gpp_bad</span
+              >
+              <div class="flex-1">
+                <h3
+                  class="text-lg font-bold text-red-800 dark:text-red-300 mb-1"
+                >
+                  ⚠️ Límite de Usuarios Excedido
+                </h3>
+                <p
+                  class="text-sm text-red-700 dark:text-red-400 mb-2"
+                  th:text="${session.userLimitExceededInfo}"
+                ></p>
+                <div class="flex flex-wrap gap-4 mt-3">
+                  <div
+                    class="bg-white dark:bg-gray-800 rounded-xl px-4 py-2 border border-red-200 dark:border-red-800"
+                  >
+                    <span class="text-xs text-gray-500 dark:text-gray-400 block"
+                      >Activos</span
+                    >
+                    <span
+                      class="text-xl font-bold text-red-600 dark:text-red-400"
+                      th:text="${session.userLimitCurrent}"
+                      >0</span
+                    >
+                  </div>
+                  <div
+                    class="bg-white dark:bg-gray-800 rounded-xl px-4 py-2 border border-green-200 dark:border-green-800"
+                  >
+                    <span class="text-xs text-gray-500 dark:text-gray-400 block"
+                      >Permitidos</span
+                    >
+                    <span
+                      class="text-xl font-bold text-green-600 dark:text-green-400"
+                      th:text="${session.userLimitMax}"
+                      >0</span
+                    >
+                  </div>
+                  <div
+                    class="bg-white dark:bg-gray-800 rounded-xl px-4 py-2 border border-orange-200 dark:border-orange-800"
+                  >
+                    <span class="text-xs text-gray-500 dark:text-gray-400 block"
+                      >Por desactivar</span
+                    >
+                    <span
+                      class="text-xl font-bold text-orange-600 dark:text-orange-400"
+                      th:text="${session.userLimitExcess}"
+                      >0</span
+                    >
+                  </div>
+                </div>
+                <p
+                  class="text-xs text-red-600 dark:text-red-400 mt-3 flex items-center gap-1"
+                >
+                  <span class="material-symbols-outlined text-sm">info</span>
+                  Desactiva empleados usando el switch de cada fila hasta
+                  alcanzar el límite. El sistema se desbloqueará
+                  automáticamente.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Alerts -->
+          <div
+            th:if="${successMessage}"
+            class="mb-6 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl"
+          >
+            <p
+              class="text-green-800 dark:text-green-300"
+              th:text="${successMessage}"
+            ></p>
+          </div>
+
+          <div
+            th:if="${errorMessage}"
+            class="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl"
+          >
+            <p
+              class="text-red-800 dark:text-red-300"
+              th:text="${errorMessage}"
+            ></p>
+          </div>
+
+          <!-- STATS -->
+          <div
+            class="mb-6 sm:mb-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6"
+          >
+            <div
+              class="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 sm:p-6 shadow-lg"
+            >
+              <div class="flex items-center justify-between mb-3">
+                <h3
+                  class="text-sm font-medium text-gray-600 dark:text-gray-400"
+                >
+                  Empleados Totales
+                </h3>
+                <span
+                  class="material-symbols-outlined text-2xl text-gray-400 dark:text-gray-500"
+                  >groups</span
+                >
+              </div>
+              <p
+                class="text-3xl font-bold text-gray-900 dark:text-white"
+                th:text="${totalCount}"
+              >
+                0
+              </p>
+            </div>
+            <div
+              class="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 sm:p-6 shadow-lg"
+            >
+              <div class="flex items-center justify-between mb-3">
+                <h3
+                  class="text-sm font-medium text-gray-600 dark:text-gray-400"
+                >
+                  Empleados Activos
+                </h3>
+                <span class="material-symbols-outlined text-2xl text-green-500"
+                  >how_to_reg</span
+                >
+              </div>
+              <p
+                class="text-3xl font-bold text-green-500"
+                th:text="${enabledCount}"
+              >
+                0
+              </p>
+            </div>
+            <div
+              class="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 sm:p-6 shadow-lg"
+            >
+              <div class="flex items-center justify-between mb-3">
+                <h3
+                  class="text-sm font-medium text-gray-600 dark:text-gray-400"
+                >
+                  Empleados Inactivos
+                </h3>
+                <span class="material-symbols-outlined text-2xl text-red-500"
+                  >person_off</span
+                >
+              </div>
+              <p
+                class="text-3xl font-bold text-red-500"
+                th:text="${disabledCount}"
+              >
+                0
+              </p>
+            </div>
+            <div
+              class="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 sm:p-6 shadow-lg"
+            >
+              <div class="flex items-center justify-between mb-3">
+                <h3
+                  class="text-sm font-medium text-gray-600 dark:text-gray-400"
+                >
+                  Roles Disponibles
+                </h3>
+                <span
+                  class="material-symbols-outlined text-2xl text-gray-400 dark:text-gray-500"
+                  >badge</span
+                >
+              </div>
+              <p
+                class="text-3xl font-bold text-gray-900 dark:text-white"
+                th:text="${rolesCount}"
+              >
+                0
+              </p>
+            </div>
+          </div>
+
+          <!-- FILTROS -->
+          <div
+            class="mb-6 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 sm:p-6 shadow-lg"
+          >
+            <h2
+              class="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2"
+            >
+              <span class="material-symbols-outlined text-primary"
+                >filter_alt</span
+              >
+              Filtros de Búsqueda
+            </h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div class="relative">
+                <label
+                  for="nameFilter"
+                  class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                  >Nombre:</label
+                >
+                <div class="relative">
+                  <div
+                    class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3"
+                  >
+                    <span
+                      class="material-symbols-outlined text-gray-400 dark:text-gray-500 text-lg"
+                      >search</span
+                    >
+                  </div>
+                  <input
+                    type="text"
+                    id="nameFilter"
+                    placeholder="Buscar por nombre..."
+                    class="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 py-2.5 pl-10 pr-4 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label
+                  for="roleFilter"
+                  class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                  >Rol:</label
+                >
+                <select
+                  id="roleFilter"
+                  class="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 py-2.5 px-3 text-gray-900 dark:text-white focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+                >
+                  <option value="">Todos los roles</option>
+                  <option
+                    th:each="role : ${allRoles}"
+                    th:value="${role.nombreRol}"
+                    th:text="${role.getDisplayName()}"
+                  ></option>
+                </select>
+              </div>
+
+              <div>
+                <label
+                  for="shiftFilter"
+                  class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                  >Turno:</label
+                >
+                <select
+                  id="shiftFilter"
+                  class="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 py-2.5 px-3 text-gray-900 dark:text-white focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+                >
+                  <option value="">Todos los turnos</option>
+                  <option
+                    th:each="shift : ${allShifts}"
+                    th:value="${shift.id}"
+                    th:text="${shift.name}"
+                  ></option>
+                </select>
+              </div>
+
+              <div>
+                <label
+                  for="statusFilter"
+                  class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                  >Estado:</label
+                >
+                <select
+                  id="statusFilter"
+                  class="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 py-2.5 px-3 text-gray-900 dark:text-white focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+                >
+                  <option value="">Todos</option>
+                  <option value="true">Activos</option>
+                  <option value="false">Inactivos</option>
+                </select>
+              </div>
+            </div>
+            <div
+              class="mt-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3"
+            >
+              <button
+                id="clearFilters"
+                class="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-sm font-medium"
+              >
+                <span class="material-symbols-outlined text-lg">clear_all</span>
+                Limpiar Filtros
+              </button>
+              <p class="text-sm text-gray-600 dark:text-gray-400">
+                Mostrando
+                <span
+                  id="filteredCount"
+                  class="font-semibold text-primary"
+                  th:text="${employees.size()}"
+                  >0</span
+                >
+                empleados
+              </p>
+            </div>
+          </div>
+
+          <!-- TABLA -->
+          <div
+            class="table-responsive rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-lg"
+          >
+            <table class="w-full table-auto">
+              <thead class="bg-gray-50 dark:bg-gray-800">
+                <tr>
+                  <th
+                    class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-400"
+                  >
+                    Empleado
+                  </th>
+                  <th
+                    class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-400"
+                  >
+                    Contacto
+                  </th>
+                  <th
+                    class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-400"
+                  >
+                    Rol
+                  </th>
+                  <th
+                    class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-400"
+                  >
+                    Salario
+                  </th>
+                  <th
+                    class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-400"
+                  >
+                    Estado
+                  </th>
+                  <th
+                    class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-400"
+                  >
+                    Supervisor
+                  </th>
+                  <th
+                    class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-400"
+                  >
+                    Último Acceso
+                  </th>
+                  <th
+                    class="px-6 py-4 text-center text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-400 sticky right-0 bg-gray-50 dark:bg-gray-800"
+                  >
+                    Acciones
+                  </th>
+                </tr>
+              </thead>
+              <tbody
+                class="divide-y divide-gray-200 dark:divide-gray-700"
+                id="employeesTableBody"
+              >
+                <tr
+                  th:each="employee : ${employees}"
+                  class="employee-row hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+                  th:attr="data-name=${employee.fullName.toLowerCase()},
+                                           data-role=${employee.primaryRole},
+                                           data-shifts=${employee.shifts.![id].toString()},
+                                           data-enabled=${employee.enabled}"
+                >
+                  <td class="px-6 py-4">
+                    <div class="flex items-center gap-3">
+                      <div
+                        class="w-10 h-10 bg-gradient-to-br from-primary to-primary-dark rounded-full flex items-center justify-center text-white font-bold text-sm shadow-lg flex-shrink-0"
+                      >
+                        <span th:text="${employee.initials}">SR</span>
+                      </div>
+                      <div class="min-w-0">
+                        <p
+                          class="text-sm font-semibold text-gray-900 dark:text-white truncate"
+                          th:text="${employee.fullName}"
+                        ></p>
+                        <p
+                          class="text-xs text-gray-500 dark:text-gray-400 truncate"
+                          th:text="'@' + ${employee.username}"
+                        ></p>
+                      </div>
+                    </div>
+                  </td>
+
+                  <td class="px-6 py-4">
+                    <div class="space-y-1">
+                      <div
+                        class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400"
+                      >
+                        <span class="material-symbols-outlined text-base"
+                          >phone</span
+                        >
+                        <span
+                          th:text="${employee.telefono ?: 'Sin teléfono'}"
+                        ></span>
+                      </div>
+                      <div
+                        class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400"
+                      >
+                        <span class="material-symbols-outlined text-base"
+                          >calendar_today</span
+                        >
+                        <span
+                          th:text="${employee.edad != null ? employee.edad + ' años' : 'No especificada'}"
+                        ></span>
+                      </div>
+                    </div>
+                  </td>
+
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <span
+                      class="inline-flex items-center rounded-full bg-primary/10 dark:bg-primary/20 px-3 py-1 text-xs font-medium text-primary-dark dark:text-primary"
+                      th:text="${employee.roleDisplayName}"
+                    >
+                    </span>
+                  </td>
+
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <p
+                      class="text-sm font-semibold text-green-600 dark:text-green-400"
+                      th:text="${employee.formattedSalary}"
+                    ></p>
+                  </td>
+
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <span
+                      th:class="${employee.enabled} ? 'inline-flex items-center rounded-full bg-green-100 dark:bg-green-900/30 px-2.5 py-0.5 text-xs font-medium text-green-800 dark:text-green-400' : 'inline-flex items-center rounded-full bg-red-100 dark:bg-red-900/30 px-2.5 py-0.5 text-xs font-medium text-red-800 dark:text-red-400'"
+                    >
+                      <svg
+                        th:class="${employee.enabled} ? '-ml-0.5 mr-1.5 h-2 w-2 text-green-500' : '-ml-0.5 mr-1.5 h-2 w-2 text-red-500'"
+                        fill="currentColor"
+                        viewBox="0 0 8 8"
+                      >
+                        <circle cx="4" cy="4" r="3"></circle>
+                      </svg>
+                      <span
+                        th:text="${employee.enabled} ? 'Activo' : 'Inactivo'"
+                      ></span>
+                    </span>
+                  </td>
+
+                  <td class="px-6 py-4">
+                    <div class="flex items-center gap-2">
+                      <span
+                        class="material-symbols-outlined text-base text-gray-400"
+                        >person</span
+                      >
+                      <span
+                        class="text-sm text-gray-600 dark:text-gray-400"
+                        th:text="${employee.supervisorName}"
+                      ></span>
+                    </div>
+                  </td>
+
+                  <td class="px-6 py-4">
+                    <p
+                      class="text-sm text-gray-900 dark:text-white"
+                      th:text="${employee.formattedLastAccess}"
+                    ></p>
+                  </td>
+
+                  <td
+                    class="px-6 py-4 sticky right-0 bg-white dark:bg-gray-900"
+                  >
+                    <div class="flex items-center justify-center gap-2">
+                      <button
+                        th:onclick="'showEmployeeDetails(' + ${employee.idEmpleado} + ')'"
+                        class="group flex h-9 w-9 items-center justify-center rounded-lg bg-gray-100 text-gray-600 hover:bg-green-100 hover:text-green-600 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-green-900/30 dark:hover:text-green-400 transition-colors"
+                        title="Ver detalles"
+                      >
+                        <span class="material-symbols-outlined text-lg"
+                          >visibility</span
+                        >
+                      </button>
+                      <a
+                        th:href="@{/admin/employees/{id}/edit(id=${employee.idEmpleado})}"
+                        class="group flex h-9 w-9 items-center justify-center rounded-lg bg-gray-100 text-gray-600 hover:bg-blue-100 hover:text-blue-600 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-blue-900/30 dark:hover:text-blue-400 transition-colors"
+                        title="Editar"
+                      >
+                        <span class="material-symbols-outlined text-lg"
+                          >edit</span
+                        >
+                      </a>
+                      <!-- Only ADMIN can activate/deactivate employees (not ADMIN or PROGRAMMER employees) -->
+                      <label
+                        sec:authorize="hasRole('ROLE_ADMIN')"
+                        th:if="${!employee.hasRole('ROLE_ADMIN') and !employee.hasRole('ROLE_PROGRAMMER')}"
+                        class="relative inline-flex items-center cursor-pointer"
+                        title="Activar/Desactivar"
+                      >
+                        <input
+                          type="checkbox"
+                          class="sr-only peer status-toggle"
+                          th:checked="${employee.enabled}"
+                          th:data-employee-id="${employee.idEmpleado}"
+                          th:data-employee-name="${employee.fullName}"
+                        />
+                        <div
+                          class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"
+                        ></div>
+                      </label>
+                      <!-- Shield icon for ADMIN employees (cannot be deactivated) -->
+                      <span
+                        sec:authorize="hasRole('ROLE_ADMIN')"
+                        th:if="${employee.hasRole('ROLE_ADMIN')}"
+                        class="material-symbols-outlined text-blue-500 text-lg"
+                        title="El administrador no puede ser desactivado"
+                        >shield_person</span
+                      >
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+
+            <div
+              id="noResults"
+              class="hidden p-6 text-center text-gray-600 dark:text-gray-400"
+            >
+              <span
+                class="material-symbols-outlined text-5xl mb-2 text-gray-300 dark:text-gray-600"
+                >search_off</span
+              >
+              <p class="font-medium">
+                No se encontraron empleados con los filtros seleccionados
+              </p>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <!-- Employee Details Modal -->
+    <div
+      id="employeeModal"
+      class="hidden fixed inset-0 bg-gray-900/50 backdrop-blur-sm overflow-y-auto h-full w-full z-50"
+    >
+      <div
+        class="relative top-20 mx-auto p-5 border-0 w-full max-w-2xl shadow-2xl rounded-2xl bg-white dark:bg-gray-900"
+      >
+        <div
+          class="flex justify-between items-center pb-4 border-b border-gray-200 dark:border-gray-700"
+        >
+          <h3
+            class="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2"
+          >
+            <span class="material-symbols-outlined text-primary">person</span>
+            Detalles del Empleado
+          </h3>
+          <button
+            onclick="closeModal()"
+            class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+          >
+            <span class="material-symbols-outlined text-2xl">close</span>
+          </button>
+        </div>
+
+        <div class="mt-6" id="modalContent">
+          <div class="mb-6">
+            <h4
+              class="text-lg font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2"
+            >
+              <span class="material-symbols-outlined text-primary">badge</span>
+              Datos Personales
+            </h4>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div class="bg-gray-50 dark:bg-gray-800 p-3 rounded-xl">
+                <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                  Nombre:
+                </p>
+                <p
+                  class="font-medium text-gray-900 dark:text-white"
+                  id="modalFullName"
+                ></p>
+              </div>
+              <div class="bg-gray-50 dark:bg-gray-800 p-3 rounded-xl">
+                <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                  Usuario:
+                </p>
+                <p
+                  class="font-medium text-gray-900 dark:text-white"
+                  id="modalUsername"
+                ></p>
+              </div>
+              <div class="bg-gray-50 dark:bg-gray-800 p-3 rounded-xl">
+                <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                  Edad:
+                </p>
+                <p
+                  class="font-medium text-gray-900 dark:text-white"
+                  id="modalAge"
+                ></p>
+              </div>
+              <div class="bg-gray-50 dark:bg-gray-800 p-3 rounded-xl">
+                <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                  Supervisor:
+                </p>
+                <p
+                  class="font-medium text-gray-900 dark:text-white"
+                  id="modalSupervisor"
+                ></p>
+              </div>
+            </div>
+          </div>
+
+          <div class="mb-6">
+            <h4
+              class="text-lg font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2"
+            >
+              <span class="material-symbols-outlined text-primary">work</span>
+              Datos Laborales
+            </h4>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div class="bg-gray-50 dark:bg-gray-800 p-3 rounded-xl">
+                <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                  Rol:
+                </p>
+                <p
+                  class="font-medium text-gray-900 dark:text-white"
+                  id="modalRole"
+                ></p>
+              </div>
+              <div class="bg-gray-50 dark:bg-gray-800 p-3 rounded-xl">
+                <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                  Turnos:
+                </p>
+                <p
+                  class="font-medium text-gray-900 dark:text-white"
+                  id="modalShifts"
+                ></p>
+              </div>
+              <div class="bg-gray-50 dark:bg-gray-800 p-3 rounded-xl">
+                <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                  Salario:
+                </p>
+                <p
+                  class="font-medium text-green-600 dark:text-green-400"
+                  id="modalSalary"
+                ></p>
+              </div>
+              <div class="bg-gray-50 dark:bg-gray-800 p-3 rounded-xl">
+                <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                  Estado:
+                </p>
+                <span
+                  id="modalStatus"
+                  class="px-2 py-1 text-xs rounded-full font-medium"
+                ></span>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <h4
+              class="text-lg font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2"
+            >
+              <span class="material-symbols-outlined text-primary"
+                >contact_mail</span
+              >
+              Contacto
+            </h4>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div class="bg-gray-50 dark:bg-gray-800 p-3 rounded-xl">
+                <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                  Teléfono:
+                </p>
+                <p
+                  class="font-medium text-gray-900 dark:text-white"
+                  id="modalTelefono"
+                ></p>
+              </div>
+              <div class="bg-gray-50 dark:bg-gray-800 p-3 rounded-xl">
+                <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                  Último Acceso:
+                </p>
+                <p
+                  class="font-medium text-gray-900 dark:text-white"
+                  id="modalLastAccess"
+                ></p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div
+          class="flex justify-end pt-4 border-t border-gray-200 dark:border-gray-700 mt-6"
+        >
+          <button
+            onclick="closeModal()"
+            class="px-6 py-2.5 bg-gray-200 hover:bg-gray-300 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-800 dark:text-white rounded-xl font-medium transition-colors"
+          >
+            Cerrar
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sidebar Scripts Fragment -->
+    <div th:replace="~{fragments/sidebar :: sidebarScripts}"></div>
+
+    <script>
+      // Filter functionality
+      document.addEventListener("DOMContentLoaded", function () {
+        const nameFilter = document.getElementById("nameFilter");
+        const roleFilter = document.getElementById("roleFilter");
+        const shiftFilter = document.getElementById("shiftFilter");
+        const statusFilter = document.getElementById("statusFilter");
+        const clearFiltersBtn = document.getElementById("clearFilters");
+        const filteredCount = document.getElementById("filteredCount");
+        const noResults = document.getElementById("noResults");
+        const tableBody = document.getElementById("employeesTableBody");
+
+        function applyFilters() {
+          const nameValue = nameFilter.value.toLowerCase();
+          const roleValue = roleFilter.value;
+          const shiftValue = shiftFilter.value;
+          const statusValue = statusFilter.value;
+
+          const rows = document.querySelectorAll(".employee-row");
+          let visibleCount = 0;
+
+          rows.forEach((row) => {
+            const name = row.getAttribute("data-name");
+            const role = row.getAttribute("data-role");
+            const shifts = row.getAttribute("data-shifts");
+            const enabled = row.getAttribute("data-enabled");
+
+            let show = true;
+
+            if (nameValue && !name.includes(nameValue)) {
+              show = false;
+            }
+
+            if (roleValue && role !== roleValue) {
+              show = false;
+            }
+
+            if (shiftValue && !shifts.includes(shiftValue)) {
+              show = false;
+            }
+
+            if (statusValue !== "" && enabled !== statusValue) {
+              show = false;
+            }
+
+            if (show) {
+              row.style.display = "";
+              visibleCount++;
+            } else {
+              row.style.display = "none";
+            }
+          });
+
+          filteredCount.textContent = visibleCount;
+
+          if (visibleCount === 0) {
+            noResults.classList.remove("hidden");
+            tableBody.parentElement.style.display = "none";
+          } else {
+            noResults.classList.add("hidden");
+            tableBody.parentElement.style.display = "";
+          }
+        }
+
+        nameFilter.addEventListener("input", applyFilters);
+        roleFilter.addEventListener("change", applyFilters);
+        shiftFilter.addEventListener("change", applyFilters);
+        statusFilter.addEventListener("change", applyFilters);
+
+        clearFiltersBtn.addEventListener("click", function () {
+          nameFilter.value = "";
+          roleFilter.value = "";
+          shiftFilter.value = "";
+          statusFilter.value = "";
+          applyFilters();
+        });
+
+        // Status toggle with SweetAlert
+        document.querySelectorAll(".status-toggle").forEach((toggle) => {
+          toggle.addEventListener("change", function (e) {
+            e.preventDefault();
+
+            const checkbox = this;
+            const employeeId = this.getAttribute("data-employee-id");
+            const employeeName = this.getAttribute("data-employee-name");
+            const enabled = this.checked;
+
+            // Revertir temporalmente
+            checkbox.checked = !enabled;
+
+            const title = enabled
+              ? "¿Activar empleado?"
+              : "¿Desactivar empleado?";
+            const text = enabled
+              ? `¿Estás seguro de activar a ${employeeName}?`
+              : `¿Estás seguro de desactivar a ${employeeName}?`;
+            const confirmButtonText = enabled
+              ? "Sí, activar"
+              : "Sí, desactivar";
+            const successTitle = enabled ? "¡Activado!" : "¡Desactivado!";
+            const successText = enabled
+              ? `${employeeName} ha sido activado correctamente.`
+              : `${employeeName} ha sido desactivado correctamente.`;
+
+            Swal.fire({
+              title: title,
+              text: text,
+              icon: "warning",
+              showCancelButton: true,
+              confirmButtonColor: "#38e07b",
+              cancelButtonColor: "#ef4444",
+              confirmButtonText: confirmButtonText,
+              cancelButtonText: "Cancelar",
+              reverseButtons: true,
+              background: document.documentElement.classList.contains("dark")
+                ? "#1f2937"
+                : "#ffffff",
+              color: document.documentElement.classList.contains("dark")
+                ? "#f3f4f6"
+                : "#1f2937",
+              customClass: {
+                popup: "rounded-2xl",
+                confirmButton: "rounded-xl px-6 py-2.5 font-semibold",
+                cancelButton: "rounded-xl px-6 py-2.5 font-semibold",
+              },
+            }).then((result) => {
+              if (result.isConfirmed) {
+                fetch(
+                  `/admin/employees/${employeeId}/toggle-status?enabled=${enabled}`,
+                  {
+                    method: "POST",
+                    headers: {
+                      "Content-Type": "application/json",
+                    },
+                  },
+                )
+                  .then((response) => response.json())
+                  .then((data) => {
+                    if (data.success) {
+                      Swal.fire({
+                        title: successTitle,
+                        text: successText,
+                        icon: "success",
+                        confirmButtonColor: "#38e07b",
+                        confirmButtonText: "Entendido",
+                        timer: 1500,
+                        showConfirmButton: false,
+                        background: document.documentElement.classList.contains(
+                          "dark",
+                        )
+                          ? "#1f2937"
+                          : "#ffffff",
+                        color: document.documentElement.classList.contains(
+                          "dark",
+                        )
+                          ? "#f3f4f6"
+                          : "#1f2937",
+                        customClass: {
+                          popup: "rounded-2xl",
+                        },
+                      }).then(() => {
+                        // Recargar la página para actualizar los contadores y la tabla
+                        window.location.reload();
+                      });
+                    } else {
+                      Swal.fire({
+                        icon: "error",
+                        title: "Error",
+                        text: data.message,
+                        confirmButtonColor: "#38e07b",
+                        background: document.documentElement.classList.contains(
+                          "dark",
+                        )
+                          ? "#1f2937"
+                          : "#ffffff",
+                        color: document.documentElement.classList.contains(
+                          "dark",
+                        )
+                          ? "#f3f4f6"
+                          : "#1f2937",
+                        customClass: {
+                          popup: "rounded-2xl",
+                          confirmButton: "rounded-xl px-6 py-2.5 font-semibold",
+                        },
+                      });
+                    }
+                  })
+                  .catch((error) => {
+                    console.error("Error:", error);
+                    Swal.fire({
+                      icon: "error",
+                      title: "Error",
+                      text: "Error al cambiar el estado del empleado",
+                      confirmButtonColor: "#38e07b",
+                      background: document.documentElement.classList.contains(
+                        "dark",
+                      )
+                        ? "#1f2937"
+                        : "#ffffff",
+                      color: document.documentElement.classList.contains("dark")
+                        ? "#f3f4f6"
+                        : "#1f2937",
+                      customClass: {
+                        popup: "rounded-2xl",
+                        confirmButton: "rounded-xl px-6 py-2.5 font-semibold",
+                      },
+                    });
+                  });
+              }
+            });
+          });
+        });
+      });
+
+      // Modal functionality
+      function showEmployeeDetails(employeeId) {
+        fetch(`/admin/employees/${employeeId}/details`)
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.success) {
+              const emp = data.employee;
+
+              document.getElementById("modalFullName").textContent =
+                emp.fullName;
+              document.getElementById("modalUsername").textContent =
+                "@" + emp.username;
+              document.getElementById("modalSupervisor").textContent =
+                emp.supervisorName;
+              document.getElementById("modalRole").textContent = emp.roleName;
+              document.getElementById("modalShifts").textContent =
+                emp.shiftNames;
+              document.getElementById("modalSalary").textContent = emp.salario;
+              document.getElementById("modalTelefono").textContent =
+                emp.telefono || "No disponible";
+              document.getElementById("modalAge").textContent = emp.edad
+                ? emp.edad + " años"
+                : "No especificada";
+              document.getElementById("modalLastAccess").textContent =
+                emp.lastAccess;
+
+              const statusSpan = document.getElementById("modalStatus");
+              statusSpan.textContent = emp.enabledText;
+              if (emp.enabled) {
+                statusSpan.className =
+                  "px-3 py-1 text-xs rounded-full font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400";
+              } else {
+                statusSpan.className =
+                  "px-3 py-1 text-xs rounded-full font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400";
+              }
+
+              document
+                .getElementById("employeeModal")
+                .classList.remove("hidden");
+            } else {
+              Swal.fire({
+                icon: "error",
+                title: "Error",
+                text: data.message,
+                confirmButtonColor: "#38e07b",
+                background: document.documentElement.classList.contains("dark")
+                  ? "#1f2937"
+                  : "#ffffff",
+                color: document.documentElement.classList.contains("dark")
+                  ? "#f3f4f6"
+                  : "#1f2937",
+                customClass: {
+                  popup: "rounded-2xl",
+                  confirmButton: "rounded-xl px-6 py-2.5 font-semibold",
+                },
+              });
+            }
+          })
+          .catch((error) => {
+            console.error("Error:", error);
+            Swal.fire({
+              icon: "error",
+              title: "Error",
+              text: "Error al cargar los detalles del empleado",
+              confirmButtonColor: "#38e07b",
+              background: document.documentElement.classList.contains("dark")
+                ? "#1f2937"
+                : "#ffffff",
+              color: document.documentElement.classList.contains("dark")
+                ? "#f3f4f6"
+                : "#1f2937",
+              customClass: {
+                popup: "rounded-2xl",
+                confirmButton: "rounded-xl px-6 py-2.5 font-semibold",
+              },
+            });
+          });
+      }
+
+      function closeModal() {
+        document.getElementById("employeeModal").classList.add("hidden");
+      }
+
+      document.addEventListener("keydown", function (event) {
+        if (event.key === "Escape") {
+          closeModal();
+        }
+      });
+
+      document
+        .getElementById("employeeModal")
+        .addEventListener("click", function (event) {
+          if (event.target === this) {
+            closeModal();
+          }
+        });
+    </script>
+
+    <!-- User Limit Auto-Check Script: after deactivating employees, check if limit is resolved -->
+    <script th:if="${session.userLimitExceeded}">
+      (function () {
+        var isDark = document.documentElement.classList.contains("dark");
+
+        // After each toggle-status reload, check if the limit has been resolved
+        function checkUserLimitStatus() {
+          fetch("/admin/employees/user-limit-status")
+            .then(function (response) {
+              return response.json();
+            })
+            .then(function (data) {
+              if (!data.limitExceeded) {
+                // Limit resolved! Show success and reload
+                sessionStorage.removeItem("userLimitAlertShown");
+                var successColor = isDark ? "#4ade80" : "#16a34a";
+                var successHtml =
+                  "<p>Has ajustado correctamente los empleados activos.</p>" +
+                  '<p style="margin-top: 8px;">Empleados activos: <strong>' +
+                  data.currentActiveUsers +
+                  "/" +
+                  data.maxUsers +
+                  "</strong></p>" +
+                  '<p style="margin-top: 8px; color:' +
+                  successColor +
+                  '; font-weight: 600;">El sistema se ha desbloqueado.</p>';
+
+                Swal.fire({
+                  icon: "success",
+                  title: "¡Límite Resuelto!",
+                  html: successHtml,
+                  confirmButtonColor: "#38e07b",
+                  confirmButtonText: "Continuar",
+                  allowOutsideClick: false,
+                  background: isDark ? "#1f2937" : "#ffffff",
+                  color: isDark ? "#f3f4f6" : "#1f2937",
+                  customClass: {
+                    popup: "rounded-2xl",
+                    confirmButton: "rounded-xl px-6 py-2.5 font-semibold",
+                  },
+                }).then(function () {
+                  window.location.reload();
+                });
+              } else {
+                // Update the banner with current numbers
+                var banner = document.getElementById("userLimitBanner");
+                if (banner) {
+                  // Update is best done via reload since Thymeleaf rendered it
+                }
+              }
+            })
+            .catch(function (err) {
+              console.error("Error checking user limit:", err);
+            });
+        }
+
+        // Check immediately on page load (in case toggle happened)
+        document.addEventListener("DOMContentLoaded", function () {
+          // Small delay to let the page settle
+          setTimeout(checkUserLimitStatus, 500);
+        });
+      })();
+    </script>
+
+    <!-- Script del Sistema de Temas -->
+    <div th:replace="~{fragments/theme :: themeScript}"></div>
+  </body>
+</html>

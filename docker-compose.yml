@@ -1,0 +1,70 @@
+services:
+  # --- Backend Spring Boot ---
+  elgransazon:
+    container_name: elgransazon_api
+    build:
+      context: .
+      dockerfile: Dockerfile
+    mem_limit: 512m
+    ports:
+      # Mapea el puerto definido en .env al puerto interno 8080 de Tomcat
+      - "${API_PORT}:8080"
+    environment:
+      # Pasa las variables del .env al contenedor
+      - API_HOST=${API_HOST}
+      - API_PORT=${API_PORT}
+      - API_PROTOCOL=${API_PROTOCOL}
+      - BASE_DOMAIN=${BASE_DOMAIN:-localhost}
+      - COOKIE_SECURE=${COOKIE_SECURE:-false}
+      # Configuración de Base de Datos
+      - DB_HOST=mysqldb # Nombre del servicio de abajo (DNS interno de Docker)
+      - DB_PORT=${DB_PORT}
+      - DB_NAME=${DB_NAME}
+      - DB_USER=root
+      - DB_PASSWORDSECRET=${DB_PASSWORDSECRET}
+
+      # Email
+      - SENDGRID_API_KEY=${SENDGRID_API_KEY}
+      - FROM_EMAIL=${FROM_EMAIL}
+      - FROM_NAME=${FROM_NAME}
+
+      # Cloudinary (Imágenes)
+      - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME}
+      - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY}
+      - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}
+
+    restart: always
+    depends_on:
+      mysqldb:
+        condition: service_healthy
+    networks:
+      - elgransazon-network
+
+  # --- Base de Datos MySQL ---
+  mysqldb:
+    image: mysql:8.0.33
+    container_name: elgransazon_db
+    ports:
+      # Acceso externo para tu Workbench/DBeaver en el puerto 3307
+      - "3307:${DB_PORT}"
+    environment:
+      - MYSQL_ROOT_PASSWORD=${DB_PASSWORDSECRET}
+      - MYSQL_DATABASE=${DB_NAME}
+      - MYSQL_PASSWORD=${DB_PASSWORDSECRET}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    restart: always
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - elgransazon-network
+
+volumes:
+  mysql_data:
+
+networks:
+  elgransazon-network:
+    driver: bridge

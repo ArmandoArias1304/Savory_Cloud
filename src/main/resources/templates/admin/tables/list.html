@@ -1,0 +1,1145 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title th:text="${globalSystemConfig.systemName + ' - Mesas'}">
+      El Gran Sazón - Mesas
+    </title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@300;400;500;600;700"
+      rel="stylesheet"
+    />
+
+    <!-- Sistema de Temas (Modo Claro/Oscuro) -->
+    <div th:replace="~{fragments/theme :: themeResources}"></div>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#38e07b",
+              "primary-dark": "#2bc866",
+              "background-light": "#f8faf9",
+              "background-dark": "#0f1713",
+            },
+            fontFamily: {
+              display: ["Work Sans"],
+            },
+            borderRadius: {
+              DEFAULT: "0.5rem",
+              lg: "0.75rem",
+              xl: "1rem",
+              "2xl": "1.5rem",
+              full: "9999px",
+            },
+            boxShadow: {
+              "table-available":
+                "0 0 0 4px rgba(0, 195, 102, 0.2), 0 1px 2px 0 rgba(0,0,0,0.05)",
+              "table-occupied":
+                "0 0 0 4px rgba(247, 144, 9, 0.2), 0 1px 2px 0 rgba(0,0,0,0.05)",
+              "table-reserved":
+                "0 0 0 4px rgba(240, 68, 56, 0.2), 0 1px 2px 0 rgba(0,0,0,0.05)",
+              "table-outofservice":
+                "0 0 0 4px rgba(156, 163, 175, 0.2), 0 1px 2px 0 rgba(0,0,0,0.05)",
+            },
+          },
+        },
+      };
+    </script>
+    <!-- Sidebar Styles Fragment -->
+    <div th:replace="~{fragments/sidebar :: sidebarStyles}"></div>
+    <style>
+      .table-responsive {
+        overflow-x: auto;
+        max-width: 100%;
+      }
+
+      .table-responsive::-webkit-scrollbar {
+        height: 8px;
+      }
+
+      .table-responsive::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 10px;
+      }
+
+      .table-responsive::-webkit-scrollbar-thumb {
+        background: #38e07b;
+        border-radius: 10px;
+      }
+
+      .table-responsive::-webkit-scrollbar-thumb:hover {
+        background: #2bc866;
+      }
+    </style>
+  </head>
+  <body
+    class="bg-gradient-to-br from-background-light to-gray-50 dark:from-background-dark dark:to-gray-900 font-display text-gray-800 dark:text-gray-200 overflow-hidden"
+  >
+    <!-- Menu Controls Fragment -->
+    <div th:replace="~{fragments/sidebar :: menuControls}"></div>
+
+    <div class="flex min-h-screen h-screen overflow-hidden">
+      <!-- SIDEBAR - Using Fragment -->
+      <div
+        th:replace="~{fragments/sidebar :: sidebar(activeMenu='tables')}"
+      ></div>
+
+      <!-- MAIN CONTENT -->
+      <main class="flex-1 overflow-y-auto h-screen">
+        <div class="p-4 sm:p-6 lg:p-8 pt-20 md:pt-20 lg:pt-8 pb-32">
+          <!-- HEADER -->
+          <div
+            class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6 sm:mb-8"
+          >
+            <div>
+              <h2
+                class="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white mb-1"
+              >
+                Gestión de Mesas
+              </h2>
+              <p class="text-sm sm:text-base text-gray-600 dark:text-gray-400">
+                Administra las mesas del restaurante
+              </p>
+            </div>
+            <div class="flex items-center gap-3">
+              <!-- Botón para cambiar vista -->
+              <div class="flex bg-gray-100 dark:bg-gray-800 rounded-xl p-1">
+                <button
+                  id="tableViewBtn"
+                  class="flex items-center gap-2 px-3 py-2 rounded-lg bg-white dark:bg-gray-700 text-primary shadow-sm transition-all"
+                  onclick="switchView('table')"
+                  title="Vista de Tabla"
+                >
+                  <span class="material-symbols-outlined text-lg"
+                    >table_rows</span
+                  >
+                </button>
+                <button
+                  id="gridViewBtn"
+                  class="flex items-center gap-2 px-3 py-2 rounded-lg text-gray-600 dark:text-gray-400 transition-all"
+                  onclick="switchView('grid')"
+                  title="Vista de Cuadros"
+                >
+                  <span class="material-symbols-outlined text-lg"
+                    >grid_view</span
+                  >
+                </button>
+              </div>
+
+              <a
+                th:href="@{/admin/tables/new}"
+                class="flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl bg-gradient-to-r from-primary to-primary-dark text-white font-semibold hover:shadow-lg hover:shadow-primary/30 transition-all shadow-md text-sm sm:text-base"
+              >
+                <span class="material-symbols-outlined text-lg">add</span>
+                Añadir Nueva Mesa
+              </a>
+            </div>
+          </div>
+
+          <!-- Alerts -->
+          <div
+            th:if="${successMessage}"
+            class="mb-6 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl"
+          >
+            <p
+              class="text-green-800 dark:text-green-300"
+              th:text="${successMessage}"
+            ></p>
+          </div>
+
+          <div
+            th:if="${errorMessage}"
+            class="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl"
+          >
+            <p
+              class="text-red-800 dark:text-red-300"
+              th:text="${errorMessage}"
+            ></p>
+          </div>
+
+          <!-- STATS -->
+          <div
+            class="mb-6 sm:mb-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6"
+          >
+            <div
+              class="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 sm:p-6 shadow-lg"
+            >
+              <div class="flex items-center justify-between mb-3">
+                <h3
+                  class="text-sm font-medium text-gray-600 dark:text-gray-400"
+                >
+                  Mesas Totales
+                </h3>
+                <span
+                  class="material-symbols-outlined text-2xl text-gray-400 dark:text-gray-500"
+                  >table_restaurant</span
+                >
+              </div>
+              <p
+                class="text-3xl font-bold text-gray-900 dark:text-white"
+                th:text="${totalCount}"
+              >
+                0
+              </p>
+            </div>
+            <div
+              class="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 sm:p-6 shadow-lg"
+            >
+              <div class="flex items-center justify-between mb-3">
+                <h3
+                  class="text-sm font-medium text-gray-600 dark:text-gray-400"
+                >
+                  Disponibles
+                </h3>
+                <span class="material-symbols-outlined text-2xl text-green-500"
+                  >check_circle</span
+                >
+              </div>
+              <p
+                class="text-3xl font-bold text-green-500"
+                th:text="${availableCount}"
+              >
+                0
+              </p>
+            </div>
+            <div
+              class="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 sm:p-6 shadow-lg"
+            >
+              <div class="flex items-center justify-between mb-3">
+                <h3
+                  class="text-sm font-medium text-gray-600 dark:text-gray-400"
+                >
+                  Ocupadas
+                </h3>
+                <span class="material-symbols-outlined text-2xl text-red-500"
+                  >person</span
+                >
+              </div>
+              <p
+                class="text-3xl font-bold text-red-500"
+                th:text="${occupiedCount}"
+              >
+                0
+              </p>
+              <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                Mesas con pedidos activos
+              </p>
+            </div>
+            <div
+              class="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 sm:p-6 shadow-lg"
+            >
+              <div class="flex items-center justify-between mb-3">
+                <h3
+                  class="text-sm font-medium text-gray-600 dark:text-gray-400"
+                >
+                  Fuera de Servicio
+                </h3>
+                <span class="material-symbols-outlined text-2xl text-gray-500"
+                  >block</span
+                >
+              </div>
+              <p
+                class="text-3xl font-bold text-gray-500"
+                th:text="${outOfServiceCount}"
+              >
+                0
+              </p>
+            </div>
+          </div>
+
+          <!-- FILTROS -->
+          <div
+            class="mb-6 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 sm:p-6 shadow-lg"
+          >
+            <h2
+              class="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2"
+            >
+              <span class="material-symbols-outlined text-primary"
+                >filter_alt</span
+              >
+              Filtros de Búsqueda
+            </h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div class="relative">
+                <label
+                  for="numberFilter"
+                  class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                  >Número de Mesa:</label
+                >
+                <div class="relative">
+                  <div
+                    class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3"
+                  >
+                    <span
+                      class="material-symbols-outlined text-gray-400 dark:text-gray-500 text-lg"
+                      >search</span
+                    >
+                  </div>
+                  <input
+                    type="number"
+                    id="numberFilter"
+                    placeholder="Ej: 5"
+                    min="1"
+                    class="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 py-2.5 pl-10 pr-4 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label
+                  for="statusFilter"
+                  class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                  >Estado:</label
+                >
+                <select
+                  id="statusFilter"
+                  class="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 py-2.5 px-3 text-gray-900 dark:text-white focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+                >
+                  <option value="">Todos los estados</option>
+                  <option
+                    th:each="status : ${allStatuses}"
+                    th:value="${status.name()}"
+                    th:text="${status.displayName}"
+                  ></option>
+                </select>
+              </div>
+
+              <div>
+                <label
+                  for="locationFilter"
+                  class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                  >Ubicación:</label
+                >
+                <select
+                  id="locationFilter"
+                  class="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 py-2.5 px-3 text-gray-900 dark:text-white focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+                >
+                  <option value="">Todas las ubicaciones</option>
+                  <option
+                    th:each="location : ${locations}"
+                    th:value="${location}"
+                    th:text="${location}"
+                  ></option>
+                </select>
+              </div>
+
+              <div>
+                <label
+                  for="capacityFilter"
+                  class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                  >Capacidad Mínima:</label
+                >
+                <input
+                  type="number"
+                  id="capacityFilter"
+                  placeholder="Ej: 4"
+                  min="1"
+                  class="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 py-2.5 px-3 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+                />
+              </div>
+            </div>
+            <div
+              class="mt-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3"
+            >
+              <button
+                id="clearFilters"
+                class="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-sm font-medium"
+              >
+                <span class="material-symbols-outlined text-lg">clear_all</span>
+                Limpiar Filtros
+              </button>
+              <p class="text-sm text-gray-600 dark:text-gray-400">
+                Mostrando
+                <span
+                  id="filteredCount"
+                  class="font-semibold text-primary"
+                  th:text="${tables.size()}"
+                  >0</span
+                >
+                mesas
+              </p>
+            </div>
+          </div>
+
+          <!-- TABLA -->
+          <div
+            id="tableView"
+            class="table-responsive rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-lg"
+          >
+            <table class="w-full table-auto">
+              <thead class="bg-gray-50 dark:bg-gray-800">
+                <tr>
+                  <th
+                    class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-400"
+                  >
+                    Mesa
+                  </th>
+                  <th
+                    class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-400"
+                  >
+                    Capacidad
+                  </th>
+                  <th
+                    class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-400"
+                  >
+                    Ubicación
+                  </th>
+                  <th
+                    class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-400"
+                  >
+                    Estado
+                  </th>
+                  <th
+                    class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-400"
+                  >
+                    Comentarios
+                  </th>
+                  <th
+                    class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-400"
+                  >
+                    Actualización
+                  </th>
+                  <th
+                    class="px-6 py-4 text-center text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-400 sticky right-0 bg-gray-50 dark:bg-gray-800"
+                  >
+                    Acciones
+                  </th>
+                </tr>
+              </thead>
+              <tbody
+                class="divide-y divide-gray-200 dark:divide-gray-700"
+                id="tablesTableBody"
+              >
+                <tr
+                  th:each="table : ${tables}"
+                  class="table-row hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+                  th:attr="data-number=${table.tableNumber},
+                                           data-status=${table.status.name()},
+                                           data-location=${table.location},
+                                           data-capacity=${table.capacity}"
+                >
+                  <td class="px-6 py-4">
+                    <div class="flex items-center gap-3">
+                      <div
+                        class="w-12 h-12 bg-gradient-to-br from-primary to-primary-dark rounded-full flex items-center justify-center text-white font-bold text-lg shadow-lg flex-shrink-0"
+                      >
+                        <span th:text="${table.tableNumber}">1</span>
+                      </div>
+                      <div>
+                        <p
+                          class="text-sm font-semibold text-gray-900 dark:text-white"
+                          th:text="${table.displayName}"
+                        >
+                          Mesa #1
+                        </p>
+                      </div>
+                    </div>
+                  </td>
+
+                  <td class="px-6 py-4">
+                    <div class="flex items-center gap-2">
+                      <span
+                        class="material-symbols-outlined text-primary text-base"
+                        >group</span
+                      >
+                      <span
+                        class="text-sm text-gray-600 dark:text-gray-400"
+                        th:text="${table.capacityDisplay}"
+                      ></span>
+                    </div>
+                  </td>
+
+                  <td class="px-6 py-4">
+                    <p
+                      class="text-sm text-gray-600 dark:text-gray-400"
+                      th:text="${table.locationDisplay}"
+                    ></p>
+                  </td>
+
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <!-- AVAILABLE - Verde -->
+                    <span
+                      th:if="${table.status.name() == 'AVAILABLE'}"
+                      class="inline-flex items-center rounded-full bg-green-100 dark:bg-green-900/30 px-3 py-1 text-xs font-medium text-green-800 dark:text-green-400"
+                      th:text="${table.statusDisplayName}"
+                    >
+                    </span>
+                    <!-- OCCUPIED - Rojo -->
+                    <span
+                      th:if="${table.status.name() == 'OCCUPIED'}"
+                      class="inline-flex items-center rounded-full bg-red-100 dark:bg-red-900/30 px-3 py-1 text-xs font-medium text-red-800 dark:text-red-400"
+                      th:text="${table.statusDisplayName}"
+                    >
+                    </span>
+                    <!-- OUT_OF_SERVICE - Gris -->
+                    <span
+                      th:if="${table.status.name() == 'OUT_OF_SERVICE'}"
+                      class="inline-flex items-center rounded-full bg-gray-100 dark:bg-gray-900/30 px-3 py-1 text-xs font-medium text-gray-800 dark:text-gray-400"
+                      th:text="${table.statusDisplayName}"
+                    >
+                    </span>
+                  </td>
+
+                  <td class="px-6 py-4">
+                    <p
+                      class="text-sm text-gray-600 dark:text-gray-400 truncate max-w-xs"
+                      th:text="${table.comments != null ? table.comments : 'Sin comentarios'}"
+                      th:title="${table.comments}"
+                    ></p>
+                  </td>
+
+                  <td class="px-6 py-4">
+                    <p
+                      class="text-sm text-gray-900 dark:text-white"
+                      th:text="${table.formattedUpdatedAt}"
+                    ></p>
+                  </td>
+
+                  <td
+                    class="px-6 py-4 sticky right-0 bg-white dark:bg-gray-900"
+                  >
+                    <div class="flex items-center justify-center gap-2">
+                      <button
+                        th:onclick="'showTableDetails(' + ${table.id} + ')'"
+                        class="group flex h-9 w-9 items-center justify-center rounded-lg bg-gray-100 text-gray-600 hover:bg-green-100 hover:text-green-600 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-green-900/30 dark:hover:text-green-400 transition-colors"
+                        title="Ver detalles"
+                      >
+                        <span class="material-symbols-outlined text-lg"
+                          >visibility</span
+                        >
+                      </button>
+                      <a
+                        th:href="@{/admin/tables/{id}/edit(id=${table.id})}"
+                        class="group flex h-9 w-9 items-center justify-center rounded-lg bg-gray-100 text-gray-600 hover:bg-blue-100 hover:text-blue-600 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-blue-900/30 dark:hover:text-blue-400 transition-colors"
+                        title="Editar"
+                      >
+                        <span class="material-symbols-outlined text-lg"
+                          >edit</span
+                        >
+                      </a>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+
+            <div
+              id="noResults"
+              class="hidden p-6 text-center text-gray-600 dark:text-gray-400"
+            >
+              <span
+                class="material-symbols-outlined text-5xl mb-2 text-gray-300 dark:text-gray-600"
+                >search_off</span
+              >
+              <p class="font-medium">
+                No se encontraron mesas con los filtros seleccionados
+              </p>
+            </div>
+          </div>
+
+          <!-- VISTA DE CUADROS (Grid View) -->
+          <div id="gridView" class="hidden">
+            <div
+              id="noResultsGrid"
+              class="hidden p-6 text-center text-gray-600 dark:text-gray-400"
+            >
+              <span
+                class="material-symbols-outlined text-5xl mb-2 text-gray-300 dark:text-gray-600"
+                >search_off</span
+              >
+              <p class="font-medium">
+                No se encontraron mesas con los filtros seleccionados
+              </p>
+            </div>
+
+            <div
+              id="gridContainer"
+              class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-6"
+            >
+              <div
+                th:each="table : ${tables}"
+                class="table-row-grid group cursor-pointer bg-gradient-to-br from-white to-gray-50 dark:from-gray-900 dark:to-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 transition-all duration-300 hover:-translate-y-1"
+                th:attr="data-number=${table.tableNumber},
+                         data-status=${table.status.name()},
+                         data-location=${table.location},
+                         data-capacity=${table.capacity}"
+                th:classappend="${table.status.name() == 'AVAILABLE' ? 'hover:shadow-table-available' : table.status.name() == 'OCCUPIED' ? 'hover:shadow-table-occupied' : 'hover:shadow-table-outofservice'}"
+                th:onclick="'showTableDetails(' + ${table.id} + ')'"
+              >
+                <div
+                  class="p-5 flex flex-col items-center justify-center text-center"
+                >
+                  <!-- Icono y número de mesa -->
+                  <div class="relative mb-3">
+                    <span
+                      th:if="${table.status.name() == 'AVAILABLE'}"
+                      class="material-symbols-outlined text-5xl text-green-500"
+                      >table_restaurant</span
+                    >
+                    <span
+                      th:if="${table.status.name() == 'OCCUPIED'}"
+                      class="material-symbols-outlined text-5xl text-red-500"
+                      >table_restaurant</span
+                    >
+                    <span
+                      th:if="${table.status.name() == 'OUT_OF_SERVICE'}"
+                      class="material-symbols-outlined text-5xl text-gray-500"
+                      >block</span
+                    >
+
+                    <!-- Indicador animado para mesas disponibles -->
+                    <span
+                      th:if="${table.status.name() == 'AVAILABLE'}"
+                      class="absolute -top-1 -right-1 flex h-3 w-3"
+                    >
+                      <span
+                        class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"
+                      ></span>
+                      <span
+                        class="relative inline-flex rounded-full h-3 w-3 bg-green-500"
+                      ></span>
+                    </span>
+                  </div>
+
+                  <!-- Número de mesa -->
+                  <h3
+                    class="font-bold text-xl tracking-tight text-gray-900 dark:text-white"
+                    th:text="${table.displayName}"
+                  >
+                    Mesa 1
+                  </h3>
+
+                  <!-- Capacidad -->
+                  <p
+                    class="text-sm text-gray-600 dark:text-gray-400 mb-4"
+                    th:text="${table.capacityDisplay}"
+                  >
+                    4 personas
+                  </p>
+
+                  <!-- Estado -->
+                  <span
+                    th:if="${table.status.name() == 'AVAILABLE'}"
+                    class="px-3 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
+                  >
+                    Disponible
+                  </span>
+                  <span
+                    th:if="${table.status.name() == 'OCCUPIED'}"
+                    class="px-3 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"
+                  >
+                    Ocupada
+                  </span>
+                  <span
+                    th:if="${table.status.name() == 'OUT_OF_SERVICE'}"
+                    class="px-3 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300"
+                  >
+                    Fuera de Servicio
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <!-- Table Details Modal -->
+    <div
+      id="tableModal"
+      class="hidden fixed inset-0 bg-gray-900/50 backdrop-blur-sm overflow-y-auto h-full w-full z-50"
+      onclick="closeModal(event)"
+    >
+      <div
+        class="relative top-10 mx-auto p-6 border-0 w-full max-w-6xl shadow-2xl rounded-2xl bg-white dark:bg-gray-900"
+        onclick="event.stopPropagation()"
+      >
+        <div
+          class="flex justify-between items-center pb-4 border-b border-gray-200 dark:border-gray-700"
+        >
+          <h3
+            class="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2"
+          >
+            <span class="material-symbols-outlined text-primary text-3xl"
+              >table_restaurant</span
+            >
+            Detalles de la Mesa
+          </h3>
+          <button
+            onclick="closeModal()"
+            class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+          >
+            <span class="material-symbols-outlined text-2xl">close</span>
+          </button>
+        </div>
+
+        <div
+          class="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6"
+          id="modalContent"
+        >
+          <!-- Columna Izquierda -->
+          <div class="space-y-6">
+            <!-- Información General -->
+            <div>
+              <h4
+                class="text-lg font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2"
+              >
+                <span class="material-symbols-outlined text-primary">info</span>
+                Información General
+              </h4>
+              <div class="grid grid-cols-2 gap-4">
+                <div class="bg-gray-50 dark:bg-gray-800 p-4 rounded-xl">
+                  <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                    Número de Mesa:
+                  </p>
+                  <p
+                    class="font-bold text-xl text-gray-900 dark:text-white"
+                    id="modalTableNumber"
+                  ></p>
+                </div>
+                <div class="bg-gray-50 dark:bg-gray-800 p-4 rounded-xl">
+                  <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                    Capacidad:
+                  </p>
+                  <p
+                    class="font-bold text-xl text-gray-900 dark:text-white"
+                    id="modalCapacity"
+                  ></p>
+                </div>
+                <div class="bg-gray-50 dark:bg-gray-800 p-4 rounded-xl">
+                  <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                    Ubicación:
+                  </p>
+                  <p
+                    class="font-medium text-gray-900 dark:text-white"
+                    id="modalLocation"
+                  ></p>
+                </div>
+                <div class="bg-gray-50 dark:bg-gray-800 p-4 rounded-xl">
+                  <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                    Estado:
+                  </p>
+                  <span
+                    id="modalStatus"
+                    class="px-3 py-1 text-xs rounded-full font-medium inline-block"
+                  ></span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Comentarios -->
+            <div>
+              <h4
+                class="text-lg font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2"
+              >
+                <span class="material-symbols-outlined text-primary"
+                  >comment</span
+                >
+                Comentarios
+              </h4>
+              <div
+                class="bg-gray-50 dark:bg-gray-800 p-4 rounded-xl min-h-[100px]"
+              >
+                <p
+                  class="text-sm text-gray-900 dark:text-white"
+                  id="modalComments"
+                ></p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Columna Derecha -->
+          <div class="space-y-6">
+            <!-- Auditoría -->
+            <div>
+              <h4
+                class="text-lg font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2"
+              >
+                <span class="material-symbols-outlined text-primary"
+                  >history</span
+                >
+                Auditoría
+              </h4>
+              <div class="grid grid-cols-2 gap-4">
+                <div class="bg-gray-50 dark:bg-gray-800 p-4 rounded-xl">
+                  <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                    Creado por:
+                  </p>
+                  <p
+                    class="font-medium text-gray-900 dark:text-white"
+                    id="modalCreatedBy"
+                  ></p>
+                </div>
+                <div class="bg-gray-50 dark:bg-gray-800 p-4 rounded-xl">
+                  <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                    Fecha de creación:
+                  </p>
+                  <p
+                    class="font-medium text-gray-900 dark:text-white text-sm"
+                    id="modalCreatedAt"
+                  ></p>
+                </div>
+                <div class="bg-gray-50 dark:bg-gray-800 p-4 rounded-xl">
+                  <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                    Actualizado por:
+                  </p>
+                  <p
+                    class="font-medium text-gray-900 dark:text-white"
+                    id="modalUpdatedBy"
+                  ></p>
+                </div>
+                <div class="bg-gray-50 dark:bg-gray-800 p-4 rounded-xl">
+                  <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                    Última actualización:
+                  </p>
+                  <p
+                    class="font-medium text-gray-900 dark:text-white text-sm"
+                    id="modalUpdatedAt"
+                  ></p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div
+          class="flex justify-between items-center pt-6 border-t border-gray-200 dark:border-gray-700 mt-6"
+        >
+          <!-- Left side buttons -->
+          <div class="flex items-center gap-3">
+            <a
+              id="modalEditBtn"
+              href="#"
+              class="flex items-center gap-2 px-6 py-2.5 bg-primary hover:bg-primary-dark text-white rounded-xl font-semibold transition-colors shadow-md"
+            >
+              <span class="material-symbols-outlined text-lg">edit</span>
+              Editar Mesa
+            </a>
+          </div>
+
+          <!-- Right side button -->
+          <button
+            onclick="closeModal()"
+            class="px-6 py-2.5 bg-gray-200 hover:bg-gray-300 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-800 dark:text-white rounded-xl font-medium transition-colors"
+          >
+            Cerrar
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sidebar Scripts Fragment -->
+    <div th:replace="~{fragments/sidebar :: sidebarScripts}"></div>
+
+    <script>
+      // Switch between table and grid view
+      function switchView(view) {
+        const tableView = document.getElementById("tableView");
+        const gridView = document.getElementById("gridView");
+        const tableViewBtn = document.getElementById("tableViewBtn");
+        const gridViewBtn = document.getElementById("gridViewBtn");
+
+        // Save the selected view to localStorage
+        localStorage.setItem("tablesView", view);
+
+        if (view === "table") {
+          tableView.classList.remove("hidden");
+          gridView.classList.add("hidden");
+          tableViewBtn.classList.add(
+            "bg-white",
+            "dark:bg-gray-700",
+            "text-primary",
+            "shadow-sm",
+          );
+          tableViewBtn.classList.remove("text-gray-600", "dark:text-gray-400");
+          gridViewBtn.classList.remove(
+            "bg-white",
+            "dark:bg-gray-700",
+            "text-primary",
+            "shadow-sm",
+          );
+          gridViewBtn.classList.add("text-gray-600", "dark:text-gray-400");
+        } else {
+          tableView.classList.add("hidden");
+          gridView.classList.remove("hidden");
+          gridViewBtn.classList.add(
+            "bg-white",
+            "dark:bg-gray-700",
+            "text-primary",
+            "shadow-sm",
+          );
+          gridViewBtn.classList.remove("text-gray-600", "dark:text-gray-400");
+          tableViewBtn.classList.remove(
+            "bg-white",
+            "dark:bg-gray-700",
+            "text-primary",
+            "shadow-sm",
+          );
+          tableViewBtn.classList.add("text-gray-600", "dark:text-gray-400");
+        }
+      }
+
+      // Restore the saved view on page load
+      document.addEventListener("DOMContentLoaded", function () {
+        const savedView = localStorage.getItem("tablesView");
+        if (savedView) {
+          switchView(savedView);
+        }
+      });
+
+      // Filter functionality
+      document.addEventListener("DOMContentLoaded", function () {
+        const numberFilter = document.getElementById("numberFilter");
+        const statusFilter = document.getElementById("statusFilter");
+        const locationFilter = document.getElementById("locationFilter");
+        const capacityFilter = document.getElementById("capacityFilter");
+        const clearFiltersBtn = document.getElementById("clearFilters");
+        const filteredCount = document.getElementById("filteredCount");
+        const noResults = document.getElementById("noResults");
+        const noResultsGrid = document.getElementById("noResultsGrid");
+        const tableBody = document.getElementById("tablesTableBody");
+        const gridContainer = document.getElementById("gridContainer");
+
+        function applyFilters() {
+          const numberValue = numberFilter.value;
+          const statusValue = statusFilter.value;
+          const locationValue = locationFilter.value;
+          const capacityValue = capacityFilter.value;
+
+          const rows = document.querySelectorAll(".table-row");
+          const gridItems = document.querySelectorAll(".table-row-grid");
+          let visibleCount = 0;
+
+          // Apply filters to table rows
+          rows.forEach((row) => {
+            const number = row.getAttribute("data-number");
+            const status = row.getAttribute("data-status");
+            const location = row.getAttribute("data-location");
+            const capacity = row.getAttribute("data-capacity");
+
+            let show = true;
+
+            if (numberValue && number !== numberValue) {
+              show = false;
+            }
+
+            if (statusValue && status !== statusValue) {
+              show = false;
+            }
+
+            if (
+              locationValue &&
+              (!location ||
+                location.toLowerCase() !== locationValue.toLowerCase())
+            ) {
+              show = false;
+            }
+
+            if (capacityValue && parseInt(capacity) < parseInt(capacityValue)) {
+              show = false;
+            }
+
+            if (show) {
+              row.style.display = "";
+              visibleCount++;
+            } else {
+              row.style.display = "none";
+            }
+          });
+
+          // Apply same filters to grid items
+          let visibleGridCount = 0;
+          gridItems.forEach((item) => {
+            const number = item.getAttribute("data-number");
+            const status = item.getAttribute("data-status");
+            const location = item.getAttribute("data-location");
+            const capacity = item.getAttribute("data-capacity");
+
+            let show = true;
+
+            if (numberValue && number !== numberValue) {
+              show = false;
+            }
+
+            if (statusValue && status !== statusValue) {
+              show = false;
+            }
+
+            if (
+              locationValue &&
+              (!location ||
+                location.toLowerCase() !== locationValue.toLowerCase())
+            ) {
+              show = false;
+            }
+
+            if (capacityValue && parseInt(capacity) < parseInt(capacityValue)) {
+              show = false;
+            }
+
+            if (show) {
+              item.style.display = "";
+              visibleGridCount++;
+            } else {
+              item.style.display = "none";
+            }
+          });
+
+          filteredCount.textContent = visibleCount;
+
+          // Handle no results for table view
+          if (visibleCount === 0) {
+            noResults.classList.remove("hidden");
+            tableBody.parentElement.style.display = "none";
+          } else {
+            noResults.classList.add("hidden");
+            tableBody.parentElement.style.display = "";
+          }
+
+          // Handle no results for grid view
+          if (visibleGridCount === 0) {
+            noResultsGrid.classList.remove("hidden");
+            gridContainer.style.display = "none";
+          } else {
+            noResultsGrid.classList.add("hidden");
+            gridContainer.style.display = "";
+          }
+        }
+
+        numberFilter.addEventListener("input", applyFilters);
+        statusFilter.addEventListener("change", applyFilters);
+        locationFilter.addEventListener("change", applyFilters);
+        capacityFilter.addEventListener("input", applyFilters);
+
+        clearFiltersBtn.addEventListener("click", function () {
+          numberFilter.value = "";
+          statusFilter.value = "";
+          locationFilter.value = "";
+          capacityFilter.value = "";
+          applyFilters();
+        });
+      });
+
+      // Modal functionality
+      function showTableDetails(tableId) {
+        fetch(`/admin/tables/${tableId}/details`)
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.success) {
+              const table = data.table;
+
+              document.getElementById("modalTableNumber").textContent =
+                table.tableNumber;
+              document.getElementById("modalCapacity").textContent =
+                table.capacityDisplay;
+              document.getElementById("modalLocation").textContent =
+                table.location;
+              document.getElementById("modalComments").textContent =
+                table.comments;
+              document.getElementById("modalCreatedBy").textContent =
+                table.createdBy;
+              document.getElementById("modalUpdatedBy").textContent =
+                table.updatedBy;
+              document.getElementById("modalCreatedAt").textContent =
+                table.createdAt;
+              document.getElementById("modalUpdatedAt").textContent =
+                table.updatedAt;
+
+              // Update edit button href
+              document.getElementById("modalEditBtn").href =
+                `/admin/tables/${tableId}/edit`;
+
+              const statusSpan = document.getElementById("modalStatus");
+              statusSpan.textContent = table.statusDisplay;
+
+              if (table.status === "AVAILABLE") {
+                statusSpan.className =
+                  "px-3 py-1 text-xs rounded-full font-medium inline-block bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400";
+              } else if (table.status === "OCCUPIED") {
+                statusSpan.className =
+                  "px-3 py-1 text-xs rounded-full font-medium inline-block bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400";
+              } else {
+                // OUT_OF_SERVICE
+                statusSpan.className =
+                  "px-3 py-1 text-xs rounded-full font-medium inline-block bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400";
+              }
+
+              document.getElementById("tableModal").classList.remove("hidden");
+            } else {
+              Swal.fire({
+                icon: "error",
+                title: "Error",
+                text: data.message,
+                confirmButtonColor: "#38e07b",
+                background: document.documentElement.classList.contains("dark")
+                  ? "#1f2937"
+                  : "#ffffff",
+                color: document.documentElement.classList.contains("dark")
+                  ? "#f3f4f6"
+                  : "#1f2937",
+                customClass: {
+                  popup: "rounded-2xl",
+                  confirmButton: "rounded-xl px-6 py-2.5 font-semibold",
+                },
+              });
+            }
+          })
+          .catch((error) => {
+            console.error("Error:", error);
+            Swal.fire({
+              icon: "error",
+              title: "Error",
+              text: "Error al cargar los detalles de la mesa",
+              confirmButtonColor: "#38e07b",
+              background: document.documentElement.classList.contains("dark")
+                ? "#1f2937"
+                : "#ffffff",
+              color: document.documentElement.classList.contains("dark")
+                ? "#f3f4f6"
+                : "#1f2937",
+              customClass: {
+                popup: "rounded-2xl",
+                confirmButton: "rounded-xl px-6 py-2.5 font-semibold",
+              },
+            });
+          });
+      }
+
+      function closeModal(event) {
+        // If event exists, check if it's a backdrop click
+        if (event) {
+          event.stopPropagation();
+        }
+        document.getElementById("tableModal").classList.add("hidden");
+      }
+
+      document.addEventListener("keydown", function (event) {
+        if (event.key === "Escape") {
+          closeModal();
+        }
+      });
+
+      document
+        .getElementById("tableModal")
+        .addEventListener("click", function (event) {
+          if (event.target === this) {
+            closeModal();
+          }
+        });
+    </script>
+
+    <!-- Script del Sistema de Temas -->
+    <div th:replace="~{fragments/theme :: themeScript}"></div>
+  </body>
+</html>

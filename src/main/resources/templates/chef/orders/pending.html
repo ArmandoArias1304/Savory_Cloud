@@ -1,0 +1,1297 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title th:text="${globalSystemConfig.systemName + ' - Pedidos Pendientes'}">
+      El Gran Sazón - Pedidos Pendientes
+    </title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@300;400;500;600;700"
+      rel="stylesheet"
+    />
+
+    <!-- Sistema de Temas (Modo Claro/Oscuro) -->
+    <div th:replace="~{fragments/theme :: themeResources}"></div>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#38e07b",
+              "primary-dark": "#2bc866",
+              "background-light": "#f8faf9",
+            },
+            fontFamily: {
+              display: ["Work Sans"],
+            },
+            borderRadius: {
+              DEFAULT: "0.5rem",
+              lg: "0.75rem",
+              xl: "1rem",
+              "2xl": "1.5rem",
+              full: "9999px",
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      .material-symbols-outlined {
+        font-variation-settings:
+          "FILL" 0,
+          "wght" 400,
+          "GRAD" 0,
+          "opsz" 24;
+      }
+
+      body {
+        font-family: "Work Sans", sans-serif;
+      }
+
+      /* Efecto de pedido pendiente - overlay azul */
+      .card.pending::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(205, 241, 254, 0.4);
+        z-index: 1;
+        pointer-events: none;
+      }
+
+      .card.pending .card-body {
+        opacity: 1;
+        filter: brightness(1.6);
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.5;
+        }
+      }
+
+      /* ===== Slide to Confirm - Uber Style ===== */
+      .slide-confirm {
+        position: relative;
+        width: 100%;
+        height: 56px;
+        border-radius: 9999px;
+        overflow: hidden;
+        user-select: none;
+        -webkit-user-select: none;
+        touch-action: none;
+      }
+      .slide-confirm.slide-sm {
+        height: 44px;
+      }
+      .slide-confirm-track {
+        position: absolute;
+        inset: 0;
+        border-radius: 9999px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .slide-confirm-text {
+        font-weight: 700;
+        color: white;
+        pointer-events: none;
+        transition: opacity 0.2s;
+        padding-left: 48px;
+        font-size: 14px;
+        letter-spacing: 0.3px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .slide-sm .slide-confirm-text {
+        font-size: 12px;
+        padding-left: 36px;
+      }
+      .slide-confirm-thumb {
+        position: absolute;
+        left: 4px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        background: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.18);
+        cursor: grab;
+        z-index: 2;
+        transition: none;
+      }
+      .slide-sm .slide-confirm-thumb {
+        width: 36px;
+        height: 36px;
+      }
+      .slide-confirm-thumb.returning {
+        transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      .slide-confirm.completed .slide-confirm-thumb {
+        transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        cursor: default;
+      }
+      .slide-confirm-progress {
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 0;
+        border-radius: 9999px;
+        pointer-events: none;
+        z-index: 1;
+      }
+      .slide-confirm-progress.returning {
+        transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      .slide-arrows {
+        display: inline-flex;
+        gap: 1px;
+      }
+      .slide-arrows span {
+        animation: slideArrow 1.5s ease-in-out infinite;
+        opacity: 0.4;
+        font-size: 16px;
+      }
+      .slide-sm .slide-arrows span {
+        font-size: 13px;
+      }
+      .slide-arrows span:nth-child(2) {
+        animation-delay: 0.15s;
+      }
+      .slide-arrows span:nth-child(3) {
+        animation-delay: 0.3s;
+      }
+      @keyframes slideArrow {
+        0%,
+        100% {
+          opacity: 0.3;
+        }
+        50% {
+          opacity: 1;
+        }
+      }
+      .slide-confirm.completed .slide-arrows {
+        display: none;
+      }
+    </style>
+  </head>
+  <body
+    class="bg-gradient-to-br from-background-light to-gray-50 dark:from-gray-900 dark:to-gray-800 font-display text-gray-800 dark:text-gray-100"
+  >
+    <div class="flex flex-col min-h-screen">
+      <!-- Header -->
+      <header
+        class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-lg sticky top-0 z-30"
+      >
+        <div class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+          <div
+            class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+          >
+            <div class="flex items-center gap-3 sm:gap-4">
+              <div
+                class="w-12 h-12 bg-gradient-to-br from-primary to-primary-dark rounded-xl flex items-center justify-center shadow-lg shadow-primary/30"
+              >
+                <span class="material-symbols-outlined text-white text-2xl"
+                  >restaurant</span
+                >
+              </div>
+              <div>
+                <h1
+                  class="text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white"
+                >
+                  <span th:if="${isBarista}">☕ Gestión de Pedidos</span>
+                  <span th:unless="${isBarista}">👨‍🍳 Gestión de Pedidos</span>
+                </h1>
+                <p class="text-sm text-gray-600 dark:text-gray-300">
+                  <span th:if="${isBarista}"
+                    >Todos los pedidos activos de barra</span
+                  >
+                  <span th:unless="${isBarista}"
+                    >Todos los pedidos activos de cocina</span
+                  >
+                </p>
+              </div>
+            </div>
+            <div
+              class="grid grid-cols-2 sm:flex sm:items-center gap-3 w-full sm:w-auto"
+            >
+              <a
+                th:href="@{/chef/orders/my-orders}"
+                class="flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-xl bg-blue-600 hover:bg-blue-700 text-white hover:shadow-lg hover:shadow-blue-500/30 transition-all"
+              >
+                <span class="material-symbols-outlined">history</span>
+                Historial
+              </a>
+              <a
+                th:href="@{/chef/dashboard}"
+                class="flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-xl bg-gradient-to-r from-primary to-primary-dark text-white hover:shadow-lg hover:shadow-primary/30 transition-all"
+              >
+                <span class="material-symbols-outlined">dashboard</span>
+                Dashboard
+              </a>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- Main Content -->
+      <main
+        class="flex-1 w-full max-w-screen-2xl px-4 py-6 mx-auto sm:px-6 lg:px-8 pb-32"
+      >
+        <!-- Statistics -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+          <!-- Pending Count -->
+          <div
+            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-lg p-6 hover:shadow-xl transition-shadow"
+          >
+            <div class="flex items-center justify-between">
+              <div class="flex-1">
+                <p
+                  class="text-sm font-medium text-gray-600 dark:text-gray-300 mb-1"
+                >
+                  Pendientes
+                </p>
+                <p
+                  class="text-3xl font-bold text-orange-600 dark:text-orange-400"
+                  th:text="${pendingCount}"
+                >
+                  0
+                </p>
+              </div>
+              <div
+                class="w-16 h-16 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg shadow-orange-500/30"
+              >
+                <span class="material-symbols-outlined text-white text-3xl"
+                  >pending_actions</span
+                >
+              </div>
+            </div>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">
+              Sin iniciar preparación
+            </p>
+          </div>
+
+          <!-- In Preparation Count -->
+          <div
+            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-lg p-6 hover:shadow-xl transition-shadow"
+          >
+            <div class="flex items-center justify-between">
+              <div class="flex-1">
+                <p
+                  class="text-sm font-medium text-gray-600 dark:text-gray-300 mb-1"
+                >
+                  En Preparación
+                </p>
+                <p
+                  class="text-3xl font-bold text-blue-600 dark:text-blue-400"
+                  th:text="${inPreparationCount}"
+                >
+                  0
+                </p>
+              </div>
+              <div
+                class="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/30"
+              >
+                <span class="material-symbols-outlined text-white text-3xl"
+                  >restaurant</span
+                >
+              </div>
+            </div>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">
+              <span th:if="${isBarista}">Pedidos en barra</span>
+              <span th:unless="${isBarista}">Pedidos en cocina</span>
+            </p>
+          </div>
+        </div>
+
+        <!-- Empty State -->
+        <div
+          th:if="${orders.isEmpty()}"
+          class="flex flex-col items-center justify-center py-16 bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700"
+        >
+          <div
+            class="w-24 h-24 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600 rounded-2xl flex items-center justify-center mb-6"
+          >
+            <span
+              class="material-symbols-outlined text-6xl text-gray-400 dark:text-gray-300"
+            >
+              check_circle
+            </span>
+          </div>
+          <h3 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+            ¡Excelente! No hay pedidos activos
+          </h3>
+          <p class="text-gray-600 dark:text-gray-300">
+            Todos los pedidos han sido procesados
+          </p>
+        </div>
+
+        <!-- Orders Grid -->
+        <div
+          th:if="${!orders.isEmpty()}"
+          class="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4"
+          id="ordersGrid"
+        >
+          <!-- ORDER CARD -->
+          <div
+            th:each="order : ${orders}"
+            th:attr="data-order-id=${order.idOrder}"
+            class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-3xl shadow-md hover:shadow-2xl flex flex-col overflow-hidden transition-all duration-300 h-[490px]"
+            th:classappend="${order.status.name() == 'PENDING'} ? 'relative' : ''"
+          >
+            <!-- Overlay azul para pedidos pendientes -->
+            <div
+              th:if="${order.status.name() == 'PENDING'}"
+              class="absolute inset-0 bg-cyan-100/40 dark:bg-cyan-900/20 z-[1] pointer-events-none"
+            ></div>
+
+            <!-- Card Header -->
+            <div
+              class="px-6 py-5 flex justify-between items-center border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 flex-shrink-0 relative z-[2]"
+            >
+              <div>
+                <h3 class="text-xl font-bold text-gray-900 dark:text-white">
+                  <span
+                    th:if="${order.table != null}"
+                    th:text="'Mesa ' + ${order.table.tableNumber}"
+                  ></span>
+                  <span
+                    th:if="${order.table == null && order.orderType.name() == 'TAKEOUT'}"
+                  >
+                    Para pasar a recoger
+                  </span>
+                  <span
+                    th:if="${order.table == null && order.orderType.name() == 'DELIVERY'}"
+                  >
+                    Delivery
+                  </span>
+                  <span
+                    th:if="${order.table == null && order.customerName != null && order.orderType.name() == 'DINE_IN'}"
+                    th:text="${order.customerName}"
+                  ></span>
+                </h3>
+                <p class="text-sm text-gray-600 dark:text-gray-300 font-medium">
+                  Creado por: <span th:text="${order.createdBy}"></span>
+                </p>
+                <p
+                  class="text-xs text-gray-500 dark:text-gray-400 font-semibold mt-0.5"
+                >
+                  Pedido <span th:text="${order.orderNumber}"></span>
+                </p>
+              </div>
+              <div class="flex flex-col items-end gap-2">
+                <!-- Order Type Badge -->
+                <span
+                  th:if="${order.orderType.name() == 'DINE_IN'}"
+                  class="px-4 py-2 rounded-full text-xs font-semibold bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300"
+                >
+                  🍽️ Mesa
+                </span>
+                <span
+                  th:if="${order.orderType.name() == 'TAKEOUT'}"
+                  class="px-4 py-2 rounded-full text-xs font-semibold bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300"
+                >
+                  📦 Llevar
+                </span>
+                <span
+                  th:if="${order.orderType.name() == 'DELIVERY'}"
+                  class="px-4 py-2 rounded-full text-xs font-semibold bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300"
+                >
+                  🚗 Delivery
+                </span>
+
+                <!-- Status Badge -->
+                <span
+                  th:if="${order.status.name() == 'PENDING'}"
+                  class="px-4 py-2 rounded-full text-xs font-semibold bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300"
+                >
+                  ⏳ Pendiente
+                </span>
+                <span
+                  th:if="${order.status.name() == 'IN_PREPARATION'}"
+                  class="px-4 py-2 rounded-full text-xs font-semibold bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300"
+                >
+                  👨‍🍳 Preparando
+                </span>
+              </div>
+            </div>
+
+            <!-- Card Body - Order Details -->
+            <div
+              class="p-5 flex-1 overflow-y-auto overflow-x-hidden relative z-[2]"
+              th:classappend="${order.status.name() == 'PENDING'} ? 'brightness-150' : ''"
+            >
+              <h4
+                class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 uppercase tracking-wide"
+              >
+                Detalles del Pedido:
+              </h4>
+              <div class="space-y-1">
+                <!-- FILTER: Chef sees items with requiresPreparation, Barista sees items with requiresBaristaPreparation -->
+                <div
+                  th:each="detail : ${order.orderDetails}"
+                  th:if="${isBarista ? (detail.itemMenu.requiresBaristaPreparation == true) : (detail.itemMenu.requiresPreparation == true)}"
+                  class="py-4 border-b border-gray-100 dark:border-gray-700 flex flex-col gap-2 last:border-b-0"
+                >
+                  <div class="flex items-start justify-between w-full gap-2">
+                    <div class="flex-1">
+                      <p
+                        class="text-base font-semibold text-gray-900 dark:text-white"
+                      >
+                        <span th:text="${detail.quantity} + 'x'"></span>
+                        <span th:text="${detail.itemMenu.name}"></span>
+                        <span
+                          th:if="${detail.comboChild}"
+                          class="inline-flex items-center px-1.5 py-0.5 text-[10px] font-bold bg-teal-100 dark:bg-teal-900/40 text-teal-700 dark:text-teal-300 rounded ml-1"
+                        >
+                          <span
+                            class="material-symbols-outlined !text-[10px] mr-0.5"
+                            >inventory_2</span
+                          >
+                          COMBO
+                        </span>
+                      </p>
+
+                      <!-- NEW ITEM Badge - Improved Design -->
+                      <!-- Only show for new items that are NOT yet READY or DELIVERED -->
+                      <div
+                        th:if="${detail.isNewItem != null && detail.isNewItem && detail.itemStatus.name() != 'READY' && detail.itemStatus.name() != 'DELIVERED'}"
+                        class="mt-2"
+                      >
+                        <span
+                          class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-gradient-to-r from-red-500 to-pink-500 text-white shadow-lg shadow-red-500/50 animate-pulse border border-red-300"
+                        >
+                          <span
+                            class="material-symbols-outlined !text-sm font-bold"
+                          >
+                            notification_important
+                          </span>
+                          ¡NUEVO ITEM!
+                        </span>
+                        <p
+                          class="text-xs text-gray-500 dark:text-gray-400 mt-1.5 ml-1"
+                        >
+                          🕐
+                          <span
+                            th:text="${#temporals.format(detail.addedAt, 'HH:mm')}"
+                          ></span>
+                        </p>
+                      </div>
+
+                      <!-- Item Status Badge -->
+                      <div class="mt-1.5">
+                        <span
+                          th:if="${detail.itemStatus != null && detail.itemStatus.name() == 'PENDING'}"
+                          class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300"
+                        >
+                          <span class="material-symbols-outlined !text-xs"
+                            >schedule</span
+                          >
+                          Pendiente
+                        </span>
+                        <span
+                          th:if="${detail.itemStatus != null && detail.itemStatus.name() == 'IN_PREPARATION'}"
+                          class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300"
+                        >
+                          <span class="material-symbols-outlined !text-xs"
+                            >cooking</span
+                          >
+                          Preparando
+                        </span>
+                        <span
+                          th:if="${detail.itemStatus != null && detail.itemStatus.name() == 'READY'}"
+                          class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300"
+                        >
+                          <span class="material-symbols-outlined !text-xs"
+                            >check_circle</span
+                          >
+                          Listo
+                        </span>
+                        <span
+                          th:if="${detail.itemStatus != null && detail.itemStatus.name() == 'DELIVERED'}"
+                          class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
+                        >
+                          <span class="material-symbols-outlined !text-xs"
+                            >done_all</span
+                          >
+                          Entregado
+                        </span>
+                      </div>
+
+                      <!-- CHEF: No item-level buttons - uses order-level bulk button only -->
+
+                      <!-- Barista Item Slide Controls -->
+                      <div th:if="${isBarista}" class="mt-3">
+                        <!-- Slide to Accept Item (PENDING -> IN_PREPARATION) -->
+                        <div
+                          th:if="${detail.itemStatus != null && detail.itemStatus.name() == 'PENDING'}"
+                          class="slide-confirm slide-sm"
+                          th:attr="data-action='accept-item', data-order-id=${order.idOrder}, data-item-id=${detail.idOrderDetail}, data-item-name=${detail.itemMenu.name}"
+                        >
+                          <div
+                            class="slide-confirm-track bg-gradient-to-r from-blue-600 to-blue-500"
+                          >
+                            <span
+                              class="slide-confirm-text"
+                              data-original="Desliza para Comenzar"
+                            >
+                              Desliza para Comenzar
+                              <span class="slide-arrows"
+                                ><span>›</span><span>›</span
+                                ><span>›</span></span
+                              >
+                            </span>
+                          </div>
+                          <div
+                            class="slide-confirm-progress bg-blue-400/30"
+                          ></div>
+                          <div class="slide-confirm-thumb">
+                            <span
+                              class="material-symbols-outlined text-blue-600 !text-lg"
+                              >play_arrow</span
+                            >
+                          </div>
+                        </div>
+
+                        <!-- Slide to Mark Item Ready (IN_PREPARATION -> READY) -->
+                        <div
+                          th:if="${detail.itemStatus != null && detail.itemStatus.name() == 'IN_PREPARATION'}"
+                          class="slide-confirm slide-sm"
+                          th:attr="data-action='ready-item', data-order-id=${order.idOrder}, data-item-id=${detail.idOrderDetail}, data-item-name=${detail.itemMenu.name}"
+                        >
+                          <div
+                            class="slide-confirm-track bg-gradient-to-r from-primary-dark to-primary"
+                          >
+                            <span
+                              class="slide-confirm-text"
+                              data-original="Desliza para Marcar Listo"
+                            >
+                              Desliza para Marcar Listo
+                              <span class="slide-arrows"
+                                ><span>›</span><span>›</span
+                                ><span>›</span></span
+                              >
+                            </span>
+                          </div>
+                          <div
+                            class="slide-confirm-progress bg-primary/30"
+                          ></div>
+                          <div class="slide-confirm-thumb">
+                            <span
+                              class="material-symbols-outlined text-primary !text-lg"
+                              >check_circle</span
+                            >
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Added At (for new items) -->
+                    </div>
+                  </div>
+                  <!-- Complements and Sauces -->
+                  <div
+                    th:if="${detail.selectedComplements != null && !detail.selectedComplements.isEmpty()}"
+                    class="pl-4 mt-1 space-y-1"
+                  >
+                    <!-- Sauces -->
+                    <th:block th:each="comp : ${detail.selectedComplements}">
+                      <div
+                        th:if="${comp.complement.isSauce != null && comp.complement.isSauce}"
+                        class="flex items-center gap-1.5"
+                      >
+                        <span
+                          class="material-symbols-outlined text-blue-500 dark:text-blue-400 !text-sm"
+                          >add_circle</span
+                        >
+                        <span
+                          class="text-sm text-blue-700 dark:text-blue-300 font-medium"
+                          th:text="${comp.complement.name}"
+                        ></span>
+                        <span
+                          th:if="${comp.quantity > 1}"
+                          class="text-xs text-gray-500 dark:text-gray-400"
+                          th:text="'x' + ${comp.quantity}"
+                        ></span>
+                      </div>
+                    </th:block>
+                    <!-- Regular Complements -->
+                    <th:block th:each="comp : ${detail.selectedComplements}">
+                      <div
+                        th:if="${comp.complement.isSauce == null || !comp.complement.isSauce}"
+                        class="flex items-center gap-1.5"
+                      >
+                        <span
+                          class="material-symbols-outlined text-purple-500 dark:text-purple-400 !text-sm"
+                          >add_circle</span
+                        >
+                        <span
+                          class="text-sm text-purple-700 dark:text-purple-300 font-medium"
+                          th:text="${comp.complement.name}"
+                        ></span>
+                        <span
+                          th:if="${comp.quantity > 1}"
+                          class="text-xs text-gray-500 dark:text-gray-400"
+                          th:text="'x' + ${comp.quantity}"
+                        ></span>
+                      </div>
+                    </th:block>
+                  </div>
+
+                  <p
+                    th:if="${detail.displayComments != null}"
+                    class="text-sm text-gray-600 dark:text-gray-300 pl-4"
+                  >
+                    💬 <span th:text="${detail.displayComments}"></span>
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Card Footer -->
+            <div
+              class="p-5 bg-gray-50 dark:bg-gray-900 flex flex-col gap-3 border-t border-gray-100 dark:border-gray-700 flex-shrink-0 relative z-[2]"
+            >
+              <!-- Server Info -->
+              <div
+                class="text-xs text-gray-600 dark:text-gray-300 pb-2 border-b border-gray-200 dark:border-gray-600"
+              >
+                <span class="font-medium">Levantado por:</span>
+                <span
+                  class="font-semibold text-gray-900 dark:text-white"
+                  th:text="${order.createdBy}"
+                ></span>
+                <br />
+                <span class="font-medium">Creado:</span>
+                <span
+                  class="font-semibold text-gray-900 dark:text-white"
+                  th:text="${#temporals.format(order.createdAt, 'HH:mm')}"
+                ></span>
+              </div>
+
+              <!-- Action Slider -->
+              <!-- CHEF: Show order-level slide-to-confirm -->
+              <div th:if="${!isBarista}">
+                <!-- PRIORITY 1: If ANY item is IN_PREPARATION, show "Marcar Listo" slider -->
+                <div
+                  th:if="${#lists.size(order.orderDetails.?[itemMenu.requiresPreparation == true && itemStatus.name() == 'IN_PREPARATION']) > 0}"
+                  class="slide-confirm"
+                  th:attr="data-action='ready-all', data-order-id=${order.idOrder}, data-order-number=${order.orderNumber}"
+                >
+                  <div
+                    class="slide-confirm-track bg-gradient-to-r from-primary-dark to-primary"
+                  >
+                    <span
+                      class="slide-confirm-text"
+                      data-original="Desliza para Marcar Listo"
+                    >
+                      Desliza para Marcar Listo
+                      <span class="slide-arrows"
+                        ><span>›</span><span>›</span><span>›</span></span
+                      >
+                    </span>
+                  </div>
+                  <div class="slide-confirm-progress bg-primary/30"></div>
+                  <div class="slide-confirm-thumb">
+                    <span
+                      class="material-symbols-outlined text-primary !text-xl"
+                      >check_circle</span
+                    >
+                  </div>
+                </div>
+
+                <!-- PRIORITY 2: If NO items IN_PREPARATION but PENDING, show "Comenzar" slider -->
+                <div
+                  th:if="${#lists.size(order.orderDetails.?[itemMenu.requiresPreparation == true && itemStatus.name() == 'IN_PREPARATION']) == 0 && #lists.size(order.orderDetails.?[itemMenu.requiresPreparation == true && itemStatus.name() == 'PENDING']) > 0}"
+                  class="slide-confirm"
+                  th:attr="data-action='accept-all', data-order-id=${order.idOrder}, data-order-number=${order.orderNumber}"
+                >
+                  <div
+                    class="slide-confirm-track bg-gradient-to-r from-blue-600 to-blue-500"
+                  >
+                    <span
+                      class="slide-confirm-text"
+                      data-original="Desliza para Comenzar"
+                    >
+                      Desliza para Comenzar
+                      <span class="slide-arrows"
+                        ><span>›</span><span>›</span><span>›</span></span
+                      >
+                    </span>
+                  </div>
+                  <div class="slide-confirm-progress bg-blue-400/30"></div>
+                  <div class="slide-confirm-thumb">
+                    <span
+                      class="material-symbols-outlined text-blue-600 !text-xl"
+                      >restaurant</span
+                    >
+                  </div>
+                </div>
+
+                <p
+                  class="text-xs text-gray-500 dark:text-gray-400 text-center mt-2"
+                >
+                  Desliza el botón para confirmar la acción
+                </p>
+              </div>
+
+              <!-- BARISTA: No footer instructions - more space for items -->
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <script th:inline="javascript">
+      /*<![CDATA[*/
+      const currentRole = /*[[${isBarista ? 'barista' : 'chef'}]]*/ "chef";
+      const companyId = /*[[${systemConfig.company != null ? systemConfig.company.idCompany : 0}]]*/ 0;
+      /*]]>*/
+
+      // ===== Slide to Confirm Logic =====
+      function initSlideConfirm() {
+        document
+          .querySelectorAll(".slide-confirm:not(.initialized)")
+          .forEach((slider) => {
+            slider.classList.add("initialized");
+            const thumb = slider.querySelector(".slide-confirm-thumb");
+            const progress = slider.querySelector(".slide-confirm-progress");
+            const text = slider.querySelector(".slide-confirm-text");
+            let isDragging = false;
+            let startX = 0;
+            let currentLeft = 4;
+
+            function getMaxLeft() {
+              return slider.offsetWidth - thumb.offsetWidth - 8;
+            }
+
+            function onStart(e) {
+              if (slider.classList.contains("completed")) return;
+              isDragging = true;
+              thumb.classList.remove("returning");
+              progress.classList.remove("returning");
+              const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+              startX = clientX - currentLeft;
+              thumb.style.cursor = "grabbing";
+            }
+
+            function onMove(e) {
+              if (!isDragging) return;
+              e.preventDefault();
+              const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+              const maxLeft = getMaxLeft();
+              let newLeft = clientX - startX;
+              newLeft = Math.max(4, Math.min(newLeft, maxLeft));
+              currentLeft = newLeft;
+              thumb.style.left = newLeft + "px";
+              const pct = maxLeft > 4 ? (newLeft - 4) / (maxLeft - 4) : 0;
+              progress.style.width = pct * 100 + "%";
+              text.style.opacity = 1 - pct;
+            }
+
+            function onEnd() {
+              if (!isDragging) return;
+              isDragging = false;
+              thumb.style.cursor = "grab";
+              const maxLeft = getMaxLeft();
+              const pct = maxLeft > 4 ? (currentLeft - 4) / (maxLeft - 4) : 0;
+              if (pct > 0.75) {
+                slider.classList.add("completed");
+                thumb.style.left = maxLeft + "px";
+                progress.style.width = "100%";
+                text.innerHTML = "✓ Confirmado";
+                text.style.opacity = 1;
+                triggerSlideAction(slider);
+              } else {
+                thumb.classList.add("returning");
+                progress.classList.add("returning");
+                currentLeft = 4;
+                thumb.style.left = "4px";
+                progress.style.width = "0%";
+                text.style.opacity = 1;
+              }
+            }
+
+            thumb.addEventListener("mousedown", onStart);
+            thumb.addEventListener("touchstart", onStart, { passive: true });
+            document.addEventListener("mousemove", onMove);
+            document.addEventListener("touchmove", onMove, { passive: false });
+            document.addEventListener("mouseup", onEnd);
+            document.addEventListener("touchend", onEnd);
+          });
+      }
+
+      function resetSlider(slider) {
+        slider.classList.remove("completed");
+        const thumb = slider.querySelector(".slide-confirm-thumb");
+        const progress = slider.querySelector(".slide-confirm-progress");
+        const text = slider.querySelector(".slide-confirm-text");
+        const originalText =
+          text.getAttribute("data-original") || "Desliza para confirmar";
+        thumb.classList.add("returning");
+        progress.classList.add("returning");
+        thumb.style.left = "4px";
+        progress.style.width = "0%";
+        text.innerHTML =
+          originalText +
+          ' <span class="slide-arrows"><span>›</span><span>›</span><span>›</span></span>';
+        text.style.opacity = 1;
+      }
+
+      function triggerSlideAction(slider) {
+        const action = slider.dataset.action;
+        const orderId = slider.dataset.orderId;
+        const orderNumber = slider.dataset.orderNumber;
+        const itemId = slider.dataset.itemId;
+        const itemName = slider.dataset.itemName;
+
+        if (action === "accept-all") {
+          changeAllChefItems(
+            slider,
+            orderId,
+            orderNumber,
+            "Preparación Iniciada",
+            "Preparación iniciada",
+          );
+        } else if (action === "ready-all") {
+          changeAllChefItems(
+            slider,
+            orderId,
+            orderNumber,
+            "Items Listos",
+            "Items listos para servir",
+          );
+        } else if (action === "accept-item") {
+          changeItemStatusDirect(
+            slider,
+            orderId,
+            itemId,
+            itemName,
+            "IN_PREPARATION",
+            "Item Aceptado",
+            "Preparando",
+          );
+        } else if (action === "ready-item") {
+          changeItemStatusDirect(
+            slider,
+            orderId,
+            itemId,
+            itemName,
+            "READY",
+            "Item Listo",
+            "Listo para servir",
+          );
+        }
+      }
+
+      // Direct API call for ALL chef items (no double confirmation)
+      function changeAllChefItems(
+        slider,
+        orderId,
+        orderNumber,
+        successTitle,
+        successText,
+      ) {
+        fetch(`/${currentRole}/orders/${orderId}/change-all-chef-items`, {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.success) {
+              showNotification(
+                successTitle,
+                `${successText}: #${orderNumber}`,
+                "success",
+              );
+              setTimeout(() => window.location.reload(), 1000);
+            } else {
+              showNotification(
+                "Error",
+                data.message || "No se pudo cambiar el estado",
+                "error",
+              );
+              resetSlider(slider);
+            }
+          })
+          .catch((error) => {
+            console.error("Error:", error);
+            showNotification("Error", "Error al cambiar el estado", "error");
+            resetSlider(slider);
+          });
+      }
+
+      // Direct API call for individual item status (no double confirmation)
+      function changeItemStatusDirect(
+        slider,
+        orderId,
+        itemId,
+        itemName,
+        newStatus,
+        successTitle,
+        successText,
+      ) {
+        fetch(`/${currentRole}/orders/${orderId}/change-items-status`, {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: `itemDetailIds=${itemId}&newStatus=${newStatus}`,
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.success) {
+              showNotification(
+                successTitle,
+                `${successText}: ${itemName}`,
+                "success",
+              );
+              setTimeout(() => window.location.reload(), 1000);
+            } else {
+              showNotification(
+                "Error",
+                data.message || "No se pudo cambiar el estado",
+                "error",
+              );
+              resetSlider(slider);
+            }
+          })
+          .catch((error) => {
+            console.error("Error:", error);
+            showNotification(
+              "Error",
+              "Error al cambiar el estado del item",
+              "error",
+            );
+            resetSlider(slider);
+          });
+      }
+
+      // Event listeners
+      document.addEventListener("DOMContentLoaded", function () {
+        // Initialize all slide-to-confirm components
+        initSlideConfirm();
+      });
+    </script>
+
+    <!-- WebSocket Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+    <script>
+      let stompClient = null;
+      let reconnectAttempts = 0;
+      const MAX_RECONNECT_ATTEMPTS = 5;
+      const RECONNECT_DELAY = 3000;
+
+      function connectWebSocket() {
+        const socket = new SockJS("/ws");
+        stompClient = Stomp.over(socket);
+
+        // Disable debug logging
+        stompClient.debug = null;
+
+        stompClient.connect(
+          {},
+          function (frame) {
+            reconnectAttempts = 0;
+            updateConnectionStatus(true);
+
+            // Subscribe to role-specific orders channel
+            // Chef subscribes to /topic/chef/orders/{companyId}
+            // Barista subscribes to /topic/barista/orders/{companyId}
+            const ordersTopic = `/topic/${currentRole}/orders/${companyId}`;
+
+            stompClient.subscribe(ordersTopic, function (message) {
+              const notification = JSON.parse(message.body);
+              handleOrderNotification(notification);
+            });
+
+            // Subscribe to personal queue for assigned orders
+            stompClient.subscribe("/user/queue/orders", function (message) {
+              const notification = JSON.parse(message.body);
+              handleOrderNotification(notification);
+            });
+
+            // Subscribe to kitchen stats (company-specific)
+            stompClient.subscribe(`/topic/kitchen/stats/${companyId}`, function (message) {
+              const stats = JSON.parse(message.body);
+              updateKitchenStats(stats);
+            });
+          },
+          function (error) {
+            console.error("WebSocket Error: ", error);
+            updateConnectionStatus(false);
+            attemptReconnect();
+          },
+        );
+
+        socket.onclose = function () {
+          updateConnectionStatus(false);
+          attemptReconnect();
+        };
+      }
+
+      function attemptReconnect() {
+        if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+          reconnectAttempts++;
+          setTimeout(connectWebSocket, RECONNECT_DELAY);
+        } else {
+          console.error("Max reconnection attempts reached");
+          showNotification(
+            "Conexión perdida",
+            "No se pudo reconectar al servidor. Por favor recarga la página.",
+            "error",
+          );
+        }
+      }
+
+      function updateConnectionStatus(connected) {
+        // Add a connection status indicator if needed
+        const statusIndicator = document.getElementById("ws-status");
+        if (statusIndicator) {
+          statusIndicator.className = connected ? "connected" : "disconnected";
+          statusIndicator.title = connected ? "Conectado" : "Desconectado";
+        }
+      }
+
+      function handleOrderNotification(notification) {
+
+        let title = "Actualización";
+        let icon = "info";
+        let message = notification.message || "Cambio en pedido";
+
+        // Determine notification type and customize display
+        if (notification.notificationType === "NEW_ORDER") {
+          title = "🔔 Nuevo Pedido";
+          message = `Pedido #${notification.orderNumber} - ${notification.orderType} - ${notification.itemCount} items - Total: $${notification.total}`;
+          icon = "info";
+
+          // ALWAYS play sound for new orders
+          playNotificationSound();
+
+          // Request browser notification
+          requestBrowserNotification(
+            "Nuevo Pedido",
+            `Pedido #${notification.orderNumber} - ${notification.itemCount} items`,
+          );
+        } else if (notification.notificationType === "ORDER_ACCEPTED") {
+          // Another chef/barista accepted this order - hide it from current view
+          const currentUser = /*[[${currentChef}]]*/ "";
+          const acceptedBy = notification.chefName;
+
+          // If it wasn't me who accepted it, hide the order
+          if (acceptedBy !== currentUser) {
+            const orderCard = document.querySelector(
+              `[data-order-id="${notification.orderId}"]`,
+            );
+            if (orderCard) {
+              orderCard.style.opacity = "0";
+              orderCard.style.transition = "opacity 0.5s ease-out";
+              setTimeout(() => {
+                orderCard.remove();
+                // Update empty state if no orders left
+                const ordersGrid = document.getElementById("ordersGrid");
+                if (ordersGrid && ordersGrid.children.length === 0) {
+                  location.reload();
+                }
+              }, 500);
+            }
+
+            title = "ℹ️ Orden Asignada";
+            message = `Pedido #${notification.orderNumber} fue aceptado por ${acceptedBy}`;
+            icon = "info";
+          } else {
+            // I accepted it, no need to do anything (it's already in my view)
+            return;
+          }
+        } else if (notification.notificationType === "ORDER_CANCELLED") {
+          title = "⚠️ Pedido Cancelado";
+          message =
+            notification.message ||
+            `El pedido #${notification.orderNumber} ha sido cancelado`;
+          icon = "warning";
+          playNotificationSound();
+
+          // Reload page immediately to remove cancelled order from view
+          showNotification(title, message, icon);
+          setTimeout(() => {
+            window.location.reload();
+          }, 1500);
+          return; // Exit early to prevent duplicate reload
+        } else if (notification.notificationType === "ITEMS_ADDED") {
+
+          title = "➕ Items Agregados";
+          message = `Pedido #${notification.orderNumber} - Se agregaron nuevos items a la orden`;
+          icon = "info";
+
+          // Play sound when items are added to existing order
+          playNotificationSound();
+        } else if (notification.notificationType === "ITEM_DELETED") {
+          title = "🗑️ Item Eliminado";
+          message = `Pedido #${notification.orderNumber} - ${notification.message}`;
+          icon = "info";
+
+          // Play sound when item is deleted
+          playNotificationSound();
+
+          // Show notification and reload to update the order view
+          showNotification(title, message, icon);
+          setTimeout(() => {
+            window.location.reload();
+          }, 1500);
+          return; // Exit early to prevent duplicate processing
+        } else if (notification.notificationType === "STATUS_CHANGE") {
+          title =
+            "📊 " +
+            (notification.status === "CANCELLED"
+              ? "Pedido Cancelado"
+              : "Estado Actualizado");
+          message = `Pedido #${notification.orderNumber} - ${notification.message}`;
+          icon = notification.status === "CANCELLED" ? "warning" : "success";
+
+          // NO sound for regular status changes
+        }
+
+        // Show notification
+        showNotification(title, message, icon);
+
+        // Reload for NEW_ORDER and ITEMS_ADDED
+        // This ensures orders with new items appear in pending view
+        if (
+          notification.notificationType === "NEW_ORDER" ||
+          notification.notificationType === "ITEMS_ADDED"
+        ) {
+          setTimeout(() => {
+            window.location.reload();
+          }, 1500);
+        } else {
+        }
+      }
+
+      function handleNewOrderNotification(notification) {
+        // Legacy function - now handled by handleOrderNotification
+        handleOrderNotification(notification);
+      }
+
+      function handleStatusChangeNotification(notification) {
+
+        // Show notification for status changes and item additions
+        if (notification.message) {
+          showNotification("📊 Actualización", notification.message, "info");
+          // NO sound for status changes - only for NEW_ORDER and ITEMS_ADDED
+        }
+
+        // NO automatic reload - changeOrderStatus() already handles page reload
+        // This prevents infinite reload loop when accepting orders
+      }
+
+      function updateKitchenStats(stats) {
+        // Update stats in UI if they exist
+        const pendingCountEl = document.getElementById("pending-count");
+        const inPrepCountEl = document.getElementById("inprep-count");
+
+        if (pendingCountEl) pendingCountEl.textContent = stats.pendingCount;
+        if (inPrepCountEl) inPrepCountEl.textContent = stats.inPreparationCount;
+      }
+
+      function showNotification(title, message, type) {
+        Swal.fire({
+          icon: type,
+          title: title,
+          text: message,
+          toast: true,
+          position: "top-end",
+          showConfirmButton: false,
+          timer: 5000,
+          timerProgressBar: true,
+          background: document.documentElement.classList.contains("dark")
+            ? "#1f2937"
+            : "#ffffff",
+          color: document.documentElement.classList.contains("dark")
+            ? "#f3f4f6"
+            : "#1f2937",
+        });
+      }
+
+      function playNotificationSound() {
+        try {
+          const audio = new Audio("/sounds/notification.mp3");
+          audio.volume = 0.5;
+
+          // Log attempt
+
+          audio
+            .play()
+            .then(() => {
+            })
+            .catch((error) => {
+              console.warn("⚠️ Sound playback prevented:", error.message);
+            });
+
+          // Handle audio errors
+          audio.onerror = function (e) {
+            console.error("❌ Audio file not found or failed to load:", e);
+          };
+        } catch (e) {
+          console.error("❌ Error creating audio:", e);
+        }
+      }
+
+      function requestBrowserNotification(title, body) {
+        if (!("Notification" in window)) {
+          return;
+        }
+
+        if (Notification.permission === "granted") {
+          new Notification(title, { body: body, icon: "/images/logo.png" });
+        } else if (Notification.permission !== "denied") {
+          Notification.requestPermission().then(function (permission) {
+            if (permission === "granted") {
+              new Notification(title, { body: body, icon: "/images/logo.png" });
+            }
+          });
+        }
+      }
+
+      // Initialize WebSocket on page load
+      document.addEventListener("DOMContentLoaded", function () {
+        // Request notification permission
+        if ("Notification" in window && Notification.permission === "default") {
+          Notification.requestPermission();
+        }
+
+        // Connect to WebSocket
+        connectWebSocket();
+      });
+
+      // Cleanup on page unload
+      window.addEventListener("beforeunload", function () {
+        if (stompClient !== null) {
+          stompClient.disconnect();
+        }
+      });
+    </script>
+
+    <!-- Script del Sistema de Temas -->
+    <div th:replace="~{fragments/theme :: themeScript}"></div>
+  </body>
+</html>

@@ -1,0 +1,314 @@
+<!doctype html>
+<html xmlns:th="http://www.thymeleaf.org" lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title th:text="${systemConfig != null and systemConfig.restaurantName != null ? systemConfig.restaurantName + ' - Ayuda' : 'Ayuda'}">
+      Ayuda
+    </title>
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="96x96"
+      th:if="${systemConfig != null and systemConfig.restaurantLogoUrl != null and !systemConfig.restaurantLogoUrl.isEmpty()}"
+      th:href="${@cloudinaryUrl.logoSmall(systemConfig.restaurantLogoUrl)}"
+    />
+    <link href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@300;400;500;600;700"
+      rel="stylesheet"
+    />
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Work Sans", sans-serif;
+        background: linear-gradient(
+          135deg,
+          #38e07b 0%,
+          #2bc866 50%,
+          #1fa552 100%
+        );
+        min-height: 100vh;
+        padding: 40px 20px;
+      }
+
+      .container {
+        max-width: 900px;
+        margin: 0 auto;
+      }
+
+      .header {
+        background: white;
+        border-radius: 20px;
+        padding: 32px;
+        margin-bottom: 24px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        text-align: center;
+      }
+
+      .header h1 {
+        font-size: 36px;
+        font-weight: 800;
+        color: #1f2937;
+        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+      }
+
+      .header p {
+        font-size: 16px;
+        color: #6b7280;
+      }
+
+      .material-symbols-outlined {
+        font-variation-settings:
+          "FILL" 0,
+          "wght" 400,
+          "GRAD" 0,
+          "opsz" 24;
+      }
+
+      .faq-container {
+        background: white;
+        border-radius: 20px;
+        padding: 32px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        margin-bottom: 24px;
+      }
+
+      .faq-item {
+        margin-bottom: 20px;
+        border-bottom: 1px solid #e5e7eb;
+        padding-bottom: 20px;
+      }
+
+      .faq-item:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+        padding-bottom: 0;
+      }
+
+      .faq-question {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        margin-bottom: 12px;
+        cursor: pointer;
+        user-select: none;
+      }
+
+      .faq-question .material-symbols-outlined {
+        color: #38e07b;
+        font-size: 28px;
+        flex-shrink: 0;
+      }
+
+      .faq-question h3 {
+        font-size: 18px;
+        font-weight: 700;
+        color: #1f2937;
+        flex: 1;
+      }
+
+      .faq-answer {
+        margin-left: 40px;
+        color: #4b5563;
+        line-height: 1.6;
+        font-size: 15px;
+      }
+
+      .back-button {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 14px 28px;
+        background: linear-gradient(135deg, #38e07b 0%, #2bc866 100%);
+        color: white;
+        text-decoration: none;
+        border-radius: 12px;
+        font-weight: 700;
+        font-size: 16px;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 12px rgba(56, 224, 123, 0.3);
+      }
+
+      .back-button:hover {
+        transform: scale(1.05);
+        box-shadow: 0 8px 20px rgba(56, 224, 123, 0.4);
+      }
+
+      .back-button .material-symbols-outlined {
+        font-size: 24px;
+      }
+
+      .button-container {
+        text-align: center;
+      }
+
+      @media (max-width: 768px) {
+        .header h1 {
+          font-size: 28px;
+          flex-direction: column;
+        }
+
+        .faq-container {
+          padding: 24px;
+        }
+
+        .faq-question h3 {
+          font-size: 16px;
+        }
+
+        .faq-answer {
+          margin-left: 0;
+          margin-top: 8px;
+          font-size: 14px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <!-- Header -->
+      <div class="header">
+        <h1>
+          <span class="material-symbols-outlined">help</span>
+          Preguntas Frecuentes
+        </h1>
+        <p>
+          Encuentra respuestas rápidas sobre cómo usar nuestro sistema de
+          pedidos
+        </p>
+      </div>
+
+      <!-- FAQ Container -->
+      <div class="faq-container">
+        <!-- FAQ 1 -->
+        <div class="faq-item">
+          <div class="faq-question">
+            <span class="material-symbols-outlined">help_outline</span>
+            <h3>¿Cómo puedo hacer un pedido?</h3>
+          </div>
+          <div class="faq-answer">
+            Para realizar un pedido, inicia sesión o crea tu cuenta, selecciona
+            los platillos que deseas, agrégalos al carrito y confirma tu orden.
+            Recibirás una notificación cuando el restaurante acepte tu pedido.
+          </div>
+        </div>
+
+        <!-- FAQ 2 -->
+        <div class="faq-item">
+          <div class="faq-question">
+            <span class="material-symbols-outlined">help_outline</span>
+            <h3>¿Puedo cancelar un pedido?</h3>
+          </div>
+          <div class="faq-answer">
+            Sí, puedes cancelar tu pedido siempre y cuando aún no esté en
+            preparación. Dirígete a la sección “Mis pedidos” y selecciona la
+            opción “Cancelar”. Si el pedido ya fue aceptado o está en
+            preparación, comunícate directamente con el restaurante.
+          </div>
+        </div>
+
+        <!-- FAQ 3 -->
+        <div class="faq-item">
+          <div class="faq-question">
+            <span class="material-symbols-outlined">help_outline</span>
+            <h3>¿Qué métodos de pago puedo usar?</h3>
+          </div>
+          <div class="faq-answer">
+            Aceptamos pagos con tarjeta de crédito o débito, transferencia, y en
+            algunos casos pago en efectivo al recibir. Si pagas en línea, tu
+            transacción es completamente segura y recibirás un comprobante
+            electrónico.
+          </div>
+        </div>
+
+        <!-- FAQ 4 -->
+        <div class="faq-item">
+          <div class="faq-question">
+            <span class="material-symbols-outlined">help_outline</span>
+            <h3>¿Cómo puedo ver el estado de mi pedido?</h3>
+          </div>
+          <div class="faq-answer">
+            En el apartado “Mis pedidos” puedes ver el estado actual de tu orden
+            en tiempo real: pendiente, en preparación, listo o entregado.
+            También recibirás notificaciones sobre cada cambio.
+          </div>
+        </div>
+
+        <!-- FAQ 5 -->
+        <div class="faq-item">
+          <div class="faq-question">
+            <span class="material-symbols-outlined">help_outline</span>
+            <h3>¿Puedo modificar mi pedido después de enviarlo?</h3>
+          </div>
+          <div class="faq-answer">
+            Puedes editar tu pedido mientras esté en estado “pendiente”. Si ya
+            fue aceptado por el restaurante, te recomendamos contactar al
+            establecimiento directamente para cualquier cambio.
+          </div>
+        </div>
+
+        <!-- FAQ 6 -->
+        <div class="faq-item">
+          <div class="faq-question">
+            <span class="material-symbols-outlined">help_outline</span>
+            <h3>¿Cómo puedo dejar una reseña o calificación?</h3>
+          </div>
+          <div class="faq-answer">
+            Una vez que tu pedido haya sido entregado, podrás dejar una reseña y
+            calificar tu experiencia en la sección “Historial de pedidos”. Tus
+            comentarios nos ayudan a mejorar nuestro servicio.
+          </div>
+        </div>
+
+        <!-- FAQ 7 -->
+        <div class="faq-item">
+          <div class="faq-question">
+            <span class="material-symbols-outlined">help_outline</span>
+            <h3>¿El sistema funciona en mi celular?</h3>
+          </div>
+          <div class="faq-answer">
+            Sí, el sistema está diseñado para funcionar correctamente en
+            computadoras, tablets y celulares. Solo necesitas conexión a
+            internet para acceder desde cualquier navegador moderno.
+          </div>
+        </div>
+        <!-- FAQ 8 -->
+        <div class="faq-item">
+          <div class="faq-question">
+            <span class="material-symbols-outlined">help_outline</span>
+            <h3>¿Qué hago si tengo un problema con mi pedido?</h3>
+          </div>
+          <div class="faq-answer">
+            Si recibiste un pedido incorrecto o tuviste algún inconveniente,
+            comunícate con el restaurante a través del chat de soporte o envía
+            un reporte desde la sección “Ayuda”. Nuestro equipo te asistirá lo
+            antes posible.
+          </div>
+        </div>
+      </div>
+
+      <!-- Back Button -->
+      <div class="button-container">
+        <a href="/client/login" class="back-button">
+          <span class="material-symbols-outlined">arrow_back</span>
+          <span>Volver al inicio</span>
+        </a>
+      </div>
+    </div>
+  </body>
+</html>

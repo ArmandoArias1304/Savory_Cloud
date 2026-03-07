@@ -1,0 +1,663 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title
+      th:text="${globalSystemConfig.systemName + ' - Ingredientes de ' + complement.name}"
+    >
+      El Gran Sazón - Ingredientes del Complemento
+    </title>
+    <link crossorigin="" href="https://fonts.gstatic.com/" rel="preconnect" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@300;400;500;600;700"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <!-- Sistema de Temas (Modo Claro/Oscuro) -->
+    <div th:replace="~{fragments/theme :: themeResources}"></div>
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#38e07b",
+              "primary-dark": "#2bc866",
+              "background-light": "#f8faf9",
+              "background-dark": "#0f1713",
+            },
+            fontFamily: {
+              display: ["Work Sans"],
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      .ingredient-row {
+        animation: slideIn 0.3s ease-out;
+      }
+      @keyframes slideIn {
+        from {
+          opacity: 0;
+          transform: translateY(-10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+    </style>
+  </head>
+  <body
+    class="bg-gradient-to-br from-background-light to-gray-50 dark:from-background-dark dark:to-gray-900 font-display text-gray-800 dark:text-gray-200 min-h-screen"
+  >
+    <!-- Main Content Centered -->
+    <div class="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
+      <div class="max-w-4xl mx-auto">
+        <!-- Header -->
+        <div class="text-center mb-8">
+          <a
+            th:href="@{/admin/complements}"
+            class="inline-flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-primary dark:hover:text-primary transition-colors mb-4"
+          >
+            <span class="material-symbols-outlined">arrow_back</span>
+            <span class="font-medium">Volver a complementos</span>
+          </a>
+          <h1
+            class="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-2"
+          >
+            Ingredientes de
+            <span th:text="${complement.name}">Complemento</span>
+          </h1>
+          <p class="text-base text-gray-600 dark:text-gray-400">
+            Gestiona la receta del complemento - estos ingredientes se
+            descontarán del inventario
+          </p>
+        </div>
+
+        <!-- Alert Messages -->
+        <div
+          th:if="${successMessage}"
+          class="mb-6 p-4 rounded-xl bg-green-100 dark:bg-green-900/30 border border-green-200 dark:border-green-800 flex items-center gap-3"
+        >
+          <span
+            class="material-symbols-outlined text-green-600 dark:text-green-400"
+            >check_circle</span
+          >
+          <p
+            class="text-green-800 dark:text-green-300 font-medium"
+            th:text="${successMessage}"
+          ></p>
+        </div>
+
+        <div
+          th:if="${errorMessage}"
+          class="mb-6 p-4 rounded-xl bg-red-100 dark:bg-red-900/30 border border-red-200 dark:border-red-800 flex items-center gap-3"
+        >
+          <span class="material-symbols-outlined text-red-600 dark:text-red-400"
+            >error</span
+          >
+          <p
+            class="text-red-800 dark:text-red-300 font-medium"
+            th:text="${errorMessage}"
+          ></p>
+        </div>
+
+        <!-- Complement Info Card -->
+        <div
+          class="bg-white dark:bg-gray-900 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 p-6 mb-6"
+        >
+          <div class="flex items-center gap-4">
+            <div
+              class="w-16 h-16 rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800 flex-shrink-0"
+            >
+              <img
+                th:if="${complement.imageUrl != null && !complement.imageUrl.isEmpty()}"
+                th:src="${complement.imageUrl}"
+                th:alt="${complement.name}"
+                class="w-full h-full object-cover"
+              />
+              <div
+                th:if="${complement.imageUrl == null || complement.imageUrl.isEmpty()}"
+                class="w-full h-full flex items-center justify-center"
+              >
+                <span class="material-symbols-outlined text-2xl text-gray-400"
+                  >local_dining</span
+                >
+              </div>
+            </div>
+            <div class="flex-1">
+              <h2
+                class="text-xl font-bold text-gray-900 dark:text-white"
+                th:text="${complement.name}"
+              >
+                Complemento
+              </h2>
+              <p
+                class="text-gray-600 dark:text-gray-400"
+                th:text="${complement.description}"
+              >
+                Descripción
+              </p>
+              <div class="flex items-center gap-4 mt-2">
+                <span class="text-lg font-bold text-primary">
+                  +$<span
+                    th:text="${#numbers.formatDecimal(complement.extraPrice, 1, 2)}"
+                    >0.00</span
+                  >
+                </span>
+                <span
+                  th:if="${complement.available}"
+                  class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800"
+                >
+                  En Stock
+                </span>
+                <span
+                  th:if="${!complement.available}"
+                  class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800"
+                >
+                  Sin Stock
+                </span>
+              </div>
+            </div>
+            <a
+              th:href="@{/admin/complements/edit/{id}(id=${complement.idComplement})}"
+              class="p-3 rounded-xl bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+            >
+              <span
+                class="material-symbols-outlined text-gray-600 dark:text-gray-400"
+                >edit</span
+              >
+            </a>
+          </div>
+        </div>
+
+        <!-- Add Ingredient Form -->
+        <div
+          class="bg-white dark:bg-gray-900 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 p-6 mb-6"
+        >
+          <h3
+            class="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2"
+          >
+            <span class="material-symbols-outlined text-primary"
+              >add_circle</span
+            >
+            Agregar Ingrediente
+          </h3>
+
+          <form
+            th:action="@{/admin/complements/{id}/ingredients/add(id=${complement.idComplement})}"
+            method="post"
+            class="grid grid-cols-1 md:grid-cols-12 gap-4"
+          >
+            <!-- Ingredient Search with Autocomplete -->
+            <div class="md:col-span-5">
+              <label
+                class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+              >
+                Ingrediente <span class="text-red-500">*</span>
+              </label>
+              <div class="relative">
+                <input
+                  type="text"
+                  id="ingredientSearch"
+                  placeholder="Buscar ingrediente..."
+                  autocomplete="off"
+                  class="w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary focus:border-transparent"
+                />
+                <input
+                  type="hidden"
+                  name="ingredientId"
+                  id="selectedIngredientId"
+                  required
+                />
+
+                <!-- Autocomplete suggestions -->
+                <div
+                  id="ingredientSuggestions"
+                  class="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl shadow-lg max-h-60 overflow-y-auto hidden"
+                >
+                  <!-- Suggestions will be populated here -->
+                </div>
+              </div>
+            </div>
+
+            <!-- Quantity -->
+            <div class="md:col-span-3">
+              <label
+                class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+              >
+                Cantidad <span class="text-red-500">*</span>
+              </label>
+              <input
+                type="number"
+                id="quantityInput"
+                name="quantity"
+                required
+                step="0.01"
+                min="0.01"
+                placeholder="0.00"
+                class="w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary focus:border-transparent"
+              />
+            </div>
+
+            <!-- Unit -->
+            <div class="md:col-span-2">
+              <label
+                class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+              >
+                Unidad
+              </label>
+              <input
+                type="text"
+                name="unit"
+                placeholder="Auto"
+                class="w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                readonly
+              />
+            </div>
+
+            <!-- Submit -->
+            <div class="md:col-span-2 flex items-end">
+              <button
+                type="submit"
+                class="w-full px-4 py-2.5 bg-gradient-to-r from-primary to-primary-dark text-white font-semibold rounded-xl hover:shadow-lg transition-all flex items-center justify-center gap-2"
+              >
+                <span class="material-symbols-outlined">add</span>
+                Agregar
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Current Ingredients -->
+        <div
+          class="bg-white dark:bg-gray-900 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 p-6"
+        >
+          <div class="flex items-center justify-between mb-6">
+            <h3
+              class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2"
+            >
+              <span class="material-symbols-outlined text-orange-500"
+                >restaurant</span
+              >
+              Ingredientes de la Receta
+              <span class="text-sm font-normal text-gray-500">
+                (<span th:text="${#lists.size(ingredients)}">0</span>
+                ingredientes)
+              </span>
+            </h3>
+          </div>
+
+          <!-- Ingredients List -->
+          <div th:if="${!#lists.isEmpty(ingredients)}" class="space-y-3">
+            <div
+              th:each="ci : ${ingredients}"
+              class="ingredient-row bg-gray-50 dark:bg-gray-800 rounded-xl p-4 flex items-center justify-between"
+            >
+              <div class="flex items-center gap-4 flex-1">
+                <div
+                  class="w-10 h-10 bg-orange-100 dark:bg-orange-900/30 rounded-lg flex items-center justify-center"
+                >
+                  <span class="material-symbols-outlined text-orange-600"
+                    >grocery</span
+                  >
+                </div>
+                <div class="flex-1">
+                  <p
+                    class="font-semibold text-gray-900 dark:text-white"
+                    th:text="${ci.ingredient.name}"
+                  >
+                    Ingrediente
+                  </p>
+                  <p class="text-sm text-gray-500 dark:text-gray-400">
+                    Stock actual:
+                    <span
+                      th:text="${#numbers.formatDecimal(ci.ingredient.currentStock, 1, 2)}"
+                      >0</span
+                    >
+                    <span th:text="${ci.ingredient.unitOfMeasure}">kg</span>
+                  </p>
+                </div>
+                <div class="text-center px-4">
+                  <p
+                    class="text-2xl font-bold text-gray-900 dark:text-white"
+                    th:text="${#numbers.formatDecimal(ci.quantity, 1, 2)}"
+                  >
+                    0
+                  </p>
+                  <p class="text-xs text-gray-500" th:text="${ci.unit}">kg</p>
+                </div>
+              </div>
+
+              <div class="flex items-center gap-2">
+                <!-- Edit quantity (inline form) -->
+                <form
+                  th:action="@{/admin/complements/{cid}/ingredients/{iid}/update(cid=${complement.idComplement}, iid=${ci.ingredient.idIngredient})}"
+                  method="post"
+                  class="flex items-center gap-2"
+                >
+                  <input
+                    type="number"
+                    name="quantity"
+                    step="0.01"
+                    min="0.01"
+                    th:value="${ci.quantity}"
+                    class="w-20 px-2 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-center"
+                  />
+                  <button
+                    type="submit"
+                    class="p-2 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
+                    title="Actualizar cantidad"
+                  >
+                    <span class="material-symbols-outlined text-blue-600"
+                      >save</span
+                    >
+                  </button>
+                </form>
+
+                <!-- Delete -->
+                <form
+                  th:action="@{/admin/complements/{cid}/ingredients/{iid}/delete(cid=${complement.idComplement}, iid=${ci.ingredient.idIngredient})}"
+                  method="post"
+                  class="inline delete-form"
+                  th:data-item-name="${ci.ingredient.name}"
+                >
+                  <button
+                    type="button"
+                    class="p-2 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors delete-btn"
+                    title="Eliminar"
+                  >
+                    <span class="material-symbols-outlined text-red-600"
+                      >delete</span
+                    >
+                  </button>
+                </form>
+              </div>
+            </div>
+          </div>
+
+          <!-- Empty state -->
+          <div th:if="${#lists.isEmpty(ingredients)}" class="text-center py-12">
+            <span class="material-symbols-outlined text-5xl text-gray-400 mb-4"
+              >restaurant</span
+            >
+            <p class="text-gray-600 dark:text-gray-400 mb-2">
+              No hay ingredientes en la receta
+            </p>
+            <p class="text-sm text-gray-500 dark:text-gray-500">
+              Agrega ingredientes usando el formulario de arriba
+            </p>
+          </div>
+        </div>
+
+        <!-- Back button -->
+        <div class="mt-6 text-center">
+          <a
+            th:href="@{/admin/complements}"
+            class="inline-flex items-center gap-2 px-6 py-3 bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-semibold rounded-xl transition-colors"
+          >
+            <span class="material-symbols-outlined">arrow_back</span>
+            Volver a Complementos
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <script th:inline="javascript">
+      // Available ingredients data
+      const availableIngredients = [
+        /*[# th:each="ingredient, iterStat : ${availableIngredients}"]*/
+        {
+          id: /*[[${ingredient.idIngredient}]]*/ 0,
+          name: /*[[${ingredient.name}]]*/ "",
+          unit: /*[[${ingredient.unitOfMeasure}]]*/ "",
+        } /*[# th:if="${!iterStat.last}"]*/ /*[/]*/,
+        /*[/]*/
+      ];
+
+      // Ingredient autocomplete functionality
+      const searchInput = document.getElementById("ingredientSearch");
+      const hiddenInput = document.getElementById("selectedIngredientId");
+      const suggestionsBox = document.getElementById("ingredientSuggestions");
+      const unitInput = document.querySelector('input[name="unit"]');
+      const quantityInput = document.getElementById("quantityInput");
+      let currentUnitType = null;
+
+      // Filter and display suggestions
+      function filterIngredients(query) {
+        if (!query || query.length < 1) {
+          suggestionsBox.classList.add("hidden");
+          return;
+        }
+
+        const normalizedQuery = query.toLowerCase().trim();
+        const filtered = availableIngredients
+          .filter((ing) => ing.name.toLowerCase().includes(normalizedQuery))
+          .sort((a, b) => {
+            // Prioritize ingredients that start with the query
+            const aStarts = a.name.toLowerCase().startsWith(normalizedQuery);
+            const bStarts = b.name.toLowerCase().startsWith(normalizedQuery);
+            if (aStarts && !bStarts) return -1;
+            if (!aStarts && bStarts) return 1;
+            // Then alphabetically
+            return a.name.localeCompare(b.name);
+          });
+
+        displaySuggestions(filtered, normalizedQuery);
+      }
+
+      // Display filtered suggestions
+      function displaySuggestions(ingredients, query) {
+        if (ingredients.length === 0) {
+          suggestionsBox.innerHTML = `
+            <div class="p-4 text-center text-gray-500 dark:text-gray-400">
+              <span class="material-symbols-outlined text-2xl mb-2">search_off</span>
+              <p class="text-sm">No se encontraron ingredientes</p>
+            </div>
+          `;
+          suggestionsBox.classList.remove("hidden");
+          return;
+        }
+
+        const html = ingredients
+          .map((ing) => {
+            // Highlight matching text
+            const regex = new RegExp(`(${query})`, "gi");
+            const highlightedName = ing.name.replace(
+              regex,
+              '<mark class="bg-yellow-200 dark:bg-yellow-700">$1</mark>',
+            );
+
+            return `
+            <div class="suggestion-item p-3 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer flex items-center justify-between transition-colors"
+                 data-id="${ing.id}"
+                 data-name="${ing.name}"
+                 data-unit="${ing.unit}">
+              <div class="flex items-center gap-3">
+                <span class="material-symbols-outlined text-orange-500">grocery</span>
+                <div>
+                  <p class="font-medium text-gray-900 dark:text-white">${highlightedName}</p>
+                  <p class="text-xs text-gray-500 dark:text-gray-400">Unidad: ${ing.unit}</p>
+                </div>
+              </div>
+              <span class="material-symbols-outlined text-gray-400">add_circle</span>
+            </div>
+          `;
+          })
+          .join("");
+
+        suggestionsBox.innerHTML = html;
+        suggestionsBox.classList.remove("hidden");
+
+        // Add click handlers
+        document.querySelectorAll(".suggestion-item").forEach((item) => {
+          item.addEventListener("click", function () {
+            selectIngredient(
+              this.dataset.id,
+              this.dataset.name,
+              this.dataset.unit,
+            );
+          });
+        });
+      }
+
+      // Select an ingredient
+      function selectIngredient(id, name, unit) {
+        hiddenInput.value = id;
+        searchInput.value = name;
+        unitInput.value = unit;
+        currentUnitType = unit;
+
+        // Adjust quantity input based on unit type
+        if (unit === "UN") {
+          // For unit type, only allow integers
+          quantityInput.step = "1";
+          quantityInput.min = "1";
+          quantityInput.placeholder = "1";
+          // Clear current value if it has decimals
+          if (quantityInput.value && quantityInput.value.includes(".")) {
+            quantityInput.value = Math.floor(parseFloat(quantityInput.value));
+          }
+        } else {
+          // For other types, allow decimals
+          quantityInput.step = "0.01";
+          quantityInput.min = "0.01";
+          quantityInput.placeholder = "0.00";
+        }
+
+        suggestionsBox.classList.add("hidden");
+      }
+
+      // Event listeners
+      searchInput.addEventListener("input", function () {
+        filterIngredients(this.value);
+      });
+
+      searchInput.addEventListener("focus", function () {
+        if (this.value.length >= 1) {
+          filterIngredients(this.value);
+        }
+      });
+
+      // Close suggestions when clicking outside
+      document.addEventListener("click", function (e) {
+        if (
+          !searchInput.contains(e.target) &&
+          !suggestionsBox.contains(e.target)
+        ) {
+          suggestionsBox.classList.add("hidden");
+        }
+      });
+
+      // Clear hidden input when search is cleared
+      searchInput.addEventListener("input", function () {
+        if (this.value === "") {
+          hiddenInput.value = "";
+          unitInput.value = "";
+          currentUnitType = null;
+          // Reset quantity input to default
+          quantityInput.step = "0.01";
+          quantityInput.min = "0.01";
+          quantityInput.placeholder = "0.00";
+        }
+      });
+
+      // Validate quantity before form submission
+      document.querySelector("form").addEventListener("submit", function (e) {
+        if (currentUnitType === "UN") {
+          const quantity = parseFloat(quantityInput.value);
+          if (!Number.isInteger(quantity)) {
+            e.preventDefault();
+            Swal.fire({
+              title: "¡Error de validación!",
+              html: "Para ingredientes de tipo <strong>Unidad (UN)</strong>, la cantidad debe ser un número entero.<br><br>Por favor, ingrese una cantidad sin decimales (ej: 1, 2, 3).",
+              icon: "error",
+              confirmButtonColor: "#38e07b",
+              confirmButtonText: "Entendido",
+              background: document.documentElement.classList.contains("dark")
+                ? "#1f2937"
+                : "#ffffff",
+              color: document.documentElement.classList.contains("dark")
+                ? "#f3f4f6"
+                : "#1f2937",
+            });
+            quantityInput.focus();
+          }
+        }
+      });
+
+      // Keyboard navigation
+      let selectedIndex = -1;
+      searchInput.addEventListener("keydown", function (e) {
+        const items = document.querySelectorAll(".suggestion-item");
+
+        if (e.key === "ArrowDown") {
+          e.preventDefault();
+          selectedIndex = Math.min(selectedIndex + 1, items.length - 1);
+          updateSelection(items);
+        } else if (e.key === "ArrowUp") {
+          e.preventDefault();
+          selectedIndex = Math.max(selectedIndex - 1, -1);
+          updateSelection(items);
+        } else if (e.key === "Enter" && selectedIndex >= 0) {
+          e.preventDefault();
+          items[selectedIndex].click();
+        } else if (e.key === "Escape") {
+          suggestionsBox.classList.add("hidden");
+          selectedIndex = -1;
+        }
+      });
+
+      function updateSelection(items) {
+        items.forEach((item, index) => {
+          if (index === selectedIndex) {
+            item.classList.add("bg-gray-100", "dark:bg-gray-700");
+          } else {
+            item.classList.remove("bg-gray-100", "dark:bg-gray-700");
+          }
+        });
+      }
+
+      // Delete confirmation
+      document.querySelectorAll(".delete-btn").forEach((btn) => {
+        btn.addEventListener("click", function () {
+          const form = this.closest("form");
+          const itemName = form.dataset.itemName;
+
+          Swal.fire({
+            title: "¿Eliminar ingrediente?",
+            text: `Se eliminará "${itemName}" de la receta`,
+            icon: "warning",
+            showCancelButton: true,
+            confirmButtonColor: "#ef4444",
+            cancelButtonColor: "#6b7280",
+            confirmButtonText: "Eliminar",
+            cancelButtonText: "Cancelar",
+            background: document.documentElement.classList.contains("dark")
+              ? "#1f2937"
+              : "#ffffff",
+            color: document.documentElement.classList.contains("dark")
+              ? "#f3f4f6"
+              : "#1f2937",
+          }).then((result) => {
+            if (result.isConfirmed) {
+              form.submit();
+            }
+          });
+        });
+      });
+    </script>
+
+    <!-- Script del Sistema de Temas -->
+    <div th:replace="~{fragments/theme :: themeScript}"></div>
+  </body>
+</html>

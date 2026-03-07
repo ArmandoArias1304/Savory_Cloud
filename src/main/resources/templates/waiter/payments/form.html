@@ -1,0 +1,969 @@
+<!doctype html>
+<html xmlns:th="http://www.thymeleaf.org" lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title th:text="${globalSystemConfig.systemName + ' - Procesar Pago'}">
+      El Gran Sazón - Procesar Pago
+    </title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@300;400;500;600;700"
+      rel="stylesheet"
+    />
+
+    <!-- Sistema de Temas (Modo Claro/Oscuro) -->
+    <div th:replace="~{fragments/theme :: themeResources}"></div>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#38e07b",
+              "primary-dark": "#2bc866",
+              "background-light": "#f8faf9",
+            },
+            fontFamily: {
+              display: ["Work Sans"],
+            },
+            borderRadius: {
+              DEFAULT: "0.5rem",
+              lg: "0.75rem",
+              xl: "1rem",
+              "2xl": "1.5rem",
+              full: "9999px",
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      .material-symbols-outlined {
+        font-variation-settings:
+          "FILL" 0,
+          "wght" 400,
+          "GRAD" 0,
+          "opsz" 24;
+      }
+
+      body {
+        font-family: "Work Sans", sans-serif;
+      }
+
+      .payment-card {
+        background: white;
+        border-radius: 1.5rem;
+        box-shadow:
+          0 4px 6px -1px rgb(0 0 0 / 0.1),
+          0 2px 4px -2px rgb(0 0 0 / 0.1);
+        transition: all 0.3s ease;
+      }
+
+      .dark .payment-card {
+        background: #1f2937;
+        box-shadow:
+          0 4px 6px -1px rgb(0 0 0 / 0.3),
+          0 2px 4px -2px rgb(0 0 0 / 0.3);
+      }
+
+      .payment-card:hover {
+        box-shadow:
+          0 10px 15px -3px rgb(0 0 0 / 0.1),
+          0 4px 6px -4px rgb(0 0 0 / 0.1);
+      }
+
+      .dark .payment-card:hover {
+        box-shadow:
+          0 10px 15px -3px rgb(0 0 0 / 0.3),
+          0 4px 6px -4px rgb(0 0 0 / 0.3);
+      }
+
+      .payment-method-btn {
+        border: 2px solid #38e07b;
+        transition: all 0.2s ease;
+      }
+
+      .payment-method-btn:hover {
+        border-color: #38e07b;
+        color: #38e07b;
+        transform: translateY(-2px);
+      }
+
+      .payment-method-btn.active {
+        border-color: #38e07b;
+        background: linear-gradient(
+          135deg,
+          rgba(56, 224, 123, 0.1) 0%,
+          rgba(43, 200, 102, 0.1) 100%
+        );
+        color: #2bc866;
+      }
+
+      .input-field {
+        transition: all 0.2s ease;
+      }
+
+      .input-field:focus {
+        border-color: #38e07b;
+        box-shadow: 0 0 0 3px rgba(56, 224, 123, 0.1);
+      }
+
+      .primary-button {
+        background: linear-gradient(135deg, #38e07b 0%, #2bc866 100%);
+        box-shadow: 0 4px 12px rgba(56, 224, 123, 0.3);
+        transition: all 0.3s ease;
+      }
+
+      .primary-button:hover {
+        box-shadow: 0 6px 16px rgba(56, 224, 123, 0.4);
+        transform: translateY(-2px);
+      }
+
+      .primary-button:active {
+        transform: translateY(0);
+      }
+
+      .order-item {
+        border-bottom: 1px solid #f1f5f9;
+        padding: 0.75rem 0;
+      }
+
+      .order-item:last-child {
+        border-bottom: none;
+      }
+
+      .tip-btn {
+        transition: all 0.2s ease;
+      }
+
+      .tip-btn:hover {
+        background: #38e07b;
+        color: white;
+        border-color: #38e07b;
+        transform: translateY(-2px);
+      }
+
+      .tip-btn.active {
+        background: #38e07b;
+        color: white;
+        border-color: #38e07b;
+      }
+
+      .counter-btn {
+        background: #f3f4f6;
+        transition: all 0.2s ease;
+      }
+
+      .dark .counter-btn {
+        background: #374151;
+        color: #d1d5db;
+      }
+
+      .counter-btn:hover {
+        background: #38e07b;
+        color: white;
+      }
+
+      .input-field {
+        transition: all 0.2s ease;
+      }
+
+      .input-field:focus {
+        border-color: #38e07b;
+        box-shadow: 0 0 0 3px rgba(56, 224, 123, 0.1);
+      }
+    </style>
+  </head>
+  <body
+    class="bg-gradient-to-br from-background-light to-gray-50 dark:from-gray-900 dark:to-gray-800 font-display text-gray-800 dark:text-gray-100"
+  >
+    <div class="flex min-h-screen flex-col">
+      <!-- Header -->
+      <header
+        class="bg-white dark:bg-gray-700 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-lg sticky top-0 z-30"
+      >
+        <div class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <div
+                class="w-12 h-12 bg-gradient-to-br from-primary to-primary-dark rounded-xl flex items-center justify-center shadow-lg shadow-primary/30"
+              >
+                <span class="material-symbols-outlined text-white text-2xl"
+                  >receipt_long</span
+                >
+              </div>
+              <div>
+                <h1
+                  class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white dark:text-white"
+                >
+                  Procesamiento de Pago
+                </h1>
+                <p
+                  class="text-sm text-gray-600 dark:text-gray-400 dark:text-gray-400"
+                >
+                  <span th:if="${order.table != null}">
+                    Mesa <span th:text="${order.table.tableNumber}"></span> -
+                  </span>
+                  Pedido #<span th:text="${order.orderNumber}"></span>
+                </p>
+              </div>
+            </div>
+            <a
+              th:href="@{/waiter/orders}"
+              class="flex items-center gap-2 rounded-xl bg-red-50 hover:bg-red-100 border-2 border-red-200 hover:border-red-300 px-4 py-2.5 transition-all"
+            >
+              <span class="material-symbols-outlined text-red-600">close</span>
+              <span class="font-bold text-red-600 text-sm sm:text-base"
+                >Cancelar Pago</span
+              >
+            </a>
+          </div>
+        </div>
+      </header>
+
+      <!-- Main Content -->
+      <main class="flex-1 p-4 sm:p-6 lg:p-8 pb-32">
+        <!-- Error Messages -->
+        <div
+          th:if="${errorMessage}"
+          class="mb-6 bg-red-100 border-l-4 border-red-500 text-red-700 px-4 py-3 rounded-xl shadow-md max-w-screen-2xl mx-auto"
+        >
+          <div class="flex items-center">
+            <span class="material-symbols-outlined mr-2">error</span>
+            <span th:text="${errorMessage}"></span>
+          </div>
+        </div>
+
+        <div
+          class="max-w-screen-2xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6"
+        >
+          <!-- Payment Section (2/3 width) -->
+          <div
+            class="lg:col-span-2 payment-card dark:bg-gray-800 p-6 sm:p-8 flex flex-col space-y-6"
+          >
+            <form
+              th:action="@{/waiter/payments/process/{id}(id=${order.idOrder})}"
+              method="post"
+              id="paymentForm"
+            >
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <!-- Left Column -->
+                <div class="space-y-6">
+                  <!-- Total Amount -->
+                  <div
+                    class="text-center bg-gradient-to-br from-primary/10 to-primary-dark/10 rounded-2xl p-6"
+                  >
+                    <p
+                      class="text-base text-gray-600 dark:text-gray-400 font-medium"
+                    >
+                      Total a Pagar
+                    </p>
+                    <h2
+                      class="text-6xl sm:text-7xl font-black text-primary tracking-tighter mt-2"
+                      id="displayTotal"
+                      th:text="${order.formattedTotal}"
+                    ></h2>
+                  </div>
+
+                  <!-- Payment Methods -->
+                  <div class="space-y-4">
+                    <h3
+                      class="text-lg font-bold text-gray-900 dark:text-white dark:text-white"
+                    >
+                      Método de Pago <span class="text-red-500">*</span>
+                    </h3>
+                    <div class="grid grid-cols-3 gap-3">
+                      <button
+                        type="button"
+                        th:each="method, iterStat : ${enabledPaymentMethods}"
+                        th:data-method="${method.name()}"
+                        th:class="${order.paymentMethod != null && order.paymentMethod == method} ? 'payment-method-btn active flex flex-col items-center justify-center gap-2 rounded-xl p-4' : 'payment-method-btn flex flex-col items-center justify-center gap-2 rounded-xl p-4 text-gray-600 dark:text-gray-400'"
+                        onclick="selectPaymentMethod(this)"
+                      >
+                        <span class="material-symbols-outlined text-3xl">
+                          <th:block th:switch="${method.name()}">
+                            <th:block th:case="'CASH'">payments</th:block>
+                            <th:block th:case="'CARD'">credit_card</th:block>
+                            <th:block th:case="'TRANSFER'"
+                              >account_balance</th:block
+                            >
+                            <th:block th:case="*">payment</th:block>
+                          </th:block>
+                        </span>
+                        <span
+                          class="font-semibold text-sm"
+                          th:text="${method.displayName}"
+                        ></span>
+                      </button>
+                    </div>
+                    <input
+                      type="hidden"
+                      name="paymentMethod"
+                      id="paymentMethodInput"
+                      th:value="${currentPaymentMethod}"
+                    />
+                  </div>
+
+                  <!-- Order Information -->
+                  <div class="space-y-4">
+                    <h3
+                      class="text-lg font-bold text-gray-900 dark:text-white dark:text-white"
+                    >
+                      Información del Pedido
+                    </h3>
+                    <div
+                      class="space-y-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 p-5"
+                    >
+                      <div class="flex justify-between text-sm">
+                        <span
+                          class="text-gray-600 dark:text-gray-400 dark:text-gray-400"
+                          >Número de orden:</span
+                        >
+                        <span
+                          class="font-semibold"
+                          th:text="${order.orderNumber}"
+                        ></span>
+                      </div>
+                      <div class="flex justify-between text-sm">
+                        <span
+                          class="text-gray-600 dark:text-gray-400 dark:text-gray-400"
+                          >Tipo:</span
+                        >
+                        <span
+                          class="font-semibold"
+                          th:text="${order.orderType.displayName}"
+                        ></span>
+                      </div>
+                      <div
+                        class="flex justify-between text-sm"
+                        th:if="${order.table != null}"
+                      >
+                        <span
+                          class="text-gray-600 dark:text-gray-400 dark:text-gray-400"
+                          >Mesa:</span
+                        >
+                        <span class="font-semibold"
+                          >Mesa #<span
+                            th:text="${order.table.tableNumber}"
+                          ></span
+                        ></span>
+                      </div>
+                      <div
+                        class="flex justify-between text-sm"
+                        th:if="${order.customerName != null}"
+                      >
+                        <span
+                          class="text-gray-600 dark:text-gray-400 dark:text-gray-400"
+                          >Cliente:</span
+                        >
+                        <span
+                          class="font-semibold"
+                          th:text="${order.customerName}"
+                        ></span>
+                      </div>
+                      <div class="flex justify-between text-sm">
+                        <span
+                          class="text-gray-600 dark:text-gray-400 dark:text-gray-400"
+                          >Estado:</span
+                        >
+                        <span
+                          class="px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800"
+                          th:text="${order.status.displayName}"
+                        ></span>
+                      </div>
+                      <div class="flex justify-between text-sm">
+                        <span
+                          class="text-gray-600 dark:text-gray-400 dark:text-gray-400"
+                          >Atendido por:</span
+                        >
+                        <span
+                          class="font-semibold"
+                          th:text="${order.employee != null ? order.employee.fullName : systemConfig.restaurantName}"
+                        ></span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Right Column -->
+                <div class="space-y-6">
+                  <!-- Split Bill Section -->
+                  <div class="space-y-4">
+                    <h3
+                      class="text-lg font-bold text-gray-900 dark:text-white dark:text-white"
+                    >
+                      Dividir Cuenta
+                    </h3>
+                    <div
+                      class="space-y-4 rounded-xl bg-gray-50 border border-gray-200 p-5"
+                    >
+                      <div class="flex items-center justify-between">
+                        <p class="text-gray-600 dark:text-gray-400 font-medium">
+                          Dividir en partes iguales
+                        </p>
+                        <div class="flex items-center gap-3">
+                          <button
+                            type="button"
+                            class="counter-btn w-10 h-10 rounded-lg flex items-center justify-center font-bold"
+                            onclick="updateSplit(-1)"
+                          >
+                            <span class="material-symbols-outlined"
+                              >remove</span
+                            >
+                          </button>
+                          <span
+                            class="text-2xl font-black text-gray-900 dark:text-white min-w-[2rem] text-center"
+                            id="split-count"
+                            >1</span
+                          >
+                          <button
+                            type="button"
+                            class="counter-btn w-10 h-10 rounded-lg flex items-center justify-center font-bold"
+                            onclick="updateSplit(1)"
+                          >
+                            <span class="material-symbols-outlined">add</span>
+                          </button>
+                        </div>
+                      </div>
+                      <div class="border-t border-gray-300 pt-4">
+                        <p
+                          class="text-gray-600 dark:text-gray-400 font-medium mb-2"
+                        >
+                          Monto por persona
+                        </p>
+                        <p
+                          class="text-4xl font-black bg-gradient-to-r from-primary to-primary-dark bg-clip-text text-transparent"
+                          id="per-person-amount"
+                        >
+                          $0.00
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Tip Section -->
+                  <div class="space-y-4">
+                    <h3
+                      class="text-lg font-bold text-gray-900 dark:text-white dark:text-white"
+                    >
+                      Propina
+                    </h3>
+                    <div class="grid grid-cols-4 gap-3">
+                      <button
+                        type="button"
+                        onclick="setTipPercentage(0)"
+                        class="tip-btn rounded-xl bg-gray-100 dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600 py-3 font-bold text-gray-700 dark:text-gray-300 text-sm"
+                      >
+                        0%
+                      </button>
+                      <button
+                        type="button"
+                        onclick="setTipPercentage(10)"
+                        class="tip-btn rounded-xl bg-gray-100 dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600 py-3 font-bold text-gray-700 dark:text-gray-300 text-sm"
+                      >
+                        10%
+                      </button>
+                      <button
+                        type="button"
+                        onclick="setTipPercentage(15)"
+                        class="tip-btn rounded-xl bg-gray-100 dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600 py-3 font-bold text-gray-700 dark:text-gray-300 text-sm"
+                      >
+                        15%
+                      </button>
+                      <button
+                        type="button"
+                        onclick="setTipPercentage(20)"
+                        class="tip-btn rounded-xl bg-gray-100 dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600 py-3 font-bold text-gray-700 dark:text-gray-300 text-sm"
+                      >
+                        20%
+                      </button>
+                    </div>
+                    <div>
+                      <label
+                        class="block text-sm font-semibold text-gray-600 dark:text-gray-400 mb-2"
+                      >
+                        Propina personalizada
+                      </label>
+                      <div class="relative">
+                        <span
+                          class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-gray-400 text-xl font-bold"
+                          >$</span
+                        >
+                        <input
+                          type="number"
+                          name="tip"
+                          id="tip"
+                          step="0.01"
+                          min="0"
+                          value="0.00"
+                          class="input-field w-full rounded-xl border-2 border-gray-300 bg-white dark:bg-gray-700 p-4 pl-11 text-xl font-bold text-gray-900 dark:text-white focus:outline-none"
+                          placeholder="0.00"
+                          oninput="calculateTotalWithTip()"
+                        />
+                      </div>
+                    </div>
+                    <div
+                      class="rounded-xl bg-primary/10 border-2 border-primary p-4"
+                    >
+                      <div class="flex justify-between items-center">
+                        <span
+                          class="text-gray-700 dark:text-gray-300 font-semibold"
+                          >Propina:</span
+                        >
+                        <span
+                          class="text-2xl font-black text-primary"
+                          id="tip-amount"
+                          >$0.00</span
+                        >
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Confirm Button -->
+              <div class="mt-8 pt-6">
+                <button
+                  type="submit"
+                  class="primary-button w-full rounded-xl py-4 text-xl font-bold text-white"
+                >
+                  <div class="flex items-center justify-center gap-2">
+                    <span class="material-symbols-outlined">check_circle</span>
+                    <span>Confirmar Pago e Imprimir Recibo</span>
+                  </div>
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <!-- Order Details Sidebar (1/3 width) -->
+          <div
+            class="payment-card dark:bg-gray-800 p-6 flex flex-col max-h-[800px]"
+          >
+            <h3
+              class="text-xl font-bold text-gray-900 dark:text-white dark:text-white mb-4 flex items-center gap-2"
+            >
+              <span class="material-symbols-outlined text-primary"
+                >shopping_cart</span
+              >
+              Detalle del Pedido
+            </h3>
+
+            <!-- Scrollable Items -->
+            <div
+              class="flex-grow overflow-y-auto space-y-1 pr-2 mb-4"
+              style="max-height: 500px"
+            >
+              <div
+                th:each="detail : ${order.orderDetails}"
+                class="order-item flex flex-col"
+              >
+                <div class="flex justify-between items-start">
+                  <div class="flex-1">
+                    <span
+                      class="text-gray-700 dark:text-gray-300 font-medium"
+                      th:text="${detail.itemMenu.name}"
+                    ></span>
+                    <span class="text-gray-600 dark:text-gray-400 text-sm ml-2">
+                      x<span th:text="${detail.quantity}"></span>
+                    </span>
+                  </div>
+                  <span
+                    class="font-bold text-gray-900 dark:text-white dark:text-white"
+                    th:text="${detail.formattedSubtotal}"
+                  ></span>
+                </div>
+                <div
+                  th:if="${detail.displayComments != null}"
+                  class="text-gray-500 text-xs italic mt-1 flex items-center gap-1"
+                >
+                  <span class="material-symbols-outlined text-xs">comment</span>
+                  <span th:text="${detail.displayComments}"></span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Scrollbar styles -->
+            <style>
+              .flex-grow::-webkit-scrollbar {
+                width: 8px;
+              }
+              .flex-grow::-webkit-scrollbar-track {
+                background: #f1f5f9;
+                border-radius: 10px;
+              }
+              .flex-grow::-webkit-scrollbar-thumb {
+                background: #cbd5e1;
+                border-radius: 10px;
+              }
+              .flex-grow::-webkit-scrollbar-thumb:hover {
+                background: #94a3b8;
+              }
+            </style>
+
+            <!-- Summary -->
+            <div class="border-t-2 border-gray-200 pt-4 space-y-3">
+              <!-- Desglose con descuento -->
+              <div th:if="${order.hasDiscount()}">
+                <div
+                  class="flex justify-between text-base font-medium text-gray-600 dark:text-gray-400"
+                >
+                  <span>Subtotal sin descuento</span>
+                  <span
+                    th:text="${order.formattedOriginalSubtotalWithoutTax}"
+                  ></span>
+                </div>
+                <div
+                  class="flex justify-between text-base font-medium text-green-600 dark:text-green-400"
+                >
+                  <span>Descuento</span>
+                  <span th:text="${order.formattedDiscountWithoutTax}"></span>
+                </div>
+                <div
+                  class="flex justify-between text-base font-medium text-gray-600 dark:text-gray-400 border-t border-gray-200 dark:border-gray-700 pt-2"
+                >
+                  <span>Subtotal con descuento</span>
+                  <span th:text="${order.formattedSubtotal}"></span>
+                </div>
+              </div>
+              <!-- Sin descuento -->
+              <div
+                th:unless="${order.hasDiscount()}"
+                class="flex justify-between text-base font-medium text-gray-600 dark:text-gray-400"
+              >
+                <span>Subtotal</span>
+                <span th:text="${order.formattedSubtotal}"></span>
+              </div>
+              <div
+                class="flex justify-between text-base font-medium text-gray-600 dark:text-gray-400 dark:text-gray-400"
+              >
+                <span
+                  >Impuestos (<span th:text="${order.taxRate}">0</span>%)</span
+                >
+                <span th:text="${order.formattedTaxAmount}"></span>
+              </div>
+              <div
+                class="flex justify-between text-base font-medium text-gray-600 dark:text-gray-400 dark:text-gray-400"
+                id="tip-line"
+              >
+                <span>Propina</span>
+                <span id="tip-summary">$0.00</span>
+              </div>
+              <div
+                class="flex justify-between items-center text-xl font-black text-gray-900 dark:text-white bg-primary/10 rounded-xl p-3"
+              >
+                <span>Total</span>
+                <span
+                  class="text-primary text-2xl"
+                  id="grand-total"
+                  th:text="${order.formattedTotal}"
+                ></span>
+              </div>
+            </div>
+
+            <!-- Waiter Info -->
+            <div
+              class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700"
+            >
+              <div
+                class="flex items-center gap-3 text-gray-600 dark:text-gray-400 dark:text-gray-400"
+              >
+                <div
+                  class="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center"
+                >
+                  <span class="material-symbols-outlined text-primary"
+                    >person</span
+                  >
+                </div>
+                <div>
+                  <p
+                    class="text-xs font-medium text-gray-500 dark:text-gray-400"
+                  >
+                    Atendido por
+                  </p>
+                  <p
+                    class="text-sm font-bold text-gray-900 dark:text-white dark:text-white"
+                    th:text="${order.employee != null ? order.employee.fullName : systemConfig.restaurantName}"
+                  ></p>
+                </div>
+              </div>
+              <div class="mt-3 text-xs text-gray-500 space-y-1">
+                <p>
+                  <span class="font-semibold">Fecha:</span>
+                  <span
+                    th:text="${#temporals.format(order.createdAt, 'dd MMM yyyy, HH:mm')}"
+                  ></span>
+                </p>
+                <p>
+                  <span class="font-semibold">Pedido:</span> #<span
+                    th:text="${order.orderNumber}"
+                  ></span>
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <!-- Thymeleaf data injection -->
+    <script th:inline="javascript">
+      /*<![CDATA[*/
+      window.ORDER_DATA = {
+        total: /*[[${order.total}]]*/ 0,
+        subtotal: /*[[${order.subtotal}]]*/ 0,
+      };
+      /*]]>*/
+    </script>
+
+    <!-- Application JavaScript -->
+    <script>
+      let orderTotal = 0;
+      let orderSubtotal = 0;
+      let splitCount = 1;
+
+      // Initialize data from backend
+      if (window.ORDER_DATA) {
+        orderTotal = parseFloat(window.ORDER_DATA.total) || 0;
+        orderSubtotal = parseFloat(window.ORDER_DATA.subtotal) || 0;
+      }
+
+      // Update split count
+      function updateSplit(delta) {
+        const tip = parseFloat(document.getElementById("tip").value) || 0;
+        const totalWithTip = orderTotal + tip;
+
+        splitCount = Math.max(1, Math.min(10, splitCount + delta));
+        document.getElementById("split-count").textContent = splitCount;
+
+        const perPerson = (totalWithTip / splitCount).toFixed(2);
+        document.getElementById("per-person-amount").textContent =
+          "$" + perPerson;
+      }
+
+      // Payment method selection
+      function selectPaymentMethod(button) {
+        // Remove active class from all buttons
+        document.querySelectorAll(".payment-method-btn").forEach((btn) => {
+          btn.classList.remove("active");
+          btn.classList.add("text-gray-600", "dark:text-gray-400");
+        });
+
+        // Add active class to clicked button
+        button.classList.add("active");
+        button.classList.remove("text-gray-600", "dark:text-gray-400");
+
+        // Update hidden input
+        const method = button.getAttribute("data-method");
+        document.getElementById("paymentMethodInput").value = method;
+      }
+
+      // Set tip percentage
+      function setTipPercentage(percentage) {
+        const tipAmount = (orderTotal * percentage) / 100;
+        document.getElementById("tip").value = tipAmount.toFixed(2);
+
+        // Update button states
+        document.querySelectorAll(".tip-btn").forEach((btn) => {
+          btn.classList.remove("active");
+        });
+        event.target.classList.add("active");
+
+        calculateTotalWithTip();
+      }
+
+      function updateElementText(id, text) {
+        const element = document.getElementById(id);
+        if (element) {
+          element.textContent = text;
+        }
+      }
+
+      function calculateTotalWithTip() {
+        const tipInput = document.getElementById("tip");
+        const tip = parseFloat(tipInput.value) || 0;
+
+        if (tip < 0) {
+          tipInput.value = 0;
+          return;
+        }
+
+        const totalWithTip = orderTotal + tip;
+
+        // Update all displays
+        const totalText = "$" + totalWithTip.toFixed(2);
+        const tipText = "$" + tip.toFixed(2);
+
+        updateElementText("totalWithTip", totalText);
+        updateElementText("displayTotal", totalText);
+        updateElementText("grand-total", totalText);
+        updateElementText("tip-amount", tipText);
+        updateElementText("tipDisplay", tipText);
+        updateElementText("tip-summary", tipText);
+
+        // Update split amount
+        const perPerson = (totalWithTip / splitCount).toFixed(2);
+        document.getElementById("per-person-amount").textContent =
+          "$" + perPerson;
+      }
+
+      // Form validation
+      document
+        .getElementById("paymentForm")
+        .addEventListener("submit", function (e) {
+          const paymentMethod =
+            document.getElementById("paymentMethodInput").value;
+
+          if (!paymentMethod) {
+            e.preventDefault();
+            Swal.fire({
+              icon: "error",
+              title: "Error",
+              text: "Debe seleccionar un método de pago",
+              confirmButtonColor: "#38e07b",
+              background: document.documentElement.classList.contains("dark")
+                ? "#1f2937"
+                : "#ffffff",
+              color: document.documentElement.classList.contains("dark")
+                ? "#f3f4f6"
+                : "#1f2937",
+            });
+            return false;
+          }
+
+          // Confirm payment
+          e.preventDefault();
+          const tip = parseFloat(document.getElementById("tip").value) || 0;
+          const totalWithTip = orderTotal + tip;
+
+          // Get payment method name (extract only text, ignore icon)
+          const paymentMethodBtn = document.querySelector(
+            ".payment-method-btn.active",
+          );
+          let paymentMethodName = "No seleccionado";
+          if (paymentMethodBtn) {
+            const textSpan =
+              paymentMethodBtn.querySelector("span.font-semibold");
+            paymentMethodName = textSpan
+              ? textSpan.textContent.trim()
+              : paymentMethodBtn.textContent.trim();
+          }
+
+          Swal.fire({
+            title: "¿Confirmar pago?",
+            html: `
+            <div class="text-left space-y-2">
+              <p class="text-base"><strong>Método de pago:</strong> ${paymentMethodName}</p>
+              <p class="text-base"><strong>Total del pedido:</strong> $${orderTotal.toFixed(
+                2,
+              )}</p>
+              ${
+                tip > 0
+                  ? `<p class="text-base"><strong>Propina:</strong> $${tip.toFixed(
+                      2,
+                    )}</p>`
+                  : ""
+              }
+              <p class="text-xl font-bold mt-3 text-green-600"><strong>Total a pagar:</strong> $${totalWithTip.toFixed(
+                2,
+              )}</p>
+            </div>
+          `,
+            icon: "question",
+            showCancelButton: true,
+            confirmButtonColor: "#38e07b",
+            cancelButtonColor: "#6b7280",
+            confirmButtonText: "Sí, procesar pago",
+            cancelButtonText: "Cancelar",
+            background: document.documentElement.classList.contains("dark")
+              ? "#1f2937"
+              : "#ffffff",
+            color: document.documentElement.classList.contains("dark")
+              ? "#f3f4f6"
+              : "#1f2937",
+            customClass: {
+              popup: "rounded-2xl",
+              confirmButton: "rounded-xl px-6 py-3 font-bold",
+              cancelButton: "rounded-xl px-6 py-3 font-bold",
+            },
+          }).then((result) => {
+            if (result.isConfirmed) {
+
+              // Play sound and wait for it to finish before submitting
+              playPaymentSound(() => {
+                this.submit();
+              });
+            }
+          });
+        });
+
+      // Play payment success sound and execute callback when finished
+      function playPaymentSound(onComplete) {
+        try {
+          const audio = new Audio("/sounds/payment.mp3");
+          audio.volume = 0.6;
+
+
+          // When sound finishes playing, execute callback
+          audio.addEventListener("ended", function () {
+            if (onComplete) onComplete();
+          });
+
+          // If sound fails to play, still execute callback after short delay
+          audio.addEventListener("error", function (e) {
+            console.error("❌ Payment audio file not found:", e);
+            setTimeout(() => {
+              if (onComplete) onComplete();
+            }, 100);
+          });
+
+          audio
+            .play()
+            .then(() => {
+            })
+            .catch((error) => {
+              console.warn("⚠️ Payment sound prevented:", error.message);
+              // Still execute callback if sound fails
+              setTimeout(() => {
+                if (onComplete) onComplete();
+              }, 100);
+            });
+        } catch (e) {
+          console.error("❌ Error creating payment audio:", e);
+          // Execute callback even if error occurs
+          if (onComplete) onComplete();
+        }
+      }
+
+      // Initialize on page load
+      document.addEventListener("DOMContentLoaded", function () {
+        calculateTotalWithTip();
+
+        // Initialize payment method button states based on hidden input value
+        const selectedMethod =
+          document.getElementById("paymentMethodInput").value;
+        document.querySelectorAll(".payment-method-btn").forEach((btn) => {
+          const btnMethod = btn.getAttribute("data-method");
+          if (btnMethod === selectedMethod) {
+            btn.classList.add("active");
+            btn.classList.remove("text-gray-600", "dark:text-gray-400");
+          } else {
+            btn.classList.remove("active");
+            btn.classList.add("text-gray-600", "dark:text-gray-400");
+          }
+        });
+      });
+    </script>
+
+    <!-- Script del Sistema de Temas -->
+    <div th:replace="~{fragments/theme :: themeScript}"></div>
+  </body>
+</html>

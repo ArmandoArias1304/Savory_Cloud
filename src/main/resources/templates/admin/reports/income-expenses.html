@@ -1,0 +1,687 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+  <head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title
+      th:text="${globalSystemConfig.systemName + ' - Reporte de Egresos e Ingresos'}"
+    >
+      El Gran Sazón - Reporte de Egresos e Ingresos
+    </title>
+    <link crossorigin="" href="https://fonts.gstatic.com/" rel="preconnect" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@300;400;500;600;700"
+      rel="stylesheet"
+    />
+
+    <!-- Sistema de Temas (Modo Claro/Oscuro) -->
+    <div th:replace="~{fragments/theme :: themeResources}"></div>
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#38e07b",
+              "primary-dark": "#2bc866",
+              "background-light": "#f8faf9",
+              "background-dark": "#0f1713",
+            },
+            fontFamily: {
+              display: ["Work Sans"],
+            },
+          },
+        },
+      };
+    </script>
+
+    <!-- Sidebar Styles -->
+    <div th:replace="~{fragments/sidebar :: sidebarStyles}"></div>
+  </head>
+  <body
+    class="bg-gradient-to-br from-background-light to-gray-50 dark:from-background-dark dark:to-gray-900 font-display text-gray-800 dark:text-gray-200 overflow-hidden"
+  >
+    <!-- Menu Overlay & Toggle -->
+    <div th:replace="~{fragments/sidebar :: menuControls}"></div>
+
+    <div class="flex min-h-screen h-screen overflow-hidden">
+      <!-- Include Sidebar Fragment -->
+      <div
+        th:replace="~{fragments/sidebar :: sidebar(activeMenu='reports')}"
+      ></div>
+
+      <!-- MAIN CONTENT -->
+      <main class="flex-1 overflow-y-auto h-screen">
+        <div class="p-4 sm:p-6 lg:p-8 pt-20 md:pt-20 lg:pt-8 pb-32">
+          <!-- HEADER -->
+          <div class="mb-6">
+            <a
+              th:href="@{/admin/reports}"
+              class="inline-flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-primary transition-colors mb-4"
+            >
+              <span class="material-symbols-outlined">arrow_back</span>
+              <span class="font-semibold">Volver a reportes</span>
+            </a>
+            <h1
+              class="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3"
+            >
+              <span class="material-symbols-outlined text-4xl text-primary"
+                >analytics</span
+              >
+              Reporte de Egresos e Ingresos
+            </h1>
+            <p class="text-gray-600 dark:text-gray-400 mt-2">
+              Análisis detallado de gastos en ingredientes e ingresos por ventas
+            </p>
+          </div>
+
+          <!-- ERROR MESSAGE -->
+          <div
+            th:if="${errorMessage}"
+            class="mb-6 p-4 bg-red-100 dark:bg-red-900/30 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-400 rounded-xl"
+          >
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined">error</span>
+              <span th:text="${errorMessage}"></span>
+            </div>
+          </div>
+
+          <!-- SUMMARY CARDS -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <!-- Total Expenses -->
+            <div
+              class="p-6 rounded-2xl bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 border-2 border-red-200 dark:border-red-800 shadow-lg"
+            >
+              <div class="flex items-center justify-between mb-2">
+                <h3
+                  class="text-sm font-semibold text-gray-700 dark:text-gray-300"
+                >
+                  Total de Egresos
+                </h3>
+                <span class="material-symbols-outlined text-red-600 text-3xl"
+                  >trending_down</span
+                >
+              </div>
+              <p
+                class="text-3xl font-bold text-red-600 dark:text-red-400"
+                th:text="${#numbers.formatCurrency(totalExpenses)}"
+              >
+                $0.00
+              </p>
+              <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                Compras de ingredientes
+              </p>
+            </div>
+
+            <!-- Total Income -->
+            <div
+              class="p-6 rounded-2xl bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-2 border-green-200 dark:border-green-800 shadow-lg"
+            >
+              <div class="flex items-center justify-between mb-2">
+                <h3
+                  class="text-sm font-semibold text-gray-700 dark:text-gray-300"
+                >
+                  Total de Ingresos
+                </h3>
+                <span class="material-symbols-outlined text-green-600 text-3xl"
+                  >trending_up</span
+                >
+              </div>
+              <p
+                class="text-3xl font-bold text-green-600 dark:text-green-400"
+                th:text="${#numbers.formatCurrency(totalIncome)}"
+              >
+                $0.00
+              </p>
+              <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                Ventas de órdenes pagadas
+              </p>
+              <div
+                class="mt-3 pt-3 border-t border-green-200 dark:border-green-800 space-y-1"
+              >
+                <div class="flex justify-between text-sm">
+                  <span class="text-gray-600 dark:text-gray-400"
+                    >Productos:</span
+                  >
+                  <span
+                    class="font-semibold text-green-700 dark:text-green-300"
+                    th:text="${#numbers.formatCurrency(totalItemIncome)}"
+                    >$0.00</span
+                  >
+                </div>
+                <div class="flex justify-between text-sm">
+                  <span class="text-gray-600 dark:text-gray-400"
+                    >Complementos:</span
+                  >
+                  <span
+                    class="font-semibold text-green-700 dark:text-green-300"
+                    th:text="${#numbers.formatCurrency(totalComplementsSales)}"
+                    >$0.00</span
+                  >
+                </div>
+              </div>
+            </div>
+
+            <!-- Net Profit -->
+            <div
+              class="p-6 rounded-2xl bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 border-2 border-blue-200 dark:border-blue-800 shadow-lg"
+              th:classappend="${netProfit >= 0 ? 'from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 border-blue-200 dark:border-blue-800' : 'from-yellow-50 to-amber-50 dark:from-yellow-900/20 dark:to-amber-900/20 border-yellow-200 dark:border-yellow-800'}"
+            >
+              <div class="flex items-center justify-between mb-2">
+                <h3
+                  class="text-sm font-semibold text-gray-700 dark:text-gray-300"
+                >
+                  Ganancia Neta
+                </h3>
+                <span
+                  class="material-symbols-outlined text-3xl"
+                  th:classappend="${netProfit >= 0 ? 'text-blue-600' : 'text-yellow-600'}"
+                  th:text="${netProfit >= 0 ? 'account_balance' : 'warning'}"
+                  >account_balance</span
+                >
+              </div>
+              <p
+                class="text-3xl font-bold"
+                th:classappend="${netProfit >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-yellow-600 dark:text-yellow-400'}"
+                th:text="${#numbers.formatCurrency(netProfit)}"
+              >
+                $0.00
+              </p>
+              <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                <span th:text="${netProfit >= 0 ? 'Ganancia' : 'Pérdida'}"
+                  >Ganancia</span
+                >
+                (Ingresos - Egresos)
+              </p>
+            </div>
+          </div>
+
+          <!-- TOGGLE BUTTONS -->
+          <div class="mb-6 flex justify-center">
+            <div
+              class="inline-flex rounded-2xl bg-white dark:bg-gray-900 p-2 shadow-lg border border-gray-200 dark:border-gray-800"
+            >
+              <button
+                id="btnExpenses"
+                onclick="toggleView('expenses')"
+                class="px-6 py-3 rounded-xl font-semibold transition-all flex items-center gap-2 bg-gradient-to-r from-red-500 to-orange-500 text-white shadow-md"
+              >
+                <span class="material-symbols-outlined">remove_circle</span>
+                <span>EGRESOS</span>
+              </button>
+              <button
+                id="btnIncome"
+                onclick="toggleView('income')"
+                class="px-6 py-3 rounded-xl font-semibold transition-all flex items-center gap-2 text-gray-700 dark:text-gray-300"
+              >
+                <span class="material-symbols-outlined">add_circle</span>
+                <span>INGRESOS</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- CATEGORIES SECTION -->
+          <div
+            id="categoriesSection"
+            class="bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800 overflow-hidden mb-8"
+          >
+            <div class="p-6 border-b border-gray-200 dark:border-gray-800">
+              <h2
+                class="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2"
+              >
+                <span class="material-symbols-outlined" id="categoryIcon"
+                  >category</span
+                >
+                <span id="categoryTitle">Categorías de Ingredientes</span>
+              </h2>
+            </div>
+
+            <!-- Categories Grid -->
+            <div class="p-6">
+              <div
+                id="categoriesGrid"
+                class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4"
+              >
+                <!-- Expenses Categories (Ingredient Categories) -->
+                <div
+                  th:each="category : ${ingredientCategories}"
+                  class="expense-category category-card"
+                >
+                  <button
+                    th:data-category-id="${category.idCategory}"
+                    th:data-category-name="${category.name}"
+                    onclick="
+                      loadExpenseDetails(
+                        this.dataset.categoryId,
+                        this.dataset.categoryName,
+                      )
+                    "
+                    class="w-full p-4 rounded-xl bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 border-2 border-red-200 dark:border-red-800 hover:border-red-400 dark:hover:border-red-600 transition-all hover:shadow-lg group"
+                  >
+                    <div class="flex flex-col items-center text-center gap-2">
+                      <span
+                        class="material-symbols-outlined text-4xl text-red-600 dark:text-red-400 group-hover:scale-110 transition-transform"
+                        >category</span
+                      >
+                      <span
+                        class="font-semibold text-gray-900 dark:text-white text-sm"
+                        th:text="${category.name}"
+                        >Categoría</span
+                      >
+                    </div>
+                  </button>
+                </div>
+
+                <!-- Income Categories (Menu Categories) -->
+                <div
+                  th:each="category : ${menuCategories}"
+                  class="income-category category-card hidden"
+                >
+                  <button
+                    th:data-category-id="${category.idCategory}"
+                    th:data-category-name="${category.name}"
+                    onclick="
+                      loadIncomeDetails(
+                        this.dataset.categoryId,
+                        this.dataset.categoryName,
+                      )
+                    "
+                    class="w-full p-4 rounded-xl bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-2 border-green-200 dark:border-green-800 hover:border-green-400 dark:hover:border-green-600 transition-all hover:shadow-lg group"
+                  >
+                    <div class="flex flex-col items-center text-center gap-2">
+                      <span
+                        class="material-symbols-outlined text-4xl text-green-600 dark:text-green-400 group-hover:scale-110 transition-transform"
+                        >restaurant_menu</span
+                      >
+                      <span
+                        class="font-semibold text-gray-900 dark:text-white text-sm"
+                        th:text="${category.name}"
+                        >Categoría</span
+                      >
+                    </div>
+                  </button>
+                </div>
+
+                <!-- Complementos Button (Income section) -->
+                <div class="income-category category-card hidden">
+                  <button
+                    onclick="loadComplementDetails()"
+                    class="w-full p-4 rounded-xl bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 border-2 border-emerald-200 dark:border-emerald-800 hover:border-emerald-400 dark:hover:border-emerald-600 transition-all hover:shadow-lg group"
+                  >
+                    <div class="flex flex-col items-center text-center gap-2">
+                      <span
+                        class="material-symbols-outlined text-4xl text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform"
+                        >add_box</span
+                      >
+                      <span
+                        class="font-semibold text-gray-900 dark:text-white text-sm"
+                        >Complementos</span
+                      >
+                    </div>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- DETAILS TABLE -->
+          <div
+            id="detailsSection"
+            class="bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800 overflow-hidden hidden"
+          >
+            <div class="p-6 border-b border-gray-200 dark:border-gray-800">
+              <div class="flex items-center justify-between">
+                <h2
+                  class="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2"
+                >
+                  <span class="material-symbols-outlined" id="detailIcon"
+                    >list</span
+                  >
+                  <span id="detailTitle">Detalle</span>
+                </h2>
+                <button
+                  onclick="closeDetails()"
+                  class="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                >
+                  <span class="material-symbols-outlined">close</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Loading Spinner -->
+            <div
+              id="loadingSpinner"
+              class="p-12 flex justify-center items-center hidden"
+            >
+              <div
+                class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"
+              ></div>
+            </div>
+
+            <!-- Table -->
+            <div id="detailsTable" class="overflow-x-auto">
+              <table
+                class="min-w-full divide-y divide-gray-200 dark:divide-gray-700"
+              >
+                <thead
+                  class="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900"
+                >
+                  <tr>
+                    <th
+                      class="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider"
+                    >
+                      Nombre
+                    </th>
+                    <th
+                      class="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider"
+                    >
+                      <span id="quantityHeader">Cantidad Comprada</span>
+                    </th>
+                    <th
+                      class="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider"
+                    >
+                      Total
+                    </th>
+                  </tr>
+                </thead>
+                <tbody
+                  id="detailsTableBody"
+                  class="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-900"
+                >
+                  <!-- Rows will be inserted here via JavaScript -->
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Empty State -->
+            <div id="emptyState" class="p-12 text-center hidden">
+              <span
+                class="material-symbols-outlined text-6xl text-gray-300 dark:text-gray-600"
+                >inbox</span
+              >
+              <p class="mt-4 text-gray-500 dark:text-gray-400 text-lg">
+                No hay datos disponibles
+              </p>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <!-- JAVASCRIPT -->
+    <script th:inline="javascript">
+      let currentView = "expenses"; // 'expenses' or 'income'
+
+      function toggleView(view) {
+        currentView = view;
+
+        const btnExpenses = document.getElementById("btnExpenses");
+        const btnIncome = document.getElementById("btnIncome");
+        const categoryTitle = document.getElementById("categoryTitle");
+        const categoryIcon = document.getElementById("categoryIcon");
+
+        // Update button styles
+        if (view === "expenses") {
+          btnExpenses.className =
+            "px-6 py-3 rounded-xl font-semibold transition-all flex items-center gap-2 bg-gradient-to-r from-red-500 to-orange-500 text-white shadow-md";
+          btnIncome.className =
+            "px-6 py-3 rounded-xl font-semibold transition-all flex items-center gap-2 text-gray-700 dark:text-gray-300";
+          categoryTitle.textContent = "Categorías de Ingredientes";
+          categoryIcon.textContent = "category";
+
+          // Show expense categories, hide income categories
+          document
+            .querySelectorAll(".expense-category")
+            .forEach((el) => el.classList.remove("hidden"));
+          document
+            .querySelectorAll(".income-category")
+            .forEach((el) => el.classList.add("hidden"));
+        } else {
+          btnIncome.className =
+            "px-6 py-3 rounded-xl font-semibold transition-all flex items-center gap-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-md";
+          btnExpenses.className =
+            "px-6 py-3 rounded-xl font-semibold transition-all flex items-center gap-2 text-gray-700 dark:text-gray-300";
+          categoryTitle.textContent = "Categorías del Menú";
+          categoryIcon.textContent = "restaurant_menu";
+
+          // Show income categories, hide expense categories
+          document
+            .querySelectorAll(".income-category")
+            .forEach((el) => el.classList.remove("hidden"));
+          document
+            .querySelectorAll(".expense-category")
+            .forEach((el) => el.classList.add("hidden"));
+        }
+
+        // Hide details section
+        closeDetails();
+      }
+
+      function loadExpenseDetails(categoryId, categoryName) {
+        const detailsSection = document.getElementById("detailsSection");
+        const detailTitle = document.getElementById("detailTitle");
+        const detailIcon = document.getElementById("detailIcon");
+        const quantityHeader = document.getElementById("quantityHeader");
+        const loadingSpinner = document.getElementById("loadingSpinner");
+        const detailsTable = document.getElementById("detailsTable");
+        const emptyState = document.getElementById("emptyState");
+        const tableBody = document.getElementById("detailsTableBody");
+
+        detailTitle.textContent = "Egresos: " + categoryName;
+        detailIcon.textContent = "remove_circle";
+        quantityHeader.textContent = "Cantidad Comprada";
+
+        detailsSection.classList.remove("hidden");
+        loadingSpinner.classList.remove("hidden");
+        detailsTable.classList.add("hidden");
+        emptyState.classList.add("hidden");
+
+        fetch(`/admin/reports/income-expenses/expenses/${categoryId}`)
+          .then((response) => response.json())
+          .then((data) => {
+            loadingSpinner.classList.add("hidden");
+
+            if (data.length === 0) {
+              emptyState.classList.remove("hidden");
+              return;
+            }
+
+            tableBody.innerHTML = "";
+            data.forEach((item) => {
+              const row = document.createElement("tr");
+              row.className =
+                "hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors";
+              row.innerHTML = `
+                <td class="px-6 py-4">
+                  <span class="text-sm font-medium text-gray-900 dark:text-white">${
+                    item.name
+                  }</span>
+                </td>
+                <td class="px-6 py-4">
+                  <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-400 font-semibold text-sm">
+                    ${parseFloat(item.quantity).toFixed(2)}
+                  </span>
+                </td>
+                <td class="px-6 py-4">
+                  <span class="text-base font-bold text-red-600 dark:text-red-400">
+                    ${new Intl.NumberFormat("es-MX", {
+                      style: "currency",
+                      currency: "MXN",
+                    }).format(item.total)}
+                  </span>
+                </td>
+              `;
+              tableBody.appendChild(row);
+            });
+
+            detailsTable.classList.remove("hidden");
+          })
+          .catch((error) => {
+            console.error("Error loading expense details:", error);
+            loadingSpinner.classList.add("hidden");
+            emptyState.classList.remove("hidden");
+          });
+      }
+
+      function loadIncomeDetails(categoryId, categoryName) {
+        const detailsSection = document.getElementById("detailsSection");
+        const detailTitle = document.getElementById("detailTitle");
+        const detailIcon = document.getElementById("detailIcon");
+        const quantityHeader = document.getElementById("quantityHeader");
+        const loadingSpinner = document.getElementById("loadingSpinner");
+        const detailsTable = document.getElementById("detailsTable");
+        const emptyState = document.getElementById("emptyState");
+        const tableBody = document.getElementById("detailsTableBody");
+
+        detailTitle.textContent = "Ingresos: " + categoryName;
+        detailIcon.textContent = "add_circle";
+        quantityHeader.textContent = "Cantidad Vendida";
+
+        detailsSection.classList.remove("hidden");
+        loadingSpinner.classList.remove("hidden");
+        detailsTable.classList.add("hidden");
+        emptyState.classList.add("hidden");
+
+        fetch(`/admin/reports/income-expenses/income/${categoryId}`)
+          .then((response) => response.json())
+          .then((data) => {
+            loadingSpinner.classList.add("hidden");
+
+            if (data.length === 0) {
+              emptyState.classList.remove("hidden");
+              return;
+            }
+
+            tableBody.innerHTML = "";
+            data.forEach((item) => {
+              const row = document.createElement("tr");
+              row.className =
+                "hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors";
+              row.innerHTML = `
+                <td class="px-6 py-4">
+                  <span class="text-sm font-medium text-gray-900 dark:text-white">${
+                    item.name
+                  }</span>
+                </td>
+                <td class="px-6 py-4">
+                  <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400 font-semibold text-sm">
+                    ${parseInt(item.quantity)} unidades
+                  </span>
+                </td>
+                <td class="px-6 py-4">
+                  <span class="text-base font-bold text-green-600 dark:text-green-400">
+                    ${new Intl.NumberFormat("es-MX", {
+                      style: "currency",
+                      currency: "MXN",
+                    }).format(item.total)}
+                  </span>
+                </td>
+              `;
+              tableBody.appendChild(row);
+            });
+
+            detailsTable.classList.remove("hidden");
+          })
+          .catch((error) => {
+            console.error("Error loading income details:", error);
+            loadingSpinner.classList.add("hidden");
+            emptyState.classList.remove("hidden");
+          });
+      }
+
+      function loadComplementDetails() {
+        const detailsSection = document.getElementById("detailsSection");
+        const detailTitle = document.getElementById("detailTitle");
+        const detailIcon = document.getElementById("detailIcon");
+        const quantityHeader = document.getElementById("quantityHeader");
+        const loadingSpinner = document.getElementById("loadingSpinner");
+        const detailsTable = document.getElementById("detailsTable");
+        const emptyState = document.getElementById("emptyState");
+        const tableBody = document.getElementById("detailsTableBody");
+
+        detailTitle.textContent = "Ingresos: Complementos";
+        detailIcon.textContent = "add_box";
+        quantityHeader.textContent = "Cantidad Vendida";
+
+        detailsSection.classList.remove("hidden");
+        loadingSpinner.classList.remove("hidden");
+        detailsTable.classList.add("hidden");
+        emptyState.classList.add("hidden");
+
+        fetch("/admin/reports/income-expenses/income/complements")
+          .then((response) => response.json())
+          .then((data) => {
+            loadingSpinner.classList.add("hidden");
+
+            if (data.length === 0) {
+              emptyState.classList.remove("hidden");
+              return;
+            }
+
+            tableBody.innerHTML = "";
+            let grandTotal = 0;
+            data.forEach((item) => {
+              grandTotal += parseFloat(item.total);
+              const row = document.createElement("tr");
+              row.className =
+                "hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors";
+              row.innerHTML = `
+                <td class="px-6 py-4">
+                  <span class="text-sm font-medium text-gray-900 dark:text-white">${item.name}</span>
+                </td>
+                <td class="px-6 py-4">
+                  <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-400 font-semibold text-sm">
+                    ${parseInt(item.quantity)} unidades
+                  </span>
+                </td>
+                <td class="px-6 py-4">
+                  <span class="text-base font-bold text-emerald-600 dark:text-emerald-400">
+                    ${new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(item.total)}
+                  </span>
+                </td>
+              `;
+              tableBody.appendChild(row);
+            });
+
+            // Total row
+            const totalRow = document.createElement("tr");
+            totalRow.className =
+              "bg-emerald-50 dark:bg-emerald-900/20 border-t-2 border-emerald-300 dark:border-emerald-700";
+            totalRow.innerHTML = `
+              <td class="px-6 py-4" colspan="2">
+                <span class="text-sm font-bold text-gray-900 dark:text-white">Total Complementos</span>
+              </td>
+              <td class="px-6 py-4">
+                <span class="text-base font-bold text-emerald-600 dark:text-emerald-400">
+                  ${new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(grandTotal)}
+                </span>
+              </td>
+            `;
+            tableBody.appendChild(totalRow);
+
+            detailsTable.classList.remove("hidden");
+          })
+          .catch((error) => {
+            console.error("Error loading complement details:", error);
+            loadingSpinner.classList.add("hidden");
+            emptyState.classList.remove("hidden");
+          });
+      }
+
+      function closeDetails() {
+        document.getElementById("detailsSection").classList.add("hidden");
+      }
+    </script>
+
+    <!-- Script del Sistema de Temas -->
+    <div th:replace="~{fragments/theme :: themeScript}"></div>
+
+    <!-- Sidebar JavaScript -->
+    <div th:replace="~{fragments/sidebar :: sidebarScripts}"></div>
+  </body>
+</html>

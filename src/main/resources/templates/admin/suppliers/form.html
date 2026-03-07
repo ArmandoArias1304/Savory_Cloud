@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title
+      th:text="${globalSystemConfig.systemName + ' - ' + (isEdit ? 'Editar Proveedor' : 'Nuevo Proveedor')}"
+    >
+      El Gran Sazón - Proveedor
+    </title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@300;400;500;600;700"
+      rel="stylesheet"
+    />
+
+    <!-- Sistema de Temas (Modo Claro/Oscuro) -->
+    <div th:replace="~{fragments/theme :: themeResources}"></div>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#38e07b",
+              "primary-dark": "#2bc866",
+              "background-light": "#f8faf9",
+              "background-dark": "#0f1713",
+            },
+            fontFamily: {
+              display: ["Work Sans"],
+            },
+          },
+        },
+      };
+    </script>
+  </head>
+  <body
+    class="bg-gradient-to-br from-background-light to-gray-50 dark:from-background-dark dark:to-gray-900 font-display text-gray-800 dark:text-gray-200 min-h-screen"
+  >
+    <div class="max-w-5xl mx-auto p-4 sm:p-6 lg:p-8 pb-32">
+      <!-- HEADER -->
+      <div class="mb-6 sm:mb-8">
+        <div class="flex items-center gap-4 mb-4">
+          <a
+            th:href="@{/admin/suppliers}"
+            class="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+          >
+            <span class="material-symbols-outlined text-2xl">arrow_back</span>
+          </a>
+          <div>
+            <h1
+              class="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white"
+              th:text="${isEdit ? 'Editar Proveedor' : 'Nuevo Proveedor'}"
+            >
+              Nuevo Proveedor
+            </h1>
+            <p class="text-sm sm:text-base text-gray-600 dark:text-gray-400">
+              Completa el formulario para guardar el proveedor
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ERROR MESSAGE -->
+      <div
+        th:if="${errorMessage}"
+        class="mb-6 p-4 bg-red-100 dark:bg-red-900/30 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-400 rounded-xl"
+      >
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined">error</span>
+          <span th:text="${errorMessage}"></span>
+        </div>
+      </div>
+
+      <!-- FORM -->
+      <div
+        class="bg-white dark:bg-gray-900 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 p-6 sm:p-8"
+      >
+        <form
+          th:action="${isEdit ? '/admin/suppliers/' + supplier.idSupplier : '/admin/suppliers'}"
+          th:object="${supplier}"
+          method="post"
+        >
+          <!-- Name Field -->
+          <div class="mb-6">
+            <label
+              for="name"
+              class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+            >
+              Nombre del Proveedor *
+            </label>
+            <input
+              type="text"
+              id="name"
+              th:field="*{name}"
+              class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
+              placeholder="Ej: Distribuidora XYZ"
+              required
+            />
+            <p
+              th:if="${#fields.hasErrors('name')}"
+              th:errors="*{name}"
+              class="mt-2 text-sm text-red-600 dark:text-red-400"
+            ></p>
+          </div>
+
+          <!-- Contact Person Field -->
+          <div class="mb-6">
+            <label
+              for="contactPerson"
+              class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+            >
+              Persona de Contacto
+            </label>
+            <input
+              type="text"
+              id="contactPerson"
+              th:field="*{contactPerson}"
+              class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
+              placeholder="Ej: Juan Pérez"
+            />
+            <p
+              th:if="${#fields.hasErrors('contactPerson')}"
+              th:errors="*{contactPerson}"
+              class="mt-2 text-sm text-red-600 dark:text-red-400"
+            ></p>
+          </div>
+
+          <!-- Phone and Email Row -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <!-- Phone -->
+            <div>
+              <label
+                for="phone"
+                class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+              >
+                Teléfono
+              </label>
+              <input
+                type="tel"
+                id="phone"
+                th:field="*{phone}"
+                pattern="[0-9]{10}"
+                minlength="10"
+                maxlength="10"
+                title="Ingresa exactamente 10 dígitos numéricos"
+                oninput="
+                  this.value = this.value.replace(/[^0-9]/g, '').slice(0, 10)
+                "
+                class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
+                placeholder="Ej: 5551234567"
+              />
+              <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                Número de teléfono (10 dígitos)
+              </p>
+              <p
+                th:if="${#fields.hasErrors('phone')}"
+                th:errors="*{phone}"
+                class="mt-2 text-sm text-red-600 dark:text-red-400"
+              ></p>
+            </div>
+
+            <!-- Email -->
+            <div>
+              <label
+                for="email"
+                class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+              >
+                Correo Electrónico
+              </label>
+              <input
+                type="email"
+                id="email"
+                th:field="*{email}"
+                class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
+                placeholder="Ej: contacto@proveedor.com"
+              />
+              <p
+                th:if="${#fields.hasErrors('email')}"
+                th:errors="*{email}"
+                class="mt-2 text-sm text-red-600 dark:text-red-400"
+              ></p>
+            </div>
+          </div>
+
+          <!-- Address Field -->
+          <div class="mb-6">
+            <label
+              for="address"
+              class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+            >
+              Dirección
+            </label>
+            <input
+              type="text"
+              id="address"
+              th:field="*{address}"
+              class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
+              placeholder="Ej: Calle Principal 123, Ciudad"
+            />
+            <p
+              th:if="${#fields.hasErrors('address')}"
+              th:errors="*{address}"
+              class="mt-2 text-sm text-red-600 dark:text-red-400"
+            ></p>
+          </div>
+
+          <!-- Rating Field -->
+          <div class="mb-6">
+            <label
+              for="rating"
+              class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+            >
+              Valoración (1-5 estrellas)
+            </label>
+            <select
+              id="rating"
+              th:field="*{rating}"
+              class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
+            >
+              <option value="">Sin valoración</option>
+              <option value="1">⭐ 1 estrella</option>
+              <option value="2">⭐⭐ 2 estrellas</option>
+              <option value="3">⭐⭐⭐ 3 estrellas</option>
+              <option value="4">⭐⭐⭐⭐ 4 estrellas</option>
+              <option value="5">⭐⭐⭐⭐⭐ 5 estrellas</option>
+            </select>
+            <p
+              th:if="${#fields.hasErrors('rating')}"
+              th:errors="*{rating}"
+              class="mt-2 text-sm text-red-600 dark:text-red-400"
+            ></p>
+          </div>
+
+          <!-- Categories Selection -->
+          <div class="mb-6">
+            <label
+              class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+            >
+              Categorías que Surte
+            </label>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">
+              Selecciona las categorías de ingredientes que este proveedor puede
+              suministrar
+            </p>
+
+            <div
+              th:if="${#lists.isEmpty(allCategories)}"
+              class="p-4 bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-400 dark:border-yellow-700 text-yellow-700 dark:text-yellow-400 rounded-xl"
+            >
+              <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined">warning</span>
+                <span
+                  >No hay categorías disponibles. Crea categorías de
+                  ingredientes primero.</span
+                >
+              </div>
+            </div>
+
+            <div
+              th:unless="${#lists.isEmpty(allCategories)}"
+              class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+            >
+              <div th:each="category : ${allCategories}" class="relative">
+                <input
+                  type="checkbox"
+                  th:id="'category_' + ${category.idCategory}"
+                  name="categoryIds"
+                  th:value="${category.idCategory}"
+                  th:checked="${supplier.categories != null && #lists.contains(supplier.categories, category)}"
+                  class="peer sr-only"
+                />
+                <label
+                  th:for="'category_' + ${category.idCategory}"
+                  class="flex items-center gap-3 p-4 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 cursor-pointer hover:border-primary transition-all peer-checked:border-primary peer-checked:bg-primary/5 dark:peer-checked:bg-primary/10"
+                >
+                  <div
+                    class="flex items-center justify-center w-10 h-10 rounded-lg flex-shrink-0"
+                    th:style="'background-color: ' + ${category.color} + '20'"
+                  >
+                    <span
+                      class="material-symbols-outlined text-xl"
+                      th:style="'color: ' + ${category.color}"
+                      th:text="${category.icon}"
+                      >category</span
+                    >
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <p
+                      class="text-sm font-semibold text-gray-900 dark:text-white truncate"
+                      th:text="${category.name}"
+                    >
+                      Categoría
+                    </p>
+                    <p
+                      class="text-xs text-gray-500 dark:text-gray-400 truncate"
+                      th:if="${category.description}"
+                      th:text="${category.description}"
+                    >
+                      Descripción
+                    </p>
+                  </div>
+                  <span
+                    class="material-symbols-outlined text-primary opacity-0 peer-checked:opacity-100 transition-opacity"
+                    >check_circle</span
+                  >
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Notes Field -->
+          <div class="mb-6">
+            <label
+              for="notes"
+              class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+            >
+              Notas Adicionales
+            </label>
+            <textarea
+              id="notes"
+              th:field="*{notes}"
+              rows="3"
+              class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-primary transition-colors resize-none"
+              placeholder="Información adicional sobre el proveedor..."
+            ></textarea>
+            <p
+              th:if="${#fields.hasErrors('notes')}"
+              th:errors="*{notes}"
+              class="mt-2 text-sm text-red-600 dark:text-red-400"
+            ></p>
+          </div>
+
+          <!-- Active Checkbox -->
+          <div class="mb-6">
+            <label class="flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                th:field="*{active}"
+                class="w-5 h-5 rounded border-gray-300 dark:border-gray-700 text-primary focus:ring-2 focus:ring-primary transition-colors"
+              />
+              <span
+                class="text-sm font-semibold text-gray-700 dark:text-gray-300"
+                >Proveedor Activo</span
+              >
+            </label>
+            <p class="mt-2 ml-8 text-xs text-gray-500 dark:text-gray-400">
+              Los proveedores inactivos no aparecerán en las búsquedas
+            </p>
+          </div>
+
+          <!-- Form Actions -->
+          <div
+            class="flex flex-col sm:flex-row gap-3 pt-6 border-t border-gray-200 dark:border-gray-800"
+          >
+            <button
+              type="submit"
+              class="flex-1 sm:flex-initial px-6 py-3 bg-gradient-to-r from-primary to-primary-dark text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-primary/30 transition-all"
+            >
+              <span class="flex items-center justify-center gap-2">
+                <span class="material-symbols-outlined">save</span>
+                <span
+                  th:text="${isEdit ? 'Actualizar Proveedor' : 'Crear Proveedor'}"
+                  >Guardar</span
+                >
+              </span>
+            </button>
+            <a
+              th:href="@{/admin/suppliers}"
+              class="flex-1 sm:flex-initial px-6 py-3 bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-semibold rounded-xl hover:bg-gray-300 dark:hover:bg-gray-700 transition-colors text-center"
+            >
+              Cancelar
+            </a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </body>
+</html>

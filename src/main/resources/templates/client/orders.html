@@ -1,0 +1,859 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title th:text="${systemConfig != null and systemConfig.restaurantName != null ? systemConfig.restaurantName + ' - Mis Pedidos' : 'Mis Pedidos'}">Mis Pedidos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@300;400;500;600;700"
+      rel="stylesheet"
+    />
+
+    <!-- Sistema de Temas (Modo Claro/Oscuro) -->
+    <div th:replace="~{fragments/theme :: themeResources}"></div>
+    <!-- Favicon del restaurante (override) -->
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="96x96"
+      th:href="${@cloudinaryUrl.logoSmall(systemConfig.restaurantLogoUrl)}"
+      th:if="${systemConfig != null and systemConfig.restaurantLogoUrl != null and !systemConfig.restaurantLogoUrl.isEmpty()}"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#38e07b",
+              "primary-dark": "#2bc866",
+              "background-light": "#f8fafc",
+              "background-dark": "#0f172a",
+              "surface-light": "#ffffff",
+              "surface-dark": "#1e293b",
+            },
+            fontFamily: {
+              display: ["Work Sans", "sans-serif"],
+            },
+          },
+        },
+      };
+    </script>
+
+    <style>
+      .table-responsive {
+        overflow-x: auto;
+        max-width: 100%;
+      }
+
+      .table-responsive::-webkit-scrollbar {
+        height: 8px;
+      }
+
+      .table-responsive::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 10px;
+      }
+
+      .table-responsive::-webkit-scrollbar-thumb {
+        background: #38e07b;
+        border-radius: 10px;
+      }
+
+      .table-responsive::-webkit-scrollbar-thumb:hover {
+        background: #2bc866;
+      }
+    </style>
+  </head>
+  <body
+    class="bg-gradient-to-br from-background-light to-gray-50 dark:from-background-dark dark:to-gray-900 font-display text-gray-800 dark:text-gray-200"
+  >
+    <div class="container mx-auto px-4 py-6 sm:py-8 pb-32">
+      <!-- HEADER -->
+      <div class="mb-6 sm:mb-8">
+        <a
+          href="/client/dashboard"
+          class="inline-flex items-center gap-2 text-primary hover:text-primary-dark font-semibold mb-4 transition-colors"
+        >
+          <span class="material-symbols-outlined">arrow_back</span>
+          Volver al Dashboard
+        </a>
+        <div
+          class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+        >
+          <div>
+            <h1
+              class="text-2xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-2"
+            >
+              Mis Pedidos
+            </h1>
+            <p class="text-gray-600 dark:text-gray-400">
+              Historial completo de tus pedidos
+            </p>
+          </div>
+          <div class="flex gap-3">
+            <a
+              href="/client/menu"
+              class="inline-flex items-center gap-2 px-4 sm:px-6 py-2 sm:py-3 bg-primary hover:bg-primary-dark text-white rounded-xl font-semibold transition-all shadow-lg"
+            >
+              <span class="material-symbols-outlined">add</span>
+              <span class="hidden sm:inline">Nuevo Pedido</span>
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- STATISTICS CARDS -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
+        <!-- Total Orders Card -->
+        <div
+          class="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-6 shadow-lg"
+        >
+          <div class="flex items-center gap-4">
+            <div
+              class="w-14 h-14 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center"
+            >
+              <span
+                class="material-symbols-outlined text-2xl text-blue-600 dark:text-blue-400"
+              >
+                shopping_bag
+              </span>
+            </div>
+            <div>
+              <p class="text-sm text-gray-600 dark:text-gray-400 font-semibold">
+                Total de Pedidos
+              </p>
+              <p
+                class="text-3xl font-black text-gray-900 dark:text-white"
+                th:text="${totalOrders}"
+              >
+                0
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Active Orders Card -->
+        <div
+          class="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-6 shadow-lg"
+        >
+          <div class="flex items-center gap-4">
+            <div
+              class="w-14 h-14 bg-orange-100 dark:bg-orange-900/30 rounded-xl flex items-center justify-center"
+            >
+              <span
+                class="material-symbols-outlined text-2xl text-orange-600 dark:text-orange-400"
+              >
+                pending
+              </span>
+            </div>
+            <div>
+              <p class="text-sm text-gray-600 dark:text-gray-400 font-semibold">
+                Pedidos Activos
+              </p>
+              <p
+                class="text-3xl font-black text-gray-900 dark:text-white"
+                th:text="${activeOrders}"
+              >
+                0
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Completed Orders Card -->
+        <div
+          class="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-6 shadow-lg"
+        >
+          <div class="flex items-center gap-4">
+            <div
+              class="w-14 h-14 bg-green-100 dark:bg-green-900/30 rounded-xl flex items-center justify-center"
+            >
+              <span
+                class="material-symbols-outlined text-2xl text-green-600 dark:text-green-400"
+              >
+                check_circle
+              </span>
+            </div>
+            <div>
+              <p class="text-sm text-gray-600 dark:text-gray-400 font-semibold">
+                Completados
+              </p>
+              <p
+                class="text-3xl font-black text-gray-900 dark:text-white"
+                th:text="${completedOrders}"
+              >
+                0
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ORDERS TABLE -->
+      <div
+        class="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-xl overflow-hidden"
+      >
+        <!-- Table Header -->
+        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-800">
+          <h2 class="text-xl font-bold text-gray-900 dark:text-white">
+            Historial de Pedidos
+          </h2>
+        </div>
+
+        <!-- Table -->
+        <div class="table-responsive">
+          <table class="w-full">
+            <thead class="bg-gray-50 dark:bg-gray-800/50">
+              <tr>
+                <th
+                  class="px-4 sm:px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider"
+                >
+                  # Pedido
+                </th>
+                <th
+                  class="px-4 sm:px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider"
+                >
+                  Tipo
+                </th>
+                <th
+                  class="px-4 sm:px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider"
+                >
+                  Estado
+                </th>
+                <th
+                  class="px-4 sm:px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider"
+                >
+                  Total
+                </th>
+                <th
+                  class="px-4 sm:px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider"
+                >
+                  Fecha
+                </th>
+                <th
+                  class="px-4 sm:px-6 py-4 text-center text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider"
+                >
+                  Acciones
+                </th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
+              <tr
+                th:if="${#lists.isEmpty(orders)}"
+                class="bg-white dark:bg-gray-900"
+              >
+                <td colspan="6" class="px-6 py-12 text-center">
+                  <div class="flex flex-col items-center gap-3">
+                    <span
+                      class="material-symbols-outlined text-6xl text-gray-300 dark:text-gray-700"
+                    >
+                      receipt_long
+                    </span>
+                    <p class="text-gray-500 dark:text-gray-400 font-semibold">
+                      No tienes pedidos registrados
+                    </p>
+                    <a
+                      href="/client/menu"
+                      class="inline-flex items-center gap-2 px-6 py-3 bg-primary hover:bg-primary-dark text-white rounded-xl font-semibold transition-all shadow-lg"
+                    >
+                      <span class="material-symbols-outlined">add</span>
+                      Crear tu primer pedido
+                    </a>
+                  </div>
+                </td>
+              </tr>
+
+              <tr
+                th:each="order : ${orders}"
+                th:data-order-id="${order.idOrder}"
+                class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+              >
+                <!-- Order Number -->
+                <td class="px-4 sm:px-6 py-4 whitespace-nowrap">
+                  <div class="flex items-center gap-2">
+                    <span
+                      class="material-symbols-outlined text-primary text-xl"
+                    >
+                      receipt
+                    </span>
+                    <span
+                      class="font-bold text-gray-900 dark:text-white"
+                      th:text="${order.orderNumber}"
+                    >
+                      #001
+                    </span>
+                  </div>
+                </td>
+
+                <!-- Order Type -->
+                <td class="px-4 sm:px-6 py-4 whitespace-nowrap">
+                  <!-- DINE_IN -->
+                  <span
+                    th:if="${order.orderType.name() == 'DINE_IN'}"
+                    class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300"
+                  >
+                    <span class="material-symbols-outlined text-sm"
+                      >table_restaurant</span
+                    >
+                    <span th:text="${order.orderType.displayName}"
+                      >Comer Aquí</span
+                    >
+                  </span>
+
+                  <!-- TAKEOUT -->
+                  <span
+                    th:if="${order.orderType.name() == 'TAKEOUT'}"
+                    class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
+                  >
+                    <span class="material-symbols-outlined text-sm"
+                      >shopping_bag</span
+                    >
+                    <span th:text="${order.orderType.displayName}"
+                      >Para pasar a recoger</span
+                    >
+                  </span>
+
+                  <!-- DELIVERY -->
+                  <span
+                    th:if="${order.orderType.name() == 'DELIVERY'}"
+                    class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300"
+                  >
+                    <span class="material-symbols-outlined text-sm"
+                      >local_shipping</span
+                    >
+                    <span th:text="${order.orderType.displayName}"
+                      >Entrega a Domicilio</span
+                    >
+                  </span>
+                </td>
+
+                <!-- Status -->
+                <td class="px-4 sm:px-6 py-4 whitespace-nowrap">
+                  <!-- PENDING -->
+                  <span
+                    th:if="${order.status.name() == 'PENDING'}"
+                    class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300"
+                  >
+                    <span class="material-symbols-outlined text-sm"
+                      >schedule</span
+                    >
+                    <span th:text="${order.status.displayName}">Pendiente</span>
+                  </span>
+
+                  <!-- IN_PREPARATION -->
+                  <span
+                    th:if="${order.status.name() == 'IN_PREPARATION'}"
+                    class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300"
+                  >
+                    <span class="material-symbols-outlined text-sm"
+                      >restaurant</span
+                    >
+                    <span th:text="${order.status.displayName}"
+                      >En Preparación</span
+                    >
+                  </span>
+
+                  <!-- READY -->
+                  <span
+                    th:if="${order.status.name() == 'READY'}"
+                    class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
+                  >
+                    <span class="material-symbols-outlined text-sm"
+                      >check_circle</span
+                    >
+                    <span th:text="${order.status.displayName}">Listo</span>
+                  </span>
+
+                  <!-- ON_THE_WAY -->
+                  <span
+                    th:if="${order.status.name() == 'ON_THE_WAY'}"
+                    class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300"
+                  >
+                    <span class="material-symbols-outlined text-sm"
+                      >delivery_truck_speed</span
+                    >
+                    <span th:text="${order.status.displayName}">En Camino</span>
+                  </span>
+
+                  <!-- DELIVERED -->
+                  <span
+                    th:if="${order.status.name() == 'DELIVERED'}"
+                    class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300"
+                  >
+                    <span class="material-symbols-outlined text-sm"
+                      >local_shipping</span
+                    >
+                    <span th:text="${order.status.displayName}">Entregado</span>
+                  </span>
+
+                  <!-- PAID -->
+                  <span
+                    th:if="${order.status.name() == 'PAID'}"
+                    class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300"
+                  >
+                    <span class="material-symbols-outlined text-sm">paid</span>
+                    <span th:text="${order.status.displayName}">Pagado</span>
+                  </span>
+
+                  <!-- CANCELLED -->
+                  <span
+                    th:if="${order.status.name() == 'CANCELLED'}"
+                    class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"
+                  >
+                    <span class="material-symbols-outlined text-sm"
+                      >cancel</span
+                    >
+                    <span th:text="${order.status.displayName}">Cancelado</span>
+                  </span>
+                </td>
+
+                <!-- Total -->
+                <td class="px-4 sm:px-6 py-4 whitespace-nowrap">
+                  <span
+                    class="text-lg font-bold text-gray-900 dark:text-white"
+                    th:text="'$' + ${#numbers.formatDecimal(order.total, 1, 2)}"
+                  >
+                    $0.00
+                  </span>
+                </td>
+
+                <!-- Date -->
+                <td class="px-4 sm:px-6 py-4 whitespace-nowrap">
+                  <div class="text-sm text-gray-900 dark:text-white">
+                    <div
+                      th:text="${#temporals.format(order.createdAt, 'dd/MM/yyyy')}"
+                    >
+                      01/01/2024
+                    </div>
+                    <div
+                      class="text-xs text-gray-500 dark:text-gray-400"
+                      th:text="${#temporals.format(order.createdAt, 'HH:mm')}"
+                    >
+                      12:00
+                    </div>
+                  </div>
+                </td>
+
+                <!-- Actions -->
+                <td class="px-4 sm:px-6 py-4 whitespace-nowrap text-center">
+                  <div class="flex items-center justify-center gap-2">
+                    <!-- Ver Detalles -->
+                    <a
+                      th:href="@{/client/orders/{id}(id=${order.idOrder})}"
+                      class="inline-flex items-center gap-1 px-4 py-2 bg-blue-100 hover:bg-blue-200 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 text-blue-700 dark:text-blue-300 rounded-lg font-semibold transition-all text-sm"
+                    >
+                      <span class="material-symbols-outlined text-sm">
+                        visibility
+                      </span>
+                      Ver Detalles
+                    </a>
+
+                    <!-- Descargar Ticket (only for PAID orders) -->
+                    <a
+                      th:if="${order.status.name() == 'PAID'}"
+                      th:href="@{/client/orders/{id}/download-ticket(id=${order.idOrder})}"
+                      class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-500 hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-700 text-white font-semibold transition-all text-sm"
+                      title="Descargar ticket del pedido"
+                    >
+                      <span class="material-symbols-outlined text-base">
+                        receipt_long
+                      </span>
+                      Descargar Ticket
+                    </a>
+
+                    <!-- Agregar Items (only for DINE_IN and TAKEOUT orders that can accept new items) -->
+                    <a
+                      th:if="${order.canAcceptNewItems()}"
+                      th:href="@{/client/orders/{id}/add-items(id=${order.idOrder})}"
+                      class="inline-flex items-center gap-1 px-4 py-2 bg-orange-100 hover:bg-orange-200 dark:bg-orange-900/30 dark:hover:bg-orange-900/50 text-orange-700 dark:text-orange-300 rounded-lg font-semibold transition-all text-sm"
+                      title="Agregar más items al pedido"
+                    >
+                      <span class="material-symbols-outlined text-sm">
+                        add_circle
+                      </span>
+                      Agregar Items
+                    </a>
+
+                    <!-- Cancelar Pedido 
+                         Rules for customer cancellation:
+                         - Order must not be in final states (CANCELLED, PAID, DELIVERED, ON_THE_WAY)
+                         - All items with preparation (Chef/Barista) must be PENDING
+                         - All items without preparation must be READY
+                    -->
+                    <th:block
+                      th:with="
+                      canCancel=${order.status.name() != 'CANCELLED' and 
+                                  order.status.name() != 'PAID' and 
+                                  order.status.name() != 'DELIVERED' and 
+                                  order.status.name() != 'ON_THE_WAY'},
+                      allItemsValid=${order.orderDetails.?[
+                        ((itemMenu.requiresPreparation == true or itemMenu.requiresBaristaPreparation == true) and itemStatus.name() != 'PENDING') or
+                        ((itemMenu.requiresPreparation == false and itemMenu.requiresBaristaPreparation == false) and itemStatus.name() != 'READY')
+                      ].empty}
+                    "
+                    >
+                      <button
+                        th:if="${canCancel and allItemsValid}"
+                        onclick="cancelOrder(this)"
+                        th:data-order-id="${order.idOrder}"
+                        th:data-order-number="${order.orderNumber}"
+                        class="inline-flex items-center gap-1 px-4 py-2 bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50 text-red-700 dark:text-red-300 rounded-lg font-semibold transition-all text-sm"
+                        title="Cancelar pedido"
+                      >
+                        <span class="material-symbols-outlined text-sm">
+                          cancel
+                        </span>
+                        Cancelar
+                      </button>
+                    </th:block>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination Controls -->
+        <div
+          id="paginationControls"
+          th:if="${totalElements > 0}"
+          class="px-6 py-4 border-t border-gray-200 dark:border-gray-800 flex flex-col sm:flex-row items-center justify-between gap-4"
+        >
+          <div class="text-sm text-gray-600 dark:text-gray-400">
+            Mostrando
+            <span th:text="${(currentPage - 1) * pageSize + 1}">1</span> -
+            <span
+              th:text="${currentPage * pageSize > totalElements ? totalElements : currentPage * pageSize}"
+              >15</span
+            >
+            de <span th:text="${totalElements}">0</span> pedidos
+          </div>
+          <div class="flex items-center gap-2">
+            <button
+              onclick="changePage(-1)"
+              th:disabled="${currentPage == 1}"
+              class="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            >
+              <span class="material-symbols-outlined text-lg"
+                >chevron_left</span
+              >
+            </button>
+            <div id="pageNumbers" class="flex items-center gap-1"></div>
+            <button
+              onclick="changePage(1)"
+              th:disabled="${currentPage >= totalPages}"
+              class="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            >
+              <span class="material-symbols-outlined text-lg"
+                >chevron_right</span
+              >
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <!-- Pagination Script -->
+    <script th:inline="javascript">
+      /*<![CDATA[*/
+      const serverCurrentPage = /*[[${currentPage}]]*/ 1;
+      const serverTotalPages = /*[[${totalPages}]]*/ 1;
+
+      function goToPage(page) {
+        const url = new URL(window.location.href);
+        url.searchParams.set("page", page);
+        window.location.href = url.toString();
+      }
+
+      function changePage(delta) {
+        const newPage = serverCurrentPage + delta;
+        if (newPage >= 1 && newPage <= serverTotalPages) {
+          goToPage(newPage);
+        }
+      }
+
+      // Generate page number buttons
+      document.addEventListener("DOMContentLoaded", function () {
+        const pageNumbersDiv = document.getElementById("pageNumbers");
+        if (!pageNumbersDiv || serverTotalPages <= 1) return;
+
+        let startPage = Math.max(1, serverCurrentPage - 2);
+        let endPage = Math.min(serverTotalPages, startPage + 4);
+        if (endPage - startPage < 4) {
+          startPage = Math.max(1, endPage - 4);
+        }
+
+        for (let i = startPage; i <= endPage; i++) {
+          const btn = document.createElement("button");
+          btn.textContent = i;
+          btn.onclick = () => goToPage(i);
+          btn.className =
+            i === serverCurrentPage
+              ? "px-3 py-1 rounded-lg bg-primary text-white font-semibold"
+              : "px-3 py-1 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all";
+          pageNumbersDiv.appendChild(btn);
+        }
+      });
+      /*]]>*/
+    </script>
+
+    <!-- Cancel Order Script -->
+    <script>
+      async function cancelOrder(button) {
+        const orderId = button.getAttribute("data-order-id");
+        const orderNumber = button.getAttribute("data-order-number");
+
+        const result = await Swal.fire({
+          title: "¿Cancelar pedido?",
+          html: `<p>¿Estás seguro de que deseas cancelar el pedido <strong>${orderNumber}</strong>?</p>`,
+          icon: "warning",
+          showCancelButton: true,
+          confirmButtonColor: "#ef4444",
+          cancelButtonColor: "#6b7280",
+          confirmButtonText: "Sí, cancelar",
+          cancelButtonText: "No, mantener",
+          reverseButtons: true,
+          background: document.documentElement.classList.contains("dark")
+            ? "#1f2937"
+            : "#ffffff",
+          color: document.documentElement.classList.contains("dark")
+            ? "#f3f4f6"
+            : "#1f2937",
+          customClass: {
+            confirmButton: "rounded-xl px-6 py-2.5 font-semibold",
+            cancelButton: "rounded-xl px-6 py-2.5 font-semibold",
+          },
+        });
+
+        if (result.isConfirmed) {
+          try {
+            const response = await fetch(`/client/orders/${orderId}/cancel`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+              await Swal.fire({
+                title: "¡Pedido cancelado!",
+                html: `<p class="text-lg mb-3">Nos entristece que hayas cancelado tu pedido.</p>
+                       <p class="text-base text-gray-600">Cuando quieras volver, aquí estaremos esperándote. 😊</p>`,
+                icon: "info",
+                confirmButtonColor: "#38e07b",
+                confirmButtonText: "Aceptar",
+                allowOutsideClick: false,
+                background: document.documentElement.classList.contains("dark")
+                  ? "#1f2937"
+                  : "#ffffff",
+                color: document.documentElement.classList.contains("dark")
+                  ? "#f3f4f6"
+                  : "#1f2937",
+                customClass: {
+                  confirmButton: "rounded-xl px-6 py-2.5 font-semibold",
+                },
+              });
+              // Recargar la página para ver los cambios
+              window.location.reload();
+            } else {
+              await Swal.fire({
+                title: "Error",
+                text: data.message || "No se pudo cancelar el pedido",
+                icon: "error",
+                confirmButtonColor: "#ef4444",
+                confirmButtonText: "Aceptar",
+                background: document.documentElement.classList.contains("dark")
+                  ? "#1f2937"
+                  : "#ffffff",
+                color: document.documentElement.classList.contains("dark")
+                  ? "#f3f4f6"
+                  : "#1f2937",
+                customClass: {
+                  confirmButton: "rounded-xl px-6 py-2.5 font-semibold",
+                },
+              });
+            }
+          } catch (error) {
+            console.error("Error cancelling order:", error);
+            await Swal.fire({
+              title: "Error",
+              text: "Ocurrió un error al cancelar el pedido",
+              icon: "error",
+              confirmButtonColor: "#ef4444",
+              confirmButtonText: "Aceptar",
+              background: document.documentElement.classList.contains("dark")
+                ? "#1f2937"
+                : "#ffffff",
+              color: document.documentElement.classList.contains("dark")
+                ? "#f3f4f6"
+                : "#1f2937",
+              customClass: {
+                confirmButton: "rounded-xl px-6 py-2.5 font-semibold",
+              },
+            });
+          }
+        }
+      }
+    </script>
+
+    <!-- WebSocket for Real-time Updates -->
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+    <script th:inline="javascript">
+      /*<![CDATA[*/
+      const companyId = /*[[${systemConfig.company != null ? systemConfig.company.idCompany : 0}]]*/ 0;
+      /*]]>*/
+    </script>
+    <script>
+      let stompClient = null;
+      let statsUpdateTimeout = null;
+      let pendingStatsUpdate = false;
+      const STATS_UPDATE_DELAY = 2000; // 2 seconds
+
+      function connectClientOrdersWebSocket() {
+        const socket = new SockJS("/ws");
+        stompClient = Stomp.over(socket);
+        stompClient.debug = null;
+
+        stompClient.connect(
+          {},
+          function (frame) {
+
+            stompClient.subscribe(
+              `/topic/admin/kitchen/${companyId}`,
+              function (notification) {
+                const message = JSON.parse(notification.body);
+                handleOrderUpdate(message);
+              },
+            );
+          },
+          function (error) {
+            console.error("❌ WebSocket Error:", error);
+            setTimeout(connectClientOrdersWebSocket, 5000);
+          },
+        );
+      }
+
+      function handleOrderUpdate(notification) {
+        const orderId = notification.orderId;
+        const newStatus = notification.newStatus;
+
+        // Update specific order row badge immediately
+        const orderRow = document.querySelector(
+          `tr[data-order-id="${orderId}"]`,
+        );
+        if (orderRow && newStatus) {
+          const badge = orderRow.querySelector(".status-badge");
+          if (badge) {
+            updateStatusBadge(badge, newStatus);
+
+            // Flash animation
+            orderRow.classList.add("bg-primary/5");
+            setTimeout(() => {
+              orderRow.classList.remove("bg-primary/5");
+            }, 1500);
+          }
+        }
+
+        // Debounce stats update
+        if (statsUpdateTimeout) {
+          clearTimeout(statsUpdateTimeout);
+        }
+
+        pendingStatsUpdate = true;
+
+        statsUpdateTimeout = setTimeout(() => {
+          if (pendingStatsUpdate) {
+            pendingStatsUpdate = false;
+            // Reload page to update stats (simpler for client view)
+            window.location.reload();
+          }
+        }, STATS_UPDATE_DELAY);
+      }
+
+      function updateStatusBadge(badge, status) {
+        // Remove all status classes
+        badge.className = "status-badge";
+
+        // Add new status class and text based on status
+        switch (status) {
+          case "PENDING":
+            badge.className =
+              "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400";
+            badge.innerHTML =
+              '<span class="material-symbols-outlined text-sm">schedule</span> Pendiente';
+            break;
+          case "IN_PREPARATION":
+            badge.className =
+              "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400";
+            badge.innerHTML =
+              '<span class="material-symbols-outlined text-sm">restaurant</span> En preparación';
+            break;
+          case "READY":
+            badge.className =
+              "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400";
+            badge.innerHTML =
+              '<span class="material-symbols-outlined text-sm">check_circle</span> Listo';
+            break;
+          case "ON_THE_WAY":
+            badge.className =
+              "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400";
+            badge.innerHTML =
+              '<span class="material-symbols-outlined text-sm">local_shipping</span> En camino';
+            break;
+          case "DELIVERED":
+            badge.className =
+              "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400";
+            badge.innerHTML =
+              '<span class="material-symbols-outlined text-sm">done_all</span> Entregado';
+            break;
+          case "PAID":
+            badge.className =
+              "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-primary/20 text-primary dark:bg-primary/10 dark:text-primary";
+            badge.innerHTML =
+              '<span class="material-symbols-outlined text-sm">payments</span> Pagado';
+            break;
+          case "CANCELLED":
+            badge.className =
+              "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400";
+            badge.innerHTML =
+              '<span class="material-symbols-outlined text-sm">cancel</span> Cancelado';
+            break;
+        }
+      }
+
+      // Connect on page load
+      window.addEventListener("DOMContentLoaded", connectClientOrdersWebSocket);
+
+      // Cleanup on page unload
+      window.addEventListener("beforeunload", function () {
+        if (statsUpdateTimeout) {
+          clearTimeout(statsUpdateTimeout);
+        }
+        if (stompClient) {
+          stompClient.disconnect();
+        }
+      });
+    </script>
+
+    <!-- Script del Sistema de Temas -->
+    <div th:replace="~{fragments/theme :: themeScript}"></div>
+  </body>
+</html>

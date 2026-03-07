@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title
+      th:text="${isSuspended == true} ? 'Licencia Suspendida' : 'Licencia Expirada'"
+    >
+      Licencia No Disponible
+    </title>
+    <!-- Favicon -->
+    <link th:if="${globalSystemConfig != null and globalSystemConfig.systemLogoUrl != null and !globalSystemConfig.systemLogoUrl.isEmpty()}"
+          rel="icon" type="image/png" th:href="${globalSystemConfig.systemLogoUrl}" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@300;400;500;600;700"
+      rel="stylesheet"
+    />
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Work Sans", sans-serif;
+        background: linear-gradient(
+          135deg,
+          #38e07b 0%,
+          #2bc866 50%,
+          #1fa552 100%
+        );
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+      }
+
+      .license-container {
+        max-width: 1200px;
+        width: 100%;
+        background: white;
+        border-radius: 24px;
+        padding: 48px 40px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        position: relative;
+        overflow: hidden;
+        animation: slideUp 0.6s ease-out;
+      }
+
+      .two-column-layout {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 48px;
+        align-items: center;
+      }
+
+      .left-column {
+        text-align: center;
+        padding-right: 24px;
+        border-right: 2px solid #e5e7eb;
+      }
+
+      .right-column {
+        text-align: left;
+        padding-left: 24px;
+      }
+
+      @keyframes slideUp {
+        from {
+          opacity: 0;
+          transform: translateY(30px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      /* Decoración de fondo */
+      .license-container::before {
+        content: "";
+        position: absolute;
+        top: -50%;
+        right: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(
+          circle,
+          rgba(56, 224, 123, 0.08) 0%,
+          transparent 70%
+        );
+        animation: pulse 4s ease-in-out infinite;
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          transform: scale(1);
+          opacity: 0.5;
+        }
+        50% {
+          transform: scale(1.1);
+          opacity: 0.8;
+        }
+      }
+
+      .content-wrapper {
+        position: relative;
+        z-index: 1;
+      }
+
+      /* Logo del restaurante */
+      .restaurant-logo {
+        width: 100px;
+        height: 100px;
+        margin: 0 auto 24px;
+        background: white;
+        border-radius: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+        overflow: hidden;
+        border: 3px solid #f0f0f0;
+      }
+
+      .restaurant-logo img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+      }
+
+      /* Nombre del restaurante */
+      .restaurant-name {
+        font-size: 28px;
+        font-weight: 700;
+        color: #1f2937;
+        margin-bottom: 32px;
+        line-height: 1.2;
+      }
+
+      /* Icono de estado */
+      .status-icon {
+        width: 120px;
+        height: 120px;
+        margin: 0 auto 24px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        animation: scaleIn 0.5s ease-out;
+      }
+
+      @keyframes scaleIn {
+        from {
+          opacity: 0;
+          transform: scale(0.8);
+        }
+        to {
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
+
+      .status-icon.suspended {
+        background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+        box-shadow: 0 8px 24px rgba(251, 191, 36, 0.4);
+      }
+
+      .status-icon.expired,
+      .status-icon.no-license {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        box-shadow: 0 8px 24px rgba(239, 68, 68, 0.4);
+      }
+
+      .status-icon .material-symbols-outlined {
+        font-size: 64px;
+        color: white;
+      }
+
+      /* Títulos */
+      .status-title {
+        font-size: 36px;
+        font-weight: 800;
+        margin-bottom: 16px;
+        line-height: 1.2;
+      }
+
+      .status-title.suspended {
+        color: #f59e0b;
+      }
+
+      .status-title.expired,
+      .status-title.no-license {
+        color: #dc2626;
+      }
+
+      /* Mensajes */
+      .status-message {
+        font-size: 18px;
+        color: #4b5563;
+        line-height: 1.6;
+        margin-bottom: 12px;
+      }
+
+      .status-submessage {
+        font-size: 16px;
+        color: #6b7280;
+        line-height: 1.6;
+        margin-bottom: 8px;
+      }
+
+      .expiration-date {
+        display: inline-block;
+        background: #fee2e2;
+        color: #991b1b;
+        padding: 8px 16px;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 16px;
+        margin: 16px 0;
+      }
+
+      /* Contact Box */
+      .contact-box {
+        background: linear-gradient(135deg, #f9fafb 0%, #ffffff 100%);
+        border: 2px solid #e5e7eb;
+        border-radius: 16px;
+        padding: 24px;
+        margin-top: 32px;
+        text-align: left;
+      }
+
+      .contact-box h3 {
+        font-size: 18px;
+        font-weight: 700;
+        color: #1f2937;
+        margin-bottom: 16px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .contact-box h3 .material-symbols-outlined {
+        color: #38e07b;
+        font-size: 24px;
+      }
+
+      .contact-item {
+        padding: 10px 0;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        transition: transform 0.2s ease;
+      }
+
+      .contact-item:hover {
+        transform: translateX(5px);
+      }
+
+      .contact-item .material-symbols-outlined {
+        color: #38e07b;
+        font-size: 20px;
+        flex-shrink: 0;
+      }
+
+      .contact-item a {
+        color: #4b5563;
+        text-decoration: none;
+        font-weight: 500;
+        transition: color 0.2s ease;
+      }
+
+      .contact-item a:hover {
+        color: #38e07b;
+      }
+
+      /* Footer */
+      .footer-text {
+        margin-top: 24px;
+        font-size: 14px;
+        color: #9ca3af;
+      }
+
+      .material-symbols-outlined {
+        font-variation-settings: "FILL" 1, "wght" 500, "GRAD" 0, "opsz" 48;
+      }
+
+      /* Responsive */
+      @media (max-width: 992px) {
+        .two-column-layout {
+          grid-template-columns: 1fr;
+          gap: 32px;
+        }
+
+        .left-column {
+          border-right: none;
+          border-bottom: 2px solid #e5e7eb;
+          padding-right: 0;
+          padding-bottom: 32px;
+        }
+
+        .right-column {
+          padding-left: 0;
+          padding-top: 0;
+        }
+      }
+
+      @media (max-width: 768px) {
+        .license-container {
+          padding: 36px 28px;
+        }
+
+        .restaurant-logo {
+          width: 80px;
+          height: 80px;
+          margin-bottom: 20px;
+        }
+
+        .restaurant-name {
+          font-size: 24px;
+          margin-bottom: 24px;
+        }
+
+        .status-icon {
+          width: 100px;
+          height: 100px;
+          margin-bottom: 20px;
+        }
+
+        .status-icon .material-symbols-outlined {
+          font-size: 52px;
+        }
+
+        .status-title {
+          font-size: 28px;
+        }
+
+        .status-message {
+          font-size: 16px;
+        }
+
+        .status-submessage {
+          font-size: 15px;
+        }
+
+        .contact-box {
+          padding: 20px;
+        }
+      }
+
+      @media (max-width: 480px) {
+        .license-container {
+          padding: 28px 20px;
+        }
+
+        .restaurant-logo {
+          width: 70px;
+          height: 70px;
+        }
+
+        .restaurant-name {
+          font-size: 20px;
+        }
+
+        .status-icon {
+          width: 90px;
+          height: 90px;
+        }
+
+        .status-title {
+          font-size: 24px;
+        }
+
+        .contact-box h3 {
+          font-size: 16px;
+        }
+
+        .contact-item {
+          font-size: 14px;
+        }
+      }
+
+      /* Animaciones */
+      .fade-in {
+        animation: fadeIn 0.8s ease-out forwards;
+        opacity: 0;
+      }
+
+      .fade-in-delay-1 {
+        animation-delay: 0.2s;
+      }
+
+      .fade-in-delay-2 {
+        animation-delay: 0.4s;
+      }
+
+      .fade-in-delay-3 {
+        animation-delay: 0.6s;
+      }
+
+      @keyframes fadeIn {
+        to {
+          opacity: 1;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="license-container">
+      <div class="content-wrapper">
+        <div class="two-column-layout">
+          <!-- COLUMNA IZQUIERDA: Logo, Nombre, Icono, Título y Mensaje -->
+          <div class="left-column">
+            <!-- Logo del restaurante -->
+            <div class="restaurant-logo fade-in">
+              <img th:if="${globalSystemConfig != null and globalSystemConfig.systemLogoUrl != null and !globalSystemConfig.systemLogoUrl.isEmpty()}"
+                   th:src="${@cloudinaryUrl.logoLarge(globalSystemConfig.systemLogoUrl)}" alt="Logo" />
+            </div>
+
+            <!-- Nombre del sistema (dinámico desde GlobalSystemConfig) -->
+            <h2
+              class="restaurant-name fade-in fade-in-delay-1"
+              th:text="${globalSystemConfig != null ? globalSystemConfig.systemName : 'SavoryCloud'}"
+            >
+              SavoryCloud
+            </h2>
+
+            <!-- LICENCIA SUSPENDIDA -->
+            <div th:if="${isSuspended == true}">
+              <div class="status-icon suspended fade-in fade-in-delay-1">
+                <span class="material-symbols-outlined">pause_circle</span>
+              </div>
+
+              <h1 class="status-title suspended fade-in fade-in-delay-2">
+                Licencia Suspendida
+              </h1>
+
+              <p class="status-message fade-in fade-in-delay-2">
+                Su licencia ha sido suspendida temporalmente.
+              </p>
+
+              <p class="status-submessage fade-in fade-in-delay-2">
+                El acceso al sistema ha sido bloqueado. Por favor contacte con
+                su proveedor para más información.
+              </p>
+            </div>
+
+            <!-- LICENCIA EXPIRADA -->
+            <div th:if="${isExpired == true && isSuspended != true}">
+              <div class="status-icon expired fade-in fade-in-delay-1">
+                <span class="material-symbols-outlined">error</span>
+              </div>
+
+              <h1 class="status-title expired fade-in fade-in-delay-2">
+                Licencia Expirada
+              </h1>
+
+              <p class="status-message fade-in fade-in-delay-2">
+                Su licencia ha expirado y el sistema ha sido bloqueado.
+              </p>
+
+              <div th:if="${expirationDate}" class="fade-in fade-in-delay-2">
+                <div class="expiration-date">
+                  <span
+                    class="material-symbols-outlined"
+                    style="
+                      font-size: 16px;
+                      vertical-align: middle;
+                      margin-right: 4px;
+                    "
+                    >calendar_today</span
+                  >
+                  Venció el:
+                  <span
+                    th:text="${#temporals.format(expirationDate, 'dd/MM/yyyy')}"
+                  ></span>
+                </div>
+              </div>
+
+              <p class="status-submessage fade-in fade-in-delay-2">
+                Para continuar utilizando el sistema, por favor contacte con su
+                proveedor para renovar su licencia.
+              </p>
+            </div>
+
+            <!-- SIN LICENCIA -->
+            <div th:if="${noLicense == true}">
+              <div class="status-icon no-license fade-in fade-in-delay-1">
+                <span class="material-symbols-outlined">block</span>
+              </div>
+
+              <h1 class="status-title no-license fade-in fade-in-delay-2">
+                Sin Licencia
+              </h1>
+
+              <p class="status-message fade-in fade-in-delay-2">
+                No se encontró una licencia válida en el sistema.
+              </p>
+
+              <p class="status-submessage fade-in fade-in-delay-2">
+                Por favor contacte con su proveedor para configurar una
+                licencia.
+              </p>
+            </div>
+          </div>
+
+          <!-- COLUMNA DERECHA: Información de contacto -->
+          <div class="right-column">
+            <!-- Mensaje de agradecimiento -->
+            <div
+              class="contact-box fade-in fade-in-delay-3"
+              style="
+                margin-top: 0;
+                background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+                border-color: #38e07b;
+              "
+            >
+              <h3>
+                <span class="material-symbols-outlined">favorite</span>
+                Gracias por Confiar en Nosotros
+              </h3>
+              <p
+                style="
+                  color: #374151;
+                  font-size: 15px;
+                  line-height: 1.7;
+                  margin: 0;
+                "
+              >
+                Valoramos tu compromiso con nuestro sistema de gestión. Sabemos
+                que esta situación puede causar inconvenientes, y estamos aquí
+                para ayudarte a resolverlo lo antes posible.
+              </p>
+            </div>
+
+            <!-- Información de contacto -->
+            <div class="contact-box fade-in fade-in-delay-3">
+              <h3>
+                <span class="material-symbols-outlined">support_agent</span>
+                Información de Contacto
+              </h3>
+
+              <div class="contact-item">
+                <span class="material-symbols-outlined">mail</span>
+                <span>Contacta a tu proveedor de servicio</span>
+              </div>
+
+              <div class="contact-item">
+                <span class="material-symbols-outlined">info</span>
+                <span>Revisa tu contrato para información de contacto</span>
+              </div>
+            </div>
+
+            <!-- Horarios de atención -->
+            <div
+              class="contact-box fade-in fade-in-delay-3"
+              style="
+                background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+                border-color: #fbbf24;
+              "
+            >
+              <h3>
+                <span class="material-symbols-outlined">schedule</span>
+                Horarios de Atención
+              </h3>
+              <p
+                style="
+                  color: #374151;
+                  font-size: 15px;
+                  line-height: 1.7;
+                  margin: 0;
+                "
+              >
+                <strong>Lunes a Viernes:</strong> 8:00 AM - 8:00 PM<br />
+                <strong>Sábados:</strong> 9:00 AM - 2:00 PM<br />
+                <strong>Domingos:</strong> Cerrado
+              </p>
+              <p
+                style="
+                  color: #92400e;
+                  font-size: 13px;
+                  margin-top: 12px;
+                  font-weight: 600;
+                "
+              >
+                <span
+                  class="material-symbols-outlined"
+                  style="font-size: 16px; vertical-align: middle"
+                  >info</span
+                >
+                Respuesta inmediata por WhatsApp
+              </p>
+            </div>
+
+            <!-- Footer -->
+            <p
+              class="footer-text fade-in fade-in-delay-3"
+              style="text-align: center"
+            >
+              © 2026
+              <span th:text="${globalSystemConfig != null ? globalSystemConfig.systemName : 'Sistema de Gestión'}">Sistema de Gestión</span>
+              - Sistema de Gestión para Restaurantes
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

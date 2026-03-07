@@ -1,0 +1,802 @@
+<!doctype html>
+<html
+  lang="es"
+  xmlns:th="http://www.thymeleaf.org"
+  xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title th:text="${globalSystemConfig.systemName + ' - Mis Reportes'}">
+      El Gran Sazón - Mis Reportes
+    </title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@300;400;500;600;700"
+      rel="stylesheet"
+    />
+
+    <!-- Sistema de Temas (Modo Claro/Oscuro) -->
+    <div th:replace="~{fragments/theme :: themeResources}"></div>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#38e07b",
+              "primary-dark": "#2bc866",
+              "background-light": "#f8faf9",
+              "background-dark": "#0f1713",
+            },
+            fontFamily: {
+              display: ["Work Sans"],
+            },
+            borderRadius: {
+              DEFAULT: "0.5rem",
+              lg: "0.75rem",
+              xl: "1rem",
+              "2xl": "1.5rem",
+              "3xl": "2rem",
+              full: "9999px",
+            },
+          },
+        },
+      };
+    </script>
+
+    <style>
+      @keyframes fadeInDown {
+        from {
+          opacity: 0;
+          transform: translateY(-20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @keyframes fadeInUp {
+        from {
+          opacity: 0;
+          transform: translateY(20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @keyframes scaleIn {
+        from {
+          opacity: 0;
+          transform: scale(0.9);
+        }
+        to {
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
+
+      .animate-fadeInDown {
+        animation: fadeInDown 0.6s ease-out;
+      }
+
+      .animate-fadeInUp {
+        animation: fadeInUp 0.6s ease-out;
+      }
+
+      .animate-scaleIn {
+        animation: scaleIn 0.5s ease-out;
+      }
+
+      .chart-container {
+        position: relative;
+        height: 300px;
+      }
+
+      .stat-card {
+        transition: all 0.3s ease;
+      }
+
+      .stat-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px rgba(56, 224, 123, 0.15);
+      }
+    </style>
+  </head>
+  <body
+    class="bg-gradient-to-br from-background-light to-gray-50 dark:from-background-dark dark:to-gray-900 font-display min-h-screen"
+  >
+    <!-- NAVIGATION BAR -->
+    <nav
+      class="bg-gradient-to-r from-primary to-primary-dark shadow-lg animate-fadeInDown"
+    >
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between items-center h-16 sm:h-20">
+          <!-- Back Button & Title -->
+          <div class="flex items-center gap-4">
+            <a
+              href="/cashier/dashboard"
+              class="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/20 hover:bg-white/30 text-white font-semibold transition-all border border-white/30"
+            >
+              <span class="material-symbols-outlined">arrow_back</span>
+              <span class="hidden sm:inline">Volver</span>
+            </a>
+            <div class="flex items-center gap-3">
+              <span
+                class="material-symbols-outlined text-white text-3xl sm:text-4xl"
+              >
+                bar_chart
+              </span>
+              <span
+                class="text-white text-xl sm:text-2xl font-bold tracking-tight"
+              >
+                Mis Reportes
+              </span>
+            </div>
+          </div>
+
+          <!-- User Info & Logout -->
+          <div class="flex items-center gap-3 sm:gap-6">
+            <div class="hidden sm:flex items-center gap-2 text-white">
+              <span class="material-symbols-outlined">account_circle</span>
+              <span class="text-sm font-medium">
+                <strong th:text="${employee.fullName}">Usuario</strong>
+              </span>
+            </div>
+            <form th:action="@{/logout}" method="post" class="inline">
+              <button
+                type="submit"
+                class="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/20 hover:bg-white/30 text-white font-semibold transition-all border border-white/30 text-sm sm:text-base"
+              >
+                <span class="material-symbols-outlined text-lg">logout</span>
+                <span class="hidden sm:inline">Cerrar Sesión</span>
+                <span class="sm:hidden">Salir</span>
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <!-- MAIN CONTENT -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 pb-32">
+      <!-- WELCOME HEADER -->
+      <div
+        class="rounded-3xl bg-white dark:bg-gray-900 shadow-xl p-6 sm:p-8 mb-8 border border-gray-200 dark:border-gray-800 animate-scaleIn"
+      >
+        <div class="flex items-center gap-4">
+          <div
+            class="flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white shadow-lg"
+          >
+            <span class="material-symbols-outlined text-3xl sm:text-4xl">
+              analytics
+            </span>
+          </div>
+          <div class="flex-1">
+            <h1
+              class="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-1"
+            >
+              Panel de Reportes
+            </h1>
+            <p class="text-sm sm:text-base text-gray-600 dark:text-gray-400">
+              Estadísticas y análisis de tu desempeño
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- STATISTICS CARDS -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 mb-8">
+        <!-- Today Orders -->
+        <div
+          class="stat-card rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg p-6 animate-fadeInUp"
+          style="animation-delay: 0.1s"
+        >
+          <div class="flex flex-col">
+            <div class="flex items-center justify-between mb-3">
+              <span class="material-symbols-outlined text-white/80 text-3xl">
+                today
+              </span>
+              <span class="text-white/80 text-xs font-medium">HOY</span>
+            </div>
+            <p
+              class="text-3xl sm:text-4xl font-bold text-white mb-1"
+              th:text="${todayOrders}"
+            >
+              0
+            </p>
+            <p class="text-white/80 text-sm">Pedidos</p>
+          </div>
+        </div>
+
+        <!-- Today Revenue -->
+        <div
+          class="stat-card rounded-2xl bg-gradient-to-br from-green-500 to-green-600 shadow-lg p-6 animate-fadeInUp"
+          style="animation-delay: 0.15s"
+        >
+          <div class="flex flex-col">
+            <div class="flex items-center justify-between mb-3">
+              <span class="material-symbols-outlined text-white/80 text-3xl">
+                payments
+              </span>
+              <span class="text-white/80 text-xs font-medium">HOY</span>
+            </div>
+            <p
+              class="text-2xl sm:text-3xl font-bold text-white mb-1"
+              th:text="${#numbers.formatCurrency(todayRevenue)}"
+            >
+              $0.00
+            </p>
+            <p class="text-white/80 text-sm">Ingresos</p>
+          </div>
+        </div>
+
+        <!-- Total Orders -->
+        <div
+          class="stat-card rounded-2xl bg-gradient-to-br from-purple-500 to-purple-600 shadow-lg p-6 animate-fadeInUp"
+          style="animation-delay: 0.2s"
+        >
+          <div class="flex flex-col">
+            <div class="flex items-center justify-between mb-3">
+              <span class="material-symbols-outlined text-white/80 text-3xl">
+                inventory_2
+              </span>
+              <span class="text-white/80 text-xs font-medium">TOTAL</span>
+            </div>
+            <p
+              class="text-3xl sm:text-4xl font-bold text-white mb-1"
+              th:text="${totalOrders}"
+            >
+              0
+            </p>
+            <p class="text-white/80 text-sm">Pedidos</p>
+          </div>
+        </div>
+
+        <!-- Total Revenue -->
+        <div
+          class="stat-card rounded-2xl bg-gradient-to-br from-primary to-primary-dark shadow-lg p-6 animate-fadeInUp"
+          style="animation-delay: 0.25s"
+        >
+          <div class="flex flex-col">
+            <div class="flex items-center justify-between mb-3">
+              <span class="material-symbols-outlined text-white/80 text-3xl">
+                account_balance_wallet
+              </span>
+              <span class="text-white/80 text-xs font-medium">TOTAL</span>
+            </div>
+            <p
+              class="text-2xl sm:text-3xl font-bold text-white mb-1"
+              th:text="${#numbers.formatCurrency(totalRevenue)}"
+            >
+              $0.00
+            </p>
+            <p class="text-white/80 text-sm">Ingresos</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- CHARTS SECTION -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 mb-8">
+        <!-- ORDERS STATUS CHART (Donut) -->
+        <div
+          class="rounded-3xl bg-white dark:bg-gray-900 shadow-xl p-6 sm:p-8 border border-gray-200 dark:border-gray-800 animate-fadeInUp"
+          style="animation-delay: 0.3s"
+        >
+          <div class="mb-6">
+            <h2
+              class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-2"
+            >
+              Estado de Pedidos (Total)
+            </h2>
+            <p class="text-sm text-gray-600 dark:text-gray-400">
+              Distribución por estado de todos tus pedidos
+            </p>
+          </div>
+          <div class="chart-container">
+            <canvas id="ordersStatusChart"></canvas>
+          </div>
+        </div>
+
+        <!-- TODAY ORDERS STATUS CHART (Donut) -->
+        <div
+          class="rounded-3xl bg-white dark:bg-gray-900 shadow-xl p-6 sm:p-8 border border-gray-200 dark:border-gray-800 animate-fadeInUp"
+          style="animation-delay: 0.35s"
+        >
+          <div class="mb-6">
+            <h2
+              class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-2"
+            >
+              Estado de Pedidos (Hoy)
+            </h2>
+            <p class="text-sm text-gray-600 dark:text-gray-400">
+              Distribución de pedidos del día de hoy
+            </p>
+          </div>
+          <div class="chart-container">
+            <canvas id="todayOrdersStatusChart"></canvas>
+          </div>
+        </div>
+
+        <!-- LAST 7 DAYS ORDERS (Line Chart) -->
+        <div
+          class="rounded-3xl bg-white dark:bg-gray-900 shadow-xl p-6 sm:p-8 border border-gray-200 dark:border-gray-800 animate-fadeInUp"
+          style="animation-delay: 0.4s"
+        >
+          <div class="mb-6">
+            <h2
+              class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-2"
+            >
+              Pedidos Últimos 7 Días
+            </h2>
+            <p class="text-sm text-gray-600 dark:text-gray-400">
+              Tendencia de pedidos en la última semana
+            </p>
+          </div>
+          <div class="chart-container">
+            <canvas id="last7DaysOrdersChart"></canvas>
+          </div>
+        </div>
+
+        <!-- LAST 7 DAYS REVENUE (Bar Chart) -->
+        <div
+          class="rounded-3xl bg-white dark:bg-gray-900 shadow-xl p-6 sm:p-8 border border-gray-200 dark:border-gray-800 animate-fadeInUp"
+          style="animation-delay: 0.45s"
+        >
+          <div class="mb-6">
+            <h2
+              class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-2"
+            >
+              Ingresos Últimos 7 Días
+            </h2>
+            <p class="text-sm text-gray-600 dark:text-gray-400">
+              Comparativa de ingresos diarios
+            </p>
+          </div>
+          <div class="chart-container">
+            <canvas id="last7DaysRevenueChart"></canvas>
+          </div>
+        </div>
+
+        <!-- TIPS CHART (Bar Chart) -->
+        <div
+          class="rounded-3xl bg-white dark:bg-gray-900 shadow-xl p-6 sm:p-8 border border-gray-200 dark:border-gray-800 animate-fadeInUp lg:col-span-2"
+          style="animation-delay: 0.5s"
+        >
+          <div class="mb-6">
+            <h2
+              class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-2"
+            >
+              Propinas Últimos 7 Días
+            </h2>
+            <p class="text-sm text-gray-600 dark:text-gray-400">
+              Evolución de propinas recibidas
+            </p>
+          </div>
+          <div class="chart-container">
+            <canvas id="last7DaysTipsChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- ADDITIONAL STATS -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
+        <!-- Average Stats -->
+        <div
+          class="rounded-3xl bg-white dark:bg-gray-900 shadow-xl p-6 sm:p-8 border border-gray-200 dark:border-gray-800 animate-fadeInUp"
+          style="animation-delay: 0.55s"
+        >
+          <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-4">
+            Promedios por Pedido
+          </h3>
+          <div class="space-y-4">
+            <div
+              class="flex items-center justify-between p-4 rounded-xl bg-gray-50 dark:bg-gray-800"
+            >
+              <div class="flex items-center gap-3">
+                <span class="material-symbols-outlined text-primary text-2xl">
+                  monetization_on
+                </span>
+                <span class="text-gray-700 dark:text-gray-300 font-medium"
+                  >Ingreso Promedio</span
+                >
+              </div>
+              <span
+                class="text-xl font-bold text-gray-900 dark:text-white"
+                th:text="${#numbers.formatCurrency(averageRevenue)}"
+              >
+                $0.00
+              </span>
+            </div>
+            <div
+              class="flex items-center justify-between p-4 rounded-xl bg-gray-50 dark:bg-gray-800"
+            >
+              <div class="flex items-center gap-3">
+                <span class="material-symbols-outlined text-green-500 text-2xl">
+                  volunteer_activism
+                </span>
+                <span class="text-gray-700 dark:text-gray-300 font-medium"
+                  >Propina Promedio</span
+                >
+              </div>
+              <span
+                class="text-xl font-bold text-gray-900 dark:text-white"
+                th:text="${#numbers.formatCurrency(averageTip)}"
+              >
+                $0.00
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tips Summary -->
+        <div
+          class="rounded-3xl bg-white dark:bg-gray-900 shadow-xl p-6 sm:p-8 border border-gray-200 dark:border-gray-800 animate-fadeInUp"
+          style="animation-delay: 0.6s"
+        >
+          <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-4">
+            Resumen de Propinas
+          </h3>
+          <div class="space-y-4">
+            <div
+              class="flex items-center justify-between p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20"
+            >
+              <div class="flex items-center gap-3">
+                <span class="material-symbols-outlined text-blue-500 text-2xl">
+                  today
+                </span>
+                <span class="text-gray-700 dark:text-gray-300 font-medium"
+                  >Propinas Hoy</span
+                >
+              </div>
+              <span
+                class="text-xl font-bold text-blue-600 dark:text-blue-400"
+                th:text="${#numbers.formatCurrency(todayTips)}"
+              >
+                $0.00
+              </span>
+            </div>
+            <div
+              class="flex items-center justify-between p-4 rounded-xl bg-green-50 dark:bg-green-900/20"
+            >
+              <div class="flex items-center gap-3">
+                <span class="material-symbols-outlined text-green-500 text-2xl">
+                  savings
+                </span>
+                <span class="text-gray-700 dark:text-gray-300 font-medium"
+                  >Propinas Totales</span
+                >
+              </div>
+              <span
+                class="text-xl font-bold text-green-600 dark:text-green-400"
+                th:text="${#numbers.formatCurrency(totalTips)}"
+              >
+                $0.00
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- FOOTER INFO -->
+      <div
+        class="mt-12 text-center text-sm text-gray-500 dark:text-gray-400 animate-fadeInUp"
+        style="animation-delay: 0.65s"
+      >
+        <p>
+          Sistema de Gestión de Restaurante &copy; 2024 El Gran Sazón. Todos los
+          derechos reservados.
+        </p>
+      </div>
+    </div>
+
+    <!-- CHARTS INITIALIZATION SCRIPT -->
+    <script th:inline="javascript">
+      // Get data from Thymeleaf
+      const totalPending = /*[[${totalPending}]]*/ 0;
+      const totalInPreparation = /*[[${totalInPreparation}]]*/ 0;
+      const totalReady = /*[[${totalReady}]]*/ 0;
+      const totalDelivered = /*[[${totalDelivered}]]*/ 0;
+      const totalPaid = /*[[${totalPaid}]]*/ 0;
+      const totalCancelled = /*[[${totalCancelled}]]*/ 0;
+
+      const todayPending = /*[[${todayPending}]]*/ 0;
+      const todayInPreparation = /*[[${todayInPreparation}]]*/ 0;
+      const todayReady = /*[[${todayReady}]]*/ 0;
+      const todayDelivered = /*[[${todayDelivered}]]*/ 0;
+      const todayPaid = /*[[${todayPaid}]]*/ 0;
+      const todayCancelled = /*[[${todayCancelled}]]*/ 0;
+
+      const last7DaysLabels = /*[[${last7DaysLabels}]]*/ [];
+      const last7DaysOrdersData = /*[[${last7DaysOrdersData}]]*/ [];
+      const last7DaysRevenueData = /*[[${last7DaysRevenueData}]]*/ [];
+      const last7DaysTipsData = /*[[${last7DaysTipsData}]]*/ [];
+
+      // Chart.js default config
+      Chart.defaults.font.family = "Work Sans";
+      Chart.defaults.color = "#6B7280";
+
+      // Orders Status Chart (Total)
+      const ordersStatusCtx = document
+        .getElementById("ordersStatusChart")
+        .getContext("2d");
+      new Chart(ordersStatusCtx, {
+        type: "doughnut",
+        data: {
+          labels: [
+            "Pendiente",
+            "En Preparación",
+            "Listo",
+            "Entregado",
+            "Pagado",
+            "Cancelado",
+          ],
+          datasets: [
+            {
+              data: [
+                totalPending,
+                totalInPreparation,
+                totalReady,
+                totalDelivered,
+                totalPaid,
+                totalCancelled,
+              ],
+              backgroundColor: [
+                "#FCD34D", // Pendiente - Yellow
+                "#60A5FA", // En Preparación - Blue
+                "#A78BFA", // Listo - Purple
+                "#34D399", // Entregado - Green
+                "#38e07b", // Pagado - Primary
+                "#F87171", // Cancelado - Red
+              ],
+              borderWidth: 0,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: "bottom",
+              labels: {
+                padding: 15,
+                font: {
+                  size: 12,
+                },
+              },
+            },
+            tooltip: {
+              callbacks: {
+                label: function (context) {
+                  const label = context.label || "";
+                  const value = context.parsed || 0;
+                  const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                  const percentage =
+                    total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                  return `${label}: ${value} (${percentage}%)`;
+                },
+              },
+            },
+          },
+        },
+      });
+
+      // Today Orders Status Chart
+      const todayOrdersStatusCtx = document
+        .getElementById("todayOrdersStatusChart")
+        .getContext("2d");
+      new Chart(todayOrdersStatusCtx, {
+        type: "doughnut",
+        data: {
+          labels: [
+            "Pendiente",
+            "En Preparación",
+            "Listo",
+            "Entregado",
+            "Pagado",
+            "Cancelado",
+          ],
+          datasets: [
+            {
+              data: [
+                todayPending,
+                todayInPreparation,
+                todayReady,
+                todayDelivered,
+                todayPaid,
+                todayCancelled,
+              ],
+              backgroundColor: [
+                "#FCD34D",
+                "#60A5FA",
+                "#A78BFA",
+                "#34D399",
+                "#38e07b",
+                "#F87171",
+              ],
+              borderWidth: 0,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: "bottom",
+              labels: {
+                padding: 15,
+                font: {
+                  size: 12,
+                },
+              },
+            },
+            tooltip: {
+              callbacks: {
+                label: function (context) {
+                  const label = context.label || "";
+                  const value = context.parsed || 0;
+                  const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                  const percentage =
+                    total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                  return `${label}: ${value} (${percentage}%)`;
+                },
+              },
+            },
+          },
+        },
+      });
+
+      // Last 7 Days Orders Chart (Line)
+      const last7DaysOrdersCtx = document
+        .getElementById("last7DaysOrdersChart")
+        .getContext("2d");
+      new Chart(last7DaysOrdersCtx, {
+        type: "line",
+        data: {
+          labels: last7DaysLabels,
+          datasets: [
+            {
+              label: "Pedidos",
+              data: last7DaysOrdersData,
+              borderColor: "#38e07b",
+              backgroundColor: "rgba(56, 224, 123, 0.1)",
+              tension: 0.4,
+              fill: true,
+              pointBackgroundColor: "#38e07b",
+              pointBorderColor: "#fff",
+              pointBorderWidth: 2,
+              pointRadius: 5,
+              pointHoverRadius: 7,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              display: false,
+            },
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: {
+                stepSize: 1,
+              },
+            },
+          },
+        },
+      });
+
+      // Last 7 Days Revenue Chart (Bar)
+      const last7DaysRevenueCtx = document
+        .getElementById("last7DaysRevenueChart")
+        .getContext("2d");
+      new Chart(last7DaysRevenueCtx, {
+        type: "bar",
+        data: {
+          labels: last7DaysLabels,
+          datasets: [
+            {
+              label: "Ingresos",
+              data: last7DaysRevenueData,
+              backgroundColor: "rgba(34, 197, 94, 0.8)",
+              borderColor: "#22c55e",
+              borderWidth: 1,
+              borderRadius: 8,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              display: false,
+            },
+            tooltip: {
+              callbacks: {
+                label: function (context) {
+                  return "Ingresos: $" + context.parsed.y.toFixed(2);
+                },
+              },
+            },
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: {
+                callback: function (value) {
+                  return "$" + value.toFixed(2);
+                },
+              },
+            },
+          },
+        },
+      });
+
+      // Last 7 Days Tips Chart (Bar)
+      const last7DaysTipsCtx = document
+        .getElementById("last7DaysTipsChart")
+        .getContext("2d");
+      new Chart(last7DaysTipsCtx, {
+        type: "bar",
+        data: {
+          labels: last7DaysLabels,
+          datasets: [
+            {
+              label: "Propinas",
+              data: last7DaysTipsData,
+              backgroundColor: "rgba(147, 51, 234, 0.8)",
+              borderColor: "#9333ea",
+              borderWidth: 1,
+              borderRadius: 8,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              display: false,
+            },
+            tooltip: {
+              callbacks: {
+                label: function (context) {
+                  return "Propinas: $" + context.parsed.y.toFixed(2);
+                },
+              },
+            },
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: {
+                callback: function (value) {
+                  return "$" + value.toFixed(2);
+                },
+              },
+            },
+          },
+        },
+      });
+    </script>
+
+    <!-- Script del Sistema de Temas -->
+    <div th:replace="~{fragments/theme :: themeScript}"></div>
+  </body>
+</html>

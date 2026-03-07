@@ -1,0 +1,1660 @@
+<!doctype html>
+<html
+  xmlns:th="http://www.thymeleaf.org"
+  xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+  lang="es"
+>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title
+      th:text="${globalSystemConfig.systemName + ' - Configuración del Sistema'}"
+    >
+      El Gran Sazón - Configuración del Sistema
+    </title>
+    <link crossorigin="" href="https://fonts.gstatic.com/" rel="preconnect" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@300;400;500;600;700"
+      rel="stylesheet"
+    />
+
+    <!-- Sistema de Temas (Modo Claro/Oscuro) -->
+    <div th:replace="~{fragments/theme :: themeResources}"></div>
+    <style>
+      /* Animación del spotlight más sutil */
+      @keyframes pulse-glow {
+        0%,
+        100% {
+          box-shadow: 0 0 0 0 rgba(56, 224, 123, 0.4);
+        }
+        50% {
+          box-shadow: 0 0 0 15px rgba(56, 224, 123, 0);
+        }
+      }
+
+      #onboarding-spotlight {
+        /* Difuminado mucho más suave - solo oscurece un poco el fondo */
+        box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.3);
+        animation: pulse-glow 2s infinite;
+        border: 3px solid #38e07b;
+        z-index: 101;
+      }
+
+      .onboarding-step-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 9999px;
+        background: #d1d5db;
+        transition: all 0.3s;
+      }
+
+      .onboarding-step-dot.active {
+        width: 24px;
+        background: #38e07b;
+      }
+
+      /* Hacer que el elemento destacado sea interactivo */
+      .onboarding-highlighted {
+        position: relative;
+        z-index: 102 !important;
+      }
+    </style>
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#38e07b",
+              "primary-dark": "#2bc866",
+              "background-light": "#f8faf9",
+              "background-dark": "#0f1713",
+            },
+            fontFamily: {
+              display: ["Work Sans"],
+            },
+            borderRadius: {
+              DEFAULT: "0.5rem",
+              lg: "0.75rem",
+              xl: "1rem",
+              "2xl": "1.5rem",
+              full: "9999px",
+            },
+          },
+        },
+      };
+    </script>
+    <!-- Sidebar Styles Fragment -->
+    <div th:replace="~{fragments/sidebar :: sidebarStyles}"></div>
+  </head>
+  <body
+    class="bg-gradient-to-br from-background-light to-gray-50 dark:from-background-dark dark:to-gray-900 font-display text-gray-800 dark:text-gray-200 overflow-hidden"
+  >
+    <!-- Menu Controls Fragment -->
+    <div th:replace="~{fragments/sidebar :: menuControls}"></div>
+
+    <div class="flex min-h-screen h-screen overflow-hidden">
+      <!-- SIDEBAR - Using Fragment -->
+      <div
+        th:replace="~{fragments/sidebar :: sidebar(activeMenu='settings')}"
+      ></div>
+
+      <!-- MAIN CONTENT -->
+      <main class="flex-1 overflow-y-auto h-screen">
+        <div class="p-4 sm:p-6 lg:p-8 pt-20 md:pt-20 lg:pt-8 pb-32">
+          <!-- HEADER -->
+          <div
+            class="flex flex-col md:flex-row md:items-center justify-between mb-6"
+          >
+            <div>
+              <h2
+                class="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white mb-1"
+              >
+                Configuración del Sistema
+              </h2>
+              <p class="text-sm sm:text-base text-gray-600 dark:text-gray-400">
+                Administra la configuración general del restaurante
+              </p>
+            </div>
+            <button
+              onclick="onboarding.start()"
+              class="flex items-center justify-center gap-2 px-4 py-2 mt-4 md:mt-0 rounded-xl bg-primary text-white font-semibold hover:bg-primary-dark transition-colors shadow-md"
+            >
+              <span class="material-symbols-outlined">help</span>
+              <span>Tour Guiado</span>
+            </button>
+          </div>
+
+          <!-- Success/Error Messages -->
+          <div
+            th:if="${successMessage}"
+            class="mb-6 p-4 rounded-xl bg-green-50 dark:bg-green-900/20 border-l-4 border-green-500 flex items-start gap-3"
+          >
+            <span
+              class="material-symbols-outlined text-green-600 dark:text-green-400"
+              >check_circle</span
+            >
+            <div class="flex-1">
+              <p
+                class="font-semibold text-green-800 dark:text-green-300"
+                th:text="${successMessage}"
+              ></p>
+            </div>
+            <button
+              onclick="this.parentElement.remove()"
+              class="text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-200"
+            >
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </div>
+
+          <div
+            th:if="${errorMessage}"
+            class="mb-6 p-4 rounded-xl bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 flex items-start gap-3"
+          >
+            <span
+              class="material-symbols-outlined text-red-600 dark:text-red-400"
+              >error</span
+            >
+            <div class="flex-1">
+              <p
+                class="font-semibold text-red-800 dark:text-red-300"
+                th:text="${errorMessage}"
+              ></p>
+            </div>
+            <button
+              onclick="this.parentElement.remove()"
+              class="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-200"
+            >
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </div>
+
+          <!-- APPEARANCE & LICENSE SECTION - 2 Columns -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            <!-- APPEARANCE CARD -->
+            <div
+              class="bg-white dark:bg-gray-900 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800"
+            >
+              <div class="p-6 border-b border-gray-200 dark:border-gray-800">
+                <h3
+                  class="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2"
+                >
+                  <span class="material-symbols-outlined text-primary"
+                    >palette</span
+                  >
+                  Apariencia
+                </h3>
+              </div>
+              <div class="p-6">
+                <div
+                  class="flex items-center justify-between p-4 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-primary transition-colors"
+                >
+                  <div class="flex items-center gap-3">
+                    <div
+                      class="w-12 h-12 rounded-xl bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600 flex items-center justify-center"
+                    >
+                      <span
+                        class="material-symbols-outlined text-2xl text-gray-600 dark:text-gray-300"
+                        id="theme-icon"
+                        >light_mode</span
+                      >
+                    </div>
+                    <div>
+                      <p class="font-semibold text-gray-900 dark:text-white">
+                        Modo de Visualización
+                      </p>
+                      <p
+                        class="text-sm text-gray-600 dark:text-gray-400"
+                        id="theme-description"
+                      >
+                        Cambia entre modo claro y oscuro
+                      </p>
+                    </div>
+                  </div>
+                  <label
+                    class="relative inline-flex items-center cursor-pointer"
+                  >
+                    <input
+                      type="checkbox"
+                      id="theme-switch"
+                      class="sr-only peer"
+                    />
+                    <div
+                      class="w-14 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/20 dark:peer-focus:ring-primary/40 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all dark:border-gray-600 peer-checked:bg-primary shadow-inner"
+                    ></div>
+                  </label>
+                </div>
+
+                <!-- Agradecimiento Savory Cloud -->
+                <div class="mt-6 p-5 rounded-xl bg-gradient-to-br from-primary/5 to-primary/10 dark:from-primary/10 dark:to-primary/20 border border-primary/20 dark:border-primary/30 text-center">
+                  <span class="material-symbols-outlined text-4xl text-primary mb-2">cloud</span>
+                  <p class="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-1">
+                    Gracias por usar <span class="text-primary">Savory Cloud</span>
+                  </p>
+                  <p class="text-xs text-gray-500 dark:text-gray-400">
+                    Tu plataforma de gestión restaurantera en la nube. Estamos comprometidos con el éxito de tu negocio.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <!-- LICENSE STATUS CARD -->
+            <div
+              class="bg-white dark:bg-gray-900 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800"
+              th:if="${license != null}"
+            >
+              <div class="p-6 border-b border-gray-200 dark:border-gray-800">
+                <h3
+                  class="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2"
+                >
+                  <span class="material-symbols-outlined text-primary"
+                    >workspace_premium</span
+                  >
+                  Estado de Licencia
+                </h3>
+              </div>
+              <div class="p-6">
+                <div class="space-y-4">
+                  <!-- Package Type -->
+                  <div
+                    class="flex items-center justify-between p-4 rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 dark:from-primary/20 dark:to-primary/10"
+                  >
+                    <div class="flex items-center gap-3">
+                      <div
+                        class="w-12 h-12 rounded-xl bg-primary flex items-center justify-center"
+                      >
+                        <span
+                          class="material-symbols-outlined text-2xl text-white"
+                          >card_membership</span
+                        >
+                      </div>
+                      <div>
+                        <p class="text-sm text-gray-600 dark:text-gray-400">
+                          Paquete Actual
+                        </p>
+                        <p
+                          class="font-bold text-lg text-gray-900 dark:text-white"
+                          th:text="${license.packageType}"
+                        >
+                          ECOMMERCE
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Days Remaining -->
+                  <div
+                    class="flex items-center justify-between p-4 rounded-xl border border-gray-200 dark:border-gray-700"
+                  >
+                    <div class="flex items-center gap-3">
+                      <div
+                        class="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900 dark:to-blue-800 flex items-center justify-center"
+                      >
+                        <span
+                          class="material-symbols-outlined text-2xl text-blue-600 dark:text-blue-300"
+                          >event</span
+                        >
+                      </div>
+                      <div>
+                        <p class="text-sm text-gray-600 dark:text-gray-400">
+                          Tiempo Restante
+                        </p>
+                        <p
+                          class="font-bold text-lg"
+                          th:classappend="${daysRemaining != null && daysRemaining <= 30} ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-white'"
+                        >
+                          <span
+                            th:text="${daysRemaining != null ? daysRemaining : 0}"
+                            >365</span
+                          >
+                          días
+                        </p>
+                      </div>
+                    </div>
+                    <span
+                      th:if="${daysRemaining != null && daysRemaining <= 30}"
+                      class="px-3 py-1 rounded-full text-xs font-semibold bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400"
+                    >
+                      ⚠️ Próximo a vencer
+                    </span>
+                    <span
+                      th:if="${daysRemaining != null && daysRemaining > 30}"
+                      class="px-3 py-1 rounded-full text-xs font-semibold bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400"
+                    >
+                      ✓ Activa
+                    </span>
+                  </div>
+
+                  <!-- Expiration Date -->
+                  <div
+                    class="flex items-center justify-between p-4 rounded-xl border border-gray-200 dark:border-gray-700"
+                  >
+                    <div class="flex items-center gap-3">
+                      <div
+                        class="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-100 to-purple-200 dark:from-purple-900 dark:to-purple-800 flex items-center justify-center"
+                      >
+                        <span
+                          class="material-symbols-outlined text-2xl text-purple-600 dark:text-purple-300"
+                          >calendar_month</span
+                        >
+                      </div>
+                      <div>
+                        <p class="text-sm text-gray-600 dark:text-gray-400">
+                          Fecha de Vencimiento
+                        </p>
+                        <p
+                          class="font-semibold text-gray-900 dark:text-white"
+                          th:text="${#temporals.format(license.expirationDate, 'dd/MM/yyyy')}"
+                        >
+                          31/12/2026
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- GENERAL CONFIGURATION SECTION -->
+          <div
+            class="mb-6 bg-white dark:bg-gray-900 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800"
+          >
+            <div class="p-6 border-b border-gray-200 dark:border-gray-800">
+              <h3
+                class="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2"
+              >
+                <span class="material-symbols-outlined text-primary">info</span>
+                Información General
+              </h3>
+            </div>
+            <div class="p-6">
+              <form
+                th:action="@{/admin/system-configuration/update}"
+                th:object="${configuration}"
+                method="post"
+                class="space-y-6"
+              >
+                <input type="hidden" th:field="*{id}" />
+
+                <!-- Restaurante: Nombre y Slogan -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label
+                      for="restaurantName"
+                      class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+                    >
+                      Nombre del Restaurante *
+                    </label>
+                    <input
+                      type="text"
+                      id="restaurantName"
+                      th:field="*{restaurantName}"
+                      required
+                      class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary focus:outline-none"
+                    />
+                    <p
+                      class="mt-1 text-sm text-red-600 dark:text-red-400"
+                      th:if="${#fields.hasErrors('restaurantName')}"
+                      th:errors="*{restaurantName}"
+                    ></p>
+                  </div>
+
+                  <div>
+                    <label
+                      for="slogan"
+                      class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+                    >
+                      Slogan del Restaurante
+                    </label>
+                    <input
+                      type="text"
+                      id="slogan"
+                      th:field="*{slogan}"
+                      class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                <!-- Restaurante: Logo (subida de imagen) -->
+                <div id="restaurantLogoSection">
+                  <label
+                    class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+                  >
+                    <span class="flex items-center gap-2">
+                      <span class="material-symbols-outlined text-primary"
+                        >image</span
+                      >
+                      Logo del Restaurante
+                    </span>
+                  </label>
+                  <div class="flex items-center gap-4">
+                    <div
+                      class="w-20 h-20 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600 flex items-center justify-center overflow-hidden bg-gray-50 dark:bg-gray-800"
+                    >
+                      <img
+                        th:if="${configuration.restaurantLogoUrl != null && !configuration.restaurantLogoUrl.isEmpty()}"
+                        th:src="${@cloudinaryUrl.logoSmall(configuration.restaurantLogoUrl)}"
+                        alt="Logo del Restaurante"
+                        class="w-full h-full object-contain"
+                      />
+                      <span
+                        th:if="${configuration.restaurantLogoUrl == null || configuration.restaurantLogoUrl.isEmpty()}"
+                        class="material-symbols-outlined text-3xl text-gray-400"
+                        >restaurant</span
+                      >
+                    </div>
+                    <div class="flex-1">
+                      <!-- Formulario separado para subir logo del restaurante -->
+                      <div class="flex items-center gap-2">
+                        <label
+                          for="restaurantLogoFile"
+                          class="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:border-primary cursor-pointer transition-colors"
+                        >
+                          <span class="material-symbols-outlined text-lg"
+                            >upload</span
+                          >
+                          <span
+                            class="text-sm font-medium"
+                            id="restaurantLogoLabel"
+                            >Seleccionar imagen...</span
+                          >
+                          <input
+                            type="file"
+                            id="restaurantLogoFile"
+                            form="uploadRestaurantLogoForm"
+                            name="restaurantLogoFile"
+                            accept="image/jpeg,image/png,image/gif,image/webp"
+                            class="hidden"
+                            onchange="
+                              document.getElementById(
+                                'restaurantLogoLabel',
+                              ).textContent =
+                                this.files[0]?.name || 'Seleccionar imagen...';
+                              document.getElementById(
+                                'btnUploadRestaurantLogo',
+                              ).disabled = !this.files[0];
+                            "
+                          />
+                        </label>
+                        <button
+                          type="submit"
+                          form="uploadRestaurantLogoForm"
+                          id="btnUploadRestaurantLogo"
+                          disabled
+                          class="flex items-center gap-1 px-4 py-2.5 bg-primary text-white font-semibold rounded-xl hover:bg-primary-dark transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <span class="material-symbols-outlined text-lg"
+                            >cloud_upload</span
+                          >
+                          <span class="text-sm">Subir</span>
+                        </button>
+                      </div>
+                      <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                        Formatos: JPG, PNG, GIF, WEBP. Máx: 5MB.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Separador visual -->
+                <div class="border-t border-gray-200 dark:border-gray-700 pt-6">
+                  <h4
+                    class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2 mb-0"
+                  >
+                    <span class="material-symbols-outlined text-primary"
+                      >contact_mail</span
+                    >
+                    Contacto y Ubicación
+                  </h4>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label
+                      for="email"
+                      class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+                    >
+                      Correo Electrónico *
+                    </label>
+                    <input
+                      type="email"
+                      id="email"
+                      th:field="*{email}"
+                      required
+                      class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary focus:outline-none"
+                    />
+                    <p
+                      class="mt-1 text-sm text-red-600 dark:text-red-400"
+                      th:if="${#fields.hasErrors('email')}"
+                      th:errors="*{email}"
+                    ></p>
+                  </div>
+
+                  <div>
+                    <label
+                      for="phone"
+                      class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+                    >
+                      Teléfono *
+                    </label>
+                    <input
+                      type="tel"
+                      id="phone"
+                      th:field="*{phone}"
+                      required
+                      pattern="[0-9]{10}"
+                      minlength="10"
+                      maxlength="10"
+                      title="Ingresa exactamente 10 dígitos numéricos"
+                      oninput="
+                        this.value = this.value
+                          .replace(/[^0-9]/g, '')
+                          .slice(0, 10)
+                      "
+                      class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary focus:outline-none"
+                    />
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                      Número de teléfono (10 dígitos)
+                    </p>
+                    <p
+                      class="mt-1 text-sm text-red-600 dark:text-red-400"
+                      th:if="${#fields.hasErrors('phone')}"
+                      th:errors="*{phone}"
+                    ></p>
+                  </div>
+                </div>
+
+                <div>
+                  <label
+                    for="address"
+                    class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+                  >
+                    Dirección *
+                  </label>
+                  <textarea
+                    id="address"
+                    th:field="*{address}"
+                    rows="2"
+                    required
+                    class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary focus:outline-none"
+                  ></textarea>
+                  <p
+                    class="mt-1 text-sm text-red-600 dark:text-red-400"
+                    th:if="${#fields.hasErrors('address')}"
+                    th:errors="*{address}"
+                  ></p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label
+                      for="taxRate"
+                      class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+                    >
+                      IVA (%) *
+                    </label>
+                    <input
+                      type="number"
+                      id="taxRate"
+                      th:field="*{taxRate}"
+                      step="0.01"
+                      min="0"
+                      max="100"
+                      required
+                      class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary focus:outline-none"
+                    />
+                    <p
+                      class="mt-1 text-sm text-red-600 dark:text-red-400"
+                      th:if="${#fields.hasErrors('taxRate')}"
+                      th:errors="*{taxRate}"
+                    ></p>
+                  </div>
+                </div>
+
+                <!-- Average Consumption Time -->
+                <div>
+                  <label
+                    for="averageConsumptionTimeMinutes"
+                    class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+                  >
+                    Tiempo Promedio de Consumo (minutos) *
+                  </label>
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <input
+                        type="number"
+                        id="averageConsumptionTimeMinutes"
+                        th:field="*{averageConsumptionTimeMinutes}"
+                        min="30"
+                        max="480"
+                        required
+                        class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary focus:outline-none"
+                      />
+                      <p
+                        class="mt-1 text-sm text-red-600 dark:text-red-400"
+                        th:if="${#fields.hasErrors('averageConsumptionTimeMinutes')}"
+                        th:errors="*{averageConsumptionTimeMinutes}"
+                      ></p>
+                    </div>
+                    <div class="flex items-center">
+                      <div
+                        class="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800"
+                      >
+                        <div
+                          class="flex items-center gap-2 text-blue-800 dark:text-blue-300"
+                        >
+                          <span class="material-symbols-outlined">info</span>
+                          <div>
+                            <p
+                              class="text-sm font-semibold"
+                              th:text="${configuration.averageConsumptionTimeDisplay}"
+                            >
+                              2 horas
+                            </p>
+                            <p class="text-xs">Tiempo estimado</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                    Este tiempo se usa para calcular el espacio entre
+                    reservaciones y validar disponibilidad de mesas. Valor
+                    recomendado: 90-150 minutos. Mínimo: 30 min, Máximo: 480 min
+                    (8 horas).
+                  </p>
+                </div>
+
+                <!-- Payment Methods -->
+                <!-- Note: Work days are now managed through Business Hours section (open/closed status) -->
+                <div id="paymentMethodsSection">
+                  <label
+                    class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3"
+                  >
+                    Métodos de Pago
+                  </label>
+                  <div
+                    class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"
+                  >
+                    <label
+                      class="flex items-center gap-3 p-4 rounded-xl border-2 border-gray-200 dark:border-gray-700 hover:border-primary cursor-pointer transition-colors"
+                    >
+                      <input
+                        type="checkbox"
+                        id="paymentCash"
+                        name="paymentCash"
+                        th:checked="${configuration.paymentMethods.get(T(com.aatechsolutions.elgransazon.domain.entity.PaymentMethodType).CASH)}"
+                        class="w-5 h-5 text-primary border-gray-300 rounded focus:ring-primary"
+                      />
+                      <div class="flex items-center gap-2">
+                        <span class="material-symbols-outlined text-primary"
+                          >payments</span
+                        >
+                        <span
+                          class="text-sm font-medium text-gray-700 dark:text-gray-300"
+                          >Efectivo</span
+                        >
+                      </div>
+                    </label>
+
+                    <label
+                      class="flex items-center gap-3 p-4 rounded-xl border-2 border-gray-200 dark:border-gray-700 hover:border-primary cursor-pointer transition-colors"
+                    >
+                      <input
+                        type="checkbox"
+                        id="paymentCreditCard"
+                        name="paymentCreditCard"
+                        th:checked="${configuration.paymentMethods.get(T(com.aatechsolutions.elgransazon.domain.entity.PaymentMethodType).CREDIT_CARD)}"
+                        class="w-5 h-5 text-primary border-gray-300 rounded focus:ring-primary"
+                      />
+                      <div class="flex items-center gap-2">
+                        <span class="material-symbols-outlined text-primary"
+                          >credit_card</span
+                        >
+                        <span
+                          class="text-sm font-medium text-gray-700 dark:text-gray-300"
+                          >Tarjeta de Crédito</span
+                        >
+                      </div>
+                    </label>
+
+                    <label
+                      class="flex items-center gap-3 p-4 rounded-xl border-2 border-gray-200 dark:border-gray-700 hover:border-primary cursor-pointer transition-colors"
+                    >
+                      <input
+                        type="checkbox"
+                        id="paymentDebitCard"
+                        name="paymentDebitCard"
+                        th:checked="${configuration.paymentMethods.get(T(com.aatechsolutions.elgransazon.domain.entity.PaymentMethodType).DEBIT_CARD)}"
+                        class="w-5 h-5 text-primary border-gray-300 rounded focus:ring-primary"
+                      />
+                      <div class="flex items-center gap-2">
+                        <span class="material-symbols-outlined text-primary"
+                          >credit_card</span
+                        >
+                        <span
+                          class="text-sm font-medium text-gray-700 dark:text-gray-300"
+                          >Tarjeta de Débito</span
+                        >
+                      </div>
+                    </label>
+
+                    <label
+                      class="flex items-center gap-3 p-4 rounded-xl border-2 border-gray-200 dark:border-gray-700 hover:border-primary cursor-pointer transition-colors"
+                    >
+                      <input
+                        type="checkbox"
+                        id="paymentTransfer"
+                        name="paymentTransfer"
+                        th:checked="${configuration.paymentMethods.get(T(com.aatechsolutions.elgransazon.domain.entity.PaymentMethodType).TRANSFER)}"
+                        class="w-5 h-5 text-primary border-gray-300 rounded focus:ring-primary"
+                      />
+                      <div class="flex items-center gap-2">
+                        <span class="material-symbols-outlined text-primary"
+                          >account_balance</span
+                        >
+                        <span
+                          class="text-sm font-medium text-gray-700 dark:text-gray-300"
+                          >Transferencia</span
+                        >
+                      </div>
+                    </label>
+                  </div>
+                  <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                    Estos métodos de pago aplican para pedidos en restaurante
+                    (para comer aquí y para llevar).
+                  </p>
+                </div>
+
+                <!-- Delivery Payment Methods - Separate Section -->
+                <div id="deliveryPaymentMethodsSection">
+                  <label
+                    class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3"
+                  >
+                    <span class="flex items-center gap-2">
+                      <span class="material-symbols-outlined text-primary"
+                        >local_shipping</span
+                      >
+                      Métodos de Pago para Delivery
+                    </span>
+                  </label>
+                  <div
+                    class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"
+                  >
+                    <label
+                      class="flex items-center gap-3 p-4 rounded-xl border-2 border-orange-200 dark:border-orange-900 hover:border-orange-400 cursor-pointer transition-colors bg-orange-50/50 dark:bg-orange-900/10"
+                    >
+                      <input
+                        type="checkbox"
+                        id="deliveryPaymentCash"
+                        name="deliveryPaymentCash"
+                        th:checked="${configuration.deliveryPaymentMethods?.get(T(com.aatechsolutions.elgransazon.domain.entity.PaymentMethodType).CASH) ?: true}"
+                        class="w-5 h-5 text-orange-500 border-gray-300 rounded focus:ring-orange-500"
+                      />
+                      <div class="flex items-center gap-2">
+                        <span class="material-symbols-outlined text-orange-500"
+                          >payments</span
+                        >
+                        <span
+                          class="text-sm font-medium text-gray-700 dark:text-gray-300"
+                          >Efectivo</span
+                        >
+                      </div>
+                    </label>
+
+                    <label
+                      class="flex items-center gap-3 p-4 rounded-xl border-2 border-orange-200 dark:border-orange-900 hover:border-orange-400 cursor-pointer transition-colors bg-orange-50/50 dark:bg-orange-900/10"
+                    >
+                      <input
+                        type="checkbox"
+                        id="deliveryPaymentCreditCard"
+                        name="deliveryPaymentCreditCard"
+                        th:checked="${configuration.deliveryPaymentMethods?.get(T(com.aatechsolutions.elgransazon.domain.entity.PaymentMethodType).CREDIT_CARD) ?: false}"
+                        class="w-5 h-5 text-orange-500 border-gray-300 rounded focus:ring-orange-500"
+                      />
+                      <div class="flex items-center gap-2">
+                        <span class="material-symbols-outlined text-orange-500"
+                          >credit_card</span
+                        >
+                        <span
+                          class="text-sm font-medium text-gray-700 dark:text-gray-300"
+                          >Tarjeta de Crédito</span
+                        >
+                      </div>
+                    </label>
+
+                    <label
+                      class="flex items-center gap-3 p-4 rounded-xl border-2 border-orange-200 dark:border-orange-900 hover:border-orange-400 cursor-pointer transition-colors bg-orange-50/50 dark:bg-orange-900/10"
+                    >
+                      <input
+                        type="checkbox"
+                        id="deliveryPaymentDebitCard"
+                        name="deliveryPaymentDebitCard"
+                        th:checked="${configuration.deliveryPaymentMethods?.get(T(com.aatechsolutions.elgransazon.domain.entity.PaymentMethodType).DEBIT_CARD) ?: false}"
+                        class="w-5 h-5 text-orange-500 border-gray-300 rounded focus:ring-orange-500"
+                      />
+                      <div class="flex items-center gap-2">
+                        <span class="material-symbols-outlined text-orange-500"
+                          >credit_card</span
+                        >
+                        <span
+                          class="text-sm font-medium text-gray-700 dark:text-gray-300"
+                          >Tarjeta de Débito</span
+                        >
+                      </div>
+                    </label>
+
+                    <label
+                      class="flex items-center gap-3 p-4 rounded-xl border-2 border-orange-200 dark:border-orange-900 hover:border-orange-400 cursor-pointer transition-colors bg-orange-50/50 dark:bg-orange-900/10"
+                    >
+                      <input
+                        type="checkbox"
+                        id="deliveryPaymentTransfer"
+                        name="deliveryPaymentTransfer"
+                        th:checked="${configuration.deliveryPaymentMethods?.get(T(com.aatechsolutions.elgransazon.domain.entity.PaymentMethodType).TRANSFER) ?: false}"
+                        class="w-5 h-5 text-orange-500 border-gray-300 rounded focus:ring-orange-500"
+                      />
+                      <div class="flex items-center gap-2">
+                        <span class="material-symbols-outlined text-orange-500"
+                          >account_balance</span
+                        >
+                        <span
+                          class="text-sm font-medium text-gray-700 dark:text-gray-300"
+                          >Transferencia</span
+                        >
+                      </div>
+                    </label>
+                  </div>
+                  <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                    Estos métodos de pago aplican exclusivamente para pedidos de
+                    entrega a domicilio (delivery). Puedes desactivar métodos
+                    aquí sin afectar los pagos del restaurante.
+                  </p>
+                </div>
+
+                <div class="flex justify-end">
+                  <button
+                    type="submit"
+                    id="btnSaveConfig"
+                    class="flex items-center gap-2 px-6 py-3 bg-primary text-white font-semibold rounded-xl hover:bg-primary-dark transition-colors shadow-md"
+                  >
+                    <span class="material-symbols-outlined">save</span>
+                    Guardar Configuración General
+                  </button>
+                </div>
+              </form>
+
+              <!-- Formulario oculto para subida de logo -->
+              <form
+                id="uploadRestaurantLogoForm"
+                th:action="@{/admin/system-configuration/upload-restaurant-logo}"
+                method="post"
+                enctype="multipart/form-data"
+                class="hidden"
+              ></form>
+            </div>
+          </div>
+
+          <!-- BUSINESS HOURS SECTION -->
+          <div
+            class="mb-6 bg-white dark:bg-gray-900 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800"
+          >
+            <div class="p-6 border-b border-gray-200 dark:border-gray-800">
+              <h3
+                id="businessHoursSection"
+                class="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2"
+              >
+                <span class="material-symbols-outlined text-primary"
+                  >schedule</span
+                >
+                Horarios de Atención
+              </h3>
+            </div>
+            <div class="p-6">
+              <form
+                th:action="@{/admin/system-configuration/business-hours/update}"
+                method="post"
+              >
+                <div
+                  class="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-800"
+                >
+                  <table
+                    class="min-w-full divide-y divide-gray-200 dark:divide-gray-800"
+                  >
+                    <thead class="bg-gray-50 dark:bg-gray-800">
+                      <tr>
+                        <th
+                          class="px-6 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase"
+                        >
+                          Día
+                        </th>
+                        <th
+                          class="px-6 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase"
+                        >
+                          Hora Apertura
+                        </th>
+                        <th
+                          class="px-6 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase"
+                        >
+                          Hora Cierre
+                        </th>
+                        <th
+                          class="px-6 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase"
+                        >
+                          Cerrado
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody
+                      class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-800"
+                    >
+                      <!-- Show ALL days of the week, not just work days -->
+                      <!-- Work days are determined by is_closed = false -->
+                      <tr
+                        th:each="day : ${allDays}"
+                        class="hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+                      >
+                        <td class="px-6 py-4 whitespace-nowrap">
+                          <span
+                            class="font-semibold text-gray-900 dark:text-white"
+                            th:text="${day.displayName}"
+                          ></span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                          <input
+                            type="time"
+                            th:name="'openTime_' + ${day}"
+                            th:value="${businessHoursMap?.get(day)?.openTime}"
+                            th:required="${businessHoursMap?.get(day) != null && !businessHoursMap.get(day).isClosed}"
+                            class="px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary focus:outline-none"
+                          />
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                          <input
+                            type="time"
+                            th:name="'closeTime_' + ${day}"
+                            th:value="${businessHoursMap?.get(day)?.closeTime}"
+                            th:required="${businessHoursMap?.get(day) != null && !businessHoursMap.get(day).isClosed}"
+                            class="px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary focus:outline-none"
+                          />
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-center">
+                          <label
+                            class="relative inline-flex items-center cursor-pointer"
+                          >
+                            <input
+                              type="checkbox"
+                              th:name="'isClosed_' + ${day}"
+                              th:checked="${businessHoursMap?.get(day)?.isClosed}"
+                              class="sr-only peer"
+                            />
+                            <div
+                              class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/20 dark:peer-focus:ring-primary/40 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary"
+                            ></div>
+                          </label>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div class="mt-6 flex justify-end">
+                  <button
+                    type="submit"
+                    class="flex items-center gap-2 px-6 py-3 bg-primary text-white font-semibold rounded-xl hover:bg-primary-dark transition-colors shadow-md"
+                  >
+                    <span class="material-symbols-outlined">save</span>
+                    Guardar Horarios
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <!-- SOCIAL NETWORKS SECTION -->
+          <div
+            class="mb-6 bg-white dark:bg-gray-900 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800"
+          >
+            <div
+              class="p-6 border-b border-gray-200 dark:border-gray-800 flex justify-between items-center"
+            >
+              <h3
+                id="socialNetworksSection"
+                class="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2"
+              >
+                <span class="material-symbols-outlined text-primary"
+                  >share</span
+                >
+                Redes Sociales
+              </h3>
+              <a
+                th:href="@{/admin/system-configuration/social-networks/new}"
+                class="flex items-center gap-2 px-4 py-2 bg-primary text-white font-semibold rounded-xl hover:bg-primary-dark transition-colors shadow-md"
+              >
+                <span class="material-symbols-outlined">add</span>
+                Agregar Red Social
+              </a>
+            </div>
+            <div class="p-6">
+              <div
+                th:if="${socialNetworks.isEmpty()}"
+                class="p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500 flex items-center gap-3"
+              >
+                <span
+                  class="material-symbols-outlined text-blue-600 dark:text-blue-400"
+                  >info</span
+                >
+                <p class="text-blue-800 dark:text-blue-300">
+                  No hay redes sociales configuradas.
+                </p>
+              </div>
+
+              <div
+                th:unless="${socialNetworks.isEmpty()}"
+                class="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-800"
+              >
+                <table
+                  class="min-w-full divide-y divide-gray-200 dark:divide-gray-800"
+                >
+                  <thead class="bg-gray-50 dark:bg-gray-800">
+                    <tr>
+                      <th
+                        class="px-6 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase"
+                      >
+                        Nombre
+                      </th>
+                      <th
+                        class="px-6 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase"
+                      >
+                        URL
+                      </th>
+                      <th
+                        class="px-6 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase"
+                      >
+                        Orden
+                      </th>
+                      <th
+                        class="px-6 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase"
+                      >
+                        Estado
+                      </th>
+                      <th
+                        class="px-6 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase"
+                      >
+                        Acciones
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody
+                    class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-800"
+                  >
+                    <tr
+                      th:each="network : ${socialNetworks}"
+                      class="hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+                    >
+                      <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="flex items-center gap-2">
+                          <i
+                            th:if="${network.icon}"
+                            th:class="${network.icon}"
+                            class="text-primary"
+                          ></i>
+                          <span
+                            class="font-semibold text-gray-900 dark:text-white"
+                            th:text="${network.name}"
+                          ></span>
+                        </div>
+                      </td>
+                      <td class="px-6 py-4">
+                        <a
+                          th:href="${network.url}"
+                          target="_blank"
+                          class="text-primary hover:text-primary-dark flex items-center gap-1"
+                        >
+                          <span th:text="${network.url}"></span>
+                          <span class="material-symbols-outlined text-sm"
+                            >open_in_new</span
+                          >
+                        </a>
+                      </td>
+                      <td
+                        class="px-6 py-4 whitespace-nowrap text-gray-600 dark:text-gray-400"
+                        th:text="${network.displayOrder}"
+                      ></td>
+                      <td class="px-6 py-4 whitespace-nowrap">
+                        <span
+                          th:if="${network.active}"
+                          class="px-2.5 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-500/20 dark:text-green-300"
+                          >Activo</span
+                        >
+                        <span
+                          th:unless="${network.active}"
+                          class="px-2.5 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800 dark:bg-gray-500/20 dark:text-gray-300"
+                          >Inactivo</span
+                        >
+                      </td>
+                      <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="flex items-center gap-2">
+                          <a
+                            th:href="@{/admin/system-configuration/social-networks/{id}/edit(id=${network.id})}"
+                            class="p-2 rounded-lg bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-500/30 shadow-sm"
+                            title="Editar"
+                          >
+                            <span class="material-symbols-outlined text-lg"
+                              >edit</span
+                            >
+                          </a>
+                          <form
+                            th:action="@{/admin/system-configuration/social-networks/{id}/toggle(id=${network.id})}"
+                            method="post"
+                            style="display: inline"
+                          >
+                            <button
+                              type="submit"
+                              class="p-2 rounded-lg bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 hover:bg-amber-200 dark:hover:bg-amber-500/30 shadow-sm"
+                              th:title="${network.active ? 'Desactivar' : 'Activar'}"
+                            >
+                              <span
+                                class="material-symbols-outlined text-lg"
+                                th:text="${network.active ? 'toggle_on' : 'toggle_off'}"
+                              ></span>
+                            </button>
+                          </form>
+                          <form
+                            th:action="@{/admin/system-configuration/social-networks/{id}/delete(id=${network.id})}"
+                            method="post"
+                            style="display: inline"
+                            onsubmit="
+                              return confirm(
+                                '¿Está seguro de eliminar esta red social?',
+                              );
+                            "
+                          >
+                            <button
+                              type="submit"
+                              class="p-2 rounded-lg bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-500/30 shadow-sm"
+                              title="Eliminar"
+                            >
+                              <span class="material-symbols-outlined text-lg"
+                                >delete</span
+                              >
+                            </button>
+                          </form>
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <!-- ONBOARDING OVERLAY -->
+    <div
+      id="onboarding-overlay"
+      class="hidden fixed inset-0 z-[100]"
+      style="background: rgba(0, 0, 0, 0.3)"
+    >
+      <!-- Spotlight (área destacada) con borde -->
+      <div
+        id="onboarding-spotlight"
+        class="fixed pointer-events-none transition-all duration-300 rounded-xl"
+      ></div>
+
+      <!-- Tooltip flotante -->
+      <div
+        id="onboarding-tooltip"
+        class="fixed bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border-2 border-primary max-w-md w-[90%] sm:max-w-md p-6 transition-all duration-300 z-[103]"
+      >
+        <!-- Flecha del tooltip -->
+        <div
+          id="tooltip-arrow"
+          class="absolute w-4 h-4 bg-white dark:bg-gray-900 border-primary rotate-45 transition-all duration-300"
+        ></div>
+
+        <!-- Contenido del tooltip -->
+        <div class="mb-4 relative z-10">
+          <h3
+            id="tooltip-title"
+            class="text-xl font-bold text-gray-900 dark:text-white mb-2"
+          ></h3>
+          <p
+            id="tooltip-description"
+            class="text-gray-600 dark:text-gray-400 text-sm leading-relaxed"
+          ></p>
+        </div>
+
+        <!-- Contador de pasos -->
+        <div class="flex items-center justify-center gap-2 mb-4">
+          <div id="steps-indicator" class="flex gap-2"></div>
+        </div>
+
+        <!-- Botones de navegación -->
+        <div class="flex items-center justify-between gap-3">
+          <button
+            id="btn-skip"
+            class="px-4 py-2 text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+          >
+            Omitir tour
+          </button>
+          <div class="flex gap-2">
+            <button
+              id="btn-prev"
+              class="px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-semibold hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Atrás
+            </button>
+            <button
+              id="btn-next"
+              class="px-4 py-2 rounded-xl bg-primary text-white font-semibold hover:bg-primary-dark transition-colors flex items-center gap-2"
+            >
+              <span id="btn-next-text">Siguiente</span>
+              <span class="material-symbols-outlined text-sm"
+                >arrow_forward</span
+              >
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- JAVASCRIPT -->
+    <!-- Sidebar Scripts Fragment -->
+    <div th:replace="~{fragments/sidebar :: sidebarScripts}"></div>
+
+    <!-- Theme Switch Script -->
+    <script>
+      // Configurar el switch de tema
+      document.addEventListener("DOMContentLoaded", function () {
+        const themeSwitch = document.getElementById("theme-switch");
+        const themeIcon = document.getElementById("theme-icon");
+        const themeDescription = document.getElementById("theme-description");
+
+        // Verificar el tema actual
+        const currentTheme =
+          localStorage.getItem("elgransazon-theme") || "light";
+        const isDark = currentTheme === "dark";
+
+        // Configurar el estado inicial del switch
+        themeSwitch.checked = isDark;
+        updateThemeUI(isDark);
+
+        // Event listener para el switch
+        themeSwitch.addEventListener("change", function () {
+          const newTheme = this.checked ? "dark" : "light";
+
+          // Aplicar el tema
+          if (newTheme === "dark") {
+            document.documentElement.classList.add("dark");
+          } else {
+            document.documentElement.classList.remove("dark");
+          }
+
+          // Guardar en localStorage
+          localStorage.setItem("elgransazon-theme", newTheme);
+
+          // Actualizar UI
+          updateThemeUI(this.checked);
+        });
+
+        function updateThemeUI(isDark) {
+          if (isDark) {
+            themeIcon.textContent = "dark_mode";
+            themeDescription.textContent = "Modo oscuro activado";
+          } else {
+            themeIcon.textContent = "light_mode";
+            themeDescription.textContent = "Modo claro activado";
+          }
+        }
+      });
+    </script>
+
+    <!-- PASO 3: AGREGAR ESTE JAVASCRIPT ANTES DEL </body> -->
+    <script>
+      // Configuración de los pasos del onboarding
+      const onboardingSteps = [
+        {
+          target: "#theme-switch",
+          title: "🎨 Modo de Visualización",
+          description:
+            "Activa o desactiva el modo oscuro del sistema. El modo oscuro reduce el brillo de la pantalla y es ideal para trabajar en ambientes con poca luz. Tu preferencia se guardará automáticamente.",
+          position: "bottom",
+        },
+        {
+          target: "#restaurantName",
+          title: "🏪 Nombre del Restaurante",
+          description:
+            "Define el nombre principal de tu restaurante. Este nombre aparecerá en todo el sistema y será visible para tus clientes en reservaciones y comunicaciones.",
+          position: "bottom",
+        },
+        {
+          target: "#slogan",
+          title: "✨ Slogan del Restaurante",
+          description:
+            'Agrega un slogan memorable que represente la esencia de tu restaurante. Ejemplo: "El mejor sabor de la ciudad" o "Tradición y sabor en cada plato".',
+          position: "bottom",
+        },
+        {
+          target: "#restaurantLogoSection",
+          title: "🖼️ Logo del Restaurante",
+          description:
+            "Sube el logo de tu restaurante. Selecciona una imagen y presiona 'Subir' para actualizarla. Formatos admitidos: JPG, PNG, GIF, WEBP (máximo 5MB).",
+          position: "bottom",
+        },
+        {
+          target: "#email",
+          title: "📧 Correo Electrónico",
+          description:
+            "Email de contacto oficial para consultas, reservaciones y comunicaciones con tus clientes. Asegúrate de que sea un correo activo.",
+          position: "bottom",
+        },
+        {
+          target: "#phone",
+          title: "📞 Teléfono de Contacto",
+          description:
+            "El número de teléfono principal donde los clientes pueden contactarte para hacer pedidos, reservaciones o consultas. Debe contener exactamente 10 dígitos.",
+          position: "bottom",
+        },
+        {
+          target: "#address",
+          title: "📍 Dirección",
+          description:
+            "Ingresa la dirección física completa de tu restaurante. Esta información será visible para tus clientes y les ayudará a encontrarte fácilmente.",
+          position: "bottom",
+        },
+        {
+          target: "#taxRate",
+          title: "💰 IVA (Impuesto)",
+          description:
+            "Define el porcentaje de IVA que se aplicará a tus productos. En México generalmente es 16%. Este valor se calculará automáticamente en todas las ventas.",
+          position: "bottom",
+        },
+        {
+          target: "#averageConsumptionTimeMinutes",
+          title: "⏱️ Tiempo Promedio de Consumo",
+          description:
+            "Tiempo estimado que los clientes pasan en tu restaurante (en minutos). Este valor es crucial para calcular el espacio entre reservaciones y la disponibilidad de mesas. Recomendado: 90-150 minutos.",
+          position: "bottom",
+        },
+        {
+          target: "#paymentMethodsSection",
+          title: "💳 Métodos de Pago",
+          description:
+            "Selecciona los métodos de pago que aceptas en tu restaurante para pedidos en local: Efectivo, Tarjeta de Crédito, Tarjeta de Débito y/o Transferencia. Puedes elegir varios.",
+          position: "bottom",
+        },
+        {
+          target: "#deliveryPaymentMethodsSection",
+          title: "🚚 Métodos de Pago para Delivery",
+          description:
+            "Configura los métodos de pago exclusivos para pedidos a domicilio. Puedes activar o desactivar métodos aquí sin afectar los pagos del restaurante.",
+          position: "bottom",
+        },
+        {
+          target: "#btnSaveConfig",
+          title: "💾 Guardar Configuración",
+          description:
+            "Una vez que completes toda la información, presiona este botón para guardar la configuración general de tu restaurante. Los cambios se aplicarán inmediatamente.",
+          position: "top",
+        },
+        {
+          target: "#businessHoursSection",
+          title: "🕐 Horarios de Atención",
+          description:
+            "Configura los horarios de apertura y cierre para cada día de la semana. Puedes marcar un día como 'Cerrado' si el restaurante no opera ese día. Los horarios se usan para validar reservaciones.",
+          position: "top",
+        },
+        {
+          target: "#socialNetworksSection",
+          title: "🌐 Redes Sociales",
+          description:
+            "Agrega y administra las redes sociales de tu restaurante (Facebook, Instagram, WhatsApp, etc.). Estas se mostrarán a tus clientes para que puedan seguirte y contactarte.",
+          position: "bottom",
+        },
+      ];
+
+      class OnboardingManager {
+        constructor(steps) {
+          this.steps = steps;
+          this.currentStep = 0;
+          this.overlay = document.getElementById("onboarding-overlay");
+          this.tooltip = document.getElementById("onboarding-tooltip");
+          this.spotlight = document.getElementById("onboarding-spotlight");
+          this.tooltipArrow = document.getElementById("tooltip-arrow");
+          this.btnNext = document.getElementById("btn-next");
+          this.btnPrev = document.getElementById("btn-prev");
+          this.btnSkip = document.getElementById("btn-skip");
+          this.currentTarget = null;
+
+          this.init();
+        }
+
+        init() {
+          // Event listeners
+          this.btnNext.addEventListener("click", () => this.next());
+          this.btnPrev.addEventListener("click", () => this.prev());
+          this.btnSkip.addEventListener("click", () => this.end());
+
+          // Cerrar con ESC
+          document.addEventListener("keydown", (e) => {
+            if (
+              e.key === "Escape" &&
+              !this.overlay.classList.contains("hidden")
+            ) {
+              this.end();
+            }
+          });
+
+          // Reposicionar en resize
+          let resizeTimeout;
+          window.addEventListener("resize", () => {
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(() => {
+              if (!this.overlay.classList.contains("hidden")) {
+                this.showStep();
+              }
+            }, 100);
+          });
+        }
+
+        start() {
+          this.currentStep = 0;
+          this.overlay.classList.remove("hidden");
+          setTimeout(() => this.showStep(), 100);
+        }
+
+        showStep() {
+          const step = this.steps[this.currentStep];
+          const target = document.querySelector(step.target);
+
+          if (!target) {
+            console.warn("Target not found:", step.target);
+            this.next();
+            return;
+          }
+
+          // Remover highlight anterior
+          if (this.currentTarget) {
+            this.currentTarget.classList.remove("onboarding-highlighted");
+          }
+
+          // Agregar highlight al nuevo target
+          target.classList.add("onboarding-highlighted");
+          this.currentTarget = target;
+
+          // Actualizar contenido del tooltip
+          document.getElementById("tooltip-title").textContent = step.title;
+          document.getElementById("tooltip-description").textContent =
+            step.description;
+
+          // Actualizar indicadores de pasos
+          this.updateStepsIndicator();
+
+          // Scroll al elemento primero (instantáneo para precisión)
+          target.scrollIntoView({
+            behavior: "auto",
+            block: "center",
+            inline: "center",
+          });
+
+          // Posicionar después de que el navegador actualice el layout
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              this.positionElements(target, step.position);
+            });
+          });
+
+          // Actualizar botones
+          this.btnPrev.disabled = this.currentStep === 0;
+
+          if (this.currentStep === this.steps.length - 1) {
+            document.getElementById("btn-next-text").textContent = "Finalizar";
+          } else {
+            document.getElementById("btn-next-text").textContent = "Siguiente";
+          }
+        }
+
+        positionElements(target, preferredPosition) {
+          const rect = target.getBoundingClientRect();
+          const tooltipRect = this.tooltip.getBoundingClientRect();
+          const padding = 16;
+          const arrowSize = 8;
+
+          // Posicionar spotlight sobre el elemento
+          this.spotlight.style.top = `${rect.top - 4}px`;
+          this.spotlight.style.left = `${rect.left - 4}px`;
+          this.spotlight.style.width = `${rect.width + 8}px`;
+          this.spotlight.style.height = `${rect.height + 8}px`;
+
+          // Calcular posición del tooltip
+          let top, left;
+          let arrowTop, arrowLeft;
+          let position = preferredPosition;
+
+          // Determinar si hay espacio para la posición preferida
+          const spaceBelow = window.innerHeight - rect.bottom;
+          const spaceAbove = rect.top;
+
+          if (
+            preferredPosition === "bottom" &&
+            spaceBelow < tooltipRect.height + padding
+          ) {
+            position = "top";
+          } else if (
+            preferredPosition === "top" &&
+            spaceAbove < tooltipRect.height + padding
+          ) {
+            position = "bottom";
+          }
+
+          if (position === "bottom") {
+            // Tooltip abajo del elemento
+            top = rect.bottom + padding;
+            left = rect.left + rect.width / 2 - tooltipRect.width / 2;
+
+            // Flecha arriba del tooltip
+            arrowTop = -arrowSize;
+            arrowLeft = tooltipRect.width / 2 - arrowSize;
+            this.tooltipArrow.style.borderTop = "2px solid #38e07b";
+            this.tooltipArrow.style.borderLeft = "2px solid #38e07b";
+            this.tooltipArrow.style.borderRight = "none";
+            this.tooltipArrow.style.borderBottom = "none";
+          } else {
+            // Tooltip arriba del elemento
+            top = rect.top - tooltipRect.height - padding;
+            left = rect.left + rect.width / 2 - tooltipRect.width / 2;
+
+            // Flecha abajo del tooltip
+            arrowTop = tooltipRect.height - arrowSize;
+            arrowLeft = tooltipRect.width / 2 - arrowSize;
+            this.tooltipArrow.style.borderBottom = "2px solid #38e07b";
+            this.tooltipArrow.style.borderRight = "2px solid #38e07b";
+            this.tooltipArrow.style.borderTop = "none";
+            this.tooltipArrow.style.borderLeft = "none";
+          }
+
+          // Ajustar si se sale de la pantalla horizontalmente
+          const maxLeft = window.innerWidth - tooltipRect.width - padding;
+          left = Math.max(padding, Math.min(left, maxLeft));
+
+          // Ajustar si se sale de la pantalla verticalmente
+          top = Math.max(
+            padding,
+            Math.min(top, window.innerHeight - tooltipRect.height - padding),
+          );
+
+          // Aplicar posiciones
+          this.tooltip.style.top = `${top}px`;
+          this.tooltip.style.left = `${left}px`;
+
+          this.tooltipArrow.style.top = `${arrowTop}px`;
+          this.tooltipArrow.style.left = `${arrowLeft}px`;
+        }
+
+        updateStepsIndicator() {
+          const indicator = document.getElementById("steps-indicator");
+          indicator.innerHTML = "";
+
+          this.steps.forEach((_, index) => {
+            const dot = document.createElement("div");
+            dot.className = "onboarding-step-dot";
+            if (index === this.currentStep) {
+              dot.classList.add("active");
+            }
+            indicator.appendChild(dot);
+          });
+        }
+
+        next() {
+          if (this.currentStep < this.steps.length - 1) {
+            this.currentStep++;
+            this.showStep();
+          } else {
+            this.end();
+          }
+        }
+
+        prev() {
+          if (this.currentStep > 0) {
+            this.currentStep--;
+            this.showStep();
+          }
+        }
+
+        end() {
+          // Remover highlight
+          if (this.currentTarget) {
+            this.currentTarget.classList.remove("onboarding-highlighted");
+          }
+
+          this.overlay.classList.add("hidden");
+          // Guardar en localStorage que ya vio el onboarding
+          localStorage.setItem("onboarding-completed", "true");
+        }
+      }
+
+      // Inicializar onboarding
+      const onboarding = new OnboardingManager(onboardingSteps);
+
+      // Puedes iniciar automáticamente o con un botón
+      window.addEventListener("DOMContentLoaded", () => {
+        // OPCIÓN 1: Iniciar automáticamente la primera vez (descomentar para activar)
+        // if (!localStorage.getItem('onboarding-completed')) {
+        //   setTimeout(() => onboarding.start(), 800);
+        // }
+      });
+    </script>
+
+    <!-- Script del Sistema de Temas -->
+    <div th:replace="~{fragments/theme :: themeScript}"></div>
+  </body>
+</html>

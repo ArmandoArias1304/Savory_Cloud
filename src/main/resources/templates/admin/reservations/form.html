@@ -1,0 +1,1081 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title
+      th:text="${globalSystemConfig.systemName + ' - ' + (isEdit ? 'Editar Reservación' : 'Nueva Reservación')}"
+    >
+      El Gran Sazón - Reservación
+    </title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@300;400;500;600;700"
+      rel="stylesheet"
+    />
+
+    <!-- Sistema de Temas (Modo Claro/Oscuro) -->
+    <div th:replace="~{fragments/theme :: themeResources}"></div>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#38e07b",
+              "primary-dark": "#2bc866",
+              "background-light": "#f8faf9",
+              "background-dark": "#0f1713",
+            },
+            fontFamily: {
+              display: ["Work Sans"],
+            },
+            borderRadius: {
+              DEFAULT: "0.5rem",
+              lg: "0.75rem",
+              xl: "1rem",
+              "2xl": "1.5rem",
+              full: "9999px",
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      .table-card,
+      .table-card-edit {
+        position: relative;
+      }
+      .table-card:hover,
+      .table-card-edit:hover {
+        transform: translateY(-2px);
+      }
+      .table-card.border-primary,
+      .table-card-edit.border-primary {
+        box-shadow: 0 0 0 3px rgba(56, 224, 123, 0.2);
+      }
+    </style>
+  </head>
+  <body
+    class="bg-gradient-to-br from-background-light to-gray-50 dark:from-background-dark dark:to-gray-900 font-display text-gray-800 dark:text-gray-200"
+  >
+    <div class="min-h-screen">
+      <!-- MAIN CONTENT -->
+      <main class="w-full">
+        <div class="max-w-5xl mx-auto p-4 sm:p-6 lg:p-8">
+          <!-- HEADER -->
+          <div class="mb-6 sm:mb-8">
+            <div class="flex items-center gap-3 mb-4">
+              <a
+                href="/admin/reservations"
+                class="flex items-center justify-center w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+              >
+                <span class="material-symbols-outlined">arrow_back</span>
+              </a>
+              <div>
+                <h2
+                  class="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white"
+                  th:text="${isEdit ? 'Editar Reservación' : 'Nueva Reservación'}"
+                >
+                  Nueva Reservación
+                </h2>
+                <p
+                  class="text-sm sm:text-base text-gray-600 dark:text-gray-400"
+                >
+                  <span th:if="${isEdit}"
+                    >Modifica los datos de la reservación</span
+                  >
+                  <span th:unless="${isEdit}"
+                    >Completa los datos de la nueva reservación</span
+                  >
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Error Messages -->
+          <div
+            th:if="${errorMessage}"
+            class="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl"
+          >
+            <p
+              class="text-red-800 dark:text-red-300"
+              th:text="${errorMessage}"
+            ></p>
+          </div>
+
+          <!-- Success Messages -->
+          <div
+            th:if="${successMessage}"
+            class="mb-6 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl"
+          >
+            <p
+              class="text-green-800 dark:text-green-300"
+              th:text="${successMessage}"
+            ></p>
+          </div>
+
+          <!-- FORM -->
+          <div
+            class="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-6 sm:p-8 shadow-lg"
+          >
+            <form
+              th:action="@{${isEdit ? '/admin/reservations/' + reservation.id : '/admin/reservations'}}"
+              th:object="${reservation}"
+              method="post"
+            >
+              <div class="space-y-6">
+                <!-- Nombre y Teléfono -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label
+                      for="customerName"
+                      class="block text-sm font-semibold text-gray-900 dark:text-white mb-2"
+                    >
+                      Nombre del Cliente
+                      <span class="text-red-500">*</span>
+                    </label>
+                    <div class="relative">
+                      <div
+                        class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3"
+                      >
+                        <span
+                          class="material-symbols-outlined text-gray-400 dark:text-gray-500 text-lg"
+                          >person</span
+                        >
+                      </div>
+                      <input
+                        type="text"
+                        id="customerName"
+                        th:field="*{customerName}"
+                        required
+                        minlength="2"
+                        maxlength="100"
+                        class="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 py-3 pl-10 pr-4 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary"
+                        placeholder="Ej: Juan Pérez"
+                      />
+                    </div>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                      Nombre completo del cliente
+                    </p>
+                    <p
+                      th:if="${#fields.hasErrors('customerName')}"
+                      th:errors="*{customerName}"
+                      class="mt-1 text-xs text-red-600 dark:text-red-400"
+                    ></p>
+                  </div>
+
+                  <div>
+                    <label
+                      for="customerPhone"
+                      class="block text-sm font-semibold text-gray-900 dark:text-white mb-2"
+                    >
+                      Teléfono
+                      <span class="text-red-500">*</span>
+                    </label>
+                    <div class="relative">
+                      <div
+                        class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3"
+                      >
+                        <span
+                          class="material-symbols-outlined text-gray-400 dark:text-gray-500 text-lg"
+                          >phone</span
+                        >
+                      </div>
+                      <input
+                        type="tel"
+                        id="customerPhone"
+                        th:field="*{customerPhone}"
+                        required
+                        pattern="[0-9]{10}"
+                        minlength="10"
+                        maxlength="10"
+                        class="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 py-3 pl-10 pr-4 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary"
+                        placeholder="Ej: 5551234567"
+                        title="Ingresa exactamente 10 dígitos numéricos"
+                        oninput="
+                          this.value = this.value
+                            .replace(/[^0-9]/g, '')
+                            .slice(0, 10)
+                        "
+                      />
+                    </div>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                      Número de contacto del cliente (10 dígitos)
+                    </p>
+                    <p
+                      th:if="${#fields.hasErrors('customerPhone')}"
+                      th:errors="*{customerPhone}"
+                      class="mt-1 text-xs text-red-600 dark:text-red-400"
+                    ></p>
+                  </div>
+                </div>
+
+                <!-- Email -->
+                <div>
+                  <label
+                    for="customerEmail"
+                    class="block text-sm font-semibold text-gray-900 dark:text-white mb-2"
+                  >
+                    Correo Electrónico
+                  </label>
+                  <div class="relative">
+                    <div
+                      class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3"
+                    >
+                      <span
+                        class="material-symbols-outlined text-gray-400 dark:text-gray-600"
+                        >email</span
+                      >
+                    </div>
+                    <input
+                      type="email"
+                      th:field="*{customerEmail}"
+                      id="customerEmail"
+                      class="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 py-3 pl-10 pr-4 text-gray-900 dark:text-white focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary"
+                      placeholder="Ej: juan@email.com"
+                    />
+                  </div>
+                  <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    Correo del cliente (opcional)
+                  </p>
+                  <p
+                    th:if="${#fields.hasErrors('customerEmail')}"
+                    th:errors="*{customerEmail}"
+                    class="mt-1 text-xs text-red-600 dark:text-red-400"
+                  ></p>
+                </div>
+
+                <!-- Número de Comensales (Read-only para nueva, editable para edición) -->
+                <div>
+                  <label
+                    for="numberOfGuests"
+                    class="block text-sm font-semibold text-gray-900 dark:text-white mb-2"
+                  >
+                    Número de Comensales
+                    <span class="text-red-500">*</span>
+                  </label>
+                  <div class="relative">
+                    <div
+                      class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3"
+                    >
+                      <span
+                        class="material-symbols-outlined text-gray-400 dark:text-gray-600"
+                        >group</span
+                      >
+                    </div>
+                    <input
+                      type="number"
+                      th:field="*{numberOfGuests}"
+                      id="numberOfGuests"
+                      th:readonly="${!isEdit}"
+                      th:required="${isEdit}"
+                      min="1"
+                      max="50"
+                      th:classappend="${isEdit ? 'bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 cursor-not-allowed'}"
+                      class="w-full rounded-xl border border-gray-200 dark:border-gray-700 py-3 pl-10 pr-4 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary"
+                      placeholder="Selecciona mesas primero"
+                    />
+                  </div>
+                  <p
+                    class="mt-1 text-xs text-gray-500 dark:text-gray-400"
+                    th:if="${!isEdit}"
+                  >
+                    Se calcula automáticamente según las mesas seleccionadas
+                    (capacidad mínima)
+                  </p>
+                  <p
+                    class="mt-1 text-xs text-gray-500 dark:text-gray-400"
+                    th:if="${isEdit}"
+                  >
+                    Número de personas que asistirán a la reservación
+                  </p>
+                  <p
+                    th:if="${#fields.hasErrors('numberOfGuests')}"
+                    th:errors="*{numberOfGuests}"
+                    class="mt-1 text-xs text-red-600 dark:text-red-400"
+                  ></p>
+                </div>
+                <!-- Fecha y Hora -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label
+                      for="reservationDate"
+                      class="block text-sm font-semibold text-gray-900 dark:text-white mb-2"
+                    >
+                      Fecha de Reservación
+                      <span class="text-red-500">*</span>
+                    </label>
+                    <div class="relative">
+                      <div
+                        class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3"
+                      >
+                        <span
+                          class="material-symbols-outlined text-gray-400 dark:text-gray-500 text-lg"
+                          >calendar_today</span
+                        >
+                      </div>
+                      <input
+                        type="date"
+                        id="reservationDate"
+                        th:field="*{reservationDate}"
+                        required
+                        class="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 py-3 pl-10 pr-4 text-gray-900 dark:text-white focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary"
+                      />
+                    </div>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                      Fecha para la reservación
+                    </p>
+                    <p
+                      th:if="${#fields.hasErrors('reservationDate')}"
+                      th:errors="*{reservationDate}"
+                      class="mt-1 text-xs text-red-600 dark:text-red-400"
+                    ></p>
+                  </div>
+
+                  <div>
+                    <label
+                      for="reservationTime"
+                      class="block text-sm font-semibold text-gray-900 dark:text-white mb-2"
+                    >
+                      Hora de Reservación
+                      <span class="text-red-500">*</span>
+                    </label>
+                    <div class="relative">
+                      <div
+                        class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3"
+                      >
+                        <span
+                          class="material-symbols-outlined text-gray-400 dark:text-gray-500 text-lg"
+                          >schedule</span
+                        >
+                      </div>
+                      <input
+                        type="time"
+                        id="reservationTime"
+                        th:field="*{reservationTime}"
+                        required
+                        class="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 py-3 pl-10 pr-4 text-gray-900 dark:text-white focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary"
+                      />
+                    </div>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                      Hora dentro del horario del restaurante
+                    </p>
+                    <p
+                      th:if="${#fields.hasErrors('reservationTime')}"
+                      th:errors="*{reservationTime}"
+                      class="mt-1 text-xs text-red-600 dark:text-red-400"
+                    ></p>
+                  </div>
+                </div>
+
+                <!-- Mesas - Selección Múltiple con Cards (solo para nueva reservación) -->
+                <div th:if="${!isEdit}">
+                  <label
+                    class="block text-sm font-semibold text-gray-900 dark:text-white mb-3"
+                  >
+                    Seleccionar Mesas
+                    <span class="text-red-500">*</span>
+                  </label>
+                  <div
+                    class="mb-3 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl"
+                  >
+                    <div class="flex items-start gap-2">
+                      <span
+                        class="material-symbols-outlined text-blue-600 dark:text-blue-400 text-lg"
+                        >info</span
+                      >
+                      <div class="text-xs text-blue-800 dark:text-blue-300">
+                        <p class="font-semibold mb-1">
+                          Selección Múltiple de Mesas:
+                        </p>
+                        <ul class="list-disc list-inside space-y-0.5 ml-2">
+                          <li>
+                            Puedes seleccionar
+                            <strong>una o más mesas</strong> para la misma
+                            reservación
+                          </li>
+                          <li>
+                            Se creará una reservación por cada mesa seleccionada
+                            con los mismos datos
+                          </li>
+                          <li>
+                            El número de comensales se ajustará automáticamente
+                            a la capacidad mínima de las mesas seleccionadas
+                          </li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Selected Tables Summary -->
+                  <div id="selectedTablesSummary" class="mb-4 hidden">
+                    <div
+                      class="p-3 bg-primary/10 border-2 border-primary rounded-xl"
+                    >
+                      <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                          <span class="material-symbols-outlined text-primary"
+                            >check_circle</span
+                          >
+                          <span
+                            class="text-sm font-semibold text-gray-900 dark:text-white"
+                          >
+                            <span id="selectedCount">0</span> mesa(s)
+                            seleccionada(s)
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onclick="clearTableSelection()"
+                          class="text-xs px-3 py-1 rounded-lg bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors"
+                        >
+                          Limpiar selección
+                        </button>
+                      </div>
+                      <div
+                        id="selectedTablesList"
+                        class="mt-2 flex flex-wrap gap-2"
+                      ></div>
+                    </div>
+                  </div>
+
+                  <!-- Tables Grid -->
+                  <div
+                    class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3"
+                  >
+                    <div
+                      th:each="table : ${tables}"
+                      th:data-table-id="${table.id}"
+                      th:data-table-number="${table.tableNumber}"
+                      th:data-table-capacity="${table.capacity}"
+                      th:data-table-location="${table.location}"
+                      class="table-card cursor-pointer rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 transition-all hover:shadow-lg hover:scale-105"
+                      onclick="toggleTableSelection(this)"
+                    >
+                      <div class="flex flex-col items-center gap-2">
+                        <div
+                          class="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center"
+                        >
+                          <span
+                            class="material-symbols-outlined text-2xl text-gray-600 dark:text-gray-400"
+                          >
+                            table_restaurant
+                          </span>
+                        </div>
+                        <div class="text-center">
+                          <p
+                            class="text-sm font-bold text-gray-900 dark:text-white"
+                          >
+                            Mesa #<span th:text="${table.tableNumber}"></span>
+                          </p>
+                          <p class="text-xs text-gray-500 dark:text-gray-400">
+                            <span
+                              class="material-symbols-outlined text-xs align-middle"
+                              >person</span
+                            >
+                            <span th:text="${table.capacity}"></span> personas
+                          </p>
+                          <p
+                            class="text-xs text-gray-400 dark:text-gray-500 truncate"
+                            th:text="${table.location}"
+                          ></p>
+                        </div>
+                        <!-- Selected Indicator -->
+                        <div
+                          class="selected-indicator hidden absolute top-2 right-2"
+                        >
+                          <span
+                            class="material-symbols-outlined text-primary text-2xl"
+                          >
+                            check_circle
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Hidden input to store selected table IDs -->
+                  <input type="hidden" name="tableIds" id="tableIds" />
+
+                  <p class="mt-3 text-xs text-gray-500 dark:text-gray-400">
+                    Click en las mesas para seleccionarlas. Solo se muestran
+                    mesas disponibles para reservar.
+                  </p>
+                  <p
+                    id="tableSelectionError"
+                    class="mt-2 text-xs text-red-600 dark:text-red-400 hidden"
+                  >
+                    Debes seleccionar al menos una mesa
+                  </p>
+                </div>
+
+                <!-- Mesa - Selección con Cards (solo para edición) -->
+                <div th:if="${isEdit}">
+                  <label
+                    class="block text-sm font-semibold text-gray-900 dark:text-white mb-3"
+                  >
+                    Seleccionar Mesa
+                    <span class="text-red-500">*</span>
+                  </label>
+                  <div
+                    class="mb-3 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl"
+                  >
+                    <div class="flex items-start gap-2">
+                      <span
+                        class="material-symbols-outlined text-blue-600 dark:text-blue-400 text-lg"
+                        >info</span
+                      >
+                      <div class="text-xs text-blue-800 dark:text-blue-300">
+                        <p class="font-semibold mb-1">Cambio de Mesa:</p>
+                        <p>
+                          Selecciona una nueva mesa para esta reservación. Solo
+                          puedes seleccionar una mesa a la vez.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Selected Table Summary -->
+                  <div id="selectedTableSummaryEdit" class="mb-4 hidden">
+                    <div
+                      class="p-3 bg-primary/10 border-2 border-primary rounded-xl"
+                    >
+                      <div class="flex items-center gap-2">
+                        <span class="material-symbols-outlined text-primary"
+                          >check_circle</span
+                        >
+                        <span
+                          class="text-sm font-semibold text-gray-900 dark:text-white"
+                          id="selectedTableNameEdit"
+                        >
+                          Mesa seleccionada
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Tables Grid -->
+                  <div
+                    class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3"
+                  >
+                    <div
+                      th:each="table : ${tables}"
+                      th:data-table-id="${table.id}"
+                      th:data-table-number="${table.tableNumber}"
+                      th:data-table-capacity="${table.capacity}"
+                      th:data-table-location="${table.location}"
+                      th:classappend="${reservation.restaurantTable != null && reservation.restaurantTable.id == table.id ? 'border-primary bg-primary/5 dark:bg-primary/10' : 'border-gray-200 dark:border-gray-700'}"
+                      class="table-card-edit cursor-pointer rounded-xl border-2 bg-white dark:bg-gray-800 p-4 transition-all hover:shadow-lg hover:scale-105"
+                      onclick="toggleTableSelectionEdit(this)"
+                    >
+                      <div class="flex flex-col items-center gap-2 relative">
+                        <div
+                          class="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center"
+                        >
+                          <span
+                            class="material-symbols-outlined text-2xl text-gray-600 dark:text-gray-400"
+                          >
+                            table_restaurant
+                          </span>
+                        </div>
+                        <div class="text-center">
+                          <p
+                            class="text-sm font-bold text-gray-900 dark:text-white"
+                          >
+                            Mesa #<span th:text="${table.tableNumber}"></span>
+                          </p>
+                          <p class="text-xs text-gray-500 dark:text-gray-400">
+                            <span
+                              class="material-symbols-outlined text-xs align-middle"
+                              >person</span
+                            >
+                            <span th:text="${table.capacity}"></span> personas
+                          </p>
+                          <p
+                            class="text-xs text-gray-400 dark:text-gray-500 truncate"
+                            th:text="${table.location}"
+                          ></p>
+                        </div>
+                        <!-- Selected Indicator -->
+                        <div
+                          th:class="${reservation.restaurantTable != null && reservation.restaurantTable.id == table.id ? 'selected-indicator-edit' : 'selected-indicator-edit hidden'}"
+                          class="absolute top-0 right-0"
+                        >
+                          <span
+                            class="material-symbols-outlined text-primary text-2xl"
+                          >
+                            check_circle
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Hidden input to store selected table ID -->
+                  <input
+                    type="hidden"
+                    th:field="*{restaurantTable.id}"
+                    id="restaurantTableId"
+                  />
+
+                  <p class="mt-3 text-xs text-gray-500 dark:text-gray-400">
+                    Click en una mesa para seleccionarla. Solo se muestran mesas
+                    disponibles para reservar.
+                  </p>
+                  <p
+                    id="tableSelectionErrorEdit"
+                    class="mt-2 text-xs text-red-600 dark:text-red-400 hidden"
+                  >
+                    Debes seleccionar una mesa
+                  </p>
+                </div>
+
+                <!-- Peticiones Especiales -->
+                <div>
+                  <label
+                    for="specialRequests"
+                    class="block text-sm font-semibold text-gray-900 dark:text-white mb-2"
+                  >
+                    Peticiones Especiales
+                  </label>
+                  <div class="relative">
+                    <textarea
+                      id="specialRequests"
+                      th:field="*{specialRequests}"
+                      rows="4"
+                      maxlength="500"
+                      class="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 py-3 px-4 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+                      placeholder="Ej: Mesa cerca de la ventana, cumpleaños, alergias, etc."
+                    ></textarea>
+                  </div>
+                  <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    Peticiones u observaciones adicionales (opcional, máx. 500
+                    caracteres)
+                  </p>
+                  <p
+                    th:if="${#fields.hasErrors('specialRequests')}"
+                    th:errors="*{specialRequests}"
+                    class="mt-1 text-xs text-red-600 dark:text-red-400"
+                  ></p>
+                </div>
+              </div>
+
+              <!-- BOTONES -->
+              <div
+                class="flex flex-col sm:flex-row gap-3 mt-8 pt-6 border-t border-gray-200 dark:border-gray-700"
+              >
+                <button
+                  type="submit"
+                  class="flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-primary to-primary-dark text-white font-semibold hover:shadow-lg hover:shadow-primary/30 transition-all shadow-md"
+                >
+                  <span class="material-symbols-outlined text-lg">save</span>
+                  <span
+                    th:text="${isEdit ? 'Actualizar Reservación' : 'Crear Reservación'}"
+                    >Crear Reservación</span
+                  >
+                </button>
+                <a
+                  href="/admin/reservations"
+                  class="flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-gray-200 dark:bg-gray-800 text-gray-800 dark:text-white font-semibold hover:bg-gray-300 dark:hover:bg-gray-700 transition-colors"
+                >
+                  <span class="material-symbols-outlined text-lg">close</span>
+                  Cancelar
+                </a>
+              </div>
+            </form>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <script>
+      // Helper function to get SweetAlert dark mode classes
+      function getSwalDarkModeClasses() {
+        const isDark = document.documentElement.classList.contains("dark");
+        return isDark
+          ? {
+              popup: "rounded-2xl !bg-gray-800 !text-gray-100",
+              title: "!text-gray-100",
+              htmlContainer: "!text-gray-300",
+              confirmButton: "rounded-xl px-6 py-2.5 font-semibold",
+              cancelButton: "rounded-xl px-6 py-2.5 font-semibold",
+            }
+          : {
+              popup: "rounded-2xl",
+              confirmButton: "rounded-xl px-6 py-2.5 font-semibold",
+              cancelButton: "rounded-xl px-6 py-2.5 font-semibold",
+            };
+      }
+
+      // Selected tables management
+      let selectedTables = [];
+
+      function toggleTableSelection(cardElement) {
+        const tableId = cardElement.dataset.tableId;
+        const tableNumber = cardElement.dataset.tableNumber;
+        const tableCapacity = parseInt(cardElement.dataset.tableCapacity);
+        const tableLocation = cardElement.dataset.tableLocation || "";
+
+        const index = selectedTables.findIndex((t) => t.id === tableId);
+
+        if (index > -1) {
+          // Deselect
+          selectedTables.splice(index, 1);
+          cardElement.classList.remove(
+            "border-primary",
+            "bg-primary/5",
+            "dark:bg-primary/10",
+          );
+          cardElement.classList.add("border-gray-200", "dark:border-gray-700");
+          cardElement
+            .querySelector(".selected-indicator")
+            .classList.add("hidden");
+        } else {
+          // Select
+          selectedTables.push({
+            id: tableId,
+            number: tableNumber,
+            capacity: tableCapacity,
+            location: tableLocation,
+          });
+          cardElement.classList.remove(
+            "border-gray-200",
+            "dark:border-gray-700",
+          );
+          cardElement.classList.add(
+            "border-primary",
+            "bg-primary/5",
+            "dark:bg-primary/10",
+          );
+          cardElement
+            .querySelector(".selected-indicator")
+            .classList.remove("hidden");
+        }
+
+        updateSelectionUI();
+      }
+
+      function clearTableSelection() {
+        selectedTables = [];
+        document.querySelectorAll(".table-card").forEach((card) => {
+          card.classList.remove(
+            "border-primary",
+            "bg-primary/5",
+            "dark:bg-primary/10",
+          );
+          card.classList.add("border-gray-200", "dark:border-gray-700");
+          card.querySelector(".selected-indicator").classList.add("hidden");
+        });
+        updateSelectionUI();
+      }
+
+      function updateSelectionUI() {
+        const summary = document.getElementById("selectedTablesSummary");
+        const count = document.getElementById("selectedCount");
+        const list = document.getElementById("selectedTablesList");
+        const tableIdsInput = document.getElementById("tableIds");
+        const guestsInput = document.getElementById("numberOfGuests");
+        const errorMsg = document.getElementById("tableSelectionError");
+
+        // Update count
+        count.textContent = selectedTables.length;
+
+        // Show/hide summary
+        if (selectedTables.length > 0) {
+          summary.classList.remove("hidden");
+          errorMsg.classList.add("hidden");
+        } else {
+          summary.classList.add("hidden");
+        }
+
+        // Update list
+        list.innerHTML = "";
+        selectedTables.forEach((table) => {
+          const badge = document.createElement("span");
+          badge.className =
+            "inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-primary text-white text-xs font-semibold";
+          badge.innerHTML = `
+            <span class="material-symbols-outlined text-sm">table_restaurant</span>
+            Mesa #${table.number} (${table.capacity}p)
+          `;
+          list.appendChild(badge);
+        });
+
+        // Update hidden input with selected table IDs
+        const tableIds = selectedTables.map((t) => t.id).join(",");
+        tableIdsInput.value = tableIds;
+
+        // Calculate and update numberOfGuests (minimum capacity)
+        if (selectedTables.length > 0) {
+          const minCapacity = Math.min(
+            ...selectedTables.map((t) => t.capacity),
+          );
+          guestsInput.value = minCapacity;
+        } else {
+          guestsInput.value = "";
+        }
+      }
+
+      // ===== EDIT MODE TABLE SELECTION =====
+      let selectedTableEdit = null;
+
+      function toggleTableSelectionEdit(cardElement) {
+        const tableId = cardElement.dataset.tableId;
+        const tableNumber = cardElement.dataset.tableNumber;
+        const tableCapacity = cardElement.dataset.tableCapacity;
+        const tableLocation = cardElement.dataset.tableLocation || "";
+
+        // Clear all previous selections
+        document.querySelectorAll(".table-card-edit").forEach((card) => {
+          card.classList.remove(
+            "border-primary",
+            "bg-primary/5",
+            "dark:bg-primary/10",
+          );
+          card.classList.add("border-gray-200", "dark:border-gray-700");
+          const indicator = card.querySelector(".selected-indicator-edit");
+          if (indicator) indicator.classList.add("hidden");
+        });
+
+        // Select clicked card
+        cardElement.classList.remove("border-gray-200", "dark:border-gray-700");
+        cardElement.classList.add(
+          "border-primary",
+          "bg-primary/5",
+          "dark:bg-primary/10",
+        );
+        const indicator = cardElement.querySelector(".selected-indicator-edit");
+        if (indicator) indicator.classList.remove("hidden");
+
+        selectedTableEdit = {
+          id: tableId,
+          number: tableNumber,
+          capacity: tableCapacity,
+          location: tableLocation,
+        };
+
+        updateSelectionUIEdit();
+      }
+
+      function updateSelectionUIEdit() {
+        const summary = document.getElementById("selectedTableSummaryEdit");
+        const summaryName = document.getElementById("selectedTableNameEdit");
+        const tableIdInput = document.getElementById("restaurantTableId");
+        const errorMsg = document.getElementById("tableSelectionErrorEdit");
+
+        if (selectedTableEdit) {
+          summary.classList.remove("hidden");
+          errorMsg.classList.add("hidden");
+          summaryName.textContent = `Mesa #${selectedTableEdit.number} (${selectedTableEdit.capacity} personas)`;
+          tableIdInput.value = selectedTableEdit.id;
+        } else {
+          summary.classList.add("hidden");
+        }
+      }
+
+      // Initialize edit mode if a table is already selected
+      document.addEventListener("DOMContentLoaded", function () {
+        const editTableInput = document.getElementById("restaurantTableId");
+        if (editTableInput && editTableInput.value) {
+          const selectedCard = document.querySelector(
+            `.table-card-edit[data-table-id="${editTableInput.value}"]`,
+          );
+          if (selectedCard) {
+            selectedTableEdit = {
+              id: selectedCard.dataset.tableId,
+              number: selectedCard.dataset.tableNumber,
+              capacity: selectedCard.dataset.tableCapacity,
+              location: selectedCard.dataset.tableLocation || "",
+            };
+            updateSelectionUIEdit();
+          }
+        }
+      });
+
+      // Form validation and double-submit prevention
+      let isSubmitting = false;
+      document.querySelector("form").addEventListener("submit", function (e) {
+        // Prevent double submission
+        if (isSubmitting) {
+          e.preventDefault();
+          return false;
+        }
+
+        // Only validate table selection for new reservations (not edit mode)
+        const tableIdsInput = document.getElementById("tableIds");
+        const isEditMode = !tableIdsInput; // If tableIds input doesn't exist, we're in edit mode
+
+        if (!isEditMode && selectedTables.length === 0) {
+          e.preventDefault();
+          document
+            .getElementById("tableSelectionError")
+            .classList.remove("hidden");
+          document
+            .querySelector(".table-card")
+            .scrollIntoView({ behavior: "smooth", block: "center" });
+
+          Swal.fire({
+            icon: "error",
+            title: "Error",
+            text: "Debes seleccionar al menos una mesa para la reservación",
+            confirmButtonColor: "#2bc866",
+            customClass: getSwalDarkModeClasses(),
+          });
+          return false;
+        }
+
+        // Validate table selection for edit mode
+        if (isEditMode && !selectedTableEdit) {
+          e.preventDefault();
+          document
+            .getElementById("tableSelectionErrorEdit")
+            .classList.remove("hidden");
+          document
+            .querySelector(".table-card-edit")
+            .scrollIntoView({ behavior: "smooth", block: "center" });
+
+          Swal.fire({
+            icon: "error",
+            title: "Error",
+            text: "Debes seleccionar una mesa para la reservación",
+            confirmButtonColor: "#2bc866",
+            customClass: getSwalDarkModeClasses(),
+          });
+          return false;
+        }
+
+        // Validate date/time
+        if (typeof validateDateTime === 'function' && !validateDateTime()) {
+          e.preventDefault();
+          return false;
+        }
+
+        // Mark as submitting and disable button
+        isSubmitting = true;
+        const submitBtn = this.querySelector('button[type="submit"]');
+        if (submitBtn) {
+          submitBtn.disabled = true;
+          submitBtn.innerHTML = '<span class="material-symbols-outlined text-lg animate-spin">sync</span> Guardando...';
+        }
+      });
+
+      // Date validation - minimum today
+      const dateInput = document.getElementById("reservationDate");
+      const timeInput = document.getElementById("reservationTime");
+
+      if (dateInput) {
+        const today = new Date();
+        const year = today.getFullYear();
+        const month = String(today.getMonth() + 1).padStart(2, "0");
+        const day = String(today.getDate()).padStart(2, "0");
+        const localToday = `${year}-${month}-${day}`;
+        dateInput.setAttribute("min", localToday);
+      }
+
+      // Validate that time is not in the past when date is today
+      function validateDateTime() {
+        if (!dateInput || !timeInput) return true;
+
+        const selectedDate = dateInput.value;
+        const selectedTime = timeInput.value;
+
+        if (!selectedDate || !selectedTime) return true;
+
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, "0");
+        const day = String(now.getDate()).padStart(2, "0");
+        const todayStr = `${year}-${month}-${day}`;
+
+        if (selectedDate === todayStr) {
+          const currentHour = now.getHours();
+          const currentMinute = now.getMinutes();
+          const currentTimeStr = `${String(currentHour).padStart(
+            2,
+            "0",
+          )}:${String(currentMinute).padStart(2, "0")}`;
+
+          if (selectedTime <= currentTimeStr) {
+            Swal.fire({
+              icon: "error",
+              title: "Hora inválida",
+              text: "No puedes crear una reservación en el pasado. Por favor selecciona una hora futura.",
+              confirmButtonColor: "#2bc866",
+              customClass: getSwalDarkModeClasses(),
+            });
+            timeInput.value = "";
+            return false;
+          }
+        }
+
+        return true;
+      }
+
+      if (dateInput && timeInput) {
+        dateInput.addEventListener("change", validateDateTime);
+        timeInput.addEventListener("change", validateDateTime);
+      }
+
+      // Character counter for special requests
+      const specialRequestsTextarea =
+        document.getElementById("specialRequests");
+      if (specialRequestsTextarea) {
+        const maxLength = 500;
+        const counterDiv = document.createElement("div");
+        counterDiv.className =
+          "text-xs text-gray-500 dark:text-gray-400 text-right mt-1";
+        specialRequestsTextarea.parentElement.appendChild(counterDiv);
+
+        function updateCounter() {
+          const remaining = maxLength - specialRequestsTextarea.value.length;
+          counterDiv.textContent = `${remaining} caracteres restantes`;
+          if (remaining < 50) {
+            counterDiv.className = "text-xs text-primary text-right mt-1";
+          } else {
+            counterDiv.className =
+              "text-xs text-gray-500 dark:text-gray-400 text-right mt-1";
+          }
+        }
+
+        specialRequestsTextarea.addEventListener("input", updateCounter);
+        updateCounter();
+      }
+
+      // Success/Error message display using SweetAlert
+      const urlParams = new URLSearchParams(window.location.search);
+      const success = urlParams.get("success");
+      const error = urlParams.get("error");
+
+      if (success) {
+        Swal.fire({
+          icon: "success",
+          title: "¡Éxito!",
+          text: decodeURIComponent(success),
+          confirmButtonColor: "#2bc866",
+          customClass: getSwalDarkModeClasses(),
+        });
+      }
+
+      if (error) {
+        Swal.fire({
+          icon: "error",
+          title: "Error",
+          text: decodeURIComponent(error),
+          confirmButtonColor: "#2bc866",
+          customClass: getSwalDarkModeClasses(),
+        });
+      }
+    </script>
+
+    <!-- Script del Sistema de Temas -->
+    <div th:replace="~{fragments/theme :: themeScript}"></div>
+  </body>
+</html>

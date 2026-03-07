@@ -1,0 +1,813 @@
+<!doctype html>
+<html xmlns:th="http://www.thymeleaf.org" lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title th:text="${globalSystemConfig != null and globalSystemConfig.systemName != null ? globalSystemConfig.systemName + ' - Iniciar Sesión' : 'Iniciar Sesión'}">
+      Iniciar Sesión
+    </title>
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="96x96"
+      th:if="${globalSystemConfig != null and globalSystemConfig.systemLogoUrl != null and !globalSystemConfig.systemLogoUrl.isEmpty()}"
+      th:href="${@cloudinaryUrl.logoSmall(globalSystemConfig.systemLogoUrl)}"
+    />
+    <link href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@300;400;500;600;700"
+      rel="stylesheet"
+    />
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family:
+          "Work Sans", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background: linear-gradient(
+          135deg,
+          #38e07b 0%,
+          #2bc866 50%,
+          #1fa552 100%
+        ) !important;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        padding: 20px;
+      }
+
+      .material-symbols-outlined {
+        font-variation-settings:
+          "FILL" 0,
+          "wght" 400,
+          "GRAD" 0,
+          "opsz" 24;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .login-container {
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        overflow: hidden;
+        max-width: 450px;
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        animation: fadeIn 0.6s ease-out;
+      }
+
+      @media (min-width: 768px) {
+        .login-container {
+          max-width: 950px;
+          flex-direction: row;
+          border-radius: 32px;
+          box-shadow:
+            0 25px 50px rgba(0, 0, 0, 0.5),
+            0 15px 30px rgba(0, 0, 0, 0.35);
+        }
+      }
+
+      /* PANEL IZQUIERDO - BRANDING */
+      .login-header {
+        background-color: #2d3436;
+        color: white;
+        padding: 20px;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        position: relative;
+        overflow: hidden;
+      }
+
+      @media (min-width: 768px) {
+        .login-header {
+          width: 40%;
+          padding: 48px;
+        }
+      }
+
+      /* Patrón de fondo sutil */
+      .login-header::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background-image: radial-gradient(circle, #38e07b 1px, transparent 1px);
+        background-size: 20px 20px;
+        opacity: 0.05;
+      }
+
+      .login-header-content {
+        position: relative;
+        z-index: 10;
+      }
+
+      /* Logo circular */
+      .logo-circle {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 70px;
+        height: 70px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #38e07b 0%, #2bc866 100%);
+        box-shadow: 0 8px 20px rgba(56, 224, 123, 0.4);
+        margin-bottom: 12px;
+      }
+
+      @media (min-width: 768px) {
+        .logo-circle {
+          width: 96px;
+          height: 96px;
+          margin-bottom: 24px;
+        }
+      }
+
+      .logo-circle .material-symbols-outlined {
+        font-size: 42px;
+        color: white;
+      }
+
+      @media (min-width: 768px) {
+        .logo-circle .material-symbols-outlined {
+          font-size: 60px;
+        }
+      }
+
+      .login-header h1 {
+        font-size: 22px;
+        font-weight: 800;
+        margin-bottom: 0;
+        color: white;
+        line-height: 1.2;
+      }
+
+      @media (min-width: 480px) {
+        .login-header h1 {
+          font-size: 26px;
+        }
+      }
+
+      @media (min-width: 768px) {
+        .login-header h1 {
+          font-size: 48px;
+          margin-bottom: 16px;
+        }
+      }
+
+      .login-header p {
+        font-size: 14px;
+        opacity: 0.9;
+        color: #d1d5db;
+        margin-bottom: 32px;
+        line-height: 1.6;
+        display: none;
+      }
+
+      @media (min-width: 768px) {
+        .login-header p {
+          display: block;
+          font-size: 18px;
+        }
+      }
+
+      /* Características con checkmarks */
+      .features-list {
+        text-align: left;
+        max-width: 320px;
+        margin: 0 auto;
+        display: none;
+      }
+
+      @media (min-width: 768px) {
+        .features-list {
+          display: block;
+        }
+      }
+
+      .feature-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 16px;
+      }
+
+      .feature-item .material-symbols-outlined {
+        font-size: 24px;
+        color: #38e07b;
+        background-color: rgba(56, 224, 123, 0.2);
+        border-radius: 50%;
+        padding: 6px;
+      }
+
+      .feature-item span {
+        font-size: 14px;
+        color: #e5e7eb;
+      }
+
+      /* PANEL DERECHO - FORMULARIO */
+      .login-body {
+        padding: 28px 24px;
+        background-color: white;
+      }
+
+      @media (min-width: 480px) {
+        .login-body {
+          padding: 32px 28px;
+        }
+      }
+
+      @media (min-width: 768px) {
+        .login-body {
+          width: 60%;
+          padding: 48px;
+        }
+      }
+
+      .login-body-header {
+        margin-bottom: 20px;
+      }
+
+      @media (min-width: 768px) {
+        .login-body-header {
+          margin-bottom: 32px;
+        }
+      }
+
+      .login-body-header h2 {
+        font-size: 22px;
+        font-weight: 800;
+        color: #1f2937;
+        margin-bottom: 8px;
+      }
+
+      @media (min-width: 480px) {
+        .login-body-header h2 {
+          font-size: 26px;
+        }
+      }
+
+      @media (min-width: 768px) {
+        .login-body-header h2 {
+          font-size: 36px;
+          margin-bottom: 12px;
+        }
+      }
+
+      .login-body-header p {
+        font-size: 14px;
+        color: #6b7280;
+        line-height: 1.4;
+      }
+
+      @media (min-width: 768px) {
+        .login-body-header p {
+          font-size: 16px;
+        }
+      }
+
+      /* Alertas */
+      .alert {
+        padding: 14px 16px;
+        border-radius: 12px;
+        margin-bottom: 20px;
+        font-size: 13px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        animation: fadeIn 0.3s ease-out;
+      }
+
+      @media (min-width: 768px) {
+        .alert {
+          padding: 16px 20px;
+          margin-bottom: 24px;
+          font-size: 14px;
+          gap: 12px;
+        }
+      }
+
+      .alert .material-symbols-outlined {
+        font-size: 22px;
+      }
+
+      @media (min-width: 768px) {
+        .alert .material-symbols-outlined {
+          font-size: 24px;
+        }
+      }
+
+      .alert-danger {
+        background-color: #fef2f2;
+        color: #991b1b;
+        border: 2px solid #fecaca;
+      }
+
+      .alert-danger .material-symbols-outlined {
+        color: #dc2626;
+      }
+
+      .alert-success {
+        background-color: #f0fdf4;
+        color: #166534;
+        border: 2px solid #bbf7d0;
+      }
+
+      .alert-success .material-symbols-outlined {
+        color: #16a34a;
+      }
+
+      /* Formulario */
+      .form-group {
+        margin-bottom: 18px;
+        position: relative;
+      }
+
+      @media (min-width: 768px) {
+        .form-group {
+          margin-bottom: 24px;
+        }
+      }
+
+      .form-group label {
+        display: block;
+        margin-bottom: 8px;
+        color: #374151;
+        font-weight: 600;
+        font-size: 14px;
+      }
+
+      .input-wrapper {
+        position: relative;
+      }
+
+      .input-wrapper .material-symbols-outlined {
+        position: absolute;
+        left: 14px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #9ca3af;
+        transition: color 0.3s ease;
+        font-size: 20px;
+      }
+
+      @media (min-width: 768px) {
+        .input-wrapper .material-symbols-outlined {
+          left: 16px;
+          font-size: 24px;
+        }
+      }
+
+      .form-group input {
+        width: 100%;
+        padding: 13px 16px 13px 44px;
+        border: 2px solid #e5e7eb;
+        border-radius: 12px;
+        font-size: 14px;
+        font-family: "Work Sans", sans-serif;
+        background-color: #f9fafb;
+        color: #1f2937;
+        transition: all 0.3s ease;
+      }
+
+      @media (min-width: 768px) {
+        .form-group input {
+          padding: 14px 16px 14px 48px;
+        }
+      }
+
+      .form-group input::placeholder {
+        color: #9ca3af;
+      }
+
+      .form-group input:focus {
+        outline: none;
+        border-color: #38e07b;
+        box-shadow: 0 0 0 4px rgba(56, 224, 123, 0.2);
+        background-color: white;
+      }
+
+      .form-group input:focus + .material-symbols-outlined {
+        color: #38e07b;
+      }
+
+      /* Recordarme y olvidaste contraseña */
+      .form-options {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      @media (min-width: 768px) {
+        .form-options {
+          margin-bottom: 24px;
+          gap: 12px;
+        }
+      }
+
+      .remember-me {
+        display: flex;
+        align-items: center;
+        cursor: pointer;
+      }
+
+      .remember-me input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        border-radius: 6px;
+        border: 2px solid #d1d5db;
+        margin-right: 8px;
+        cursor: pointer;
+      }
+
+      @media (min-width: 768px) {
+        .remember-me input[type="checkbox"] {
+          width: 20px;
+          height: 20px;
+        }
+      }
+
+      .remember-me input[type="checkbox"]:checked {
+        accent-color: #38e07b;
+      }
+
+      .remember-me label {
+        font-size: 13px;
+        color: #4b5563;
+        cursor: pointer;
+        margin: 0;
+      }
+
+      @media (min-width: 768px) {
+        .remember-me label {
+          font-size: 14px;
+        }
+      }
+
+      .forgot-password {
+        font-size: 13px;
+        color: #38e07b;
+        text-decoration: none;
+        font-weight: 600;
+        transition: color 0.3s ease;
+      }
+
+      @media (min-width: 768px) {
+        .forgot-password {
+          font-size: 14px;
+        }
+      }
+
+      .forgot-password:hover {
+        color: #2bc866;
+      }
+
+      /* Botón de login */
+      .btn-login {
+        width: 100%;
+        padding: 14px 20px;
+        background: linear-gradient(135deg, #38e07b 0%, #2bc866 100%);
+        color: white;
+        border: none;
+        border-radius: 12px;
+        font-size: 15px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        box-shadow: 0 4px 12px rgba(56, 224, 123, 0.3);
+      }
+
+      @media (min-width: 768px) {
+        .btn-login {
+          padding: 16px 24px;
+          font-size: 16px;
+        }
+      }
+
+      .btn-login:hover {
+        transform: scale(1.02);
+        box-shadow: 0 8px 20px rgba(56, 224, 123, 0.4);
+      }
+
+      .btn-login:active {
+        transform: scale(0.98);
+      }
+
+      /* Divider */
+      .divider {
+        position: relative;
+        text-align: center;
+        margin: 20px 0;
+      }
+
+      @media (min-width: 768px) {
+        .divider {
+          margin: 32px 0;
+        }
+      }
+
+      .divider::before {
+        content: "";
+        position: absolute;
+        top: 50%;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background-color: #e5e7eb;
+      }
+
+      .divider span {
+        position: relative;
+        background-color: white;
+        padding: 0 16px;
+        color: #9ca3af;
+        font-size: 13px;
+      }
+
+      @media (min-width: 768px) {
+        .divider span {
+          font-size: 14px;
+        }
+      }
+
+      /* Enlaces de ayuda */
+      .help-links {
+        display: flex;
+        justify-content: center;
+        gap: 20px;
+        flex-wrap: wrap;
+      }
+
+      @media (min-width: 768px) {
+        .help-links {
+          gap: 24px;
+        }
+      }
+
+      .help-link {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 13px;
+        color: #6b7280;
+        text-decoration: none;
+        transition: color 0.3s ease;
+      }
+
+      @media (min-width: 768px) {
+        .help-link {
+          font-size: 14px;
+        }
+      }
+
+      .help-link:hover {
+        color: #38e07b;
+      }
+
+      .help-link .material-symbols-outlined {
+        font-size: 18px;
+      }
+
+      /* Footer */
+      .login-footer {
+        position: fixed;
+        bottom: 16px;
+        left: 0;
+        right: 0;
+        text-align: center;
+        font-size: 12px;
+        color: white;
+        font-weight: 600;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        z-index: 50;
+      }
+
+      /* Responsive adjustments */
+      @media (max-width: 767px) {
+        .form-options {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="login-container">
+      <!-- PANEL IZQUIERDO - BRANDING -->
+      <div class="login-header">
+        <div class="login-header-content">
+          <!-- Logo - Dynamic from configuration -->
+          <div class="logo-circle" style="background: white; overflow: hidden">
+            <img
+              th:if="${globalSystemConfig != null and globalSystemConfig.systemLogoUrl != null and !globalSystemConfig.systemLogoUrl.isEmpty()}"
+              th:src="${@cloudinaryUrl.logoLarge(globalSystemConfig.systemLogoUrl)}"
+              alt="Logo"
+              style="width: 130px; height: 130px; object-fit: contain"
+            />
+          </div>
+
+          <!-- Título - Dynamic from configuration -->
+          <h1
+            th:text="${globalSystemConfig != null and globalSystemConfig.systemName != null and !globalSystemConfig.systemName.isEmpty()} ? ${globalSystemConfig.systemName} : 'SavoryCloud'"
+          >
+            SavoryCloud
+          </h1>
+
+          <!-- Subtítulo -->
+          <p
+            th:text="${globalSystemConfig != null and globalSystemConfig.systemSlogan != null and !globalSystemConfig.systemSlogan.isEmpty()} ? ${globalSystemConfig.systemSlogan} : 'Sistema de gestión integral para tu restaurante'"
+          >
+            Sistema de gestión integral para tu restaurante
+          </p>
+
+          <!-- Características -->
+          <div class="features-list">
+            <div class="feature-item">
+              <span class="material-symbols-outlined">check_circle</span>
+              <span>Gestión de pedidos eficiente</span>
+            </div>
+            <div class="feature-item">
+              <span class="material-symbols-outlined">check_circle</span>
+              <span>Control de inventario en tiempo real</span>
+            </div>
+            <div class="feature-item">
+              <span class="material-symbols-outlined">check_circle</span>
+              <span>Reportes y análisis detallados</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PANEL DERECHO - FORMULARIO -->
+      <div class="login-body">
+        <!-- Encabezado -->
+        <div class="login-body-header">
+          <h2>Bienvenido de Nuevo</h2>
+          <p>Inicia sesión para acceder al sistema del restaurante</p>
+        </div>
+
+        <!-- Mensaje de error -->
+        <div th:if="${error}" class="alert alert-danger">
+          <span class="material-symbols-outlined">error</span>
+          <span th:text="${error}">Usuario o contraseña incorrectos</span>
+        </div>
+
+        <!-- Mensaje especial para clientes que intentan entrar aquí (solo si tiene módulo de clientes) -->
+        <div
+          th:if="${errorType == 'clientAttempt' && hasCustomerModule}"
+          class="alert"
+          style="
+            background-color: #fef3c7;
+            border: 1px solid #f59e0b;
+            color: #92400e;
+            margin-top: 12px;
+          "
+        >
+          <span class="material-symbols-outlined" style="color: #f59e0b"
+            >info</span
+          >
+          <div style="flex: 1">
+            <strong>¡Ups! Este no es tu login.</strong><br />
+            <span style="font-size: 13px"
+              >¿Eres cliente?
+              <a
+                th:href="@{/client/login}"
+                style="
+                  color: #2563eb;
+                  font-weight: 600;
+                  text-decoration: underline;
+                "
+                >Haz clic aquí para ir al login de clientes</a
+              >
+            </span>
+          </div>
+        </div>
+
+        <!-- Mensaje de éxito (logout) -->
+        <div th:if="${message}" class="alert alert-success">
+          <span class="material-symbols-outlined">check_circle</span>
+          <span th:text="${message}">Has cerrado sesión exitosamente</span>
+        </div>
+
+        <!-- Formulario de login -->
+        <form th:action="@{/perform_login}" method="post">
+          <!-- Campo Usuario -->
+          <div class="form-group">
+            <label for="username">Usuario</label>
+            <div class="input-wrapper">
+              <input
+                type="text"
+                id="username"
+                name="username"
+                placeholder="Ingresa tu usuario"
+                required
+                autofocus
+              />
+              <span class="material-symbols-outlined">person</span>
+            </div>
+          </div>
+
+          <!-- Campo Contraseña -->
+          <div class="form-group">
+            <label for="password">Contraseña</label>
+            <div class="input-wrapper">
+              <input
+                type="password"
+                id="password"
+                name="password"
+                placeholder="Ingresa tu contraseña"
+                required
+              />
+              <span class="material-symbols-outlined">lock</span>
+            </div>
+          </div>
+
+          <!-- Recordarme y Olvidaste contraseña -->
+          <div class="form-options">
+            <a href="#" class="forgot-password">¿Olvidaste tu contraseña?</a>
+          </div>
+
+          <!-- Botón de login -->
+          <button type="submit" class="btn-login">
+            <span>Iniciar Sesión</span>
+            <span class="material-symbols-outlined">arrow_forward</span>
+          </button>
+        </form>
+
+        <!-- Divider y Link al login de clientes (solo si tiene módulo de clientes - paquete ECOMMERCE) -->
+        <div th:if="${hasCustomerModule}">
+          <div class="divider">
+            <span>¿Eres cliente?</span>
+          </div>
+
+          <!-- Link al login de clientes -->
+          <div style="text-align: center; margin-bottom: 16px">
+            <a
+              th:href="@{/client/login}"
+              style="
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                font-size: 14px;
+                color: #6b7280;
+                text-decoration: none;
+                transition: color 0.3s ease;
+              "
+            >
+              <span class="material-symbols-outlined" style="font-size: 18px"
+                >person</span
+              >
+              <span>Acceso para clientes</span>
+            </a>
+          </div>
+        </div>
+
+        <!-- Divider -->
+        <div class="divider">
+          <span>¿Necesitas ayuda?</span>
+        </div>
+
+        <!-- Enlaces de ayuda -->
+        <div class="help-links">
+          <a href="/support" class="help-link">
+            <span class="material-symbols-outlined">support</span>
+            <span>Soporte</span>
+          </a>
+          <a href="/help" class="help-link">
+            <span class="material-symbols-outlined">help</span>
+            <span>Ayuda</span>
+          </a>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

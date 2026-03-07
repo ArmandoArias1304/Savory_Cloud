@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${globalSystemConfig.systemName} + ' - ' + ${company.name}">SavoryCloud - Detalles de Empresa</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@300;400;500;600;700" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#38e07b",
+              "primary-dark": "#2bc866",
+              "background-light": "#f8faf9",
+              "background-dark": "#0f1713",
+            },
+            fontFamily: {
+              display: ["Work Sans"],
+            },
+          },
+        },
+      };
+    </script>
+</head>
+<body class="bg-background-light dark:bg-background-dark min-h-screen font-display">
+    <!-- Header -->
+    <header class="bg-white dark:bg-slate-800 shadow-sm border-b border-gray-200 dark:border-slate-700">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center py-4">
+                <div class="flex items-center space-x-4">
+                    <a th:href="@{/programmer/companies}" class="flex items-center text-gray-500 hover:text-primary">
+                        <span class="material-symbols-outlined">arrow_back</span>
+                    </a>
+                    <div>
+                        <h1 class="text-2xl font-bold text-gray-900 dark:text-white" th:text="${company.name}">Empresa</h1>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">
+                            <code class="bg-gray-100 dark:bg-slate-600 px-2 py-0.5 rounded" th:text="${company.slug}">slug</code>
+                        </p>
+                    </div>
+                </div>
+                <div class="flex space-x-2">
+                    <a th:href="@{/programmer/companies/{id}/edit(id=${company.idCompany})}" 
+                       class="inline-flex items-center px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
+                        <span class="material-symbols-outlined mr-2">edit</span>
+                        Editar
+                    </a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Alerts -->
+        <div th:if="${success}" class="mb-6 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg flex items-center">
+            <span class="material-symbols-outlined mr-2">check_circle</span>
+            <span th:text="${success}"></span>
+        </div>
+
+        <!-- Status Badge -->
+        <div class="mb-6">
+            <span th:if="${company.active}" class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                <span class="w-2 h-2 mr-2 rounded-full bg-green-400"></span>
+                Empresa Activa
+            </span>
+            <span th:unless="${company.active}" class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
+                <span class="w-2 h-2 mr-2 rounded-full bg-gray-400"></span>
+                Empresa Inactiva
+            </span>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Company Info -->
+            <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6">
+                <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+                    <span class="material-symbols-outlined mr-2 text-primary">domain</span>
+                    Información General
+                </h2>
+                <dl class="space-y-4">
+                    <div>
+                        <dt class="text-sm text-gray-500 dark:text-gray-400">Nombre</dt>
+                        <dd class="mt-1 text-gray-900 dark:text-white font-medium" th:text="${company.name}">Empresa</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm text-gray-500 dark:text-gray-400">Slug</dt>
+                        <dd class="mt-1">
+                            <code class="bg-gray-100 dark:bg-slate-600 px-2 py-1 rounded text-gray-900 dark:text-white" th:text="${company.slug}">slug</code>
+                        </dd>
+                    </div>
+                    <div th:if="${company.customDomain}">
+                        <dt class="text-sm text-gray-500 dark:text-gray-400">Dominio Personalizado</dt>
+                        <dd class="mt-1 text-gray-900 dark:text-white" th:text="${company.customDomain}">dominio.com</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm text-gray-500 dark:text-gray-400">Email de Contacto</dt>
+                        <dd class="mt-1 text-gray-900 dark:text-white" th:text="${company.contactEmail ?: 'No especificado'}">email@ejemplo.com</dd>
+                    </div>
+                    <div th:if="${company.contactPhone}">
+                        <dt class="text-sm text-gray-500 dark:text-gray-400">Teléfono</dt>
+                        <dd class="mt-1 text-gray-900 dark:text-white" th:text="${company.contactPhone}">+52 123 456 7890</dd>
+                    </div>
+                    <div th:if="${company.address}">
+                        <dt class="text-sm text-gray-500 dark:text-gray-400">Dirección</dt>
+                        <dd class="mt-1 text-gray-900 dark:text-white" th:text="${company.address}">Dirección</dd>
+                    </div>
+                </dl>
+            </div>
+
+            <!-- Dates -->
+            <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6">
+                <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+                    <span class="material-symbols-outlined mr-2 text-primary">schedule</span>
+                    Fechas
+                </h2>
+                <dl class="space-y-4">
+                    <div>
+                        <dt class="text-sm text-gray-500 dark:text-gray-400">Creada</dt>
+                        <dd class="mt-1 text-gray-900 dark:text-white" th:text="${#temporals.format(company.createdAt, 'dd/MM/yyyy HH:mm')}">01/01/2024 12:00</dd>
+                    </div>
+                    <div th:if="${company.updatedAt}">
+                        <dt class="text-sm text-gray-500 dark:text-gray-400">Última actualización</dt>
+                        <dd class="mt-1 text-gray-900 dark:text-white" th:text="${#temporals.format(company.updatedAt, 'dd/MM/yyyy HH:mm')}">01/01/2024 12:00</dd>
+                    </div>
+                </dl>
+            </div>
+
+            <!-- License Info -->
+            <div th:if="${company.systemLicense}" class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6">
+                <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+                    <span class="material-symbols-outlined mr-2 text-primary">verified</span>
+                    Licencia
+                </h2>
+                <dl class="space-y-4">
+                    <div>
+                        <dt class="text-sm text-gray-500 dark:text-gray-400">Estado</dt>
+                        <dd class="mt-1">
+                            <span th:if="${!company.systemLicense.expired}" class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">Activa</span>
+                            <span th:if="${company.systemLicense.expired}" class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">Expirada</span>
+                        </dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm text-gray-500 dark:text-gray-400">Fecha de Expiración</dt>
+                        <dd class="mt-1 text-gray-900 dark:text-white" th:text="${#temporals.format(company.systemLicense.expirationDate, 'dd/MM/yyyy')}">01/01/2025</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm text-gray-500 dark:text-gray-400">Límite de Usuarios</dt>
+                        <dd class="mt-1 text-gray-900 dark:text-white" th:text="${company.systemLicense.maxUsers}">10</dd>
+                    </div>
+                </dl>
+            </div>
+
+            <!-- Configuration Info -->
+            <div th:if="${company.systemConfiguration}" class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6">
+                <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+                    <span class="material-symbols-outlined mr-2 text-primary">settings</span>
+                    Configuración
+                </h2>
+                <dl class="space-y-4">
+                    <div>
+                        <dt class="text-sm text-gray-500 dark:text-gray-400">Nombre del Restaurante</dt>
+                        <dd class="mt-1 text-gray-900 dark:text-white" th:text="${company.systemConfiguration.restaurantName}">Nombre del Restaurante</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm text-gray-500 dark:text-gray-400">Impuesto</dt>
+                        <dd class="mt-1 text-gray-900 dark:text-white" th:text="${company.systemConfiguration.taxRate + '%'}">16%</dd>
+                    </div>
+                </dl>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="mt-8 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6">
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+                <span class="material-symbols-outlined mr-2 text-primary">build</span>
+                Acciones
+            </h2>
+            <div class="flex flex-wrap gap-4">
+                <form th:action="@{/programmer/companies/{id}/toggle-active(id=${company.idCompany})}" method="post">
+                    <button type="submit" 
+                            th:class="${company.active ? 'inline-flex items-center px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors' : 'inline-flex items-center px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors'}">
+                        <span class="material-symbols-outlined mr-2" th:text="${company.active ? 'toggle_off' : 'toggle_on'}">toggle_on</span>
+                        <span th:text="${company.active ? 'Desactivar Empresa' : 'Activar Empresa'}">Toggle</span>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </main>
+
+    <th:block th:replace="~{fragments/theme :: themeScript}"></th:block>
+</body>
+</html>

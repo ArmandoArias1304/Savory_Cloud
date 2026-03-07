@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title th:text="${globalSystemConfig.systemName + ' - 403 Acceso Prohibido'}">
+      El Gran Sazón - 403 Acceso Prohibido
+    </title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@300;400;500;600;700"
+      rel="stylesheet"
+    />
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Work Sans", sans-serif;
+        background: linear-gradient(
+          135deg,
+          #38e07b 0%,
+          #2bc866 50%,
+          #1fa552 100%
+        );
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        overflow-x: hidden;
+      }
+
+      .error-container {
+        max-width: 800px;
+        width: 100%;
+        background: white;
+        border-radius: 24px;
+        padding: 24px 32px 32px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+        animation: slideUp 0.6s ease-out;
+      }
+
+      @keyframes slideUp {
+        from {
+          opacity: 0;
+          transform: translateY(30px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      /* Decoración de fondo animada */
+      .error-container::before {
+        content: "";
+        position: absolute;
+        top: -50%;
+        right: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(
+          circle,
+          rgba(56, 224, 123, 0.1) 0%,
+          transparent 70%
+        );
+        animation: pulse 4s ease-in-out infinite;
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          transform: scale(1);
+          opacity: 0.5;
+        }
+        50% {
+          transform: scale(1.1);
+          opacity: 0.8;
+        }
+      }
+
+      .content-wrapper {
+        position: relative;
+        z-index: 1;
+      }
+
+      /* Espacio para la mascota */
+      .mascot-container {
+        width: 350px;
+        height: 350px;
+        margin: 0 auto 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        animation: float 3s ease-in-out infinite;
+        position: relative;
+      }
+
+      @keyframes float {
+        0%,
+        100% {
+          transform: translateY(0px);
+        }
+        50% {
+          transform: translateY(-20px);
+        }
+      }
+
+      /* Placeholder para la mascota */
+      .mascot-placeholder {
+        font-size: 100px;
+      }
+
+      .mascot-container img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+      }
+
+      /* Número de error grande */
+      .error-code {
+        font-size: 120px;
+        font-weight: 800;
+        background: linear-gradient(135deg, #38e07b 0%, #2bc866 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        line-height: 1;
+        margin-bottom: 12px;
+        animation: glitch 3s ease-in-out infinite;
+      }
+
+      @keyframes glitch {
+        0%,
+        100% {
+          transform: translate(0);
+        }
+        20% {
+          transform: translate(-2px, 2px);
+        }
+        40% {
+          transform: translate(-2px, -2px);
+        }
+        60% {
+          transform: translate(2px, 2px);
+        }
+        80% {
+          transform: translate(2px, -2px);
+        }
+      }
+
+      .error-title {
+        font-size: 32px;
+        font-weight: 700;
+        color: #1f2937;
+        margin-bottom: 12px;
+      }
+
+      .error-message {
+        font-size: 18px;
+        color: #6b7280;
+        margin-bottom: 8px;
+        line-height: 1.6;
+      }
+
+      .error-submessage {
+        font-size: 16px;
+        color: #9ca3af;
+        margin-bottom: 0;
+        line-height: 1.6;
+      }
+
+      /* Responsive */
+      @media (max-width: 768px) {
+        .error-container {
+          padding: 20px 24px 28px;
+        }
+
+        .mascot-container {
+          width: 260px;
+          height: 260px;
+          margin-bottom: 8px;
+        }
+
+        .mascot-placeholder {
+          font-size: 70px;
+        }
+
+        .error-code {
+          font-size: 80px;
+        }
+
+        .error-title {
+          font-size: 24px;
+        }
+
+        .error-message {
+          font-size: 16px;
+        }
+
+        .error-submessage {
+          font-size: 14px;
+        }
+      }
+
+      @media (max-width: 480px) {
+        .error-container {
+          padding: 16px 16px 24px;
+        }
+
+        .mascot-container {
+          width: 220px;
+          height: 220px;
+          margin-bottom: 8px;
+        }
+
+        .mascot-placeholder {
+          font-size: 50px;
+        }
+
+        .error-code {
+          font-size: 60px;
+        }
+      }
+
+      /* Animación de entrada de los elementos */
+      .fade-in {
+        animation: fadeIn 0.8s ease-out forwards;
+        opacity: 0;
+      }
+
+      .fade-in-delay-1 {
+        animation-delay: 0.2s;
+      }
+
+      .fade-in-delay-2 {
+        animation-delay: 0.4s;
+      }
+
+      .fade-in-delay-3 {
+        animation-delay: 0.6s;
+      }
+
+      @keyframes fadeIn {
+        to {
+          opacity: 1;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="error-container">
+      <div class="content-wrapper">
+        <!-- Espacio para la mascota -->
+        <div class="mascot-container fade-in">
+          <img src="/images/robot.png" alt="Mascota" />
+        </div>
+
+        <!-- Código de error -->
+        <div class="error-code fade-in fade-in-delay-1">403</div>
+
+        <!-- Mensaje principal -->
+        <h1 class="error-title fade-in fade-in-delay-1">Acceso Prohibido</h1>
+        <p class="error-message fade-in fade-in-delay-2">
+          No tienes los permisos necesarios para acceder a este contenido.
+        </p>
+        <p class="error-submessage fade-in fade-in-delay-2">
+          Contacta al administrador si crees que esto es un error.
+        </p>
+      </div>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,541 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title
+      th:text="${globalSystemConfig.systemName + ' - ' + (isEdit ? 'Editar Turno' : 'Nuevo Turno')}"
+    >
+      El Gran Sazón - Turno
+    </title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@300;400;500;600;700"
+      rel="stylesheet"
+    />
+
+    <!-- Sistema de Temas (Modo Claro/Oscuro) -->
+    <div th:replace="~{fragments/theme :: themeResources}"></div>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#38e07b",
+              "primary-dark": "#2bc866",
+              "background-light": "#f8faf9",
+              "background-dark": "#0f1713",
+            },
+            fontFamily: {
+              display: ["Work Sans"],
+            },
+            borderRadius: {
+              DEFAULT: "0.5rem",
+              lg: "0.75rem",
+              xl: "1rem",
+              "2xl": "1.5rem",
+              full: "9999px",
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      .material-symbols-outlined {
+        font-variation-settings:
+          "FILL" 0,
+          "wght" 400,
+          "GRAD" 0,
+          "opsz" 24;
+      }
+    </style>
+  </head>
+  <body
+    class="bg-gradient-to-br from-background-light to-gray-50 dark:from-background-dark dark:to-gray-900 font-display text-gray-800 dark:text-gray-200"
+  >
+    <div class="min-h-screen">
+      <!-- Header -->
+      <header
+        class="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 shadow-lg sticky top-0 z-30"
+      >
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+          <div
+            class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+          >
+            <div class="flex items-center gap-3 sm:gap-4">
+              <a
+                th:href="@{/admin/shifts}"
+                class="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+              >
+                <span
+                  class="material-symbols-outlined text-gray-600 dark:text-gray-400 text-xl sm:text-2xl"
+                  >arrow_back</span
+                >
+              </a>
+              <div class="flex items-center gap-3">
+                <div
+                  th:if="${isEdit}"
+                  class="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-amber-500 to-amber-600 rounded-xl flex items-center justify-center shadow-lg shadow-amber-500/30"
+                >
+                  <span
+                    class="material-symbols-outlined text-white text-xl sm:text-2xl"
+                    >edit</span
+                  >
+                </div>
+                <div
+                  th:unless="${isEdit}"
+                  class="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-primary to-primary-dark rounded-xl flex items-center justify-center shadow-lg shadow-primary/30"
+                >
+                  <span
+                    class="material-symbols-outlined text-white text-xl sm:text-2xl"
+                    >add_circle</span
+                  >
+                </div>
+                <div>
+                  <h1
+                    class="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white"
+                    th:text="${isEdit} ? 'Editar Turno' : 'Nuevo Turno'"
+                  >
+                    Nuevo Turno
+                  </h1>
+                  <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                    Complete la información del turno
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- Main Content -->
+      <main class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 pb-32">
+        <!-- Error Alert -->
+        <div
+          th:if="${errorMessage}"
+          class="bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 text-red-800 dark:text-red-300 px-4 sm:px-6 py-4 rounded-lg mb-6 flex items-start gap-3 shadow-sm"
+        >
+          <span
+            class="material-symbols-outlined text-red-500 text-xl flex-shrink-0 mt-0.5"
+            >error</span
+          >
+          <span class="text-sm sm:text-base" th:text="${errorMessage}"></span>
+        </div>
+
+        <!-- Form Card -->
+        <div
+          class="bg-white dark:bg-gray-900 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-800 overflow-hidden"
+        >
+          <form
+            th:action="${isEdit} ? @{/admin/shifts/{id}(id=${shift.id})} : @{/admin/shifts}"
+            th:object="${shift}"
+            method="post"
+            id="shiftForm"
+          >
+            <div class="p-6 sm:p-8 space-y-6">
+              <!-- Name -->
+              <div>
+                <label
+                  for="name"
+                  class="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+                >
+                  <span class="material-symbols-outlined text-lg text-primary"
+                    >badge</span
+                  >
+                  Nombre del Turno
+                  <span class="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  th:field="*{name}"
+                  id="name"
+                  required
+                  class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
+                  placeholder="Ej: Turno Mañana, Turno Tarde, Turno Noche"
+                />
+                <p
+                  class="mt-2 text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1"
+                >
+                  <span class="material-symbols-outlined text-sm">info</span>
+                  Ingrese un nombre descriptivo para el turno
+                </p>
+              </div>
+
+              <!-- Description -->
+              <div>
+                <label
+                  for="description"
+                  class="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+                >
+                  <span class="material-symbols-outlined text-lg text-primary"
+                    >description</span
+                  >
+                  Descripción
+                </label>
+                <textarea
+                  th:field="*{description}"
+                  id="description"
+                  rows="3"
+                  class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-primary transition-colors resize-none"
+                  placeholder="Descripción opcional del turno (horario especial, observaciones, etc.)"
+                ></textarea>
+              </div>
+
+              <!-- Time Range -->
+              <div>
+                <label
+                  class="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3"
+                >
+                  <span class="material-symbols-outlined text-lg text-primary"
+                    >schedule</span
+                  >
+                  Horario del Turno
+                  <span class="text-red-500">*</span>
+                </label>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label
+                      for="startTime"
+                      class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-2"
+                    >
+                      Hora de Inicio
+                    </label>
+                    <div class="relative">
+                      <span
+                        class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+                        >schedule</span
+                      >
+                      <input
+                        type="time"
+                        th:field="*{startTime}"
+                        id="startTime"
+                        required
+                        class="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label
+                      for="endTime"
+                      class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-2"
+                    >
+                      Hora de Fin
+                    </label>
+                    <div class="relative">
+                      <span
+                        class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+                        >schedule</span
+                      >
+                      <input
+                        type="time"
+                        th:field="*{endTime}"
+                        id="endTime"
+                        required
+                        class="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Work Days -->
+              <div>
+                <label
+                  class="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3"
+                >
+                  <span class="material-symbols-outlined text-lg text-primary"
+                    >calendar_month</span
+                  >
+                  Días Laborales
+                  <span class="text-red-500">*</span>
+                </label>
+                <div
+                  class="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-800 rounded-xl p-5 border border-gray-200 dark:border-gray-700"
+                >
+                  <div class="grid grid-cols-1 sm:grid-cols-4 gap-2 sm:gap-3">
+                    <label
+                      th:each="day : ${allDays}"
+                      class="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2.5 sm:py-3 bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 cursor-pointer hover:border-primary hover:bg-primary/5 transition-all group"
+                    >
+                      <input
+                        type="checkbox"
+                        th:id="'day_' + ${day.name()}"
+                        th:value="${day}"
+                        th:field="*{workDays}"
+                        class="w-4 h-4 sm:w-5 sm:h-5 text-primary border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-primary transition-colors cursor-pointer flex-shrink-0"
+                      />
+                      <span
+                        class="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-primary transition-colors truncate"
+                        th:text="${day.getDisplayName()}"
+                      >
+                        Lunes
+                      </span>
+                    </label>
+                  </div>
+                </div>
+                <p
+                  class="mt-3 text-xs text-gray-500 dark:text-gray-400 flex items-start gap-1"
+                >
+                  <span class="material-symbols-outlined text-sm mt-0.5"
+                    >info</span
+                  >
+                  <span
+                    >Los días seleccionados deben estar configurados como
+                    laborales en el sistema</span
+                  >
+                </p>
+              </div>
+
+              <!-- Active Status -->
+              <div>
+                <label
+                  for="active"
+                  class="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+                >
+                  <span class="material-symbols-outlined text-lg text-primary"
+                    >toggle_on</span
+                  >
+                  Estado del Turno
+                </label>
+                <select
+                  th:field="*{active}"
+                  id="active"
+                  class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
+                >
+                  <option th:value="true">✓ Activo</option>
+                  <option th:value="false">✗ Inactivo</option>
+                </select>
+                <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                  Solo los turnos activos estarán disponibles para asignar
+                  empleados
+                </p>
+              </div>
+
+              <!-- Info Box -->
+              <div
+                class="p-5 bg-blue-50 dark:bg-blue-500/10 border-l-4 border-blue-500 rounded-xl"
+              >
+                <div class="flex items-start gap-3">
+                  <div
+                    class="w-10 h-10 bg-blue-500/20 rounded-full flex items-center justify-center flex-shrink-0"
+                  >
+                    <span
+                      class="material-symbols-outlined text-blue-600 dark:text-blue-400 text-xl"
+                      >info</span
+                    >
+                  </div>
+                  <div>
+                    <h3
+                      class="font-bold text-blue-900 dark:text-blue-300 mb-2 text-sm"
+                    >
+                      Validaciones Importantes
+                    </h3>
+                    <ul
+                      class="space-y-1.5 text-sm text-blue-800 dark:text-blue-200"
+                    >
+                      <li class="flex items-start gap-2">
+                        <span class="material-symbols-outlined text-base mt-0.5"
+                          >check_circle</span
+                        >
+                        <span
+                          >Los días deben estar configurados como laborales en
+                          el sistema</span
+                        >
+                      </li>
+                      <li class="flex items-start gap-2">
+                        <span class="material-symbols-outlined text-base mt-0.5"
+                          >check_circle</span
+                        >
+                        <span
+                          >El horario debe estar dentro del horario de apertura
+                          del restaurante</span
+                        >
+                      </li>
+                      <li class="flex items-start gap-2">
+                        <span class="material-symbols-outlined text-base mt-0.5"
+                          >check_circle</span
+                        >
+                        <span
+                          >La hora de fin debe ser posterior a la hora de
+                          inicio</span
+                        >
+                      </li>
+                      <li class="flex items-start gap-2">
+                        <span class="material-symbols-outlined text-base mt-0.5"
+                          >check_circle</span
+                        >
+                        <span>Debe seleccionar al menos un día laboral</span>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Form Actions -->
+            <div
+              class="px-6 sm:px-8 py-5 bg-gray-50 dark:bg-gray-800 border-t-2 border-gray-200 dark:border-gray-700 flex flex-col-reverse sm:flex-row justify-between items-stretch sm:items-center gap-3"
+            >
+              <a
+                th:href="@{/admin/shifts}"
+                class="inline-flex items-center justify-center gap-2 px-6 py-3 border-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-xl font-semibold hover:bg-gray-100 dark:hover:bg-gray-700 transition-all"
+              >
+                <span class="material-symbols-outlined">close</span>
+                Cancelar
+              </a>
+              <button
+                type="submit"
+                class="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold shadow-md transition-all"
+                th:classappend="${isEdit} ? 'bg-gradient-to-r from-amber-500 to-amber-600 hover:shadow-lg hover:shadow-amber-500/30 text-white' : 'bg-gradient-to-r from-primary to-primary-dark hover:shadow-lg hover:shadow-primary/30 text-white'"
+              >
+                <span
+                  class="material-symbols-outlined"
+                  th:text="${isEdit} ? 'save' : 'add_circle'"
+                  >save</span
+                >
+                <span th:text="${isEdit} ? 'Actualizar Turno' : 'Crear Turno'"
+                  >Crear Turno</span
+                >
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Additional Help Card -->
+        <div
+          class="mt-6 bg-white dark:bg-gray-900 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-800 p-6"
+        >
+          <div class="flex items-start gap-3">
+            <div
+              class="w-10 h-10 bg-purple-500/10 rounded-xl flex items-center justify-center flex-shrink-0"
+            >
+              <span class="material-symbols-outlined text-purple-500 text-xl"
+                >help</span
+              >
+            </div>
+            <div>
+              <h3 class="font-bold text-gray-900 dark:text-white mb-2">
+                ¿Necesitas ayuda?
+              </h3>
+              <p class="text-sm text-gray-600 dark:text-gray-400">
+                Los turnos definen los horarios de trabajo de tus empleados.
+                Asegúrate de configurar correctamente los horarios y días
+                laborales para una gestión eficiente del personal.
+              </p>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <script>
+      // Auto-hide error alert
+      document.addEventListener("DOMContentLoaded", function () {
+        const errorAlert = document.querySelector(".bg-red-50");
+        if (errorAlert) {
+          setTimeout(() => {
+            errorAlert.style.transition =
+              "opacity 0.5s ease-out, transform 0.5s ease-out";
+            errorAlert.style.opacity = "0";
+            errorAlert.style.transform = "translateY(-20px)";
+            setTimeout(() => {
+              errorAlert.remove();
+            }, 500);
+          }, 5000);
+        }
+      });
+
+      // Validate at least one day is selected
+      document
+        .getElementById("shiftForm")
+        .addEventListener("submit", function (e) {
+          const checkboxes = document.querySelectorAll(
+            'input[type="checkbox"][name="workDays"]',
+          );
+          const checked = Array.from(checkboxes).some((cb) => cb.checked);
+
+          if (!checked) {
+            e.preventDefault();
+            Swal.fire({
+              title: "Días laborales requeridos",
+              text: "Debe seleccionar al menos un día laboral para el turno",
+              icon: "warning",
+              confirmButtonColor: "#38e07b",
+              confirmButtonText: "Entendido",
+              background: document.documentElement.classList.contains("dark")
+                ? "#1f2937"
+                : "#ffffff",
+              color: document.documentElement.classList.contains("dark")
+                ? "#f3f4f6"
+                : "#1f2937",
+              customClass: {
+                popup: "rounded-2xl",
+                title: "text-xl font-bold",
+                confirmButton: "rounded-xl px-6 py-2.5 font-semibold",
+              },
+            });
+            return;
+          }
+
+          // Validate time range
+          const startTime = document.getElementById("startTime").value;
+          const endTime = document.getElementById("endTime").value;
+
+          if (startTime && endTime && startTime >= endTime) {
+            e.preventDefault();
+            Swal.fire({
+              title: "Horario inválido",
+              text: "La hora de fin debe ser posterior a la hora de inicio",
+              icon: "error",
+              confirmButtonColor: "#38e07b",
+              confirmButtonText: "Entendido",
+              background: document.documentElement.classList.contains("dark")
+                ? "#1f2937"
+                : "#ffffff",
+              color: document.documentElement.classList.contains("dark")
+                ? "#f3f4f6"
+                : "#1f2937",
+              customClass: {
+                popup: "rounded-2xl",
+                title: "text-xl font-bold",
+                confirmButton: "rounded-xl px-6 py-2.5 font-semibold",
+              },
+            });
+            return;
+          }
+        });
+
+      // Visual feedback for checkbox selection
+      document
+        .querySelectorAll('input[type="checkbox"][name="workDays"]')
+        .forEach((checkbox) => {
+          checkbox.addEventListener("change", function () {
+            const label = this.closest("label");
+            if (this.checked) {
+              label.classList.add("border-primary", "bg-primary/10");
+            } else {
+              label.classList.remove("border-primary", "bg-primary/10");
+            }
+          });
+
+          // Initial state
+          if (checkbox.checked) {
+            checkbox
+              .closest("label")
+              .classList.add("border-primary", "bg-primary/10");
+          }
+        });
+    </script>
+
+    <!-- Script del Sistema de Temas -->
+    <div th:replace="~{fragments/theme :: themeScript}"></div>
+  </body>
+</html>

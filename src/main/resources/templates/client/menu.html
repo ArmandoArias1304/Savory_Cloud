@@ -1,0 +1,4451 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title
+      th:text="${systemConfig != null and systemConfig.restaurantName != null ? systemConfig.restaurantName + ' - Nuevo Pedido' : 'Nuevo Pedido'}"
+    >
+      Nuevo Pedido
+    </title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@300;400;500;600;700"
+      rel="stylesheet"
+    />
+
+    <!-- Sistema de Temas (Modo Claro/Oscuro) -->
+    <div th:replace="~{fragments/theme :: themeResources}"></div>
+    <!-- Favicon del restaurante (override) -->
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="96x96"
+      th:href="${@cloudinaryUrl.logoSmall(systemConfig.restaurantLogoUrl)}"
+      th:if="${systemConfig != null and systemConfig.restaurantLogoUrl != null and !systemConfig.restaurantLogoUrl.isEmpty()}"
+    />
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#38e07b",
+              "primary-dark": "#2bc866",
+              secondary: "#f59e0b",
+              accent: "#3b82f6",
+              "background-light": "#f8faf9",
+              "background-dark": "#0f1323",
+              "surface-light": "#ffffff",
+              "surface-dark": "#1e293b",
+              "text-light-primary": "#0f172a",
+              "text-light-secondary": "#64748b",
+              "text-dark-primary": "#f8fafc",
+              "text-dark-secondary": "#94a3b8",
+            },
+            fontFamily: {
+              display: ["Work Sans"],
+            },
+            borderRadius: {
+              DEFAULT: "0.5rem",
+              lg: "0.75rem",
+              xl: "1rem",
+              "2xl": "1.5rem",
+              full: "9999px",
+            },
+            boxShadow: {
+              soft: "0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05)",
+              green: "0 4px 12px rgba(56, 224, 123, 0.3)",
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      .material-symbols-outlined {
+        font-variation-settings:
+          "FILL" 0,
+          "wght" 400,
+          "GRAD" 0,
+          "opsz" 24;
+      }
+      .material-symbols-outlined.filled {
+        font-variation-settings:
+          "FILL" 1,
+          "wght" 500;
+      }
+
+      .menu-item-card {
+        transition: all 0.3s ease;
+      }
+
+      .menu-item-card:hover {
+        transform: translateY(-4px);
+        box-shadow:
+          0 10px 25px -5px rgb(0 0 0 / 0.1),
+          0 8px 10px -6px rgb(0 0 0 / 0.1);
+      }
+
+      .category-btn {
+        transition: all 0.2s ease;
+      }
+
+      .category-btn:hover:not(.active) {
+        transform: translateY(-2px);
+      }
+
+      .order-item {
+        transition: all 0.2s ease;
+      }
+
+      .order-item:hover {
+        background-color: rgba(56, 224, 123, 0.05);
+      }
+
+      .primary-button {
+        background: linear-gradient(135deg, #38e07b 0%, #2bc866 100%);
+        box-shadow: 0 4px 12px rgba(56, 224, 123, 0.3);
+        transition: all 0.3s ease;
+      }
+
+      .primary-button:hover {
+        box-shadow: 0 6px 16px rgba(56, 224, 123, 0.4);
+        transform: translateY(-2px);
+      }
+
+      .quantity-btn {
+        transition: all 0.2s ease;
+      }
+
+      .quantity-btn:hover {
+        background: #38e07b;
+        color: white;
+      }
+
+      /* Custom Scrollbar */
+      .overflow-y-auto::-webkit-scrollbar {
+        width: 8px;
+      }
+
+      .overflow-y-auto::-webkit-scrollbar-track {
+        background: #f1f5f9;
+        border-radius: 10px;
+      }
+
+      .overflow-y-auto::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 10px;
+      }
+
+      .overflow-y-auto::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8;
+      }
+
+      .dark .overflow-y-auto::-webkit-scrollbar-track {
+        background: #1e293b;
+      }
+
+      .dark .overflow-y-auto::-webkit-scrollbar-thumb {
+        background: #475569;
+      }
+
+      .dark .overflow-y-auto::-webkit-scrollbar-thumb:hover {
+        background: #64748b;
+      }
+
+      .swal-close-green {
+        color: #ef4444 !important;
+      }
+      .swal-close-green:hover {
+        color: #dc2626 !important;
+      }
+    </style>
+  </head>
+  <body
+    class="bg-background-light dark:bg-background-dark font-display text-text-light-primary dark:text-dark-primary"
+  >
+    <div class="flex h-screen flex-col">
+      <!-- Header -->
+      <header
+        class="flex items-center gap-3 border-b border-slate-200/80 dark:border-slate-800/80 bg-white dark:bg-surface-dark px-3 sm:px-6 py-3 sm:py-4 shadow-soft"
+      >
+        <!-- Back Button -->
+        <a
+          href="/client/orders"
+          class="flex h-10 w-10 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 transition-colors"
+        >
+          <span class="material-symbols-outlined text-xl">arrow_back</span>
+        </a>
+
+        <!-- Restaurant Icon -->
+        <div
+          class="w-10 h-10 sm:w-12 sm:h-12 shrink-0 bg-gradient-to-br from-primary to-primary-dark rounded-xl flex items-center justify-center shadow-lg shadow-primary/30"
+        >
+          <svg
+            class="w-6 h-6 sm:w-7 sm:h-7 text-white"
+            fill="currentColor"
+            viewBox="0 0 24 24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3v8h2.5v8H21V2c-2.76 0-5 2.24-5 5z"
+            ></path>
+          </svg>
+        </div>
+
+        <!-- Title and Badges -->
+        <div class="flex-1 min-w-0">
+          <h1
+            class="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white truncate"
+          >
+            Nuevo Pedido
+          </h1>
+          <div class="flex items-center gap-1.5 flex-wrap mt-1">
+            <!-- Order Type Badge -->
+            <span
+              class="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-lg text-xs font-semibold whitespace-nowrap"
+              th:classappend="${orderType.name() == 'TAKEOUT'} ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300' : 
+                             'bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-300'"
+            >
+              <span
+                class="material-symbols-outlined"
+                style="font-size: 14px"
+                th:text="${orderType.name() == 'TAKEOUT'} ? 'shopping_bag' : 'delivery_dining'"
+              >
+                shopping_bag
+              </span>
+              <span class="hidden xs:inline" th:text="${orderType.displayName}"
+                >Para pasar a recoger</span
+              >
+            </span>
+
+            <!-- Customer Name -->
+            <span
+              class="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-lg text-xs font-semibold bg-gray-100 text-gray-800 dark:bg-gray-900/50 dark:text-gray-300 max-w-[120px] sm:max-w-none"
+            >
+              <span
+                class="material-symbols-outlined shrink-0"
+                style="font-size: 14px"
+              >
+                person
+              </span>
+              <span class="truncate" th:text="${customer.fullName}">
+                Cliente
+              </span>
+            </span>
+          </div>
+        </div>
+      </header>
+
+      <div class="grid flex-1 grid-cols-12 overflow-hidden">
+        <!-- Menu Section -->
+        <div
+          class="col-span-12 flex flex-col bg-background-light dark:bg-background-dark lg:col-span-7 xl:col-span-8 overflow-hidden"
+        >
+          <!-- Categories - Fixed/Sticky -->
+          <div
+            class="sticky top-0 z-20 border-b border-slate-200/80 px-6 py-4 dark:border-slate-800/80 bg-white dark:bg-surface-dark shadow-sm"
+          >
+            <nav class="flex items-center gap-2 overflow-x-auto">
+              <button
+                th:each="category, iterStat : ${categories}"
+                th:if="${itemsByCategory.containsKey(category.idCategory)}"
+                th:data-category-id="${category.idCategory}"
+                th:classappend="${iterStat.first} ? 'category-btn active flex items-center gap-2 sm:gap-3 rounded-xl bg-gradient-to-r from-primary to-primary-dark px-4 sm:px-6 py-3 sm:py-3.5 text-xs sm:text-sm font-bold text-white shadow-green whitespace-nowrap' : 'category-btn flex items-center gap-2 sm:gap-3 rounded-xl px-4 sm:px-6 py-3 sm:py-3.5 text-xs sm:text-sm font-semibold text-gray-700 hover:bg-primary/15 hover:text-green-800 dark:text-gray-300 dark:hover:bg-primary/20 dark:hover:text-green-300 whitespace-nowrap'"
+                onclick="scrollToCategory(this)"
+                type="button"
+              >
+                <span
+                  th:if="${category.icon}"
+                  class="material-symbols-outlined"
+                  th:classappend="${iterStat.first} ? 'filled' : ''"
+                  th:text="${category.icon}"
+                >
+                  restaurant
+                </span>
+                <span th:text="${category.name}">Categoría</span>
+              </button>
+            </nav>
+          </div>
+
+          <!-- Menu Items Grid - Scrolleable -->
+          <main class="flex-1 overflow-y-auto p-4 pb-32">
+            <div
+              th:each="category : ${categories}"
+              th:if="${itemsByCategory.containsKey(category.idCategory)}"
+              class="mb-6"
+              th:id="'category-' + ${category.idCategory}"
+            >
+              <h3
+                class="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2"
+              >
+                <span
+                  th:if="${category.icon}"
+                  class="material-symbols-outlined text-primary text-2xl"
+                  th:text="${category.icon}"
+                >
+                  restaurant
+                </span>
+                <span th:text="${category.name}">Categoría</span>
+              </h3>
+
+              <div class="grid grid-cols-2 gap-4 md:grid-cols-4 xl:grid-cols-5">
+                <!-- Menu Item -->
+                <div
+                  th:each="item : ${itemsByCategory.get(category.idCategory)}"
+                  th:if="${itemsByCategory.get(category.idCategory) != null}"
+                  th:classappend="${!item.available || !item.scheduleAvailable} ? 'opacity-75' : ''"
+                  class="menu-item-card cursor-pointer rounded-xl bg-surface-light shadow-soft dark:bg-surface-dark overflow-hidden relative"
+                  th:data-item-id="${item.idItemMenu}"
+                  th:data-item-name="${item.name}"
+                  th:data-item-price="${item.price}"
+                  th:data-item-description="${item.description}"
+                  th:data-item-image="${@cloudinaryUrl.modal(item.imageUrl)}"
+                  th:data-item-available="${item.available}"
+                  th:data-schedule-status="${item.scheduleStatus}"
+                  th:data-schedule-info="${item.scheduleInfo}"
+                  th:data-is-buffet="${item.isBuffet != null && item.isBuffet}"
+                  th:data-is-combo="${item.isCombo != null && item.isCombo}"
+                  onclick="openItemModal(this)"
+                >
+                  <!-- Promotion Badge (Top Right Corner) -->
+                  <div
+                    class="promotion-badge-indicator absolute top-2 right-2 z-20"
+                    th:data-item-id="${item.idItemMenu}"
+                    style="display: none"
+                  >
+                    <div
+                      class="inline-flex items-center gap-1 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg"
+                    >
+                      <span>🏷️</span>
+                      <span class="promo-text">Promoción</span>
+                    </div>
+                  </div>
+
+                  <!-- AGOTADO Badge (Diagonal) -->
+                  <div
+                    th:if="${!item.available}"
+                    class="absolute top-8 -left-12 w-48 bg-red-600 text-white text-center py-1 transform rotate-[-45deg] z-10 shadow-lg pointer-events-none"
+                    style="
+                      font-weight: 900;
+                      font-size: 0.75rem;
+                      letter-spacing: 0.1em;
+                    "
+                  >
+                    AGOTADO
+                  </div>
+
+                  <!-- NO DISPONIBLE HOY Badge (Diagonal) -->
+                  <div
+                    th:if="${item.available && item.scheduleStatus == 'day_unavailable'}"
+                    class="absolute top-8 -left-12 w-48 bg-orange-600 text-white text-center py-1 transform rotate-[-45deg] z-10 shadow-lg pointer-events-none"
+                    style="
+                      font-weight: 900;
+                      font-size: 0.65rem;
+                      letter-spacing: 0.05em;
+                    "
+                  >
+                    NO DISPONIBLE HOY
+                  </div>
+
+                  <!-- FUERA DE HORARIO Badge (Diagonal) -->
+                  <div
+                    th:if="${item.available && item.scheduleStatus == 'time_unavailable'}"
+                    class="absolute top-8 -left-12 w-48 bg-amber-600 text-white text-center py-1 transform rotate-[-45deg] z-10 shadow-lg pointer-events-none"
+                    style="
+                      font-weight: 900;
+                      font-size: 0.65rem;
+                      letter-spacing: 0.05em;
+                    "
+                  >
+                    FUERA DE HORARIO
+                  </div>
+
+                  <div
+                    class="w-full aspect-square overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 img-skeleton"
+                  >
+                    <img
+                      th:if="${item.imageUrl != null && !item.imageUrl.isEmpty()}"
+                      th:src="${@cloudinaryUrl.card(item.imageUrl)}"
+                      th:srcset="${@cloudinaryUrl.cardSrcset(item.imageUrl)}"
+                      sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 20vw"
+                      th:alt="${item.name}"
+                      class="w-full h-full object-cover img-fade"
+                      th:classappend="${!item.available || !item.scheduleAvailable} ? 'grayscale' : ''"
+                      loading="lazy"
+                      decoding="async"
+                      onload="
+                        this.classList.add('loaded');
+                        this.parentElement.classList.remove('img-skeleton');
+                      "
+                    />
+                    <div
+                      th:if="${item.imageUrl == null || item.imageUrl.isEmpty()}"
+                      class="w-full h-full flex items-center justify-center"
+                    >
+                      <span
+                        class="material-symbols-outlined text-6xl text-gray-400 dark:text-gray-600"
+                      >
+                        restaurant
+                      </span>
+                    </div>
+                  </div>
+                  <div class="p-3">
+                    <p
+                      class="font-bold text-sm text-gray-900 dark:text-white truncate"
+                      th:text="${item.name}"
+                    >
+                      Nombre del Producto
+                    </p>
+                    <p
+                      class="text-base font-black text-primary mt-0.5"
+                      th:text="${item.getFormattedPrice()}"
+                    >
+                      $0.00
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </main>
+        </div>
+
+        <!-- Order Sidebar -->
+        <aside
+          id="cart-sidebar"
+          class="fixed lg:relative top-0 right-0 h-full lg:col-span-5 xl:col-span-4 w-full sm:w-96 lg:w-auto transform translate-x-full lg:translate-x-0 transition-transform duration-300 ease-in-out z-40 col-span-12 flex flex-col border-l border-slate-200/80 bg-surface-light dark:border-slate-800/80 dark:bg-slate-900/70 overflow-hidden shadow-2xl lg:shadow-none"
+        >
+          <!-- Order Header - Compact -->
+          <div
+            class="sticky top-0 z-20 border-b border-slate-200/80 px-3 py-2 dark:border-slate-800/80 bg-gradient-to-br from-primary/5 to-primary-dark/5"
+          >
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary text-lg"
+                  >receipt_long</span
+                >
+                <h2 class="text-base font-bold text-gray-900 dark:text-white">
+                  Comanda
+                </h2>
+                <span
+                  id="cartItemCount"
+                  class="text-xs px-1.5 py-0.5 bg-primary text-white rounded-full font-bold min-w-[20px] text-center"
+                  >0</span
+                >
+              </div>
+              <!-- Close button for mobile -->
+              <button
+                onclick="toggleCart()"
+                class="lg:hidden p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors"
+              >
+                <span class="material-symbols-outlined text-xl">close</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Order Items - Maximum Height -->
+          <div
+            id="cartItems"
+            class="flex-1 space-y-2 overflow-y-auto p-3 min-h-0"
+          >
+            <!-- Cart items will be rendered here dynamically -->
+          </div>
+
+          <!-- Order Summary & Controls - Compact Fixed Bottom -->
+          <div
+            class="sticky bottom-0 z-20 border-t border-slate-200/80 bg-white dark:border-slate-800/80 dark:bg-slate-900 shadow-lg"
+          >
+            <!-- Totals Section - Always Visible -->
+            <div
+              class="px-3 py-2 space-y-1.5 border-b border-slate-200/50 dark:border-slate-700/50"
+            >
+              <!-- Subtotal (sin IVA) -->
+              <div
+                class="flex justify-between text-xs text-gray-600 dark:text-gray-400"
+              >
+                <span>Subtotal</span>
+                <span id="cartSubtotal" class="font-semibold">$0.00</span>
+              </div>
+
+              <!-- Descuento (solo se muestra cuando hay promoción) -->
+              <div
+                id="cartDiscountContainer"
+                class="hidden flex justify-between items-center bg-green-50 dark:bg-green-900/20 rounded px-2 py-1 border border-green-200 dark:border-green-800"
+              >
+                <div class="flex items-center gap-1.5">
+                  <span
+                    class="material-symbols-outlined text-green-600 dark:text-green-400 text-sm"
+                    >local_offer</span
+                  >
+                  <span
+                    class="text-xs font-semibold text-green-800 dark:text-green-300"
+                    >Descuento</span
+                  >
+                </div>
+                <span
+                  id="cartDiscount"
+                  class="text-green-600 dark:text-green-400 font-bold text-sm"
+                  >-$0.00</span
+                >
+              </div>
+
+              <!-- IVA -->
+              <div
+                class="flex justify-between text-xs text-gray-600 dark:text-gray-400"
+              >
+                <span>IVA (<span th:text="${config.taxRate}">16</span>%)</span>
+                <span id="cartIVA" class="font-semibold">$0.00</span>
+              </div>
+
+              <!-- Total - Prominent -->
+              <div
+                class="flex justify-between items-center bg-primary/10 rounded-lg px-3 py-2"
+              >
+                <span class="text-sm font-bold text-gray-900 dark:text-white"
+                  >Total</span
+                >
+                <span id="cartTotal" class="text-primary text-xl font-black"
+                  >$0.00</span
+                >
+              </div>
+            </div>
+
+            <!-- Collapsible Order Details -->
+            <div class="px-3 py-2">
+              <button
+                type="button"
+                onclick="toggleOrderDetails()"
+                class="w-full flex items-center justify-between text-xs font-bold text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-primary transition-colors py-1"
+              >
+                <span>Detalles del Pedido</span>
+                <span
+                  id="detailsToggleIcon"
+                  class="material-symbols-outlined text-base transition-transform"
+                  style="transform: rotate(180deg)"
+                  >expand_more</span
+                >
+              </button>
+
+              <div id="orderDetailsSection" class="space-y-2 mt-2">
+                <!-- Order Type -->
+                <div>
+                  <label
+                    for="orderTypeSelector"
+                    class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1"
+                  >
+                    Tipo de Pedido
+                  </label>
+                  <select
+                    id="orderTypeSelector"
+                    class="w-full px-2 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded text-xs text-gray-900 dark:text-white focus:ring-1 focus:ring-primary focus:border-transparent transition-all"
+                    onchange="updateOrderType(this.value)"
+                  >
+                    <option
+                      th:each="type : ${orderTypes}"
+                      th:value="${type.name()}"
+                      th:text="${type.displayName}"
+                      th:selected="${type == orderType}"
+                    ></option>
+                  </select>
+                </div>
+
+                <!-- Delivery Address (DELIVERY only) -->
+                <div id="deliveryAddressContainer" class="hidden">
+                  <label
+                    for="deliveryAddressSelector"
+                    class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1"
+                  >
+                    Dirección
+                  </label>
+                  <div th:if="${hasAddresses}">
+                    <select
+                      id="deliveryAddressSelector"
+                      class="w-full px-2 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded text-xs text-gray-900 dark:text-white focus:ring-1 focus:ring-primary transition-all"
+                    >
+                      <option
+                        th:each="addr : ${customerAddresses}"
+                        th:value="${addr.idAddress}"
+                        th:text="${addr.label}"
+                        th:data-lat="${addr.latitude}"
+                        th:data-lng="${addr.longitude}"
+                        th:data-address="${addr.address}"
+                        th:data-reference="${addr.reference}"
+                        th:selected="${addr.isDefault}"
+                      ></option>
+                    </select>
+                  </div>
+                  <div
+                    th:unless="${hasAddresses}"
+                    class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded p-2"
+                  >
+                    <p class="text-xs text-yellow-700 dark:text-yellow-400">
+                      <span
+                        class="material-symbols-outlined text-xs align-middle"
+                        >warning</span
+                      >
+                      Sin direcciones
+                    </p>
+                    <a
+                      href="/client/profile"
+                      target="_blank"
+                      class="text-xs text-primary hover:underline font-semibold"
+                    >
+                      + Agregar
+                    </a>
+                  </div>
+                </div>
+
+                <!-- Delivery Notes (DELIVERY only) -->
+                <div id="deliveryReferencesContainer" class="hidden">
+                  <label
+                    for="deliveryReferences"
+                    class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1"
+                  >
+                    Notas
+                    <span class="text-gray-500 font-normal">(Opcional)</span>
+                  </label>
+                  <textarea
+                    id="deliveryReferences"
+                    rows="2"
+                    class="w-full px-2 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded text-xs text-gray-900 dark:text-white focus:ring-1 focus:ring-primary resize-none"
+                    placeholder="Tocar timbre, llamar..."
+                  ></textarea>
+                </div>
+
+                <!-- Payment Method -->
+                <div>
+                  <label
+                    for="paymentMethod"
+                    class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1"
+                  >
+                    Método de Pago
+                  </label>
+                  <select
+                    id="paymentMethod"
+                    class="w-full px-2 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded text-xs text-gray-900 dark:text-white focus:ring-1 focus:ring-primary transition-all"
+                  >
+                    <option
+                      th:each="method : ${enabledPaymentMethods}"
+                      th:value="${method.name()}"
+                      th:text="${method.icon + ' ' + method.displayName}"
+                      th:selected="${methodStat.first}"
+                    ></option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- Action Buttons - Compact -->
+            <div
+              class="px-3 py-2 space-y-1.5 border-t border-slate-200/50 dark:border-slate-700/50"
+            >
+              <button
+                type="button"
+                onclick="submitOrder()"
+                id="submitOrderBtn"
+                disabled
+                class="primary-button w-full px-4 py-2.5 disabled:bg-gray-300 disabled:cursor-not-allowed disabled:shadow-none text-white rounded-lg font-bold transition-all flex items-center justify-center gap-2 text-sm"
+              >
+                <span class="material-symbols-outlined text-lg">send</span>
+                <span
+                  th:text="${existingOrderId != null} ? 'Agregar Items' : 'Crear Pedido'"
+                  >Crear Pedido</span
+                >
+              </button>
+              <button
+                type="button"
+                onclick="clearCart()"
+                class="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800 text-gray-700 dark:text-gray-300 rounded-lg font-semibold transition-all text-xs"
+              >
+                Limpiar Carrito
+              </button>
+            </div>
+          </div>
+        </aside>
+      </div>
+
+      <!-- Floating Cart Button - Mobile/Tablet only -->
+      <button
+        onclick="toggleCart()"
+        class="lg:hidden fixed bottom-6 right-6 z-50 h-16 w-16 rounded-full bg-gradient-to-br from-primary to-primary-dark text-white flex items-center justify-center shadow-2xl hover:scale-110 transition-transform"
+      >
+        <span class="material-symbols-outlined text-3xl">shopping_cart</span>
+        <span
+          id="floatingCartCount"
+          class="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center"
+          >0</span
+        >
+      </button>
+
+      <!-- Backdrop for cart - Mobile/Tablet only -->
+      <div
+        id="cart-backdrop"
+        onclick="toggleCart()"
+        class="lg:hidden fixed inset-0 bg-black/60 z-30 hidden"
+      ></div>
+    </div>
+
+    <!-- Item Detail Modal (SweetAlert2 will be used instead) -->
+    <div id="itemModal" style="display: none"></div>
+
+    <!-- Sidebar Scripts Fragment -->
+    <div th:replace="~{fragments/sidebar :: sidebarScripts}"></div>
+
+    <script th:inline="javascript">
+      // Data from server
+      const orderData = {
+        orderType: /*[[${orderType.name()}]]*/ "DINE_IN",
+        tableId: /*[[${selectedTable?.id}]]*/ null,
+        customerName: /*[[${customerName}]]*/ null,
+        customerPhone: /*[[${customerPhone}]]*/ null,
+        deliveryAddress: /*[[${deliveryAddress}]]*/ null,
+        deliveryReferences: /*[[${deliveryReferences}]]*/ null,
+      };
+
+      // Tax rate from system configuration
+      const taxRate = /*[[${config.taxRate}]]*/ 0.0; // Tax rate as percentage (e.g., 19.0 for 19%)
+      const taxMultiplier = taxRate / 100; // Convert to decimal (e.g., 0.19)
+
+      // Payment methods for different order types
+      const restaurantPaymentMethods = /*[[${enabledPaymentMethods}]]*/ [];
+      const deliveryPaymentMethods = /*[[${deliveryPaymentMethods}]]*/ [];
+
+      // Active promotions - loaded via AJAX
+      let activePromotions = [];
+      let itemPromotionsMap = new Map();
+      let promotionsLoaded = false; // Flag to track if promotions are loaded
+
+      // Load promotions from server
+      async function loadPromotions() {
+        try {
+          const response = await fetch("/client/promotions/active");
+          if (response.ok) {
+            activePromotions = await response.json();
+
+            // IMPORTANT: Clear the map first to prevent duplicate promotions
+            itemPromotionsMap.clear();
+
+            // Build item promotions map
+            activePromotions.forEach((promo) => {
+              promo.itemIds.forEach((itemId) => {
+                if (!itemPromotionsMap.has(itemId)) {
+                  itemPromotionsMap.set(itemId, []);
+                }
+                itemPromotionsMap.get(itemId).push(promo);
+              });
+            });
+
+            promotionsLoaded = true; // Mark as loaded
+
+            // Update promotion badges on menu items
+            updatePromotionBadges();
+          } else {
+            console.warn("Failed to load promotions:", response.status);
+            promotionsLoaded = true; // Mark as loaded even if failed to avoid blocking
+          }
+        } catch (error) {
+          console.error("Error loading promotions:", error);
+          promotionsLoaded = true; // Mark as loaded even if failed to avoid blocking
+        }
+      }
+
+      // Update promotion badges on menu item cards
+      function updatePromotionBadges() {
+        document
+          .querySelectorAll(".promotion-badge-indicator")
+          .forEach((badge) => {
+            const itemId = parseInt(badge.getAttribute("data-item-id"));
+            const itemPromotions = itemPromotionsMap.get(itemId) || [];
+
+            if (itemPromotions.length > 0) {
+              const promoText = badge.querySelector(".promo-text");
+
+              if (itemPromotions.length === 1) {
+                // Show promotion type
+                const promo = itemPromotions[0];
+                promoText.textContent = promo.displayLabel;
+              } else {
+                // Show number of promotions
+                promoText.textContent = `${itemPromotions.length} Promociones`;
+              }
+
+              badge.style.display = "block";
+            }
+          });
+      }
+
+      // Load promotions when page loads
+      loadPromotions();
+
+      // ========== BUFFET ITEM FILTERING ==========
+      // Hide/show buffet items based on current order type
+      function filterBuffetItems() {
+        // Get current order type - could be changed dynamically by the client
+        const currentOrderType =
+          typeof getCurrentOrderType === "function"
+            ? getCurrentOrderType()
+            : orderData.orderType;
+        const isDineIn = currentOrderType === "DINE_IN";
+        document.querySelectorAll(".menu-item-card").forEach((card) => {
+          if (card.dataset.isBuffet === "true") {
+            card.style.display = isDineIn ? "" : "none";
+          }
+        });
+      }
+      // Run on page load
+      document.addEventListener("DOMContentLoaded", filterBuffetItems);
+
+      // Cart persistence key for localStorage
+      const CART_STORAGE_KEY = "elgransazon_client_cart";
+
+      // Cart state
+      let cart = [];
+      let currentItem = null;
+
+      // Stock availability cache: { itemId: maxQuantity }
+      let stockCache = {};
+
+      // Fetch max available quantity for an item
+      async function fetchMaxQuantity(itemId) {
+        try {
+          const response = await fetch(
+            `/client/menu-items/${itemId}/max-quantity`,
+          );
+          const data = await response.json();
+          if (data.success) {
+            stockCache[itemId] = data.maxQuantity;
+            return data.maxQuantity;
+          }
+          return 9999; // Default if error
+        } catch (error) {
+          console.error("Error fetching max quantity:", error);
+          return 9999;
+        }
+      }
+
+      // Get max quantity from cache or fetch it
+      async function getMaxQuantity(itemId) {
+        if (stockCache[itemId] !== undefined) {
+          return stockCache[itemId];
+        }
+        return await fetchMaxQuantity(itemId);
+      }
+
+      // Calculate available quantity considering items already in cart
+      function getAvailableQuantityForItem(itemId, maxFromStock) {
+        // Sum up quantities of same item already in cart
+        const quantityInCart = cart
+          .filter((item) => item.id == itemId)
+          .reduce((sum, item) => sum + item.quantity, 0);
+        return Math.max(0, maxFromStock - quantityInCart);
+      }
+
+      // Update the + button state in modal based on stock
+      function updateModalPlusButtonState(maxQuantity) {
+        const plusBtn = document.querySelector("#modal-plus-btn");
+        if (!plusBtn) return;
+
+        if (window.modalQuantity >= maxQuantity) {
+          plusBtn.disabled = true;
+          plusBtn.classList.add("opacity-50", "cursor-not-allowed");
+          plusBtn.classList.remove("hover:bg-primary", "hover:text-white");
+          plusBtn.title = "Stock máximo alcanzado";
+        } else {
+          plusBtn.disabled = false;
+          plusBtn.classList.remove("opacity-50", "cursor-not-allowed");
+          plusBtn.classList.add("hover:bg-primary", "hover:text-white");
+          plusBtn.title = "";
+        }
+      }
+
+      // Save cart to localStorage
+      function saveCartToStorage() {
+        try {
+          localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart));
+        } catch (e) {
+          console.warn("Could not save cart to localStorage:", e);
+        }
+      }
+
+      // Load cart from localStorage
+      function loadCartFromStorage() {
+        try {
+          const savedCart = localStorage.getItem(CART_STORAGE_KEY);
+          if (savedCart) {
+            cart = JSON.parse(savedCart);
+            return true;
+          }
+        } catch (e) {
+          console.warn("Could not load cart from localStorage:", e);
+        }
+        return false;
+      }
+
+      // Clear cart from localStorage
+      function clearCartFromStorage() {
+        try {
+          localStorage.removeItem(CART_STORAGE_KEY);
+        } catch (e) {
+          console.warn("Could not clear cart from localStorage:", e);
+        }
+      }
+
+      /**
+       * Get the best discount promotion for a given item and quantity
+       * Returns the promotion that gives the maximum discount in monetary terms
+       * For FIXED_AMOUNT_DISCOUNT, considers minQuantityForFixedDiscount
+       */
+      function getBestDiscountPromotion(itemId, price, quantity) {
+        const promotions = itemPromotionsMap.get(parseInt(itemId)) || [];
+
+        // Filter only discount promotions (not BUY_X_PAY_Y)
+        const discountPromotions = promotions.filter(
+          (p) =>
+            p.promotionType === "PERCENTAGE_DISCOUNT" ||
+            p.promotionType === "FIXED_AMOUNT_DISCOUNT",
+        );
+
+        if (discountPromotions.length === 0) return null;
+
+        let bestPromotion = null;
+        let maxDiscount = 0;
+
+        discountPromotions.forEach((promo) => {
+          let discount = 0;
+          const originalTotal = price * quantity;
+
+          if (promo.promotionType === "PERCENTAGE_DISCOUNT") {
+            discount = originalTotal * (promo.discountPercentage / 100);
+          } else if (promo.promotionType === "FIXED_AMOUNT_DISCOUNT") {
+            // Consider minQuantityForFixedDiscount - discount only applies to multiples
+            const minQty = promo.minQuantityForFixedDiscount || 1;
+            const discountedSets = Math.floor(quantity / minQty);
+            const itemsWithDiscount = discountedSets * minQty;
+
+            // Only calculate discount for items that qualify
+            discount = Math.min(
+              promo.discountAmount * itemsWithDiscount,
+              price * itemsWithDiscount,
+            );
+          }
+
+          if (discount > maxDiscount) {
+            maxDiscount = discount;
+            bestPromotion = promo;
+          }
+        });
+
+        return bestPromotion;
+      }
+
+      /**
+       * Get the best BUY_X_PAY_Y promotion for a given quantity
+       * Returns the promotion that gives the maximum discount for the specified quantity
+       * If multiple promotions give same discount, prioritizes the one with higher buyQuantity
+       */
+      function getBestBuyXPayYPromotion(itemId, price, quantity) {
+        const promotions = itemPromotionsMap.get(parseInt(itemId)) || [];
+
+        // Filter only BUY_X_PAY_Y promotions that meet the minimum quantity
+        const buyXPayYPromotions = promotions.filter(
+          (p) => p.promotionType === "BUY_X_PAY_Y" && quantity >= p.buyQuantity,
+        );
+
+        if (buyXPayYPromotions.length === 0) return null;
+
+        let bestPromotion = null;
+        let maxDiscount = 0;
+        let maxBuyQuantity = 0;
+
+        buyXPayYPromotions.forEach((promo) => {
+          const sets = Math.floor(quantity / promo.buyQuantity);
+          const remaining = quantity % promo.buyQuantity;
+          const discountedTotal =
+            sets * promo.payQuantity * price + remaining * price;
+          const originalTotal = price * quantity;
+          const discount = originalTotal - discountedTotal;
+
+          // Seleccionar si:
+          // 1. Tiene mayor descuento, O
+          // 2. Mismo descuento pero mayor buyQuantity (más específico)
+          if (
+            discount > maxDiscount ||
+            (discount === maxDiscount && promo.buyQuantity > maxBuyQuantity)
+          ) {
+            maxDiscount = discount;
+            maxBuyQuantity = promo.buyQuantity;
+            bestPromotion = promo;
+          }
+        });
+
+        return bestPromotion;
+      }
+
+      /**
+       * Automatically select the best promotion for an item with given quantity
+       * Priority: BUY_X_PAY_Y (if quantity qualifies) > Best Discount Promotion
+       */
+      function getAutoBestPromotion(itemId, price, quantity) {
+        // First check for applicable BUY_X_PAY_Y promotions
+        const bestBuyXPayY = getBestBuyXPayYPromotion(itemId, price, quantity);
+        if (bestBuyXPayY) {
+          return bestBuyXPayY;
+        }
+
+        // If no BUY_X_PAY_Y applies, get best discount promotion
+        return getBestDiscountPromotion(itemId, price, quantity);
+      }
+
+      // ========== COMPLEMENTS FUNCTIONALITY ==========
+
+      // Guard against double-click opening modal twice
+      let isModalOpening = false;
+
+      // Cache for item complements
+      let itemComplementsCache = new Map();
+
+      // Cache for combo children API responses
+      let comboChildrenCache = new Map();
+
+      // Selected complements for current item in modal
+      let selectedComplements = [];
+      let currentItemMaxSauces = null; // Limit of sauces for current item
+      let selectedSaucesCount = 0; // Counter for selected sauces
+
+      /**
+       * Fetch available complements for an item (separated into sauces and regular)
+       */
+      async function fetchItemComplements(itemId) {
+        // Check cache first
+        if (itemComplementsCache.has(parseInt(itemId))) {
+          return itemComplementsCache.get(parseInt(itemId));
+        }
+
+        try {
+          // Use the new separated endpoint
+          const response = await fetch(
+            `/api/complements/item-menu/${itemId}/separated`,
+          );
+          const data = await response.json();
+
+          if (data) {
+            // Store both sauces and regular complements
+            const result = {
+              sauces: data.sauces || [],
+              complements: data.complements || [],
+              maxSauces: data.maxSauces,
+              totalSaucesAvailable: data.totalSaucesAvailable || 0,
+            };
+            itemComplementsCache.set(parseInt(itemId), result);
+            return result;
+          }
+          return {
+            sauces: [],
+            complements: [],
+            maxSauces: null,
+            totalSaucesAvailable: 0,
+          };
+        } catch (error) {
+          console.error("Error fetching complements:", error);
+          return {
+            sauces: [],
+            complements: [],
+            maxSauces: null,
+            totalSaucesAvailable: 0,
+          };
+        }
+      }
+
+      /**
+       * Generate HTML for a single complement item
+       * Note: Sauces don't show quantity controls (always qty=1)
+       */
+      function generateComplementItemHTML(comp, isSauce = false) {
+        // Sauces always have maxQuantity = 1 and don't show quantity controls
+        const showQtyControls = !isSauce && comp.maxQuantity > 1;
+
+        // Detect dark mode
+        const isDarkMode = document.documentElement.classList.contains("dark");
+
+        // Check availability
+        const isAvailable = comp.available !== false;
+        const disabledClasses = !isAvailable
+          ? "opacity-50 cursor-not-allowed"
+          : "cursor-pointer";
+        const disabledAttr = !isAvailable ? "data-disabled='true'" : "";
+        const clickHandler = !isAvailable
+          ? ""
+          : 'onclick="toggleComplement(this)"';
+
+        // Price display logic: only show if price > 0
+        const showPrice = parseFloat(comp.complementExtraPrice) > 0;
+        const priceHTML = showPrice
+          ? `<p class="text-xs ${isSauce ? "text-orange-500" : "text-purple-500"} font-bold">+$${parseFloat(comp.complementExtraPrice).toFixed(2)}</p>`
+          : "";
+
+        return `
+          <div class="complement-item flex items-center justify-between p-3 rounded-lg border ${isDarkMode ? "border-gray-700 hover:border-primary hover:bg-primary/10" : "border-gray-200 hover:border-primary hover:bg-primary/5"} transition-all ${disabledClasses}"
+               data-complement-id="${comp.complementId}"
+               data-complement-name="${comp.complementName}"
+               data-complement-price="${comp.complementExtraPrice}"
+               data-max-qty="${isSauce ? 1 : comp.maxQuantity}"
+               data-is-sauce="${isSauce}"
+               data-show-qty-controls="${showQtyControls}"
+               ${disabledAttr}
+               ${clickHandler}>
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-lg ${isSauce ? (isDarkMode ? "bg-orange-900/50" : "bg-orange-100") : isDarkMode ? "bg-gray-700" : "bg-gray-100"} overflow-hidden flex-shrink-0">
+                ${
+                  comp.complementImageUrl
+                    ? `<img src="${comp.complementImageUrl}" alt="${comp.complementName}" class="w-full h-full object-cover" />`
+                    : `<div class="w-full h-full flex items-center justify-center"><span class="material-symbols-outlined ${isSauce ? "text-orange-400" : isDarkMode ? "text-purple-400" : "text-purple-500"} text-lg">${isSauce ? "local_fire_department" : "skillet"}</span></div>`
+                }
+              </div>
+              <div>
+                <p class="font-semibold ${isDarkMode ? "text-white" : "text-gray-900"} text-sm">${comp.complementName}${!isAvailable ? ' <span class="text-red-500 text-xs">(Sin stock)</span>' : ""}</p>
+                ${priceHTML}
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              ${
+                showQtyControls
+                  ? `
+              <div class="complement-qty-controls flex items-center gap-1 hidden">
+                <button type="button" onclick="event.stopPropagation(); updateComplementQty(this, -1)" class="w-7 h-7 rounded ${isDarkMode ? "bg-gray-700" : "bg-gray-200"} hover:bg-primary hover:text-white flex items-center justify-center text-sm font-bold transition-colors">−</button>
+                <span class="complement-qty w-8 text-center font-bold text-sm ${isDarkMode ? "text-white" : "text-gray-900"}">0</span>
+                <button type="button" onclick="event.stopPropagation(); updateComplementQty(this, 1)" class="w-7 h-7 rounded ${isDarkMode ? "bg-gray-700" : "bg-gray-200"} hover:bg-primary hover:text-white flex items-center justify-center text-sm font-bold transition-colors">+</button>
+              </div>
+              `
+                  : ""
+              }
+              <span class="complement-check material-symbols-outlined ${isDarkMode ? "text-gray-600" : "text-gray-300"}">radio_button_unchecked</span>
+            </div>
+          </div>
+        `;
+      }
+
+      /**
+       * Generate buttons for complements section (sauces and regular)
+       */
+      function generateComplementsButtons(complementsData) {
+        if (!complementsData) return "";
+
+        const isDarkMode = document.documentElement.classList.contains("dark");
+        const { sauces, complements, maxSauces } = complementsData;
+
+        const hasSauces = sauces && sauces.length > 0;
+        const hasComplements = complements && complements.length > 0;
+
+        if (!hasSauces && !hasComplements) return "";
+
+        let html = `<div class="grid grid-cols-2 gap-2">`;
+
+        // Sauce button
+        if (hasSauces) {
+          const selectedSauces = selectedComplements.filter((c) => c.isSauce);
+          html += `
+            <button type="button" onclick="openSaucesModal()" class="w-full flex items-center justify-between p-2 rounded-lg border-2 ${isDarkMode ? "border-orange-600 bg-orange-900/20 hover:bg-orange-900/30" : "border-orange-400 bg-orange-50 hover:bg-orange-100"} transition-all">
+              <div class="flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-orange-500 text-base">local_fire_department</span>
+                <span class="font-semibold text-xs ${isDarkMode ? "text-white" : "text-gray-900"}">Elegir Salsas</span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <span id="sauces-count-badge" class="px-2 py-0.5 rounded-full text-xs font-bold ${isDarkMode ? "bg-orange-700 text-white" : "bg-orange-200 text-orange-800"}">${selectedSauces.length} ${maxSauces && maxSauces > 0 ? "/ " + maxSauces : ""}</span>
+                <span class="material-symbols-outlined text-gray-400 text-base">chevron_right</span>
+              </div>
+            </button>
+          `;
+        }
+
+        // Complements button
+        if (hasComplements) {
+          const selectedComps = selectedComplements.filter((c) => !c.isSauce);
+          const totalCompsQty = selectedComps.reduce(
+            (sum, c) => sum + c.quantity,
+            0,
+          );
+          html += `
+            <button type="button" onclick="openComplementsModal()" class="w-full flex items-center justify-between p-2 rounded-lg border-2 ${isDarkMode ? "border-purple-600 bg-purple-900/20 hover:bg-purple-900/30" : "border-purple-400 bg-purple-50 hover:bg-purple-100"} transition-all">
+              <div class="flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-purple-500 text-base">skillet</span>
+                <span class="font-semibold text-xs ${isDarkMode ? "text-white" : "text-gray-900"}">Elegir Complementos</span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <span id="complements-count-badge" class="px-2 py-0.5 rounded-full text-xs font-bold ${isDarkMode ? "bg-purple-700 text-white" : "bg-purple-200 text-purple-800"}">${totalCompsQty}</span>
+                <span class="material-symbols-outlined text-gray-400 text-lg">chevron_right</span>
+              </div>
+            </button>
+          `;
+        }
+
+        html += "</div>";
+        return html;
+      }
+
+      /**
+       * Open sauces selection modal
+       */
+      async function openSaucesModal() {
+        if (!currentItem) return;
+
+        const isDarkMode = document.documentElement.classList.contains("dark");
+        const itemComplements = await fetchItemComplements(currentItem.id);
+        const { sauces, maxSauces } = itemComplements;
+
+        if (!sauces || sauces.length === 0) return;
+
+        currentItemMaxSauces = maxSauces;
+        selectedSaucesCount = selectedComplements.filter(
+          (c) => c.isSauce,
+        ).length;
+
+        const sauceLimitText =
+          maxSauces && maxSauces > 0 ? `(Máximo ${maxSauces})` : "(Ilimitadas)";
+        const saucesHTML = sauces
+          .map((sauce) => generateComplementItemHTML(sauce, true))
+          .join("");
+
+        // Create overlay within the main Swal modal
+        const overlayHTML = `
+          <div id="sauces-overlay" class="fixed inset-0 ${isDarkMode ? "bg-black/80" : "bg-black/50"} flex items-center justify-center z-[9999]" style="margin: 0;">
+            <div class="${isDarkMode ? "bg-slate-800" : "bg-white"} rounded-2xl shadow-2xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-hidden">
+              <div class="${isDarkMode ? "bg-slate-700" : "bg-gray-50"} px-6 py-4 border-b ${isDarkMode ? "border-slate-600" : "border-gray-200"}">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-2">
+                    <span class="material-symbols-outlined text-orange-500 text-2xl">local_fire_department</span>
+                    <h3 class="text-xl font-bold ${isDarkMode ? "text-white" : "text-gray-900"}">Salsas Disponibles</h3>
+                  </div>
+                  <button onclick="closeSaucesOverlay()" class="${isDarkMode ? "text-gray-400 hover:text-white" : "text-gray-400 hover:text-gray-600"} transition-colors">
+                    <span class="material-symbols-outlined text-2xl">close</span>
+                  </button>
+                </div>
+              </div>
+              <div class="p-6 overflow-y-auto" style="max-height: calc(90vh - 180px);">
+                <div id="sauces-counter" class="text-sm ${isDarkMode ? "text-orange-400" : "text-orange-600"} mb-3 font-semibold ${!maxSauces || maxSauces <= 0 ? "hidden" : ""}">
+                  Seleccionadas: <span id="selected-sauces-count">${selectedSaucesCount}</span> de ${maxSauces || "∞"} ${sauceLimitText}
+                </div>
+                <div id="sauces-container" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                  ${saucesHTML}
+                </div>
+              </div>
+              <div class="${isDarkMode ? "bg-slate-700" : "bg-gray-50"} px-6 py-4 border-t ${isDarkMode ? "border-slate-600" : "border-gray-200"} flex justify-end gap-3">
+                <button onclick="closeSaucesOverlay()" class="px-6 py-3 rounded-xl font-bold ${isDarkMode ? "bg-gray-600 hover:bg-gray-500" : "bg-gray-200 hover:bg-gray-300"} ${isDarkMode ? "text-white" : "text-gray-700"} transition-colors">
+                  Cancelar
+                </button>
+                <button onclick="confirmSaucesSelection()" class="px-6 py-3 rounded-xl font-bold bg-orange-500 hover:bg-orange-600 text-white transition-colors">
+                  Confirmar
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+
+        // Insert overlay into the Swal container
+        const swalContainer = document.querySelector(".swal2-container");
+        if (swalContainer) {
+          const overlayDiv = document.createElement("div");
+          overlayDiv.innerHTML = overlayHTML;
+          swalContainer.appendChild(overlayDiv.firstElementChild);
+
+          // Restore previously selected sauces - set visual state directly
+          setTimeout(() => {
+            selectedComplements
+              .filter((c) => c.isSauce)
+              .forEach((selectedSauce) => {
+                const sauceElement = document.querySelector(
+                  `[data-complement-id="${selectedSauce.id}"][data-is-sauce="true"]`,
+                );
+                if (sauceElement) {
+                  // Set visual state to selected
+                  sauceElement.classList.add(
+                    "border-orange-500",
+                    isDarkMode ? "bg-orange-900/30" : "bg-orange-100/30",
+                  );
+                  sauceElement.classList.remove(
+                    isDarkMode ? "border-gray-700" : "border-gray-200",
+                  );
+                  const checkIcon =
+                    sauceElement.querySelector(".complement-check");
+                  if (checkIcon) {
+                    checkIcon.textContent = "check_circle";
+                    checkIcon.classList.remove(
+                      isDarkMode ? "text-gray-600" : "text-gray-300",
+                    );
+                    checkIcon.classList.add("text-orange-500");
+                  }
+                }
+              });
+            updateSaucesCounter();
+          }, 50);
+        }
+      }
+
+      /**
+       * Close sauces overlay without confirmation
+       */
+      function closeSaucesOverlay() {
+        const overlay = document.getElementById("sauces-overlay");
+        if (overlay) {
+          overlay.remove();
+        }
+      }
+
+      /**
+       * Confirm sauces selection and close overlay
+       */
+      function confirmSaucesSelection() {
+        updateComplementsBadges();
+        updateModalComplementsTotal();
+        closeSaucesOverlay();
+      }
+
+      /**
+       * Open complements selection modal
+       */
+      async function openComplementsModal() {
+        if (!currentItem) return;
+
+        const isDarkMode = document.documentElement.classList.contains("dark");
+        const itemComplements = await fetchItemComplements(currentItem.id);
+        const { complements } = itemComplements;
+
+        if (!complements || complements.length === 0) return;
+
+        const complementsHTML = complements
+          .map((comp) => generateComplementItemHTML(comp, false))
+          .join("");
+
+        // Create overlay within the main Swal modal
+        const overlayHTML = `
+          <div id="complements-overlay" class="fixed inset-0 ${isDarkMode ? "bg-black/80" : "bg-black/50"} flex items-center justify-center z-[9999]" style="margin: 0;">
+            <div class="${isDarkMode ? "bg-slate-800" : "bg-white"} rounded-2xl shadow-2xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-hidden">
+              <div class="${isDarkMode ? "bg-slate-700" : "bg-gray-50"} px-6 py-4 border-b ${isDarkMode ? "border-slate-600" : "border-gray-200"}">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-2">
+                    <span class="material-symbols-outlined text-purple-500 text-2xl">skillet</span>
+                    <h3 class="text-xl font-bold ${isDarkMode ? "text-white" : "text-gray-900"}">Complementos Disponibles</h3>
+                  </div>
+                  <button onclick="closeComplementsOverlay()" class="${isDarkMode ? "text-gray-400 hover:text-white" : "text-gray-400 hover:text-gray-600"} transition-colors">
+                    <span class="material-symbols-outlined text-2xl">close</span>
+                  </button>
+                </div>
+              </div>
+              <div class="p-6 overflow-y-auto" style="max-height: calc(90vh - 180px);">
+                <div class="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 gap-3">
+                  ${complementsHTML}
+                </div>
+              </div>
+              <div class="${isDarkMode ? "bg-slate-700" : "bg-gray-50"} px-6 py-4 border-t ${isDarkMode ? "border-slate-600" : "border-gray-200"} flex justify-end gap-3">
+                <button onclick="closeComplementsOverlay()" class="px-6 py-3 rounded-xl font-bold ${isDarkMode ? "bg-gray-600 hover:bg-gray-500" : "bg-gray-200 hover:bg-gray-300"} ${isDarkMode ? "text-white" : "text-gray-700"} transition-colors">
+                  Cancelar
+                </button>
+                <button onclick="confirmComplementsSelection()" class="px-6 py-3 rounded-xl font-bold bg-purple-500 hover:bg-purple-600 text-white transition-colors">
+                  Confirmar
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+
+        // Insert overlay into the Swal container
+        const swalContainer = document.querySelector(".swal2-container");
+        if (swalContainer) {
+          const overlayDiv = document.createElement("div");
+          overlayDiv.innerHTML = overlayHTML;
+          swalContainer.appendChild(overlayDiv.firstElementChild);
+
+          // Restore previously selected complements - set visual state directly
+          setTimeout(() => {
+            selectedComplements
+              .filter((c) => !c.isSauce)
+              .forEach((selectedComp) => {
+                const compElement = document.querySelector(
+                  `[data-complement-id="${selectedComp.id}"][data-is-sauce="false"]`,
+                );
+                if (compElement) {
+                  // Set visual state to selected
+                  compElement.classList.add(
+                    "border-purple-500",
+                    isDarkMode ? "bg-purple-900/30" : "bg-purple-100/30",
+                  );
+                  compElement.classList.remove(
+                    isDarkMode ? "border-gray-700" : "border-gray-200",
+                  );
+                  const checkIcon =
+                    compElement.querySelector(".complement-check");
+                  if (checkIcon) {
+                    checkIcon.textContent = "check_circle";
+                    checkIcon.classList.remove(
+                      isDarkMode ? "text-gray-600" : "text-gray-300",
+                    );
+                    checkIcon.classList.add("text-purple-500");
+                  }
+
+                  // Show quantity controls and set quantity
+                  const qtyControls = compElement.querySelector(
+                    ".complement-qty-controls",
+                  );
+                  if (qtyControls && selectedComp.quantity > 0) {
+                    qtyControls.classList.remove("hidden");
+                    const qtySpan =
+                      qtyControls.querySelector(".complement-qty");
+                    if (qtySpan) qtySpan.textContent = selectedComp.quantity;
+                  }
+                }
+              });
+          }, 50);
+        }
+      }
+
+      /**
+       * Close complements overlay without confirmation
+       */
+      function closeComplementsOverlay() {
+        const overlay = document.getElementById("complements-overlay");
+        if (overlay) {
+          overlay.remove();
+        }
+      }
+
+      /**
+       * Confirm complements selection and close overlay
+       */
+      function confirmComplementsSelection() {
+        updateComplementsBadges();
+        updateModalComplementsTotal();
+        closeComplementsOverlay();
+      }
+
+      /**
+       * Update badges on main modal buttons
+       */
+      function updateComplementsBadges() {
+        const saucesBadge = document.getElementById("sauces-count-badge");
+        const complementsBadge = document.getElementById(
+          "complements-count-badge",
+        );
+
+        if (saucesBadge) {
+          const selectedSauces = selectedComplements.filter((c) => c.isSauce);
+          const maxSauces = currentItemMaxSauces;
+          saucesBadge.textContent = `${selectedSauces.length}${maxSauces && maxSauces > 0 ? " / " + maxSauces : ""}`;
+        }
+
+        if (complementsBadge) {
+          const selectedComps = selectedComplements.filter((c) => !c.isSauce);
+          const totalQty = selectedComps.reduce(
+            (sum, c) => sum + c.quantity,
+            0,
+          );
+          complementsBadge.textContent = totalQty;
+        }
+      }
+
+      /**
+       * Generate HTML for complements section in modal (separated sauces and regular)
+       */
+      function generateComplementsHTML(complementsData) {
+        if (!complementsData) return "";
+
+        const { sauces, complements, maxSauces, totalSaucesAvailable } =
+          complementsData;
+        currentItemMaxSauces = maxSauces;
+        selectedSaucesCount = 0;
+
+        const hasSauces = sauces && sauces.length > 0;
+        const hasComplements = complements && complements.length > 0;
+
+        if (!hasSauces && !hasComplements) return "";
+
+        // Detect dark mode
+        const isDarkMode = document.documentElement.classList.contains("dark");
+
+        let html = `<div class="mt-4 border-t ${isDarkMode ? "border-gray-700" : "border-gray-200"} pt-4">`;
+
+        // Sauces section
+        if (hasSauces) {
+          const sauceLimitText =
+            maxSauces && maxSauces > 0
+              ? `<span class="text-orange-600 font-medium">(máx. ${maxSauces})</span>`
+              : "";
+
+          html += `
+            <div class="mb-4">
+              <label class="block text-sm font-bold ${isDarkMode ? "text-gray-200" : "text-gray-700"} mb-2">
+                <span class="material-symbols-outlined text-orange-500 align-middle text-sm mr-1">local_fire_department</span>
+                Salsas disponibles (${sauces.length}) ${sauceLimitText}
+              </label>
+              <div id="sauces-counter" class="text-xs ${isDarkMode ? "text-orange-400" : "text-orange-600"} mb-2 ${!maxSauces || maxSauces <= 0 ? "hidden" : ""}">
+                Seleccionadas: <span id="selected-sauces-count">0</span> de ${maxSauces || "∞"}
+              </div>
+              <div class="space-y-2 max-h-32 overflow-y-auto pr-2" id="sauces-container">
+                ${sauces.map((sauce) => generateComplementItemHTML(sauce, true)).join("")}
+              </div>
+            </div>
+          `;
+        }
+
+        // Regular complements section
+        if (hasComplements) {
+          html += `
+            <div>
+              <label class="block text-sm font-bold ${isDarkMode ? "text-gray-200" : "text-gray-700"} mb-2">
+                <span class="material-symbols-outlined ${isDarkMode ? "text-purple-400" : "text-purple-500"} align-middle text-sm mr-1">skillet</span>
+                Complementos (${complements.length})
+              </label>
+              <div class="space-y-2 max-h-32 overflow-y-auto pr-2" id="complements-container">
+                ${complements.map((comp) => generateComplementItemHTML(comp, false)).join("")}
+              </div>
+            </div>
+          `;
+        }
+
+        html +=
+          '<p id="complements-total" class="text-sm text-orange-600 font-semibold mt-2"></p>';
+        html += "</div>";
+        return html;
+      }
+
+      /**
+       * Toggle complement selection
+       */
+      function toggleComplement(element) {
+        // Check if complement is disabled (unavailable)
+        if (element.dataset.disabled === "true") {
+          return; // Do nothing if disabled
+        }
+
+        const compId = parseInt(element.dataset.complementId);
+        const compName = element.dataset.complementName;
+        const compPrice = parseFloat(element.dataset.complementPrice);
+        const maxQty = parseInt(element.dataset.maxQty);
+        const isSauce = element.dataset.isSauce === "true";
+
+        // Detect dark mode
+        const isDarkMode = document.documentElement.classList.contains("dark");
+
+        const checkIcon = element.querySelector(".complement-check");
+        const qtyControls = element.querySelector(".complement-qty-controls");
+        const qtySpan = qtyControls
+          ? qtyControls.querySelector(".complement-qty")
+          : null;
+        const showQtyControls = element.dataset.showQtyControls === "true";
+
+        const existingIndex = selectedComplements.findIndex(
+          (c) => c.id === compId,
+        );
+
+        if (existingIndex >= 0) {
+          // Deselect
+          selectedComplements.splice(existingIndex, 1);
+          element.classList.remove(
+            "border-purple-400",
+            "bg-purple-50",
+            "dark:border-purple-500",
+            "dark:bg-purple-900/30",
+            "border-orange-400",
+            "bg-orange-50",
+            "dark:border-orange-500",
+            "dark:bg-orange-900/30",
+          );
+          checkIcon.textContent = "radio_button_unchecked";
+          checkIcon.classList.remove("text-purple-500", "text-orange-500");
+          checkIcon.classList.add(
+            isDarkMode ? "text-gray-600" : "text-gray-300",
+          );
+          if (qtyControls) {
+            qtyControls.classList.add("hidden");
+            if (qtySpan) qtySpan.textContent = "0";
+          }
+
+          // Update sauce counter if it was a sauce
+          if (isSauce) {
+            selectedSaucesCount--;
+            updateSaucesCounter();
+          }
+        } else {
+          // Validate sauce limit before selecting (should be blocked visually, but double-check)
+          if (
+            isSauce &&
+            currentItemMaxSauces &&
+            currentItemMaxSauces > 0 &&
+            selectedSaucesCount >= currentItemMaxSauces
+          ) {
+            return; // Blocked - limit reached
+          }
+
+          // Select - sauces always have quantity 1
+          selectedComplements.push({
+            id: compId,
+            name: compName,
+            extraPrice: compPrice,
+            quantity: 1,
+            maxQuantity: isSauce ? 1 : maxQty,
+            isSauce: isSauce,
+          });
+
+          if (isSauce) {
+            // Sauce selection with orange colors
+            if (isDarkMode) {
+              element.classList.add(
+                "border-orange-500",
+                "dark:bg-orange-900/30",
+              );
+            } else {
+              element.classList.add("border-orange-400", "bg-orange-50");
+            }
+            checkIcon.textContent = "check_circle";
+            checkIcon.classList.remove(
+              isDarkMode ? "text-gray-600" : "text-gray-300",
+            );
+            checkIcon.classList.add("text-orange-500");
+            selectedSaucesCount++;
+            updateSaucesCounter();
+            // Sauces don't show qty controls
+          } else {
+            // Regular complement selection with purple colors
+            if (isDarkMode) {
+              element.classList.add(
+                "border-purple-500",
+                "dark:bg-purple-900/30",
+              );
+            } else {
+              element.classList.add("border-purple-400", "bg-purple-50");
+            }
+            checkIcon.textContent = "check_circle";
+            checkIcon.classList.remove(
+              isDarkMode ? "text-gray-600" : "text-gray-300",
+            );
+            checkIcon.classList.add("text-purple-500");
+            // Only show qty controls for non-sauces with maxQty > 1
+            if (showQtyControls && qtyControls) {
+              qtyControls.classList.remove("hidden");
+              if (qtySpan) qtySpan.textContent = "1";
+            }
+          }
+        }
+
+        updateModalComplementsTotal();
+      }
+
+      /**
+       * Update the sauces counter display
+       */
+      function updateSaucesCounter() {
+        const counterSpan = document.getElementById("selected-sauces-count");
+        if (counterSpan) {
+          counterSpan.textContent = selectedSaucesCount;
+
+          // Visual feedback when reaching the limit
+          const counterContainer = document.getElementById("sauces-counter");
+          if (counterContainer) {
+            if (
+              currentItemMaxSauces &&
+              selectedSaucesCount >= currentItemMaxSauces
+            ) {
+              counterContainer.classList.add("text-red-600", "font-bold");
+              counterContainer.classList.remove("text-orange-600");
+            } else {
+              counterContainer.classList.remove("text-red-600", "font-bold");
+              counterContainer.classList.add("text-orange-600");
+            }
+          }
+        }
+
+        // Update disabled state of unselected sauces
+        updateSaucesDisabledState();
+      }
+
+      /**
+       * Update disabled state of sauces when limit is reached
+       * Blocks unselected sauces when maxSauces is reached
+       */
+      function updateSaucesDisabledState() {
+        const saucesContainer = document.getElementById("sauces-container");
+        if (!saucesContainer) return;
+
+        const sauceItems = saucesContainer.querySelectorAll(
+          '.complement-item[data-is-sauce="true"]',
+        );
+        const limitReached =
+          currentItemMaxSauces &&
+          currentItemMaxSauces > 0 &&
+          selectedSaucesCount >= currentItemMaxSauces;
+
+        sauceItems.forEach((sauceElement) => {
+          const compId = parseInt(sauceElement.dataset.complementId);
+          const isSelected = selectedComplements.some((c) => c.id === compId);
+
+          if (limitReached && !isSelected) {
+            // Block unselected sauces
+            sauceElement.classList.add(
+              "opacity-40",
+              "pointer-events-none",
+              "cursor-not-allowed",
+            );
+            sauceElement.classList.remove(
+              "hover:border-primary",
+              "hover:bg-primary/5",
+              "cursor-pointer",
+            );
+          } else {
+            // Unblock sauces
+            sauceElement.classList.remove(
+              "opacity-40",
+              "pointer-events-none",
+              "cursor-not-allowed",
+            );
+            sauceElement.classList.add(
+              "hover:border-primary",
+              "hover:bg-primary/5",
+              "cursor-pointer",
+            );
+          }
+        });
+      }
+
+      /**
+       * Update complement quantity
+       */
+      function updateComplementQty(button, delta) {
+        const container = button.closest(".complement-item");
+        const compId = parseInt(container.dataset.complementId);
+        const maxQty = parseInt(container.dataset.maxQty);
+        const qtySpan = container.querySelector(".complement-qty");
+
+        const existing = selectedComplements.find((c) => c.id === compId);
+        if (!existing) return;
+
+        const newQty = existing.quantity + delta;
+
+        // Validate limits: minimum 1, maximum maxQty
+        if (newQty < 1) {
+          // Remove if quantity reaches 0
+          toggleComplement(container);
+          return;
+        }
+        if (newQty > maxQty) return;
+
+        existing.quantity = newQty;
+        qtySpan.textContent = newQty;
+
+        updateModalComplementsTotal();
+      }
+
+      /**
+       * Calculate complements total
+       */
+      function calculateComplementsTotal() {
+        const qty = window.modalQuantity || 1;
+        return selectedComplements.reduce(
+          (sum, comp) =>
+            sum + comp.extraPrice * comp.quantity * (comp.isSauce ? qty : 1),
+          0,
+        );
+      }
+
+      /**
+       * Update the modal to show complements total
+       */
+      function updateModalComplementsTotal() {
+        const totalElement = document.getElementById("complements-total");
+        if (totalElement) {
+          const total = calculateComplementsTotal();
+          totalElement.textContent =
+            total > 0 ? `+$${total.toFixed(2)} en complementos` : "";
+        }
+      }
+
+      /**
+       * Initialize complements (empty by default, user selects manually)
+       */
+      function initializeDefaultComplements(complements) {
+        selectedComplements = [];
+        // No pre-selection - users select complements manually
+      }
+
+      // Update complement quantity in cart item
+      function updateCartComplementQuantity(cartIndex, complementIndex, delta) {
+        if (
+          !cart[cartIndex] ||
+          !cart[cartIndex].complements ||
+          !cart[cartIndex].complements[complementIndex]
+        ) {
+          return;
+        }
+
+        const item = cart[cartIndex];
+        const complement = item.complements[complementIndex];
+        const newQuantity = complement.quantity + delta;
+
+        // Validate limits: minimum 1, maximum maxQuantity
+        if (newQuantity < 1) {
+          // If reducing below 1, remove the complement
+          Swal.fire({
+            title: "¿Eliminar complemento?",
+            text: `¿Deseas eliminar ${complement.name} del item?`,
+            icon: "question",
+            background: document.documentElement.classList.contains("dark")
+              ? "#1f2937"
+              : "#ffffff",
+            color: document.documentElement.classList.contains("dark")
+              ? "#f3f4f6"
+              : "#1f2937",
+            showCancelButton: true,
+            confirmButtonColor: "#ef4444",
+            cancelButtonColor: "#6b7280",
+            confirmButtonText: "Sí, eliminar",
+            cancelButtonText: "Cancelar",
+          }).then((result) => {
+            if (result.isConfirmed) {
+              // Remove complement from array
+              item.complements.splice(complementIndex, 1);
+              // Recalculate complements total
+              item.complementsTotal = item.complements.reduce(
+                (sum, c) =>
+                  sum +
+                  c.extraPrice * c.quantity * (c.isSauce ? item.quantity : 1),
+                0,
+              );
+              updateCartUI();
+              saveCartToStorage();
+            }
+          });
+          return;
+        }
+
+        if (newQuantity > complement.maxQuantity) {
+          Swal.fire({
+            icon: "warning",
+            title: "Límite alcanzado",
+            text: `Máximo ${complement.maxQuantity} unidad(es) de ${complement.name} permitidas`,
+            background: document.documentElement.classList.contains("dark")
+              ? "#1f2937"
+              : "#ffffff",
+            color: document.documentElement.classList.contains("dark")
+              ? "#f3f4f6"
+              : "#1f2937",
+            timer: 2000,
+            showConfirmButton: false,
+          });
+          return;
+        }
+
+        // Update quantity
+        complement.quantity = newQuantity;
+
+        // Recalculate complements total for this cart item
+        item.complementsTotal = item.complements.reduce(
+          (sum, c) =>
+            sum + c.extraPrice * c.quantity * (c.isSauce ? item.quantity : 1),
+          0,
+        );
+
+        updateCartUI();
+        saveCartToStorage();
+      }
+
+      // Update order type
+      function updateOrderType(newType) {
+        orderData.orderType = newType;
+
+        // Show/hide delivery address and references fields based on order type
+        const deliveryAddressContainer = document.getElementById(
+          "deliveryAddressContainer",
+        );
+        const deliveryReferencesContainer = document.getElementById(
+          "deliveryReferencesContainer",
+        );
+        if (newType === "DELIVERY") {
+          deliveryAddressContainer.classList.remove("hidden");
+          deliveryReferencesContainer.classList.remove("hidden");
+        } else {
+          deliveryAddressContainer.classList.add("hidden");
+          deliveryReferencesContainer.classList.add("hidden");
+          // Clear the field when hiding it
+          document.getElementById("deliveryReferences").value = "";
+        }
+
+        // Update payment methods based on order type
+        updatePaymentMethodsForOrderType(newType);
+
+        // Filter buffet items based on new order type
+        filterBuffetItems();
+      }
+
+      // Update payment methods dropdown based on order type
+      function updatePaymentMethodsForOrderType(orderType) {
+        const paymentMethodSelect = document.getElementById("paymentMethod");
+        if (!paymentMethodSelect) return;
+
+        // Choose the correct payment methods list
+        const methods =
+          orderType === "DELIVERY"
+            ? deliveryPaymentMethods
+            : restaurantPaymentMethods;
+
+        // Save current selection if possible
+        const currentSelection = paymentMethodSelect.value;
+
+        // Clear and rebuild options
+        paymentMethodSelect.innerHTML = "";
+
+        if (methods.length === 0) {
+          const option = document.createElement("option");
+          option.value = "";
+          option.textContent = "No hay métodos disponibles";
+          option.disabled = true;
+          paymentMethodSelect.appendChild(option);
+          return;
+        }
+
+        methods.forEach((method, index) => {
+          const option = document.createElement("option");
+          option.value = method; // The enum name (e.g., "CASH")
+
+          // Map method names to display text and icons
+          const displayInfo = {
+            CASH: { icon: "💵", name: "Efectivo" },
+            CREDIT_CARD: { icon: "💳", name: "Tarjeta de Crédito" },
+            DEBIT_CARD: { icon: "💳", name: "Tarjeta de Débito" },
+            TRANSFER: { icon: "🏦", name: "Transferencia" },
+          };
+
+          const info = displayInfo[method] || { icon: "💰", name: method };
+          option.textContent = `${info.icon} ${info.name}`;
+
+          // Try to preserve previous selection or select first
+          if (
+            method === currentSelection ||
+            (index === 0 && !currentSelection)
+          ) {
+            option.selected = true;
+          }
+
+          paymentMethodSelect.appendChild(option);
+        });
+
+      }
+
+      // Toggle order details section
+      function toggleOrderDetails() {
+        const section = document.getElementById("orderDetailsSection");
+        const icon = document.getElementById("detailsToggleIcon");
+
+        if (section.classList.contains("hidden")) {
+          section.classList.remove("hidden");
+          icon.style.transform = "rotate(180deg)";
+        } else {
+          section.classList.add("hidden");
+          icon.style.transform = "rotate(0deg)";
+        }
+      }
+
+      // Scroll to category with smooth animation
+      function scrollToCategory(button) {
+        const categoryId = button.dataset.categoryId;
+        const categorySection = document.getElementById(
+          "category-" + categoryId,
+        );
+        const menuContainer = categorySection.closest(".overflow-y-auto");
+
+        if (categorySection && menuContainer) {
+          // Calculate offset (header height)
+          const offset = 80;
+          const elementPosition =
+            categorySection.offsetTop - menuContainer.offsetTop;
+          const offsetPosition = elementPosition - offset;
+
+          // Smooth scroll
+          menuContainer.scrollTo({
+            top: offsetPosition,
+            behavior: "smooth",
+          });
+
+          // Update active state
+          document.querySelectorAll(".category-btn").forEach((btn) => {
+            btn.classList.remove(
+              "active",
+              "bg-gradient-to-r",
+              "from-primary",
+              "to-primary-dark",
+              "text-white",
+              "shadow-green",
+              "font-bold",
+            );
+            btn.classList.add(
+              "text-gray-700",
+              "dark:text-gray-300",
+              "font-semibold",
+            );
+            const icon = btn.querySelector(".material-symbols-outlined");
+            if (icon) {
+              icon.classList.remove("filled");
+            }
+          });
+
+          button.classList.add(
+            "active",
+            "bg-gradient-to-r",
+            "from-primary",
+            "to-primary-dark",
+            "text-white",
+            "shadow-green",
+            "font-bold",
+          );
+          button.classList.remove(
+            "text-gray-700",
+            "dark:text-gray-300",
+            "font-semibold",
+          );
+          const activeIcon = button.querySelector(".material-symbols-outlined");
+          if (activeIcon) {
+            activeIcon.classList.add("filled");
+          }
+        }
+      }
+
+      // Toggle cart sidebar (mobile/tablet)
+      function toggleCart() {
+        const sidebar = document.getElementById("cart-sidebar");
+        const backdrop = document.getElementById("cart-backdrop");
+
+        if (sidebar.classList.contains("translate-x-full")) {
+          // Abrir carrito
+          sidebar.classList.remove("translate-x-full");
+          sidebar.classList.add("translate-x-0");
+          backdrop.classList.remove("hidden");
+          document.body.style.overflow = "hidden"; // Prevenir scroll del body
+        } else {
+          // Cerrar carrito
+          sidebar.classList.remove("translate-x-0");
+          sidebar.classList.add("translate-x-full");
+          backdrop.classList.add("hidden");
+          document.body.style.overflow = ""; // Restaurar scroll
+        }
+      }
+
+      // Update item quantity in cart
+      async function updateCartItemQuantity(index, delta) {
+        if (cart[index]) {
+          const item = cart[index];
+          const newQuantity = item.quantity + delta;
+
+          // If incrementing, check stock availability
+          if (delta > 0) {
+            const maxFromStock = await getMaxQuantity(item.id);
+            // Calculate total quantity of this item across all cart entries
+            const totalQuantityOfItem = cart
+              .filter((cartItem, i) => cartItem.id == item.id)
+              .reduce((sum, cartItem, i) => {
+                // For the current item, use the new quantity
+                const idx = cart.findIndex((c) => c === cartItem);
+                return sum + (idx === index ? newQuantity : cartItem.quantity);
+              }, 0);
+
+            if (totalQuantityOfItem > maxFromStock) {
+              // Show warning toast
+              Swal.fire({
+                toast: true,
+                position: "top-end",
+                icon: "warning",
+                title: `Stock máximo alcanzado (${maxFromStock} disponibles)`,
+                background: document.documentElement.classList.contains("dark")
+                  ? "#1f2937"
+                  : "#ffffff",
+                color: document.documentElement.classList.contains("dark")
+                  ? "#f3f4f6"
+                  : "#1f2937",
+                showConfirmButton: false,
+                timer: 2000,
+                timerProgressBar: true,
+              });
+              renderCart(); // Re-render to update button states
+              return;
+            }
+          }
+
+          if (newQuantity > 0 && newQuantity <= 99) {
+            item.quantity = newQuantity;
+
+            // Recalculate complementsTotal (sauces multiply by item quantity)
+            if (item.isCombo && item.comboChildren) {
+              item.complementsTotal = 0;
+              item.comboChildren.forEach((child) => {
+                (child.selectedComplements || []).forEach((c) => {
+                  item.complementsTotal +=
+                    (c.extraPrice || 0) *
+                    c.quantity *
+                    (c.isSauce ? (child.quantity || 1) * newQuantity : 1);
+                });
+              });
+            } else if (item.complements && item.complements.length > 0) {
+              item.complementsTotal = item.complements.reduce(
+                (sum, c) =>
+                  sum +
+                  c.extraPrice * c.quantity * (c.isSauce ? newQuantity : 1),
+                0,
+              );
+            }
+
+            // Reevaluar automáticamente la mejor promoción para la nueva cantidad
+            const bestPromotion = getAutoBestPromotion(
+              item.id,
+              item.price,
+              newQuantity,
+            );
+
+            if (bestPromotion) {
+              // Aplicar la mejor promoción
+              const originalTotal = item.price * newQuantity;
+              let discountedTotal = originalTotal;
+
+              if (bestPromotion.promotionType === "BUY_X_PAY_Y") {
+                const sets = Math.floor(
+                  newQuantity / bestPromotion.buyQuantity,
+                );
+                const remaining = newQuantity % bestPromotion.buyQuantity;
+                discountedTotal =
+                  sets * bestPromotion.payQuantity * item.price +
+                  remaining * item.price;
+              } else if (
+                bestPromotion.promotionType === "PERCENTAGE_DISCOUNT"
+              ) {
+                const discount = bestPromotion.discountPercentage / 100;
+                discountedTotal = originalTotal * (1 - discount);
+              } else if (
+                bestPromotion.promotionType === "FIXED_AMOUNT_DISCOUNT"
+              ) {
+                // Consider minQuantityForFixedDiscount - discount only applies to multiples
+                const minQty = bestPromotion.minQuantityForFixedDiscount || 1;
+                const discountedSets = Math.floor(newQuantity / minQty);
+                const remainingItems = newQuantity % minQty;
+                const itemsWithDiscount = discountedSets * minQty;
+
+                const pricePerUnit = Math.max(
+                  0,
+                  item.price - bestPromotion.discountAmount,
+                );
+                // Discounted items + full price items
+                discountedTotal =
+                  pricePerUnit * itemsWithDiscount +
+                  item.price * remainingItems;
+              }
+
+              // IMPORTANTE: NO redondear - mantener precisión completa
+              item.promotionAppliedPrice = discountedTotal / newQuantity;
+              item.subtotal = discountedTotal;
+              item.appliedPromotionId = bestPromotion.id;
+              item.promotionLabel = bestPromotion.displayLabel;
+            } else {
+              // Sin promoción aplicable
+              item.subtotal = item.price * newQuantity;
+              item.promotionAppliedPrice = null;
+              item.appliedPromotionId = null;
+              item.promotionLabel = null;
+            }
+            const promotions = itemPromotionsMap.get(parseInt(item.id)) || [];
+            const appliedPromotion = promotions.find(
+              (p) => p.id == item.appliedPromotionId,
+            );
+
+            if (appliedPromotion) {
+              const originalTotal = item.price * newQuantity;
+              let discountedTotal = originalTotal;
+
+              // Recalcular según el tipo de promoción
+              if (appliedPromotion.promotionType === "BUY_X_PAY_Y") {
+                // Para 2x1, 3x2, etc.
+                const sets = Math.floor(
+                  newQuantity / appliedPromotion.buyQuantity,
+                );
+                const remaining = newQuantity % appliedPromotion.buyQuantity;
+                discountedTotal =
+                  sets * appliedPromotion.payQuantity * item.price +
+                  remaining * item.price;
+              } else if (
+                appliedPromotion.promotionType === "PERCENTAGE_DISCOUNT"
+              ) {
+                // Para descuentos porcentuales (50%, 30%, etc.)
+                const discount = appliedPromotion.discountPercentage / 100;
+                discountedTotal = originalTotal * (1 - discount);
+              } else if (
+                appliedPromotion.promotionType === "FIXED_AMOUNT_DISCOUNT"
+              ) {
+                // Consider minQuantityForFixedDiscount - discount only applies to multiples
+                const minQty =
+                  appliedPromotion.minQuantityForFixedDiscount || 1;
+                const discountedSets = Math.floor(newQuantity / minQty);
+                const remainingItems = newQuantity % minQty;
+                const itemsWithDiscount = discountedSets * minQty;
+
+                const pricePerUnit = Math.max(
+                  0,
+                  item.price - appliedPromotion.discountAmount,
+                );
+                // Discounted items + full price items
+                discountedTotal =
+                  pricePerUnit * itemsWithDiscount +
+                  item.price * remainingItems;
+              }
+
+              // IMPORTANTE: NO redondear - mantener precisión completa
+              item.promotionAppliedPrice = discountedTotal / newQuantity;
+              item.subtotal = discountedTotal;
+            } else {
+              // Si no se encuentra la promoción, calcular precio normal
+              item.subtotal = item.price * newQuantity;
+            }
+
+            updateCartUI();
+            saveCartToStorage();
+          } else if (newQuantity <= 0) {
+            const isDarkMode =
+              document.documentElement.classList.contains("dark");
+            Swal.fire({
+              title: "¿Eliminar del carrito?",
+              text: `Se eliminará "${item.name}" del carrito`,
+              icon: "warning",
+              showCancelButton: true,
+              confirmButtonColor: "#ef4444",
+              cancelButtonColor: "#6b7280",
+              confirmButtonText: "Sí, eliminar",
+              cancelButtonText: "Cancelar",
+              background: isDarkMode ? "#1e293b" : "#ffffff",
+              color: isDarkMode ? "#F3F4F6" : "#1F2937",
+            }).then((result) => {
+              if (result.isConfirmed) {
+                cart.splice(index, 1);
+                updateCartUI();
+                saveCartToStorage();
+              }
+            });
+          }
+        }
+      }
+
+      // Open item modal with SweetAlert2 (style from menu.html)
+      async function openItemModal(card) {
+        // Guard: prevent double-click opening modal twice
+        if (isModalOpening || Swal.isVisible()) return;
+        isModalOpening = true;
+
+        try {
+          // Wait for promotions to load if not loaded yet
+          if (!promotionsLoaded) {
+            await loadPromotions();
+          }
+
+          const itemId = card.dataset.itemId;
+          const itemName = card.dataset.itemName;
+          const itemPrice = parseFloat(card.dataset.itemPrice);
+          const itemDescription = card.dataset.itemDescription;
+          const itemImage = card.dataset.itemImage;
+          const isAvailable = card.dataset.itemAvailable === "true";
+          const scheduleStatus = card.dataset.scheduleStatus || "available";
+          const scheduleInfo = card.dataset.scheduleInfo || "";
+          const isUsable = isAvailable && scheduleStatus === "available";
+          const isCombo = card.dataset.isCombo === "true";
+
+          currentItem = {
+            id: itemId,
+            name: itemName,
+            price: itemPrice,
+            description: itemDescription,
+            image: itemImage,
+            isCombo: isCombo,
+          };
+
+          // If combo, open combo-specific modal
+          if (isCombo) {
+            openComboItemModal(card);
+            return; // combo function manages its own isModalOpening
+          }
+
+          // Get promotions for this item
+          const itemPromotions = itemPromotionsMap.get(parseInt(itemId)) || [];
+
+          // Default image if not provided
+          const imageUrl =
+            itemImage && itemImage !== "null" && itemImage !== ""
+              ? itemImage
+              : "https://via.placeholder.com/400x300/f3f4f6/9ca3af?text=Sin+Imagen";
+
+          // Detect dark mode
+          const isDarkMode =
+            document.documentElement.classList.contains("dark");
+
+          Swal.fire({
+            html: `
+            <div class="flex flex-col md:flex-row gap-6 text-left">
+                <!-- Imagen del producto - Izquierda -->
+                <div class="md:w-1/2 img-skeleton rounded-xl">
+                    <img src="${imageUrl}" alt="${itemName}" class="w-full h-64 md:h-80 object-cover rounded-xl img-fade ${
+                      !isUsable ? "grayscale" : ""
+                    }" onload="this.classList.add('loaded');this.parentElement.classList.remove('img-skeleton')" />
+                </div>
+                
+                <!-- Detalles del producto - Derecha -->
+                <div class="md:w-1/2 flex flex-col px-4 md:px-0">
+                    <h2 class="text-3xl font-black ${
+                      !isUsable
+                        ? !isAvailable
+                          ? "text-red-600"
+                          : scheduleStatus === "day_unavailable"
+                            ? "text-orange-600"
+                            : "text-amber-600"
+                        : isDarkMode
+                          ? "text-white"
+                          : "text-gray-900"
+                    } mb-2">${itemName}</h2>
+                    <p class="text-5xl font-black text-primary mb-4">$${itemPrice.toFixed(
+                      2,
+                    )}</p>
+                    <p class="${isDarkMode ? "text-gray-300" : "text-gray-600"} mb-6 flex-grow">${
+                      itemDescription || "Sin descripción disponible"
+                    }</p>
+                    
+                    ${
+                      isUsable
+                        ? `
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-bold ${isDarkMode ? "text-gray-200" : "text-gray-700"} mb-2">Cantidad <span id="stock-indicator" class="text-xs font-normal ${isDarkMode ? "text-gray-400" : "text-gray-500"}"></span></label>
+                            <div class="flex items-center gap-3">
+                                <button id="modal-minus-btn" onclick="updateQuantity(-1)" class="flex h-11 w-11 items-center justify-center rounded-lg ${isDarkMode ? "bg-gray-700" : "bg-gray-200"} hover:bg-primary hover:text-white font-bold transition-all text-xl">
+                                    −
+                                </button>
+                                <span id="modal-quantity" class="text-3xl font-black w-16 text-center ${isDarkMode ? "text-white" : "text-gray-900"}">1</span>
+                                <button id="modal-plus-btn" onclick="updateQuantity(1)" class="flex h-11 w-11 items-center justify-center rounded-lg ${isDarkMode ? "bg-gray-700" : "bg-gray-200"} hover:bg-primary hover:text-white font-bold transition-all text-xl">
+                                    +
+                                </button>
+                            </div>
+                        </div>
+                        
+                        ${
+                          itemPromotions.length > 0
+                            ? `
+                        <div>
+                            <label class="block text-xs font-bold ${isDarkMode ? "text-gray-200" : "text-gray-700"} mb-2">
+                                <span class="material-symbols-outlined text-green-600 align-middle text-sm mr-1">local_offer</span>
+                                Promociones disponibles (${
+                                  itemPromotions.length
+                                })
+                            </label>
+                            <div class="flex gap-1.5 flex-wrap">
+                                <!-- Botones de promociones -->
+                                ${itemPromotions
+                                  .map(
+                                    (promo) =>
+                                      `<button 
+                                    type="button"
+                                    class="promotion-btn flex-1 min-w-fit px-2 py-1.5 rounded-lg border ${isDarkMode ? "border-amber-700 bg-gradient-to-br from-amber-900/50 to-orange-900/50 hover:from-amber-900/70 hover:to-orange-900/70" : "border-amber-400 bg-gradient-to-br from-amber-50 to-orange-50 hover:from-amber-100 hover:to-orange-100"} transition-all flex flex-col items-center justify-center gap-0.5 relative text-xs"
+                                    data-promo-id="${promo.id}"
+                                    data-promo-type="${promo.promotionType}"
+                                    onclick="selectPromotion(this, '${promo.id}')"
+                                >
+                                    <span class="material-symbols-outlined ${isDarkMode ? "text-amber-400" : "text-amber-600"} text-base">local_offer</span>
+                                    <div class="text-center leading-tight">
+                                        <div class="font-bold text-xs ${isDarkMode ? "text-amber-300" : "text-amber-700"}">${promo.displayLabel}</div>
+                                    </div>
+                                    <span class="material-symbols-outlined text-primary hidden check-icon absolute top-0.5 right-0.5 text-sm">check_circle</span>
+                                </button>`,
+                                  )
+                                  .join("")}
+                            </div>
+                            <input type="hidden" id="promotion-selector" value="" />
+                            <p class="text-xs ${isDarkMode ? "text-gray-400" : "text-gray-500"} mt-2">
+                                <span class="material-symbols-outlined text-xs align-middle">info</span>
+                                Se aplicará automáticamente la mejor promoción disponible
+                            </p>
+                        </div>
+                        `
+                            : ""
+                        }
+                        
+                        <div id="complements-buttons-container"></div>
+                        
+                        <div>
+                            <label class="block text-sm font-bold ${isDarkMode ? "text-gray-200" : "text-gray-700"} mb-2">Comentarios especiales (opcional)</label>
+                            <textarea id="item-comments" class="w-full rounded-lg border-2 ${isDarkMode ? "border-gray-600 bg-gray-800 text-white" : "border-gray-300 bg-white text-gray-900"} p-3 focus:border-primary focus:outline-none text-sm" rows="3" placeholder="Ej: Sin cebolla, extra queso, término medio..."></textarea>
+                        </div>
+                    </div>
+                    `
+                        : !isAvailable
+                          ? `
+                    <div class="bg-red-50 border-2 border-red-200 rounded-xl p-6 mt-4">
+                        <div class="flex items-center gap-3 mb-2">
+                            <span class="material-symbols-outlined text-red-600 text-3xl">error</span>
+                            <h3 class="text-xl font-black text-red-600">Producto Agotado</h3>
+                        </div>
+                        <p class="text-red-700 font-semibold">Este producto no está disponible por el momento debido a falta de stock.</p>
+                    </div>
+                    `
+                          : scheduleStatus === "day_unavailable"
+                            ? `
+                    <div class="bg-orange-50 border-2 border-orange-200 rounded-xl p-6 mt-4">
+                        <div class="flex items-center gap-3 mb-2">
+                            <span class="material-symbols-outlined text-orange-600 text-3xl">event_busy</span>
+                            <h3 class="text-xl font-black text-orange-600">No Disponible Hoy</h3>
+                        </div>
+                        <p class="text-orange-700 font-semibold">Este producto no se ofrece el día de hoy.</p>
+                        <p class="text-orange-600 text-sm mt-2">${scheduleInfo}</p>
+                    </div>
+                    `
+                            : `
+                    <div class="bg-amber-50 border-2 border-amber-200 rounded-xl p-6 mt-4">
+                        <div class="flex items-center gap-3 mb-2">
+                            <span class="material-symbols-outlined text-amber-600 text-3xl">schedule</span>
+                            <h3 class="text-xl font-black text-amber-600">Fuera de Horario</h3>
+                        </div>
+                        <p class="text-amber-700 font-semibold">Este producto no está disponible en este horario.</p>
+                        <p class="text-amber-600 text-sm mt-2">${scheduleInfo}</p>
+                    </div>
+                    `
+                    }
+                </div>
+            </div>
+        `,
+            showCancelButton: !isUsable,
+            showConfirmButton: isUsable,
+            confirmButtonColor: "#38e07b",
+            cancelButtonColor: "#6b7280",
+            confirmButtonText: isUsable
+              ? '<span style="display: flex; align-items: center; gap: 8px;"><span class="material-symbols-outlined" style="font-size: 20px;">add_shopping_cart</span> Agregar al Carrito</span>'
+              : null,
+            cancelButtonText: isUsable ? "Cancelar" : "Cerrar",
+            width: "900px",
+            showCloseButton: true,
+            background: isDarkMode ? "#1e293b" : "#ffffff",
+            color: isDarkMode ? "#F3F4F6" : "#1F2937",
+            customClass: {
+              popup: "rounded-2xl",
+              htmlContainer: "p-0",
+              closeButton: "swal-close-green",
+              confirmButton: "rounded-xl px-6 py-3 font-bold",
+              cancelButton: "rounded-xl px-6 py-3 font-bold",
+              actions: "mt-6",
+            },
+            backdrop: "rgba(0,0,0,0.6)",
+            didOpen: async () => {
+              // Variable global para la cantidad
+              window.modalQuantity = 1;
+
+              // Load complements and stock in parallel (modal already visible = instant open)
+              const [itemComplements, maxFromStock] = await Promise.all([
+                fetchItemComplements(itemId),
+                fetchMaxQuantity(itemId),
+              ]);
+
+              // Initialize and render complements
+              initializeDefaultComplements(itemComplements);
+              const compContainer = document.getElementById(
+                "complements-buttons-container",
+              );
+              if (compContainer) {
+                compContainer.innerHTML =
+                  generateComplementsButtons(itemComplements);
+              }
+              updateModalComplementsTotal();
+
+              // Stock handling
+              const availableQty = getAvailableQuantityForItem(
+                itemId,
+                maxFromStock,
+              );
+              window.modalMaxQuantity = availableQty;
+
+              // Show stock indicator
+              const stockIndicator = document.getElementById("stock-indicator");
+              if (stockIndicator) {
+                if (maxFromStock >= 9999) {
+                  stockIndicator.textContent = "";
+                } else {
+                  stockIndicator.textContent = `(Disponible: ${availableQty})`;
+                  if (availableQty <= 3) {
+                    stockIndicator.classList.add(
+                      "text-orange-600",
+                      "font-semibold",
+                    );
+                    stockIndicator.classList.remove("text-gray-500");
+                  }
+                }
+              }
+
+              // Update plus button state
+              updateModalPlusButtonState(availableQty);
+
+              // Pre-seleccionar automáticamente la mejor promoción
+              const bestPromo = getAutoBestPromotion(itemId, itemPrice, 1);
+              if (bestPromo) {
+                const promoBtn = document.querySelector(
+                  `.promotion-btn[data-promo-id="${bestPromo.id}"]`,
+                );
+                if (promoBtn) {
+                  selectPromotion(promoBtn, bestPromo.id);
+                }
+              }
+            },
+          }).then((result) => {
+            if (result.isConfirmed) {
+              const quantity = window.modalQuantity;
+              const comments = document
+                .getElementById("item-comments")
+                .value.trim();
+
+              // Get selected promotion if any
+              const promotionSelector =
+                document.getElementById("promotion-selector");
+              const selectedPromotionId = promotionSelector
+                ? promotionSelector.value
+                  ? parseInt(promotionSelector.value)
+                  : null
+                : null;
+
+              addToCart(quantity, comments, selectedPromotionId);
+            }
+          });
+        } finally {
+          isModalOpening = false;
+        }
+      }
+
+      /**
+       * Reopen item modal with saved state (used when user cancels sauce confirmation)
+       */
+      async function reopenItemModal(
+        savedQuantity,
+        savedComments,
+        savedPromotionId,
+        savedComplements = [],
+      ) {
+        if (!currentItem) return;
+
+        // Create a temporary card-like object with the current item data
+        const tempCard = {
+          dataset: {
+            itemId: currentItem.id,
+            itemName: currentItem.name,
+            itemPrice: currentItem.price,
+            itemDescription: currentItem.description,
+            itemImage: currentItem.image,
+            itemAvailable: "true",
+            scheduleStatus: "available",
+            scheduleInfo: "",
+          },
+        };
+
+        // Reopen the modal
+        await openItemModal(tempCard);
+
+        // Restore the saved state after the modal opens
+        setTimeout(() => {
+          // Restore quantity
+          if (savedQuantity && savedQuantity !== 1) {
+            window.modalQuantity = savedQuantity;
+            const qtyElement = document.getElementById("modal-quantity");
+            if (qtyElement) {
+              qtyElement.textContent = savedQuantity;
+            }
+          }
+
+          // Restore comments
+          if (savedComments) {
+            const commentsElement = document.getElementById("item-comments");
+            if (commentsElement) {
+              commentsElement.value = savedComments;
+            }
+          }
+
+          // Restore selected promotion
+          if (savedPromotionId) {
+            const promoButton = document.querySelector(
+              `.promotion-btn[data-promo-id="${savedPromotionId}"]`,
+            );
+            if (promoButton) {
+              selectPromotion(promoButton, savedPromotionId);
+            }
+          }
+
+          // Restore selected complements
+          if (savedComplements && savedComplements.length > 0) {
+            // Restore internal state
+            selectedComplements = savedComplements.map((comp) => ({ ...comp }));
+            selectedSaucesCount = savedComplements.filter(
+              (c) => c.isSauce,
+            ).length;
+
+            // Update visual badges and totals
+            updateComplementsBadges();
+            updateModalComplementsTotal();
+          }
+        }, 300); // Increased timeout to ensure DOM is fully rendered
+      }
+
+      // Select promotion button (for new button-based promotion selector)
+      function selectPromotion(button, promoId) {
+        // Remover selección de todos los botones
+        document.querySelectorAll(".promotion-btn").forEach((btn) => {
+          btn.classList.remove(
+            "border-primary",
+            "bg-primary/10",
+            "ring-2",
+            "ring-primary",
+          );
+          btn.querySelector(".check-icon")?.classList.add("hidden");
+        });
+
+        // Marcar el botón seleccionado
+        button.classList.add(
+          "border-primary",
+          "bg-primary/10",
+          "ring-2",
+          "ring-primary",
+        );
+        const checkIcon = button.querySelector(".check-icon");
+        if (checkIcon) {
+          checkIcon.classList.remove("hidden");
+        }
+
+        // Actualizar el valor del input hidden
+        const hiddenInput = document.getElementById("promotion-selector");
+        if (hiddenInput) {
+          hiddenInput.value = promoId;
+        }
+      }
+
+      // Close item modal (not needed with SweetAlert, but keep for compatibility)
+      function closeItemModal() {
+        Swal.close();
+      }
+
+      // Update quantity in modal
+      function updateQuantity(delta) {
+        // Use modal max quantity if set, otherwise default to 99
+        const maxQty = window.modalMaxQuantity || 99;
+
+        window.modalQuantity = Math.max(
+          1,
+          Math.min(maxQty, window.modalQuantity + delta),
+        );
+        document.getElementById("modal-quantity").textContent =
+          window.modalQuantity;
+
+        // Update plus button state based on stock limit
+        updateModalPlusButtonState(maxQty);
+
+        // Actualizar total de complementos (salsas se multiplican por cantidad)
+        updateModalComplementsTotal();
+
+        // Reevaluar y actualizar la mejor promoción cuando cambia la cantidad
+        if (currentItem) {
+          const bestPromo = getAutoBestPromotion(
+            currentItem.id,
+            currentItem.price,
+            window.modalQuantity,
+          );
+
+          // Deseleccionar todas las promociones primero
+          document.querySelectorAll(".promotion-btn").forEach((btn) => {
+            btn.classList.remove(
+              "border-primary",
+              "bg-primary/10",
+              "ring-2",
+              "ring-primary",
+            );
+            const checkIcon = btn.querySelector(".check-icon");
+            if (checkIcon) {
+              checkIcon.classList.add("hidden");
+            }
+          });
+
+          // Actualizar el input hidden
+          const hiddenInput = document.getElementById("promotion-selector");
+
+          // Seleccionar la mejor promoción si existe
+          if (bestPromo) {
+            const promoBtn = document.querySelector(
+              `.promotion-btn[data-promo-id="${bestPromo.id}"]`,
+            );
+            if (promoBtn) {
+              // Marcar visualmente el botón
+              promoBtn.classList.add(
+                "border-primary",
+                "bg-primary/10",
+                "ring-2",
+                "ring-primary",
+              );
+              const checkIcon = promoBtn.querySelector(".check-icon");
+              if (checkIcon) {
+                checkIcon.classList.remove("hidden");
+              }
+              // Actualizar el valor del input hidden
+              if (hiddenInput) {
+                hiddenInput.value = bestPromo.id;
+              }
+            }
+          } else {
+            // No hay promoción aplicable, limpiar el input hidden
+            if (hiddenInput) {
+              hiddenInput.value = "";
+            }
+          }
+        }
+      }
+
+      // Increment quantity (kept for compatibility)
+      function incrementQuantity() {
+        updateQuantity(1);
+      }
+
+      // Decrement quantity (kept for compatibility)
+      function decrementQuantity() {
+        updateQuantity(-1);
+      }
+
+      // Update modal subtotal (not used in SweetAlert version but kept for compatibility)
+      function updateModalSubtotal() {
+        // Not needed in SweetAlert version
+      }
+
+      // Add to cart
+      async function addToCart(quantity, comments, selectedPromotionId = null) {
+        if (!currentItem) return;
+
+        const qty = quantity || 1;
+
+        // Check if item has sauces available and none selected
+        const itemComplements = await fetchItemComplements(currentItem.id);
+        const hasSaucesAvailable =
+          itemComplements.sauces && itemComplements.sauces.length > 0;
+        const selectedSauces = selectedComplements.filter((c) => c.isSauce);
+        const hasSelectedSauces = selectedSauces.length > 0;
+
+        // If item has sauces but none selected, ask for confirmation
+        if (hasSaucesAvailable && !hasSelectedSauces) {
+          const isDarkMode =
+            document.documentElement.classList.contains("dark");
+
+          const result = await Swal.fire({
+            title: "¿Sin salsa?",
+            html: `Para el item <b>${currentItem.name}</b> no seleccionaste ninguna salsa, se irá en natural por defecto.<br><br>¿Deseas continuar sin salsa?`,
+            icon: "question",
+            showCancelButton: true,
+            confirmButtonColor: "#38e07b",
+            cancelButtonColor: "#f59e0b",
+            confirmButtonText: "Sí, continuar",
+            cancelButtonText: "No, elegir salsa",
+            customClass: {
+              popup: isDarkMode ? "swal2-dark" : "",
+              title: isDarkMode ? "text-white" : "",
+              htmlContainer: isDarkMode ? "text-gray-300" : "",
+            },
+            background: isDarkMode ? "#1F2937" : "#FFFFFF",
+            color: isDarkMode ? "#F3F4F6" : "#1F2937",
+          });
+
+          // If user cancels, reopen the item modal so they can select sauces
+          if (!result.isConfirmed) {
+            const savedQuantity = window.modalQuantity || qty;
+            const savedComments = comments || "";
+            const savedComplements = [...selectedComplements];
+            reopenItemModal(
+              savedQuantity,
+              savedComments,
+              selectedPromotionId,
+              savedComplements,
+            );
+            return;
+          }
+          // If confirmed, continue with adding to cart without sauces
+        }
+
+        let promotionAppliedPrice = null;
+        let appliedPromotion = null;
+
+        // Si no se seleccionó promoción manualmente, aplicar automáticamente la mejor
+        if (!selectedPromotionId) {
+          appliedPromotion = getAutoBestPromotion(
+            currentItem.id,
+            currentItem.price,
+            qty,
+          );
+          if (appliedPromotion) {
+            selectedPromotionId = appliedPromotion.id;
+          }
+        } else {
+          // Buscar la promoción seleccionada manualmente
+          const promotions =
+            itemPromotionsMap.get(parseInt(currentItem.id)) || [];
+          appliedPromotion = promotions.find(
+            (p) => p.id == selectedPromotionId,
+          );
+        }
+
+        // Si hay promoción aplicable, calcular el precio con descuento
+        if (appliedPromotion) {
+
+          // Validar cantidad mínima para BUY_X_PAY_Y
+          if (appliedPromotion.promotionType === "BUY_X_PAY_Y") {
+            if (qty < appliedPromotion.buyQuantity) {
+              // Mostrar alerta y no agregar al carrito
+              Swal.fire({
+                icon: "warning",
+                title: "Cantidad insuficiente",
+                html: `Para aplicar la promoción <strong>${appliedPromotion.displayLabel}</strong> necesitas agregar al menos <strong>${appliedPromotion.buyQuantity}</strong> unidades.<br><br>Cantidad actual: <strong>${qty}</strong><br><br>Por favor, aumenta la cantidad o selecciona otra promoción.`,
+                background: document.documentElement.classList.contains("dark")
+                  ? "#1f2937"
+                  : "#ffffff",
+                color: document.documentElement.classList.contains("dark")
+                  ? "#f3f4f6"
+                  : "#1f2937",
+                confirmButtonText: "Entendido",
+                confirmButtonColor: "#38e07b",
+              });
+              return; // No agregar al carrito
+            }
+          }
+
+          if (appliedPromotion) {
+            // Validate minimum quantity for BUY_X_PAY_Y promotions
+            if (appliedPromotion.promotionType === "BUY_X_PAY_Y") {
+              if (qty < appliedPromotion.buyQuantity) {
+                Swal.fire({
+                  icon: "warning",
+                  title: "Cantidad insuficiente",
+                  html: `Para aplicar la promoción <strong>${appliedPromotion.displayLabel}</strong> necesitas agregar al menos <strong>${appliedPromotion.buyQuantity}</strong> unidades.<br><br>Cantidad actual: <strong>${qty}</strong>`,
+                  background: document.documentElement.classList.contains(
+                    "dark",
+                  )
+                    ? "#1f2937"
+                    : "#ffffff",
+                  color: document.documentElement.classList.contains("dark")
+                    ? "#f3f4f6"
+                    : "#1f2937",
+                  confirmButtonText: "Entendido",
+                  confirmButtonColor: "#38e07b",
+                });
+                return; // No agregar al carrito
+              }
+            }
+
+            // Calculate discounted price based on promotion type
+            const originalTotal = currentItem.price * qty;
+            let discountedTotal = originalTotal;
+
+
+            if (appliedPromotion.promotionType === "BUY_X_PAY_Y") {
+              const sets = Math.floor(qty / appliedPromotion.buyQuantity);
+              const remaining = qty % appliedPromotion.buyQuantity;
+              discountedTotal =
+                sets * appliedPromotion.payQuantity * currentItem.price +
+                remaining * currentItem.price;
+            } else if (
+              appliedPromotion.promotionType === "PERCENTAGE_DISCOUNT"
+            ) {
+              const discount = appliedPromotion.discountPercentage / 100;
+              discountedTotal = originalTotal * (1 - discount);
+            } else if (
+              appliedPromotion.promotionType === "FIXED_AMOUNT_DISCOUNT"
+            ) {
+              // Consider minQuantityForFixedDiscount - discount only applies to multiples
+              const minQty = appliedPromotion.minQuantityForFixedDiscount || 1;
+              const discountedSets = Math.floor(qty / minQty);
+              const remainingItems = qty % minQty;
+              const itemsWithDiscount = discountedSets * minQty;
+
+              const pricePerUnit = Math.max(
+                0,
+                currentItem.price - appliedPromotion.discountAmount,
+              );
+              // Discounted items + full price items
+              discountedTotal =
+                pricePerUnit * itemsWithDiscount +
+                currentItem.price * remainingItems;
+            }
+
+            // IMPORTANTE: NO redondear - mantener precisión completa
+            // Precio por unidad con precisión completa (sin redondear)
+            promotionAppliedPrice = discountedTotal / qty;
+          }
+        }
+
+        // Calculate final subtotal - mantener precisión completa (sin redondear)
+        let finalSubtotal;
+        if (promotionAppliedPrice && appliedPromotion) {
+          // For promotions: usar el total con descuento calculado sin redondear
+          const originalTotal = currentItem.price * qty;
+          let discountedTotal = originalTotal;
+
+          if (appliedPromotion.promotionType === "BUY_X_PAY_Y") {
+            const sets = Math.floor(qty / appliedPromotion.buyQuantity);
+            const remaining = qty % appliedPromotion.buyQuantity;
+            discountedTotal =
+              sets * appliedPromotion.payQuantity * currentItem.price +
+              remaining * currentItem.price;
+          } else if (appliedPromotion.promotionType === "PERCENTAGE_DISCOUNT") {
+            const discount = appliedPromotion.discountPercentage / 100;
+            discountedTotal = originalTotal * (1 - discount);
+          } else if (
+            appliedPromotion.promotionType === "FIXED_AMOUNT_DISCOUNT"
+          ) {
+            // Consider minQuantityForFixedDiscount - discount only applies to multiples
+            const minQty = appliedPromotion.minQuantityForFixedDiscount || 1;
+            const discountedSets = Math.floor(qty / minQty);
+            const remainingItems = qty % minQty;
+            const itemsWithDiscount = discountedSets * minQty;
+
+            const pricePerUnit = Math.max(
+              0,
+              currentItem.price - appliedPromotion.discountAmount,
+            );
+            // Discounted items + full price items
+            discountedTotal =
+              pricePerUnit * itemsWithDiscount +
+              currentItem.price * remainingItems;
+          }
+          finalSubtotal = discountedTotal; // Sin redondear
+        } else {
+          finalSubtotal = currentItem.price * qty; // Sin redondear
+        }
+
+        // Calculate complements total and clone selected complements
+        const complementsTotal = calculateComplementsTotal();
+        const cartItemComplements = selectedComplements.map((comp) => ({
+          ...comp,
+        }));
+
+        const cartItem = {
+          id: currentItem.id,
+          name: currentItem.name,
+          price: currentItem.price,
+          quantity: qty,
+          comments: comments || "",
+          subtotal: finalSubtotal,
+          image: currentItem.image,
+          promotionAppliedPrice: promotionAppliedPrice,
+          appliedPromotionId: selectedPromotionId,
+          promotionLabel: appliedPromotion
+            ? appliedPromotion.displayLabel
+            : null,
+          complements: cartItemComplements,
+          complementsTotal: complementsTotal,
+        };
+
+
+        cart.push(cartItem);
+
+        // Clear selected complements for next item
+        selectedComplements = [];
+
+        updateCartUI();
+        saveCartToStorage(); // Persist cart to localStorage
+
+        // Show success message
+        const complementsText =
+          cartItemComplements.length > 0
+            ? ` con ${cartItemComplements.length} complemento(s)`
+            : "";
+        Swal.fire({
+          icon: "success",
+          title: "Agregado al carrito",
+          text: `${cartItem.name} x${qty}${complementsText}`,
+          background: document.documentElement.classList.contains("dark")
+            ? "#1f2937"
+            : "#ffffff",
+          color: document.documentElement.classList.contains("dark")
+            ? "#f3f4f6"
+            : "#1f2937",
+          timer: 1500,
+          showConfirmButton: false,
+          toast: true,
+          position: "top-end",
+        });
+      }
+
+      // Update cart UI
+      function updateCartUI() {
+        const cartItemsContainer = document.getElementById("cartItems");
+        const itemCount = document.getElementById("cartItemCount");
+        const floatingCartCount = document.getElementById("floatingCartCount");
+        const cartSubtotalEl = document.getElementById("cartSubtotal");
+        const cartIVAEl = document.getElementById("cartIVA");
+        const cartTotalEl = document.getElementById("cartTotal");
+        const submitBtn = document.getElementById("submitOrderBtn");
+
+
+        // Update item count (both counters)
+        itemCount.textContent = cart.length;
+        if (floatingCartCount) {
+          floatingCartCount.textContent = cart.length;
+        }
+
+        // ============================================================
+        // LÓGICA DE CÁLCULO CORRECTA:
+        // El precio almacenado (item.price) ya incluye IVA
+        //
+        // IMPORTANTE: El TOTAL se calcula directamente desde item.subtotal
+        // que ya tiene el valor exacto calculado con la promoción.
+        // Los demás valores (subtotal sin IVA, descuento, IVA) se derivan
+        // del total para evitar errores de precisión de punto flotante.
+        // ============================================================
+
+        // Función para redondear a 2 decimales (consistente con view.html)
+        const round2 = (value) => Math.round(value * 100) / 100;
+
+        let subtotalSinIVA = 0;
+        let totalConPromocion = 0;
+        let hayPromocion = false;
+        let totalComplementos = 0;
+
+        cart.forEach((item) => {
+          const precioOriginalSinIVA = item.price / (1 + taxMultiplier);
+          subtotalSinIVA += precioOriginalSinIVA * item.quantity;
+
+          // Sumar el subtotal del item (valor exacto con promoción aplicada)
+          totalConPromocion += item.subtotal;
+
+          if (
+            item.promotionAppliedPrice !== null &&
+            item.promotionAppliedPrice !== undefined
+          ) {
+            hayPromocion = true;
+          }
+
+          // Incluir complementos en el total
+          if (item.complementsTotal && item.complementsTotal > 0) {
+            totalComplementos += item.complementsTotal;
+            // Complementos también incluyen IVA, así que los agregamos a la base imponible
+            const complementosSinIVA =
+              item.complementsTotal / (1 + taxMultiplier);
+            subtotalSinIVA += complementosSinIVA;
+            totalConPromocion += item.complementsTotal;
+          }
+        });
+
+        // Redondear el total a 2 decimales (este es el valor exacto)
+        totalConPromocion = round2(totalConPromocion);
+
+        // Base imponible = Total / (1 + taxRate) - derivado del total exacto
+        const baseImponible = totalConPromocion / (1 + taxMultiplier);
+
+        // IVA = Total - Base imponible
+        const iva = totalConPromocion - baseImponible;
+
+        // Descuento (sin IVA) = Subtotal redondeado - Base imponible redondeada (consistente con view.html)
+        const descuentoTotalSinIVA =
+          round2(subtotalSinIVA) - round2(baseImponible);
+
+        // Redondear a 2 decimales (consistente con view.html)
+        cartSubtotalEl.textContent = `$${round2(subtotalSinIVA).toFixed(2)}`;
+        cartIVAEl.textContent = `$${round2(iva).toFixed(2)}`;
+        cartTotalEl.textContent =
+          totalConPromocion === 0
+            ? "GRATIS"
+            : `$${totalConPromocion.toFixed(2)}`;
+
+        const discountContainer = document.getElementById(
+          "cartDiscountContainer",
+        );
+        const discountElement = document.getElementById("cartDiscount");
+        if (discountContainer && discountElement) {
+          if (hayPromocion && descuentoTotalSinIVA > 0.001) {
+            discountElement.textContent = `-$${descuentoTotalSinIVA.toFixed(2)}`;
+            discountContainer.classList.remove("hidden");
+          } else {
+            discountContainer.classList.add("hidden");
+          }
+        }
+
+        if (cart.length === 0) {
+          submitBtn.disabled = true;
+          cartItemsContainer.innerHTML = `
+            <div class="text-center py-12">
+              <span class="material-symbols-outlined text-7xl text-slate-300 dark:text-slate-700 mb-3 block">
+                shopping_cart
+              </span>
+              <p class="text-sm font-semibold text-slate-500 dark:text-slate-400">
+                El carrito está vacío
+              </p>
+              <p class="text-xs text-slate-400 dark:text-slate-500 mt-1">
+                Selecciona items del menú
+              </p>
+            </div>
+          `;
+          return;
+        }
+
+        submitBtn.disabled = false;
+
+        // Render cart items (estilo de menu.html con imagen y botones de cantidad)
+        const cartHTML = cart
+          .map((item, index) => {
+
+            return `
+          <div class="order-item rounded-lg p-3 border border-slate-100 dark:border-slate-800">
+            <div class="flex items-center gap-3">
+              ${
+                item.image && item.image !== "null" && item.image !== ""
+                  ? `<img
+                      alt="${item.name}"
+                      class="h-14 w-14 shrink-0 rounded-lg object-cover ring-2 ring-primary/20"
+                      src="${item.image}"
+                    />`
+                  : `<div class="h-14 w-14 shrink-0 rounded-lg bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 flex items-center justify-center ring-2 ring-primary/20">
+                      <span class="material-symbols-outlined text-2xl text-gray-400 dark:text-gray-600">restaurant</span>
+                    </div>`
+              }
+              <div class="flex-1 min-w-0">
+                <p class="font-bold text-sm text-gray-900 dark:text-white truncate">
+                  ${item.isCombo ? '<span class="inline-flex items-center px-1.5 py-0.5 text-[10px] font-bold bg-teal-100 dark:bg-teal-900/40 text-teal-700 dark:text-teal-300 rounded mr-1">COMBO</span>' : ""}${item.name}
+                </p>
+                ${
+                  item.promotionLabel
+                    ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 mt-1 text-xs font-semibold text-green-700 dark:text-green-300 bg-green-100 dark:bg-green-900/30 rounded-full border border-green-200 dark:border-green-800">
+                        <span class="material-symbols-outlined text-xs">local_offer</span>
+                        ${item.promotionLabel}
+                      </span>`
+                    : ""
+                }
+                <p class="text-sm font-black text-primary ${
+                  item.promotionAppliedPrice ? "mt-1" : ""
+                }">
+                  ${
+                    item.promotionAppliedPrice !== null &&
+                    item.promotionAppliedPrice !== undefined
+                      ? item.promotionAppliedPrice === 0
+                        ? `<span class="line-through text-gray-400 dark:text-gray-600 font-normal mr-1">$${item.price.toFixed(2)}</span>
+                           <span class="text-green-600 dark:text-green-400 font-bold">GRATIS</span>`
+                        : `<span class="line-through text-gray-400 dark:text-gray-600 font-normal mr-1">$${item.price.toFixed(2)}</span>
+                           <span class="text-green-600 dark:text-green-400">$${item.promotionAppliedPrice.toFixed(2)}</span>`
+                      : `$${item.price.toFixed(2)}`
+                  }
+                </p>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <button
+                  onclick="updateCartItemQuantity(${index}, -1)"
+                  class="quantity-btn flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                >
+                  <span class="material-symbols-outlined text-base">remove</span>
+                </button>
+                <span class="w-6 text-center text-base font-black text-gray-900 dark:text-white">
+                  ${item.quantity}
+                </span>
+                <button
+                  id="cart-plus-btn-${index}"
+                  data-item-id="${item.id}"
+                  onclick="updateCartItemQuantity(${index}, 1)"
+                  class="quantity-btn cart-plus-btn flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                >
+                  <span class="material-symbols-outlined text-base">add</span>
+                </button>
+              </div>
+              <button
+                onclick="removeFromCart(${index})"
+                class="h-8 w-8 shrink-0 rounded-lg flex items-center justify-center text-slate-500 transition-all hover:bg-red-100 hover:text-red-600 dark:text-slate-400 dark:hover:bg-red-900/50 dark:hover:text-red-400"
+              >
+                <span class="material-symbols-outlined text-lg">delete</span>
+              </button>
+            </div>
+            ${
+              item.comments
+                ? `
+              <div class="mt-2 flex items-center gap-2 rounded-lg bg-amber-50 dark:bg-amber-900/20 p-2 border border-amber-200 dark:border-amber-800">
+                <span class="material-symbols-outlined text-sm text-amber-600 dark:text-amber-400">
+                  edit_note
+                </span>
+                <p class="text-xs font-medium text-amber-900 dark:text-amber-200 flex-1">
+                  ${item.comments}
+                </p>
+              </div>
+            `
+                : ""
+            }
+            ${
+              item.isCombo &&
+              item.comboChildren &&
+              item.comboChildren.length > 0
+                ? `
+              <div class="mt-2 pt-2 border-t border-teal-200 dark:border-teal-800">
+                <p class="text-xs font-semibold text-teal-600 dark:text-teal-400 mb-2 flex items-center gap-1">
+                  <span class="material-symbols-outlined text-sm">inventory_2</span>
+                  Combo (${item.comboChildren.length} items)
+                </p>
+                ${item.comboChildren
+                  .map(
+                    (child) => `
+                  <div class="py-1 pl-3 border-l-2 border-teal-300 dark:border-teal-700">
+                    <p class="text-xs font-medium text-gray-700 dark:text-gray-300">
+                      ${child.quantity > 1 ? child.quantity + "x " : ""}${child.name}
+                    </p>
+                    ${
+                      child.selectedComplements &&
+                      child.selectedComplements.length > 0
+                        ? `
+                      <div class="ml-2 mt-0.5">
+                        ${child.selectedComplements
+                          .map(
+                            (sc) => `
+                          <span class="inline-flex items-center text-[10px] text-purple-600 dark:text-purple-400 mr-1">
+                            ${sc.isSauce ? "🫙" : "➕"} ${sc.name}${sc.quantity > 1 ? " x" + sc.quantity : ""}${sc.extraPrice > 0 ? " (+$" + (sc.extraPrice * sc.quantity).toFixed(2) + ")" : ""}
+                          </span>
+                        `,
+                          )
+                          .join("")}
+                      </div>
+                    `
+                        : ""
+                    }
+                  </div>
+                `,
+                  )
+                  .join("")}
+              </div>
+            `
+                : item.complements && item.complements.length > 0
+                  ? `
+              <div class="mt-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                <p class="text-xs font-semibold text-purple-600 dark:text-purple-400 mb-2 flex items-center gap-1">
+                  <span class="material-symbols-outlined text-sm">add_circle</span>
+                  Complementos
+                </p>
+                ${item.complements
+                  .map(
+                    (comp, compIndex) => `
+                  <div class="flex items-center justify-between py-1.5 pl-3 border-l-2 border-purple-300 dark:border-purple-700">
+                    <div class="flex-1 min-w-0">
+                      <p class="text-xs font-medium text-gray-700 dark:text-gray-300 truncate">
+                        ${comp.name}
+                      </p>
+                      ${
+                        comp.extraPrice > 0
+                          ? `
+                      <p class="text-xs text-purple-600 dark:text-purple-400 font-semibold">
+                        $${(comp.extraPrice * comp.quantity).toFixed(2)}
+                        ${comp.quantity > 1 ? `<span class="text-gray-400 font-normal">($${comp.extraPrice.toFixed(2)} c/u)</span>` : ""}
+                      </p>
+                      `
+                          : ""
+                      }
+                    </div>
+                    <div class="flex items-center gap-1">
+                      <button
+                        onclick="updateCartComplementQuantity(${index}, ${compIndex}, -1)"
+                        class="flex h-6 w-6 items-center justify-center rounded bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-800/50 transition-colors"
+                      >
+                        <span class="material-symbols-outlined text-sm">remove</span>
+                      </button>
+                      <span class="w-5 text-center text-xs font-bold text-gray-900 dark:text-white">
+                        ${comp.quantity}
+                      </span>
+                      <button
+                        onclick="updateCartComplementQuantity(${index}, ${compIndex}, 1)"
+                        class="flex h-6 w-6 items-center justify-center rounded bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-800/50 transition-colors"
+                      >
+                        <span class="material-symbols-outlined text-sm">add</span>
+                      </button>
+                    </div>
+                  </div>
+                `,
+                  )
+                  .join("")}
+              </div>
+            `
+                  : ""
+            }
+          </div>
+        `;
+          })
+          .join("");
+
+        cartItemsContainer.innerHTML = cartHTML;
+
+        // Update cart plus buttons state based on stock availability
+        updateCartPlusButtonsState();
+      }
+
+      // Update cart plus buttons based on stock availability
+      async function updateCartPlusButtonsState() {
+        const plusButtons = document.querySelectorAll(".cart-plus-btn");
+
+        for (const btn of plusButtons) {
+          const itemId = btn.dataset.itemId;
+          const index = parseInt(btn.id.replace("cart-plus-btn-", ""));
+
+          if (!itemId || isNaN(index)) continue;
+
+          // Get max from stock (use cache if available)
+          const maxFromStock =
+            stockCache[itemId] !== undefined
+              ? stockCache[itemId]
+              : await fetchMaxQuantity(itemId);
+
+          // Calculate total quantity of this item in cart
+          const totalQuantityInCart = cart
+            .filter((item) => item.id == itemId)
+            .reduce((sum, item) => sum + item.quantity, 0);
+
+          // Check if at max
+          if (totalQuantityInCart >= maxFromStock) {
+            btn.disabled = true;
+            btn.classList.add("opacity-50", "cursor-not-allowed");
+            btn.title = "Stock máximo alcanzado";
+          } else {
+            btn.disabled = false;
+            btn.classList.remove("opacity-50", "cursor-not-allowed");
+            btn.title = "";
+          }
+        }
+      }
+
+      // Remove from cart
+      function removeFromCart(index) {
+        Swal.fire({
+          title: "¿Eliminar del carrito?",
+          text: cart[index].name,
+          icon: "warning",
+          background: document.documentElement.classList.contains("dark")
+            ? "#1f2937"
+            : "#ffffff",
+          color: document.documentElement.classList.contains("dark")
+            ? "#f3f4f6"
+            : "#1f2937",
+          showCancelButton: true,
+          confirmButtonColor: "#ef4444",
+          cancelButtonColor: "#6b7280",
+          confirmButtonText: "Sí, eliminar",
+          cancelButtonText: "Cancelar",
+        }).then((result) => {
+          if (result.isConfirmed) {
+            cart.splice(index, 1);
+            updateCartUI();
+            saveCartToStorage(); // Persist after removing item
+          }
+        });
+      }
+
+      // Clear cart
+      function clearCart() {
+        if (cart.length === 0) return;
+
+        Swal.fire({
+          title: "¿Limpiar carrito?",
+          text: "Se eliminarán todos los items",
+          icon: "warning",
+          background: document.documentElement.classList.contains("dark")
+            ? "#1f2937"
+            : "#ffffff",
+          color: document.documentElement.classList.contains("dark")
+            ? "#f3f4f6"
+            : "#1f2937",
+          showCancelButton: true,
+          confirmButtonColor: "#ef4444",
+          cancelButtonColor: "#6b7280",
+          confirmButtonText: "Sí, limpiar",
+          cancelButtonText: "Cancelar",
+        }).then((result) => {
+          if (result.isConfirmed) {
+            cart = [];
+            updateCartUI();
+            clearCartFromStorage(); // Also clear from localStorage
+          }
+        });
+      }
+
+      // Guard flag to prevent duplicate order submissions
+      let isSubmitting = false;
+
+      // Submit order
+      function submitOrder() {
+        // Prevent duplicate submissions
+        if (isSubmitting) {
+          console.warn(
+            "Order submission already in progress, ignoring duplicate click",
+          );
+          return;
+        }
+
+        if (cart.length === 0) {
+          Swal.fire({
+            icon: "warning",
+            title: "Carrito vacío",
+            text: "Agrega items antes de crear el pedido",
+            background: document.documentElement.classList.contains("dark")
+              ? "#1f2937"
+              : "#ffffff",
+            color: document.documentElement.classList.contains("dark")
+              ? "#f3f4f6"
+              : "#1f2937",
+          });
+          return;
+        }
+
+        // Validate delivery address for DELIVERY orders
+        if (orderData.orderType === "DELIVERY") {
+          const hasAddresses = /*[[${hasAddresses}]]*/ false;
+          const addressSelector = document.getElementById(
+            "deliveryAddressSelector",
+          );
+
+          if (!hasAddresses || !addressSelector || !addressSelector.value) {
+            Swal.fire({
+              icon: "warning",
+              title: "Dirección requerida",
+              html: "Para pedidos a domicilio necesitas tener una dirección guardada.<br><br><span class='text-sm text-gray-500'>Tu carrito se guardará automáticamente.</span>",
+              background: document.documentElement.classList.contains("dark")
+                ? "#1f2937"
+                : "#ffffff",
+              color: document.documentElement.classList.contains("dark")
+                ? "#f3f4f6"
+                : "#1f2937",
+              showCancelButton: true,
+              confirmButtonText: "Agregar dirección",
+              cancelButtonText: "Cancelar",
+              confirmButtonColor: "#38e07b",
+            }).then((result) => {
+              if (result.isConfirmed) {
+                // Save cart before navigating
+                saveCartToStorage();
+                // Open profile in new tab so cart page stays open
+                window.open("/client/profile", "_blank");
+              }
+            });
+            return;
+          }
+        }
+
+        // Lock submission immediately
+        isSubmitting = true;
+        const submitBtn = document.getElementById("submitOrderBtn");
+        if (submitBtn) submitBtn.disabled = true;
+
+
+        // Prepare order data for AJAX
+        const paymentMethod =
+          document.getElementById("paymentMethod")?.value || "CASH";
+
+        // Prepare items array - include subtotal for precision with BUY_X_PAY_Y promotions
+        const items = cart.map((item) => {
+          let complements = [];
+          if (item.complements && item.complements.length > 0) {
+            if (item.isCombo) {
+              complements = item.complements.map((cc) => ({
+                childItemId: Number(cc.childItemId),
+                complements: cc.complements.map((c) => ({
+                  id: Number(c.id),
+                  quantity: Number(c.quantity),
+                })),
+              }));
+            } else {
+              complements = item.complements.map((c) => ({
+                id: Number(c.id),
+                quantity: Number(c.quantity),
+              }));
+            }
+          }
+          return {
+            itemId: item.id,
+            quantity: item.quantity,
+            comments: item.comments || "",
+            promotionPrice: item.promotionAppliedPrice || null,
+            promotionId: item.appliedPromotionId || null,
+            subtotal: item.subtotal || null,
+            complements: complements,
+          };
+        });
+
+        // Get delivery info if DELIVERY order type
+        let deliveryAddressId = null;
+        let deliveryAddress = null;
+        let deliveryReferences = null;
+
+        if (orderData.orderType === "DELIVERY") {
+          const addressSelector = document.getElementById(
+            "deliveryAddressSelector",
+          );
+          if (addressSelector) {
+            deliveryAddressId = addressSelector.value;
+            const selectedOption =
+              addressSelector.options[addressSelector.selectedIndex];
+            deliveryAddress = selectedOption.dataset.address;
+            const addrReference = selectedOption.dataset.reference;
+            const extraNotes =
+              document.getElementById("deliveryReferences")?.value || "";
+            deliveryReferences = addrReference
+              ? addrReference + (extraNotes ? " | " + extraNotes : "")
+              : extraNotes;
+          }
+        }
+
+        // Prepare request body
+        const requestData = {
+          ...orderData,
+          paymentMethod: paymentMethod,
+          items: items,
+          deliveryAddressId: deliveryAddressId,
+          deliveryAddress: deliveryAddress,
+          deliveryReferences: deliveryReferences,
+        };
+
+
+        // Send AJAX request
+        fetch("/client/orders/create", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(requestData),
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.success) {
+              // Clear cart and localStorage on success
+              cart = [];
+              clearCartFromStorage();
+              Swal.fire({
+                title: "¡Pedido creado!",
+                text: `Pedido #${data.orderNumber} creado exitosamente`,
+                icon: "success",
+                background: document.documentElement.classList.contains("dark")
+                  ? "#1f2937"
+                  : "#ffffff",
+                color: document.documentElement.classList.contains("dark")
+                  ? "#f3f4f6"
+                  : "#1f2937",
+              }).then(() => {
+                window.location.href = "/client/orders";
+              });
+            } else {
+              // Reset submission guard on error
+              isSubmitting = false;
+              if (submitBtn) submitBtn.disabled = false;
+              // Handle Error
+              if (data.errorType === "PROMOTION_EXPIRED") {
+                handleExpiredPromotions(data.expiredPromotions);
+              } else if (
+                data.errorType === "STOCK_ERROR" ||
+                (data.message && data.message.includes("Stock insuficiente"))
+              ) {
+                handleStockError(data.message);
+              } else {
+                Swal.fire({
+                  title: "Error",
+                  text: data.message || "No se pudo crear el pedido",
+                  icon: "error",
+                  background: document.documentElement.classList.contains(
+                    "dark",
+                  )
+                    ? "#1f2937"
+                    : "#ffffff",
+                  color: document.documentElement.classList.contains("dark")
+                    ? "#f3f4f6"
+                    : "#1f2937",
+                });
+              }
+            }
+          })
+          .catch((error) => {
+            // Reset submission guard on error
+            isSubmitting = false;
+            if (submitBtn) submitBtn.disabled = false;
+            console.error("Error creating order:", error);
+            Swal.fire({
+              title: "Error",
+              text: "No se pudo crear el pedido. Intenta nuevamente.",
+              icon: "error",
+              background: document.documentElement.classList.contains("dark")
+                ? "#1f2937"
+                : "#ffffff",
+              color: document.documentElement.classList.contains("dark")
+                ? "#f3f4f6"
+                : "#1f2937",
+            });
+          });
+
+      }
+
+      function handleExpiredPromotions(expiredPromotions) {
+        const isDark = document.documentElement.classList.contains("dark");
+
+        // Build HTML list
+        const itemsList = expiredPromotions
+          .map((item) => {
+            const formatter = new Intl.NumberFormat("es-MX", {
+              style: "currency",
+              currency: "MXN",
+            });
+            return `<div style="text-align: left; padding: 12px; background-color: ${isDark ? "rgba(217, 119, 6, 0.15)" : "#fef3c7"}; border-radius: 8px; margin-bottom: 8px; border: 1px solid ${isDark ? "rgba(217, 119, 6, 0.3)" : "#fbbf24"};">
+              <p style="font-weight: 600; color: ${isDark ? "#f3f4f6" : "#1f2937"}; margin-bottom: 4px;">${item.itemName}</p>
+              <p style="font-size: 0.875rem; color: ${isDark ? "#d1d5db" : "#4b5563"}; margin-bottom: 4px;">
+                Promoción ${item.reason}${item.promotionName ? ": " + item.promotionName : ""}
+              </p>
+              <p style="font-size: 0.875rem; margin-top: 4px; color: ${isDark ? "#d1d5db" : "#374151"};">
+                <span style="color: ${isDark ? "#9ca3af" : "#6b7280"};">Cantidad:</span> <strong>${item.quantity}</strong>
+              </p>
+              <p style="font-size: 0.875rem; font-weight: 500; color: #ff9f43; margin-top: 4px;">
+                Nuevo precio: ${formatter.format(item.normalPrice)} c/u = 
+                <strong>${formatter.format(item.subtotal)}</strong>
+              </p>
+            </div>`;
+          })
+          .join("");
+
+        Swal.fire({
+          icon: "warning",
+          title: "Promociones actualizadas",
+          html: `<div style="color: ${isDark ? "#e5e7eb" : "#374151"};">
+            <p style="margin-bottom: 16px; font-size: 0.95rem; color: ${isDark ? "#d1d5db" : "#4b5563"};">Los siguientes productos ya no cuentan con promoción activa y se cobrarán a precio regular:</p>
+            ${itemsList}
+            <p style="margin-top: 16px; font-size: 0.875rem; color: ${isDark ? "#9ca3af" : "#6b7280"};">
+              ¿Deseas continuar con tu pedido a precio regular o prefieres revisarlo?
+            </p>
+          </div>`,
+          showCancelButton: true,
+          confirmButtonText: "Continuar con pedido",
+          cancelButtonText: "Revisar carrito",
+          confirmButtonColor: "#ff9f43",
+          cancelButtonColor: "#6b7280",
+          width: "600px",
+          background: isDark ? "#1f2937" : "#ffffff",
+          color: isDark ? "#f3f4f6" : "#1f2937",
+        }).then((result) => {
+          if (result.isConfirmed) {
+            // Remove promotions from affected cart items
+            expiredPromotions.forEach((expired) => {
+              cart.forEach((cartItem) => {
+                if (cartItem.id == expired.itemId) {
+                  cartItem.appliedPromotionId = null;
+                  cartItem.promotionAppliedPrice = null;
+                  cartItem.promotionLabel = null;
+                  // Recalculate subtotal without promotion
+                  cartItem.subtotal = cartItem.price * cartItem.quantity;
+                }
+              });
+            });
+            updateCartUI();
+            saveCartToStorage(); // Persist changes
+            // Retry submission directly
+            submitOrder();
+          }
+          // If cancelled, just close the dialog and let user modify cart
+        });
+      }
+
+      function handleStockError(message) {
+        let itemsToRemove = [];
+        let itemsStr = "";
+        if (message.includes(": ")) {
+          let itemPart = message.split(": ")[1];
+          // Remove the invitation text suffix if present so we get just the items
+          if (itemPart.includes(". ¡Te invitamos")) {
+            itemPart = itemPart.split(". ¡Te invitamos")[0];
+          }
+
+          if (itemPart) {
+            itemsStr = itemPart;
+            itemsToRemove = itemPart.split(", ").map((s) => s.trim());
+          }
+        }
+
+        Swal.fire({
+          icon: "warning",
+          title: "¡Lo sentimos mucho!",
+          html: `<b>${itemsStr}</b> en este momento.<br><br>Pero seguro encuentras otras opciones deliciosas en nuestro menú.`,
+          background: document.documentElement.classList.contains("dark")
+            ? "#1f2937"
+            : "#ffffff",
+          color: document.documentElement.classList.contains("dark")
+            ? "#f3f4f6"
+            : "#1f2937",
+          confirmButtonText: "Ver otras opciones",
+          confirmButtonColor: "#ff9f43",
+        }).then(() => {
+          if (itemsToRemove.length > 0) {
+            const initialLength = cart.length;
+            cart = cart.filter(
+              (cartItem) => !itemsToRemove.includes(cartItem.name),
+            );
+
+            if (cart.length < initialLength) {
+              updateCartUI();
+              saveCartToStorage(); // Persist after removing out-of-stock items
+              const Toast = Swal.mixin({
+                toast: true,
+                position: "top-end",
+                showConfirmButton: false,
+                timer: 3000,
+                timerProgressBar: true,
+              });
+              Toast.fire({
+                icon: "info",
+                title: "Items eliminados del carrito por falta de stock",
+              });
+            }
+          }
+        });
+      }
+
+      // ========== COMBO ITEM MODAL ==========
+
+      /**
+       * Open a special modal for combo items showing child items with per-child complements
+       */
+      async function openComboItemModal(card) {
+        // Guard already set by openItemModal caller; if called directly, set it
+        if (!isModalOpening) {
+          if (Swal.isVisible()) return;
+          isModalOpening = true;
+        }
+
+        try {
+          // Wait for promotions to load if not loaded yet
+          if (!promotionsLoaded) {
+            await loadPromotions();
+          }
+
+          const isDarkMode =
+            document.documentElement.classList.contains("dark");
+          const itemId = card.dataset.itemId;
+          const itemName = card.dataset.itemName;
+          const itemPrice = parseFloat(card.dataset.itemPrice);
+          const itemImage = card.dataset.itemImage;
+          const itemDescription = card.dataset.itemDescription;
+          const isAvailable = card.dataset.itemAvailable === "true";
+          const scheduleStatus = card.dataset.scheduleStatus || "available";
+          const isUsable = isAvailable && scheduleStatus === "available";
+
+          // Get promotions for this combo item
+          const itemPromotions = itemPromotionsMap.get(parseInt(itemId)) || [];
+
+          const imageUrl =
+            itemImage && itemImage !== "null" && itemImage !== ""
+              ? itemImage
+              : "https://via.placeholder.com/400x300/f3f4f6/9ca3af?text=Combo";
+
+          window._comboData = { comboItems: null, childComplementsMap: {} };
+
+          Swal.fire({
+            html: `
+            <div class="flex flex-col md:flex-row gap-6 text-left">
+              <div class="md:w-2/5">
+                <img src="${imageUrl}" alt="${itemName}" 
+                  class="w-full h-48 md:h-64 object-cover rounded-xl shadow-md" 
+                  onerror="this.src='https://via.placeholder.com/400x300/f3f4f6/9ca3af?text=Combo'">
+                <div class="mt-3 p-3 rounded-xl ${isDarkMode ? "bg-teal-900/30 border border-teal-800" : "bg-teal-50 border border-teal-200"}">
+                  <p id="combo-items-count" class="text-xs font-medium ${isDarkMode ? "text-teal-300" : "text-teal-700"}">🍱 Combo</p>
+                </div>
+              </div>
+              <div class="md:w-3/5">
+                <h2 class="text-2xl font-bold ${isDarkMode ? "text-white" : "text-gray-900"} mb-1">🍱 ${itemName}</h2>
+                <div class="flex items-center gap-3 mb-3">
+                  <span class="text-2xl font-bold text-primary">$${itemPrice.toFixed(2)}</span>
+                  <span id="comboComplementsTotal" class="text-sm ${isDarkMode ? "text-gray-400" : "text-gray-500"}"></span>
+                </div>
+                ${itemDescription ? `<p class="text-sm ${isDarkMode ? "text-gray-400" : "text-gray-600"} mb-3">${itemDescription}</p>` : ""}
+                
+                ${
+                  isUsable && itemPromotions.length > 0
+                    ? `
+                <div class="mb-3">
+                    <label class="block text-xs font-bold ${isDarkMode ? "text-gray-200" : "text-gray-700"} mb-2">
+                        <span class="material-symbols-outlined text-green-600 align-middle text-sm mr-1">local_offer</span>
+                        Promociones disponibles (${itemPromotions.length})
+                    </label>
+                    <div class="flex gap-1.5 flex-wrap">
+                        ${itemPromotions
+                          .map(
+                            (promo) => `<button 
+                            type="button"
+                            class="promotion-btn flex-1 min-w-fit px-2 py-1.5 rounded-lg border ${isDarkMode ? "border-amber-600 bg-gradient-to-br from-amber-900/50 to-orange-900/50 hover:from-amber-800/50 hover:to-orange-800/50" : "border-amber-400 bg-gradient-to-br from-amber-50 to-orange-50 hover:from-amber-100 hover:to-orange-100"} transition-all flex flex-col items-center justify-center gap-0.5 relative text-xs"
+                            data-promo-id="${promo.id}"
+                            data-promo-type="${promo.promotionType}"
+                            onclick="selectPromotion(this, '${promo.id}')"
+                        >
+                            <span class="material-symbols-outlined ${isDarkMode ? "text-amber-400" : "text-amber-600"} text-base">local_offer</span>
+                            <div class="text-center leading-tight">
+                                <div class="font-bold text-xs ${isDarkMode ? "text-amber-300" : "text-amber-700"}">${promo.displayLabel}</div>
+                            </div>
+                            <span class="material-symbols-outlined text-primary hidden check-icon absolute top-0.5 right-0.5 text-sm">check_circle</span>
+                        </button>`,
+                          )
+                          .join("")}
+                    </div>
+                    <input type="hidden" id="promotion-selector" value="" />
+                    <p class="text-xs ${isDarkMode ? "text-gray-400" : "text-gray-500"} mt-2">
+                        <span class="material-symbols-outlined text-xs align-middle">info</span>
+                        Se aplicará automáticamente la mejor promoción disponible
+                    </p>
+                </div>
+                `
+                    : ""
+                }
+
+                <div class="mb-3">
+                  <p class="text-sm font-semibold ${isDarkMode ? "text-white" : "text-gray-900"} mb-2">Items del Combo:</p>
+                  <div id="combo-children-container">
+                    <div class="flex items-center justify-center py-6">
+                      <span class="material-symbols-outlined animate-spin text-primary text-2xl">progress_activity</span>
+                      <span class="ml-2 text-sm ${isDarkMode ? "text-gray-400" : "text-gray-500"}">Cargando items...</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="flex items-center gap-3 mb-3">
+                  <label class="text-sm font-medium ${isDarkMode ? "text-gray-300" : "text-gray-700"}">Cantidad:</label>
+                  <div class="flex items-center gap-2">
+                    <button type="button" onclick="updateComboQuantity(-1)" 
+                      class="w-8 h-8 flex items-center justify-center rounded-lg ${isDarkMode ? "bg-gray-700 text-white hover:bg-gray-600" : "bg-gray-200 text-gray-700 hover:bg-gray-300"} transition-colors">-</button>
+                    <input type="number" id="comboQuantityInput" value="1" min="1" 
+                      class="w-16 text-center rounded-lg border ${isDarkMode ? "bg-gray-800 border-gray-600 text-white" : "bg-white border-gray-300 text-gray-900"}" readonly>
+                    <button type="button" onclick="updateComboQuantity(1)" 
+                      class="w-8 h-8 flex items-center justify-center rounded-lg ${isDarkMode ? "bg-gray-700 text-white hover:bg-gray-600" : "bg-gray-200 text-gray-700 hover:bg-gray-300"} transition-colors">+</button>
+                  </div>
+                </div>
+
+                <div class="mb-3">
+                  <label class="text-sm font-medium ${isDarkMode ? "text-gray-300" : "text-gray-700"}">Comentarios:</label>
+                  <textarea id="comboComments" rows="2" placeholder="Instrucciones especiales..."
+                    class="w-full mt-1 px-3 py-2 rounded-xl border text-sm ${isDarkMode ? "bg-gray-800 border-gray-600 text-white" : "bg-white border-gray-300 text-gray-900"}"></textarea>
+                </div>
+              </div>
+            </div>
+          `,
+            showCancelButton: true,
+            confirmButtonText: isUsable
+              ? `<span class="material-symbols-outlined mr-1">add_shopping_cart</span> Agregar al Carrito`
+              : "No Disponible",
+            confirmButtonColor: isUsable ? "#14b8a6" : "#9ca3af",
+            cancelButtonText: "Cancelar",
+            width: "900px",
+            background: isDarkMode ? "#1f2937" : "#ffffff",
+            color: isDarkMode ? "#f3f4f6" : "#1f2937",
+            customClass: {
+              popup: isDarkMode ? "dark-swal-popup bg-gray-900 text-white" : "",
+              confirmButton: isUsable ? "" : "cursor-not-allowed",
+            },
+            didOpen: async () => {
+              // Auto-select the best promotion
+              const bestPromo = getAutoBestPromotion(itemId, itemPrice, 1);
+              if (bestPromo) {
+                const promoBtn = document.querySelector(
+                  `.promotion-btn[data-promo-id="${bestPromo.id}"]`,
+                );
+                if (promoBtn) selectPromotion(promoBtn, bestPromo.id);
+              }
+
+              // Fetch combo children
+              const comboItems = await fetchComboChildren(itemId);
+
+              if (comboItems.length === 0) {
+                document.getElementById("combo-children-container").innerHTML =
+                  `
+                <div class="text-center py-4">
+                  <span class="material-symbols-outlined text-red-400 text-3xl">error</span>
+                  <p class="text-sm ${isDarkMode ? "text-red-400" : "text-red-600"} mt-1">Este combo no tiene items configurados.</p>
+                </div>`;
+                return;
+              }
+
+              // Update combo count text
+              document.getElementById("combo-items-count").textContent =
+                "🍱 Combo - " + comboItems.length + " items incluidos";
+
+              // Fetch complements for all child items in parallel
+              const childComplementsMap = {};
+              await Promise.all(
+                comboItems.map(async (ci) => {
+                  childComplementsMap[ci.childItemId] =
+                    await fetchItemComplements(ci.childItemId);
+                }),
+              );
+
+              // Store data for .then() handler
+              window._comboData = { comboItems, childComplementsMap };
+
+              // Build child items HTML
+              let childItemsHTML = "";
+              for (const ci of comboItems) {
+                const childComps = childComplementsMap[ci.childItemId];
+                const hasSauces =
+                  childComps &&
+                  childComps.sauces &&
+                  childComps.sauces.length > 0;
+                const hasComplements =
+                  childComps &&
+                  childComps.complements &&
+                  childComps.complements.length > 0;
+
+                childItemsHTML += `
+                <div class="combo-child-item p-3 rounded-xl border ${isDarkMode ? "border-gray-700 bg-gray-800" : "border-gray-200 bg-gray-50"} mb-3" data-child-id="${ci.childItemId}" data-max-sauces="${childComps.maxSauces != null ? childComps.maxSauces : 99}">
+                  <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center gap-2">
+                      <span class="font-semibold ${isDarkMode ? "text-white" : "text-gray-900"}">${ci.childItemName}</span>
+                      <span class="text-xs px-2 py-0.5 rounded-full ${isDarkMode ? "bg-teal-900/40 text-teal-300" : "bg-teal-100 text-teal-700"}">x${ci.quantity}</span>
+                    </div>
+                    <span class="text-xs ${isDarkMode ? "text-gray-400" : "text-gray-500"}">${ci.childRequiresPreparation ? "👨‍🍳 Chef" : ci.childRequiresBaristaPreparation ? "☕ Barista" : "📦 Listo"}</span>
+                  </div>
+                  ${
+                    hasSauces || hasComplements
+                      ? `
+                    <div class="mt-2">
+                      <p class="text-xs font-medium ${isDarkMode ? "text-gray-400" : "text-gray-600"} mb-1">Complementos disponibles:</p>
+                      ${hasSauces && childComps.maxSauces != null ? `<p class="text-[10px] ${isDarkMode ? "text-amber-400" : "text-amber-600"} mb-1 combo-sauces-counter" data-child-id="${ci.childItemId}">🫙 Salsas: <span class="combo-sauce-count">0</span>/${childComps.maxSauces} máx.</p>` : ""}
+                      <div class="combo-child-complements space-y-1" data-child-id="${ci.childItemId}">
+                        ${(childComps.sauces || [])
+                          .map(
+                            (s) => `
+                          <div class="combo-comp-item flex items-center justify-between text-xs px-2 py-1 rounded-lg border transition-all ${isDarkMode ? "border-gray-600 text-gray-300" : "border-gray-300 text-gray-700"}"
+                            data-comp-id="${s.complementId}" data-comp-name="${s.complementName}" data-comp-price="${s.complementExtraPrice}" data-is-sauce="true"
+                            data-child-id="${ci.childItemId}" data-child-qty="${ci.quantity}" data-qty="0" data-max-qty="1">
+                            <span>🫙 ${s.complementName} ${s.complementExtraPrice > 0 ? "+$" + parseFloat(s.complementExtraPrice).toFixed(2) : ""}</span>
+                            <button type="button" class="combo-sauce-toggle ml-2 px-2 py-0.5 rounded ${isDarkMode ? "bg-gray-700 hover:bg-amber-600" : "bg-gray-200 hover:bg-amber-400"} transition-colors"
+                              onclick="toggleComboSauce(this.parentElement)">
+                              Agregar
+                            </button>
+                          </div>
+                        `,
+                          )
+                          .join("")}
+                        ${(childComps.complements || [])
+                          .map((c) => {
+                            const maxQ = c.maxQuantity || 1;
+                            return `
+                          <div class="combo-comp-item flex items-center justify-between text-xs px-2 py-1 rounded-lg border transition-all ${isDarkMode ? "border-gray-600 text-gray-300" : "border-gray-300 text-gray-700"}"
+                            data-comp-id="${c.complementId}" data-comp-name="${c.complementName}" data-comp-price="${c.complementExtraPrice}" data-is-sauce="false"
+                            data-child-id="${ci.childItemId}" data-child-qty="${ci.quantity}" data-qty="0" data-max-qty="${maxQ}">
+                            <span>➕ ${c.complementName} ${c.complementExtraPrice > 0 ? "+$" + parseFloat(c.complementExtraPrice).toFixed(2) : ""}</span>
+                            <div class="flex items-center gap-1 ml-2">
+                              <button type="button" class="px-1.5 py-0.5 rounded ${isDarkMode ? "bg-gray-700 hover:bg-blue-600" : "bg-gray-200 hover:bg-blue-400"} transition-colors" onclick="changeComboCompQty(this.parentElement.parentElement, -1)">−</button>
+                              <span class="combo-comp-qty w-5 text-center font-semibold">0</span>
+                              <button type="button" class="px-1.5 py-0.5 rounded ${isDarkMode ? "bg-gray-700 hover:bg-blue-600" : "bg-gray-200 hover:bg-blue-400"} transition-colors" onclick="changeComboCompQty(this.parentElement.parentElement, 1)">+</button>
+                              <span class="text-[10px] ${isDarkMode ? "text-gray-500" : "text-gray-400"}">max ${maxQ}</span>
+                            </div>
+                          </div>`;
+                          })
+                          .join("")}
+                      </div>
+                    </div>
+                  `
+                      : ""
+                  }
+                </div>
+              `;
+              }
+
+              // Inject built HTML into container
+              document.getElementById("combo-children-container").innerHTML =
+                childItemsHTML;
+            },
+            preConfirm: () => {
+              if (!isUsable) return false;
+              const quantity =
+                parseInt(document.getElementById("comboQuantityInput").value) ||
+                1;
+              const comments =
+                document.getElementById("comboComments")?.value || "";
+              const promotionSelector =
+                document.getElementById("promotion-selector");
+              const selectedPromotionId = promotionSelector
+                ? promotionSelector.value
+                  ? parseInt(promotionSelector.value)
+                  : null
+                : null;
+              return { quantity, comments, selectedPromotionId };
+            },
+          }).then((result) => {
+            if (
+              result.isConfirmed &&
+              result.value &&
+              window._comboData &&
+              window._comboData.comboItems
+            ) {
+              addComboToCart(
+                result.value.quantity,
+                result.value.comments,
+                window._comboData.comboItems,
+                window._comboData.childComplementsMap,
+                result.value.selectedPromotionId,
+              );
+            }
+          });
+        } finally {
+          isModalOpening = false;
+        }
+      }
+
+      /**
+       * Toggle a sauce complement for a combo child item (0/1)
+       * Enforces maxSauces limit per child item
+       */
+      function toggleComboSauce(item) {
+        const isDarkMode = document.documentElement.classList.contains("dark");
+        let qty = parseInt(item.dataset.qty) || 0;
+        const childId = item.dataset.childId;
+
+        // If trying to select (currently 0), check maxSauces limit
+        if (qty === 0) {
+          const childContainer = document.querySelector(
+            `.combo-child-item[data-child-id="${childId}"]`,
+          );
+          const maxSauces = childContainer
+            ? parseInt(childContainer.dataset.maxSauces)
+            : 99;
+          if (!isNaN(maxSauces) && maxSauces < 99) {
+            const selectedSauces = document.querySelectorAll(
+              `.combo-comp-item[data-child-id="${childId}"][data-is-sauce="true"]`,
+            );
+            let currentCount = 0;
+            selectedSauces.forEach((s) => {
+              if (parseInt(s.dataset.qty) > 0) currentCount++;
+            });
+            if (currentCount >= maxSauces) {
+              Swal.fire({
+                toast: true,
+                position: "top-end",
+                icon: "warning",
+                title: `Máximo ${maxSauces} salsa(s) para este item`,
+                background: document.documentElement.classList.contains("dark")
+                  ? "#1f2937"
+                  : "#ffffff",
+                color: document.documentElement.classList.contains("dark")
+                  ? "#f3f4f6"
+                  : "#1f2937",
+                showConfirmButton: false,
+                timer: 2500,
+                timerProgressBar: true,
+              });
+              return;
+            }
+          }
+        }
+
+        qty = qty === 0 ? 1 : 0;
+        item.dataset.qty = qty;
+        const toggleBtn = item.querySelector(".combo-sauce-toggle");
+        if (qty === 1) {
+          item.classList.add(
+            "border-primary",
+            isDarkMode ? "bg-teal-900/40" : "bg-teal-50",
+          );
+          item.classList.remove(
+            isDarkMode ? "border-gray-600" : "border-gray-300",
+          );
+          if (toggleBtn) toggleBtn.textContent = "Quitar";
+        } else {
+          item.classList.remove(
+            "border-primary",
+            isDarkMode ? "bg-teal-900/40" : "bg-teal-50",
+            "bg-teal-50",
+            "bg-teal-900/40",
+          );
+          item.classList.add(
+            isDarkMode ? "border-gray-600" : "border-gray-300",
+          );
+          if (toggleBtn) toggleBtn.textContent = "Agregar";
+        }
+        updateComboComplementsTotal();
+        updateComboSaucesCounters();
+      }
+
+      /**
+       * Update sauce counter labels for all combo child items
+       */
+      function updateComboSaucesCounters() {
+        document
+          .querySelectorAll(".combo-child-item")
+          .forEach((childContainer) => {
+            const childId = childContainer.dataset.childId;
+            const maxSauces = parseInt(childContainer.dataset.maxSauces);
+            const counter = document.querySelector(
+              `.combo-sauces-counter[data-child-id="${childId}"]`,
+            );
+            const sauceItems = document.querySelectorAll(
+              `.combo-comp-item[data-child-id="${childId}"][data-is-sauce="true"]`,
+            );
+
+            let selectedCount = 0;
+            sauceItems.forEach((s) => {
+              if (parseInt(s.dataset.qty) > 0) selectedCount++;
+            });
+
+            if (counter) {
+              const span = counter.querySelector(".combo-sauce-count");
+              if (span) span.textContent = selectedCount;
+            }
+
+            if (!isNaN(maxSauces) && maxSauces < 99) {
+              const limitReached = selectedCount >= maxSauces;
+              sauceItems.forEach((sauceItem) => {
+                const isSelected = parseInt(sauceItem.dataset.qty) > 0;
+                const btn = sauceItem.querySelector(".combo-sauce-toggle");
+                if (limitReached && !isSelected) {
+                  sauceItem.classList.add("opacity-40", "pointer-events-none");
+                  if (btn) btn.classList.add("cursor-not-allowed");
+                } else {
+                  sauceItem.classList.remove(
+                    "opacity-40",
+                    "pointer-events-none",
+                  );
+                  if (btn) btn.classList.remove("cursor-not-allowed");
+                }
+              });
+            }
+          });
+      }
+
+      /**
+       * Change quantity of a regular complement for a combo child item
+       */
+      function changeComboCompQty(item, delta) {
+        const isDarkMode = document.documentElement.classList.contains("dark");
+        let qty = parseInt(item.dataset.qty) || 0;
+        const maxQty = parseInt(item.dataset.maxQty) || 1;
+        qty = Math.max(0, Math.min(maxQty, qty + delta));
+        item.dataset.qty = qty;
+        const qtyLabel = item.querySelector(".combo-comp-qty");
+        if (qtyLabel) qtyLabel.textContent = qty;
+        if (qty > 0) {
+          item.classList.add(
+            "border-primary",
+            isDarkMode ? "bg-blue-900/30" : "bg-blue-50",
+          );
+          item.classList.remove(
+            isDarkMode ? "border-gray-600" : "border-gray-300",
+          );
+        } else {
+          item.classList.remove(
+            "border-primary",
+            isDarkMode ? "bg-blue-900/30" : "bg-blue-50",
+            "bg-blue-50",
+            "bg-blue-900/30",
+          );
+          item.classList.add(
+            isDarkMode ? "border-gray-600" : "border-gray-300",
+          );
+        }
+        updateComboComplementsTotal();
+      }
+
+      /**
+       * Update combo complements total display
+       */
+      function updateComboComplementsTotal() {
+        const allItems = document.querySelectorAll(".combo-comp-item");
+        const comboQtyInput = document.getElementById("comboQuantityInput");
+        const comboQty = comboQtyInput ? parseInt(comboQtyInput.value) || 1 : 1;
+        let total = 0;
+        allItems.forEach((item) => {
+          const qty = parseInt(item.dataset.qty) || 0;
+          const price = parseFloat(item.dataset.compPrice) || 0;
+          const isSauce = item.dataset.isSauce === "true";
+          const childQty = parseInt(item.dataset.childQty) || 1;
+          total += price * qty * (isSauce ? childQty * comboQty : 1);
+        });
+        const label = document.getElementById("comboComplementsTotal");
+        if (label) {
+          label.textContent =
+            total > 0 ? `+ $${total.toFixed(2)} complementos` : "";
+        }
+      }
+
+      /**
+       * Update combo quantity
+       */
+      function updateComboQuantity(delta) {
+        const input = document.getElementById("comboQuantityInput");
+        if (!input) return;
+        let val = parseInt(input.value) || 1;
+        val = Math.max(1, val + delta);
+        input.value = val;
+        updateComboComplementsTotal();
+        // Re-evaluate best promotion for new quantity
+        if (currentItem) {
+          const bestPromo = getAutoBestPromotion(
+            currentItem.id,
+            currentItem.price,
+            val,
+          );
+          if (bestPromo) {
+            const promoBtn = document.querySelector(
+              `.promotion-btn[data-promo-id="${bestPromo.id}"]`,
+            );
+            if (promoBtn) selectPromotion(promoBtn, bestPromo.id);
+          } else {
+            // Deselect all promotion buttons
+            document.querySelectorAll(".promotion-btn").forEach((btn) => {
+              btn.classList.remove(
+                "border-primary",
+                "bg-primary/10",
+                "ring-2",
+                "ring-primary",
+              );
+              const check = btn.querySelector(".check-icon");
+              if (check) check.classList.add("hidden");
+            });
+            const selector = document.getElementById("promotion-selector");
+            if (selector) selector.value = "";
+          }
+        }
+      }
+
+      /**
+       * Add combo to cart with per-child complements
+       */
+      function addComboToCart(
+        quantity,
+        comments,
+        comboItems,
+        childComplementsMap,
+        selectedPromotionId = null,
+      ) {
+        // Collect per-child complements from items with qty > 0
+        const allItems = document.querySelectorAll(".combo-comp-item");
+
+        // Group by childItemId
+        const compsByChild = {};
+        allItems.forEach((item) => {
+          const qty = parseInt(item.dataset.qty) || 0;
+          if (qty <= 0) return;
+          const childId = item.dataset.childId;
+          if (!compsByChild[childId]) compsByChild[childId] = [];
+          compsByChild[childId].push({
+            id: parseInt(item.dataset.compId),
+            quantity: qty,
+            name: item.dataset.compName,
+            price: parseFloat(item.dataset.compPrice) || 0,
+            isSauce: item.dataset.isSauce === "true",
+          });
+        });
+
+        // Build complements array for submission (per-child format)
+        const perChildComplements = [];
+        for (const [childId, comps] of Object.entries(compsByChild)) {
+          perChildComplements.push({
+            childItemId: parseInt(childId),
+            complements: comps.map((c) => ({ id: c.id, quantity: c.quantity })),
+          });
+        }
+
+        // Calculate complements total
+        let complementsTotal = 0;
+        allItems.forEach((item) => {
+          const qty = parseInt(item.dataset.qty) || 0;
+          const isSauce = item.dataset.isSauce === "true";
+          const childQty = parseInt(item.dataset.childQty) || 1;
+          complementsTotal +=
+            (parseFloat(item.dataset.compPrice) || 0) *
+            qty *
+            (isSauce ? childQty * quantity : 1);
+        });
+
+        // Apply promotion automatically (same logic as updateCartItemQuantity)
+        let subtotal = currentItem.price * quantity;
+        let promotionAppliedPrice = null;
+        let appliedPromotionId = null;
+        let promotionLabel = null;
+
+        // Use selected promotion if provided, otherwise auto-select best
+        let bestPromotion = null;
+        if (selectedPromotionId) {
+          const promotions =
+            itemPromotionsMap.get(parseInt(currentItem.id)) || [];
+          bestPromotion = promotions.find((p) => p.id == selectedPromotionId);
+        }
+        if (!bestPromotion) {
+          bestPromotion = getAutoBestPromotion(
+            currentItem.id,
+            currentItem.price,
+            quantity,
+          );
+        }
+        if (bestPromotion) {
+          const originalTotal = currentItem.price * quantity;
+          let discountedTotal = originalTotal;
+
+          if (bestPromotion.promotionType === "BUY_X_PAY_Y") {
+            const sets = Math.floor(quantity / bestPromotion.buyQuantity);
+            const remaining = quantity % bestPromotion.buyQuantity;
+            discountedTotal =
+              sets * bestPromotion.payQuantity * currentItem.price +
+              remaining * currentItem.price;
+          } else if (bestPromotion.promotionType === "PERCENTAGE_DISCOUNT") {
+            const discount = bestPromotion.discountPercentage / 100;
+            discountedTotal = originalTotal * (1 - discount);
+          } else if (bestPromotion.promotionType === "FIXED_AMOUNT_DISCOUNT") {
+            const minQty = bestPromotion.minQuantityForFixedDiscount || 1;
+            const discountedSets = Math.floor(quantity / minQty);
+            const remainingItems = quantity % minQty;
+            const itemsWithDiscount = discountedSets * minQty;
+            const pricePerUnit = Math.max(
+              0,
+              currentItem.price - bestPromotion.discountAmount,
+            );
+            discountedTotal =
+              pricePerUnit * itemsWithDiscount +
+              currentItem.price * remainingItems;
+          }
+
+          promotionAppliedPrice = discountedTotal / quantity;
+          subtotal = discountedTotal;
+          appliedPromotionId = bestPromotion.id;
+          promotionLabel = bestPromotion.displayLabel;
+        }
+
+        // Build cart item
+        const cartItem = {
+          id: currentItem.id,
+          name: currentItem.name,
+          price: currentItem.price,
+          quantity: quantity,
+          comments: comments,
+          subtotal: subtotal,
+          image: currentItem.image,
+          promotionAppliedPrice: promotionAppliedPrice,
+          appliedPromotionId: appliedPromotionId,
+          promotionLabel: promotionLabel,
+          isCombo: true,
+          comboChildren: comboItems.map((ci) => {
+            const childComps = compsByChild[ci.childItemId.toString()] || [];
+            return {
+              childItemId: ci.childItemId,
+              name: ci.childItemName,
+              quantity: ci.quantity,
+              selectedComplements: childComps.map((c) => ({
+                id: c.id,
+                name: c.name,
+                quantity: c.quantity,
+                extraPrice: c.price,
+                isSauce: c.isSauce,
+              })),
+            };
+          }),
+          complements: perChildComplements,
+          complementsTotal: complementsTotal,
+        };
+
+        cart.push(cartItem);
+        updateCartUI();
+
+        // Show success toast
+        Swal.fire({
+          toast: true,
+          position: "top-end",
+          icon: "success",
+          title: `🍱 ${currentItem.name} x${quantity} agregado al carrito`,
+          background: document.documentElement.classList.contains("dark")
+            ? "#1f2937"
+            : "#ffffff",
+          color: document.documentElement.classList.contains("dark")
+            ? "#f3f4f6"
+            : "#1f2937",
+          showConfirmButton: false,
+          timer: 2000,
+          timerProgressBar: true,
+        });
+      }
+
+      // Close modal on escape key (for SweetAlert compatibility)
+      document.addEventListener("keydown", function (event) {
+        if (event.key === "Escape") {
+          Swal.close();
+        }
+      });
+
+      // Fetch and cache combo children (used by prefetch and modal)
+      async function fetchComboChildren(itemId) {
+        const id = parseInt(itemId);
+        if (comboChildrenCache.has(id)) return comboChildrenCache.get(id);
+        try {
+          const res = await fetch(`/api/combo/${itemId}/items`);
+          const data = await res.json();
+          if (data.success && data.comboItems) {
+            comboChildrenCache.set(id, data.comboItems);
+            return data.comboItems;
+          }
+        } catch (e) {
+          /* silent */
+        }
+        return [];
+      }
+
+      // Prefetch complements + modal image on card hover (enhanced for combos)
+      function prefetchOnHover(card) {
+        const itemId = card.dataset.itemId;
+        if (!itemId) return;
+        const isCombo = card.dataset.isCombo === "true";
+
+        // Prefetch modal image
+        const img = card.dataset.itemImage;
+        if (img && img !== "null" && !card._prefetched) {
+          card._prefetched = true;
+          new Image().src = img;
+        }
+
+        if (isCombo) {
+          // For combos: fetch children + all their complements
+          fetchComboChildren(itemId).then((children) => {
+            children.forEach((ci) => fetchItemComplements(ci.childItemId));
+          });
+        } else {
+          // For regular items: cache complements
+          fetchItemComplements(itemId);
+        }
+      }
+
+      // Initialize cart UI on page load
+      document.addEventListener("DOMContentLoaded", function () {
+        // Load cart from localStorage if available
+        if (loadCartFromStorage()) {
+          // Show toast if cart was restored
+          if (cart.length > 0) {
+            const Toast = Swal.mixin({
+              toast: true,
+              position: "top-end",
+              showConfirmButton: false,
+              timer: 3000,
+              timerProgressBar: true,
+            });
+            Toast.fire({
+              icon: "success",
+              title: `Carrito restaurado (${cart.length} items)`,
+            });
+          }
+        }
+
+        updateCartUI();
+
+        // Show/hide delivery references based on initial order type
+        const orderTypeSelector = document.getElementById("orderTypeSelector");
+        if (orderTypeSelector && orderTypeSelector.value === "DELIVERY") {
+          document
+            .getElementById("deliveryReferencesContainer")
+            .classList.remove("hidden");
+        }
+
+        // Preload promotions immediately so modal opens instantly
+        loadPromotions();
+        // Attach hover/touch prefetch to all menu cards
+        document.querySelectorAll(".menu-item-card").forEach((card) => {
+          card.addEventListener("pointerenter", () => prefetchOnHover(card), {
+            once: true,
+          });
+          card.addEventListener("touchstart", () => prefetchOnHover(card), {
+            once: true,
+            passive: true,
+          });
+        });
+      });
+    </script>
+
+    <!-- Script del Sistema de Temas -->
+    <div th:replace="~{fragments/theme :: themeScript}"></div>
+  </body>
+</html>

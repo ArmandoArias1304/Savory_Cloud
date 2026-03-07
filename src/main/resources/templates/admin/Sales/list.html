@@ -1,0 +1,597 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+  <head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title th:text="${globalSystemConfig.systemName + ' - Ventas'}">
+      El Gran Sazón - Ventas
+    </title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@300;400;500;600;700"
+      rel="stylesheet"
+    />
+
+    <!-- Sistema de Temas (Modo Claro/Oscuro) -->
+    <div th:replace="~{fragments/theme :: themeResources}"></div>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#38e07b",
+              "primary-dark": "#2bc866",
+              "background-light": "#f8faf9",
+              "background-dark": "#0f1713",
+            },
+            fontFamily: {
+              display: ["Work Sans"],
+            },
+            borderRadius: {
+              DEFAULT: "0.5rem",
+              lg: "0.75rem",
+              xl: "1rem",
+              "2xl": "1.5rem",
+              full: "9999px",
+            },
+          },
+        },
+      };
+    </script>
+
+    <!-- Sidebar Styles Fragment -->
+    <div th:replace="~{fragments/sidebar :: sidebarStyles}"></div>
+
+    <style>
+      .table-responsive {
+        overflow-x: auto;
+        max-width: 100%;
+      }
+
+      .table-responsive::-webkit-scrollbar {
+        height: 8px;
+      }
+
+      .table-responsive::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 10px;
+      }
+
+      .table-responsive::-webkit-scrollbar-thumb {
+        background: #38e07b;
+        border-radius: 10px;
+      }
+
+      .table-responsive::-webkit-scrollbar-thumb:hover {
+        background: #2bc866;
+      }
+    </style>
+  </head>
+  <body
+    class="bg-gradient-to-br from-background-light to-gray-50 dark:from-background-dark dark:to-gray-900 font-display text-gray-800 dark:text-gray-200 overflow-hidden"
+  >
+    <!-- Menu Controls Fragment -->
+    <div th:replace="~{fragments/sidebar :: menuControls}"></div>
+
+    <div class="flex min-h-screen h-screen overflow-hidden">
+      <!-- SIDEBAR - Using Fragment -->
+      <div
+        th:replace="~{fragments/sidebar :: sidebar(activeMenu='sales')}"
+      ></div>
+
+      <!-- MAIN CONTENT -->
+      <main class="flex-1 overflow-y-auto h-screen">
+        <div class="p-4 sm:p-6 lg:p-8 pt-20 md:pt-20 lg:pt-8 pb-32">
+          <!-- HEADER -->
+          <div
+            class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 sm:mb-8"
+          >
+            <div>
+              <h2
+                class="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white mb-1"
+              >
+                Reportes de Ventas
+              </h2>
+              <p class="text-sm sm:text-base text-gray-600 dark:text-gray-400">
+                Análisis detallado de las ventas del restaurante
+              </p>
+            </div>
+          </div>
+
+          <!-- FILTROS -->
+          <div
+            class="mb-6 sm:mb-8 p-4 sm:p-6 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-lg"
+          >
+            <div class="flex items-center gap-2 mb-4">
+              <span class="material-symbols-outlined text-primary text-2xl"
+                >filter_alt</span
+              >
+              <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+                Filtros de Búsqueda
+              </h3>
+            </div>
+
+            <div
+              class="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-4"
+            >
+              <div
+                class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 flex-1"
+              >
+                <!-- Date From Filter -->
+                <div>
+                  <label
+                    class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                    for="startDate"
+                    >Desde</label
+                  >
+                  <input
+                    type="date"
+                    id="startDate"
+                    th:value="${startDate}"
+                    class="w-full rounded-xl text-gray-900 dark:text-white focus:outline-0 focus:ring-2 focus:ring-primary border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 h-11 text-sm"
+                  />
+                </div>
+
+                <!-- Date To Filter -->
+                <div>
+                  <label
+                    class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                    for="endDate"
+                    >Hasta</label
+                  >
+                  <input
+                    type="date"
+                    id="endDate"
+                    th:value="${endDate}"
+                    class="w-full rounded-xl text-gray-900 dark:text-white focus:outline-0 focus:ring-2 focus:ring-primary border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 h-11 text-sm"
+                  />
+                </div>
+
+                <!-- Employee Filter -->
+                <div>
+                  <label
+                    class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                    for="filterEmployee"
+                    >Trabajador</label
+                  >
+                  <select
+                    class="w-full rounded-xl text-gray-900 dark:text-white focus:outline-0 focus:ring-2 focus:ring-primary border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 h-11 text-sm"
+                    id="filterEmployee"
+                  >
+                    <option value="">Todos los trabajadores</option>
+                    <option
+                      th:each="employee : ${employees}"
+                      th:value="${employee.idEmpleado}"
+                      th:text="${employee.nombre + ' ' + employee.apellido}"
+                      th:selected="${selectedEmployeeId != null && selectedEmployeeId == employee.idEmpleado}"
+                    ></option>
+                  </select>
+                </div>
+
+                <!-- Payment Method Filter -->
+                <div>
+                  <label
+                    class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                    for="filterPaymentMethod"
+                    >Método de Pago</label
+                  >
+                  <select
+                    class="w-full rounded-xl text-gray-900 dark:text-white focus:outline-0 focus:ring-2 focus:ring-primary border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 h-11 text-sm"
+                    id="filterPaymentMethod"
+                  >
+                    <option value="">Todos los métodos</option>
+                    <option
+                      th:each="method : ${paymentMethods}"
+                      th:value="${method}"
+                      th:text="${method.displayName}"
+                      th:selected="${selectedPaymentMethod != null && selectedPaymentMethod == method}"
+                    ></option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Filter Actions -->
+              <div class="flex gap-2">
+                <button
+                  onclick="clearFilters()"
+                  class="flex h-10 items-center justify-center gap-x-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                >
+                  <span>Limpiar</span>
+                </button>
+                <button
+                  onclick="applyFilters()"
+                  class="flex h-10 items-center justify-center gap-x-2 rounded-xl bg-primary px-5 text-sm font-bold text-white hover:bg-primary-dark transition-colors shadow-md"
+                >
+                  <span class="material-symbols-outlined text-base"
+                    >search</span
+                  >
+                  <span>Buscar</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- STATS -->
+          <div
+            class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8"
+          >
+            <!-- Ventas del Periodo Filtrado -->
+            <div
+              class="flex items-center gap-4 rounded-2xl p-4 sm:p-6 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-lg"
+            >
+              <div
+                class="p-3 rounded-xl bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400"
+              >
+                <span class="material-symbols-outlined text-2xl">payments</span>
+              </div>
+              <div class="flex flex-col">
+                <p class="text-gray-600 dark:text-gray-400 text-sm font-medium">
+                  Ventas del Periodo
+                </p>
+                <p class="text-gray-900 dark:text-white text-3xl font-bold">
+                  <span
+                    th:text="${#numbers.formatCurrency(totalSalesWithoutTip)}"
+                    >$0.00</span
+                  >
+                </p>
+                <p class="text-gray-500 dark:text-gray-400 text-xs mt-1">
+                  <span th:text="${totalCount}">0</span> ventas (sin propina)
+                </p>
+              </div>
+            </div>
+
+            <!-- Total de Propinas -->
+            <div
+              class="flex items-center gap-4 rounded-2xl p-4 sm:p-6 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-lg"
+            >
+              <div
+                class="p-3 rounded-xl bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"
+              >
+                <span class="material-symbols-outlined text-2xl"
+                  >volunteer_activism</span
+                >
+              </div>
+              <div class="flex flex-col">
+                <p class="text-gray-600 dark:text-gray-400 text-sm font-medium">
+                  Total de Propinas
+                </p>
+                <p class="text-gray-900 dark:text-white text-3xl font-bold">
+                  <span th:text="${#numbers.formatCurrency(totalTips)}"
+                    >$0.00</span
+                  >
+                </p>
+              </div>
+            </div>
+
+            <!-- Total de Ventas -->
+            <div
+              class="flex items-center gap-4 rounded-2xl p-4 sm:p-6 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-lg"
+            >
+              <div
+                class="p-3 rounded-xl bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400"
+              >
+                <span class="material-symbols-outlined text-2xl"
+                  >trending_up</span
+                >
+              </div>
+              <div class="flex flex-col">
+                <p class="text-gray-600 dark:text-gray-400 text-sm font-medium">
+                  Total del Periodo + Propinas
+                </p>
+                <p class="text-gray-900 dark:text-white text-3xl font-bold">
+                  <span th:text="${#numbers.formatCurrency(totalSales)}"
+                    >$0.00</span
+                  >
+                </p>
+                <p class="text-gray-500 dark:text-gray-400 text-xs mt-1">
+                  <span th:text="${totalCount}">0</span> ventas
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- TABLA -->
+          <div
+            class="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-lg overflow-hidden"
+          >
+            <div
+              class="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-800"
+            >
+              <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary text-2xl"
+                  >receipt_long</span
+                >
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+                  Historial de Ventas (<span th:text="${totalCount}">0</span>)
+                </h3>
+              </div>
+            </div>
+
+            <div class="table-responsive">
+              <table class="w-full text-sm text-left">
+                <thead
+                  class="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700"
+                >
+                  <tr>
+                    <th
+                      class="px-6 py-4 font-semibold text-gray-700 dark:text-gray-300"
+                    >
+                      # Pedido
+                    </th>
+                    <th
+                      class="px-6 py-4 font-semibold text-gray-700 dark:text-gray-300"
+                    >
+                      Fecha y Hora
+                    </th>
+                    <th
+                      class="px-6 py-4 font-semibold text-gray-700 dark:text-gray-300"
+                    >
+                      Tipo
+                    </th>
+                    <th
+                      class="px-6 py-4 font-semibold text-gray-700 dark:text-gray-300"
+                    >
+                      Cobrado por
+                    </th>
+                    <th
+                      class="px-6 py-4 font-semibold text-gray-700 dark:text-gray-300"
+                    >
+                      Método de Pago
+                    </th>
+                    <th
+                      class="px-6 py-4 font-semibold text-gray-700 dark:text-gray-300 text-right"
+                    >
+                      Subtotal
+                    </th>
+                    <th
+                      class="px-6 py-4 font-semibold text-gray-700 dark:text-gray-300 text-right"
+                    >
+                      Propina
+                    </th>
+                    <th
+                      class="px-6 py-4 font-semibold text-gray-700 dark:text-gray-300 text-right"
+                    >
+                      Total
+                    </th>
+                    <th
+                      class="px-6 py-4 font-semibold text-gray-700 dark:text-gray-300 text-center"
+                    >
+                      Acciones
+                    </th>
+                  </tr>
+                </thead>
+                <tbody
+                  class="divide-y divide-gray-200 dark:divide-gray-700"
+                  th:if="${!sales.empty}"
+                >
+                  <tr
+                    th:each="sale : ${sales}"
+                    th:data-sale-id="${sale.idOrder}"
+                    class="hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+                  >
+                    <td
+                      class="px-6 py-4 whitespace-nowrap text-primary font-semibold"
+                    >
+                      <span th:text="${sale.orderNumber}">#0001</span>
+                    </td>
+                    <td
+                      class="px-6 py-4 whitespace-nowrap text-gray-600 dark:text-gray-400"
+                    >
+                      <span
+                        th:text="${sale.updatedAt != null ? #temporals.format(sale.updatedAt, 'dd/MM/yyyy hh:mm a') : sale.formattedCreatedAt}"
+                        >15/07/2024 10:30 AM</span
+                      >
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <span
+                        th:class="${sale.orderType.name() == 'DINE_IN'} ? 'px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 
+                                   (${sale.orderType.name() == 'TAKEOUT'} ? 'px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400' : 
+                                   'px-2 py-1 text-xs font-semibold rounded-full bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400')"
+                        th:text="${sale.orderType.displayName}"
+                      >
+                        Para pasar a recoger
+                      </span>
+                    </td>
+                    <td
+                      class="px-6 py-4 whitespace-nowrap text-gray-600 dark:text-gray-400"
+                    >
+                      <span
+                        th:text="${sale.paidBy != null ? (sale.paidBy.nombre + ' ' + sale.paidBy.apellido) : '-'}"
+                        >Cobrador</span
+                      >
+                    </td>
+                    <td
+                      class="px-6 py-4 whitespace-nowrap text-gray-600 dark:text-gray-400"
+                    >
+                      <span
+                        th:text="${sale.paymentMethod != null ? sale.paymentMethod.displayName : 'N/A'}"
+                        >Efectivo</span
+                      >
+                    </td>
+                    <td
+                      class="px-6 py-4 whitespace-nowrap text-gray-600 dark:text-gray-400 text-right font-medium"
+                    >
+                      <span th:text="${sale.formattedTotal}">$150.00</span>
+                    </td>
+                    <td
+                      class="px-6 py-4 whitespace-nowrap text-gray-600 dark:text-gray-400 text-right"
+                    >
+                      <span th:text="${sale.formattedTip ?: '$0.00'}"
+                        >$0.00</span
+                      >
+                    </td>
+                    <td
+                      class="px-6 py-4 whitespace-nowrap text-primary text-right font-bold"
+                    >
+                      <span th:text="${sale.formattedTotalWithTip}"
+                        >$150.00</span
+                      >
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-center">
+                      <a
+                        th:href="@{/admin/orders/view/{id}(id=${sale.idOrder})}"
+                        class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors"
+                        title="Ver detalles"
+                      >
+                        <span class="material-symbols-outlined text-lg"
+                          >visibility</span
+                        >
+                      </a>
+                    </td>
+                  </tr>
+                </tbody>
+                <tbody th:if="${sales.empty}">
+                  <tr>
+                    <td colspan="9" class="px-6 py-12 text-center">
+                      <div class="flex flex-col items-center gap-3">
+                        <span
+                          class="material-symbols-outlined text-6xl text-gray-300 dark:text-gray-700"
+                          >receipt_long</span
+                        >
+                        <p class="text-gray-500 dark:text-gray-400 text-lg">
+                          No se encontraron ventas
+                        </p>
+                        <p
+                          class="text-gray-400 dark:text-gray-500 text-sm max-w-md"
+                        >
+                          No hay ventas registradas con los filtros
+                          seleccionados. Intenta ajustar los criterios de
+                          búsqueda.
+                        </p>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Pagination Controls -->
+            <div
+              th:if="${totalElements > 0}"
+              class="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4 px-6 pb-6"
+            >
+              <div class="text-sm text-gray-600 dark:text-gray-400">
+                Mostrando
+                <span th:text="${(currentPage - 1) * pageSize + 1}">1</span> a
+                <span
+                  th:text="${currentPage * pageSize > totalElements ? totalElements : currentPage * pageSize}"
+                  >15</span
+                >
+                de <span th:text="${totalElements}">0</span> ventas
+              </div>
+              <div class="flex items-center gap-2">
+                <button
+                  onclick="changePage(-1)"
+                  th:disabled="${currentPage == 1}"
+                  class="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  <span class="material-symbols-outlined text-sm"
+                    >chevron_left</span
+                  >
+                </button>
+                <div
+                  id="sales-page-numbers"
+                  class="flex items-center gap-1"
+                ></div>
+                <button
+                  onclick="changePage(1)"
+                  th:disabled="${currentPage >= totalPages}"
+                  class="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  <span class="material-symbols-outlined text-sm"
+                    >chevron_right</span
+                  >
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <script th:inline="javascript">
+      // Filter functions
+      function applyFilters() {
+        const employeeId = document.getElementById("filterEmployee").value;
+        const paymentMethod = document.getElementById(
+          "filterPaymentMethod",
+        ).value;
+        const startDate = document.getElementById("startDate").value;
+        const endDate = document.getElementById("endDate").value;
+
+        let url = "/admin/sales?";
+        if (startDate) url += `startDate=${startDate}&`;
+        if (endDate) url += `endDate=${endDate}&`;
+        if (employeeId) url += `employeeId=${employeeId}&`;
+        if (paymentMethod) url += `paymentMethod=${paymentMethod}&`;
+
+        window.location.href = url;
+      }
+
+      function clearFilters() {
+        window.location.href = "/admin/sales";
+      }
+
+      // ============================================
+      // SERVER-SIDE PAGINATION
+      // ============================================
+      /*<![CDATA[*/
+      const serverCurrentPage = /*[[${currentPage}]]*/ 1;
+      const serverTotalPages = /*[[${totalPages}]]*/ 1;
+
+      function goToPage(page) {
+        const url = new URL(window.location.href);
+        url.searchParams.set("page", page);
+        window.location.href = url.toString();
+      }
+
+      function changePage(delta) {
+        const newPage = serverCurrentPage + delta;
+        if (newPage >= 1 && newPage <= serverTotalPages) {
+          goToPage(newPage);
+        }
+      }
+
+      // Generate page number buttons
+      document.addEventListener("DOMContentLoaded", function () {
+        const pageNumbersDiv = document.getElementById("sales-page-numbers");
+        if (!pageNumbersDiv || serverTotalPages <= 1) return;
+
+        let startPage = Math.max(1, serverCurrentPage - 2);
+        let endPage = Math.min(serverTotalPages, startPage + 4);
+        if (endPage - startPage < 4) {
+          startPage = Math.max(1, endPage - 4);
+        }
+
+        for (let i = startPage; i <= endPage; i++) {
+          const btn = document.createElement("button");
+          btn.textContent = i;
+          btn.onclick = () => goToPage(i);
+          btn.className =
+            i === serverCurrentPage
+              ? "px-3 py-1 rounded-lg bg-primary text-white font-semibold"
+              : "px-3 py-1 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors";
+          pageNumbersDiv.appendChild(btn);
+        }
+      });
+      /*]]>*/
+    </script>
+
+    <!-- Sidebar Scripts Fragment -->
+    <div th:replace="~{fragments/sidebar :: sidebarScripts}"></div>
+
+    <!-- Script del Sistema de Temas -->
+    <div th:replace="~{fragments/theme :: themeScript}"></div>
+  </body>
+</html>

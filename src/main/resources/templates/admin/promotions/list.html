@@ -1,0 +1,514 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title th:text="${globalSystemConfig.systemName + ' - Promociones'}">
+      El Gran Sazón - Promociones
+    </title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@300;400;500;600;700"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <!-- Sistema de Temas (Modo Claro/Oscuro) -->
+    <div th:replace="~{fragments/theme :: themeResources}"></div>
+
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#38e07b",
+              "primary-dark": "#2bc866",
+              "background-light": "#f8faf9",
+              "background-dark": "#0f1713",
+            },
+            fontFamily: { display: ["Work Sans"] },
+            borderRadius: {
+              DEFAULT: "0.5rem",
+              lg: "0.75rem",
+              xl: "1rem",
+              "2xl": "1.5rem",
+              full: "9999px",
+            },
+          },
+        },
+      };
+    </script>
+
+    <!-- Sidebar Styles Fragment -->
+    <div th:replace="~{fragments/sidebar :: sidebarStyles}"></div>
+  </head>
+
+  <body
+    class="bg-gradient-to-br from-background-light to-gray-50 dark:from-background-dark dark:to-gray-900 font-display text-gray-800 dark:text-gray-200 overflow-hidden"
+  >
+    <!-- Menu Controls Fragment -->
+    <div th:replace="~{fragments/sidebar :: menuControls}"></div>
+
+    <div class="flex min-h-screen h-screen overflow-hidden">
+      <!-- SIDEBAR - Using Fragment -->
+      <div
+        th:replace="~{fragments/sidebar :: sidebar(activeMenu='promotions')}"
+      ></div>
+
+      <!-- MAIN CONTENT -->
+      <main class="flex-1 overflow-y-auto h-screen">
+        <div class="p-4 sm:p-6 lg:p-8 pt-20 md:pt-20 lg:pt-8 pb-32">
+          <!-- HEADER -->
+          <div
+            class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6 sm:mb-8"
+          >
+            <div>
+              <h2
+                class="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white mb-1"
+              >
+                Promociones
+              </h2>
+              <p class="text-sm sm:text-base text-gray-600 dark:text-gray-400">
+                Gestiona las ofertas y descuentos del restaurante
+              </p>
+            </div>
+            <a
+              th:href="@{/admin/promotions/new}"
+              class="flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl bg-gradient-to-r from-primary to-primary-dark text-white font-semibold hover:shadow-lg hover:shadow-primary/30 transition-all shadow-md text-sm sm:text-base"
+            >
+              <span class="material-symbols-outlined text-lg">add</span>
+              Nueva Promoción
+            </a>
+          </div>
+
+          <!-- FLASH MESSAGES -->
+          <div
+            th:if="${success}"
+            class="mb-6 p-4 bg-green-100 dark:bg-green-900 border border-green-200 dark:border-green-800 rounded-xl flex items-center gap-3"
+          >
+            <span
+              class="material-symbols-outlined text-green-600 dark:text-green-400"
+              >check_circle</span
+            >
+            <span
+              class="text-green-800 dark:text-green-200 font-medium"
+              th:text="${success}"
+            ></span>
+          </div>
+          <div
+            th:if="${error}"
+            class="mb-6 p-4 bg-red-100 dark:bg-red-900 border border-red-200 dark:border-red-800 rounded-xl flex items-center gap-3"
+          >
+            <span
+              class="material-symbols-outlined text-red-600 dark:text-red-400"
+              >error</span
+            >
+            <span
+              class="text-red-800 dark:text-red-200 font-medium"
+              th:text="${error}"
+            ></span>
+          </div>
+
+          <!-- Stats -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm">
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="text-gray-600 dark:text-gray-400 text-sm">Total</p>
+                  <p
+                    class="text-2xl font-bold text-gray-900 dark:text-white"
+                    th:text="${totalCount}"
+                  >
+                    0
+                  </p>
+                </div>
+                <span class="material-symbols-outlined text-4xl text-blue-500"
+                  >sell</span
+                >
+              </div>
+            </div>
+            <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm">
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="text-gray-600 dark:text-gray-400 text-sm">
+                    Activas Hoy
+                  </p>
+                  <p
+                    class="text-2xl font-bold text-green-600"
+                    th:text="${activeCount}"
+                  >
+                    0
+                  </p>
+                </div>
+                <span class="material-symbols-outlined text-4xl text-green-500"
+                  >local_offer</span
+                >
+              </div>
+            </div>
+            <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm">
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="text-gray-600 dark:text-gray-400 text-sm">
+                    Por Vencer (7 días)
+                  </p>
+                  <p
+                    class="text-2xl font-bold text-orange-600"
+                    th:text="${endingSoonCount}"
+                  >
+                    0
+                  </p>
+                </div>
+                <span class="material-symbols-outlined text-4xl text-orange-500"
+                  >schedule</span
+                >
+              </div>
+            </div>
+          </div>
+
+          <!-- Filters -->
+          <div class="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm mb-6">
+            <form
+              th:action="@{/admin/promotions}"
+              method="get"
+              class="flex flex-col sm:flex-row gap-3 sm:gap-4 sm:items-end"
+            >
+              <div class="flex-1 grid grid-cols-2 gap-3 sm:contents">
+                <div>
+                  <label
+                    class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                    >Tipo</label
+                  >
+                  <select
+                    name="type"
+                    class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm sm:text-base"
+                  >
+                    <option value="">Todos los tipos</option>
+                    <option
+                      th:each="type : ${promotionTypes}"
+                      th:value="${type}"
+                      th:text="${type.displayName}"
+                      th:selected="${type == selectedType}"
+                    ></option>
+                  </select>
+                </div>
+                <div>
+                  <label
+                    class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                    >Estado</label
+                  >
+                  <select
+                    name="active"
+                    class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm sm:text-base"
+                  >
+                    <option value="">Todos</option>
+                    <option
+                      value="true"
+                      th:selected="${selectedActive != null && selectedActive}"
+                    >
+                      Activas
+                    </option>
+                    <option
+                      value="false"
+                      th:selected="${selectedActive != null && !selectedActive}"
+                    >
+                      Inactivas
+                    </option>
+                  </select>
+                </div>
+              </div>
+              <div class="flex gap-3 sm:gap-4">
+                <button
+                  type="submit"
+                  class="flex-1 sm:flex-none bg-primary hover:bg-primary-dark text-white px-5 sm:px-6 py-2.5 rounded-lg font-semibold transition-colors text-sm sm:text-base"
+                >
+                  Filtrar
+                </button>
+                <a
+                  th:href="@{/admin/promotions}"
+                  class="flex-1 sm:flex-none text-center bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 px-5 sm:px-6 py-2.5 rounded-lg font-semibold transition-colors text-sm sm:text-base"
+                >
+                  Limpiar
+                </a>
+              </div>
+            </form>
+          </div>
+
+          <!-- Promotions Table -->
+          <div
+            class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm overflow-hidden"
+          >
+            <div class="overflow-x-auto">
+              <table class="w-full">
+                <thead class="bg-gray-50 dark:bg-gray-900">
+                  <tr>
+                    <th
+                      class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase"
+                    >
+                      Promoción
+                    </th>
+                    <th
+                      class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase"
+                    >
+                      Tipo
+                    </th>
+                    <th
+                      class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase"
+                    >
+                      Descuento
+                    </th>
+                    <th
+                      class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase"
+                    >
+                      Vigencia
+                    </th>
+                    <th
+                      class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase"
+                    >
+                      Items
+                    </th>
+                    <th
+                      class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase"
+                    >
+                      Estado
+                    </th>
+                    <th
+                      class="px-6 py-4 text-center text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase"
+                    >
+                      Acciones
+                    </th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                  <tr th:if="${#lists.isEmpty(promotions)}">
+                    <td
+                      colspan="7"
+                      class="px-6 py-8 text-center text-gray-500 dark:text-gray-400"
+                    >
+                      No hay promociones disponibles
+                    </td>
+                  </tr>
+                  <tr
+                    th:each="promo : ${promotions}"
+                    class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                  >
+                    <td class="px-6 py-4">
+                      <div
+                        class="font-semibold text-gray-900 dark:text-white"
+                        th:text="${promo.name}"
+                      ></div>
+                      <div
+                        class="text-sm text-gray-600 dark:text-gray-400"
+                        th:text="${promo.description}"
+                      ></div>
+                    </td>
+                    <td class="px-6 py-4">
+                      <span
+                        th:text="${promo.promotionType.displayName}"
+                        class="text-sm text-gray-700 dark:text-gray-300"
+                      ></span>
+                    </td>
+                    <td class="px-6 py-4">
+                      <span
+                        th:text="${promo.displayLabel}"
+                        class="inline-flex px-3 py-1 text-sm font-semibold rounded-full bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-200"
+                      ></span>
+                    </td>
+                    <td class="px-6 py-4">
+                      <div class="text-sm text-gray-700 dark:text-gray-300">
+                        <div
+                          th:text="${#temporals.format(promo.startDate, 'dd/MM/yyyy')}"
+                        ></div>
+                        <div class="text-gray-500 dark:text-gray-400">
+                          hasta
+                        </div>
+                        <div
+                          th:text="${#temporals.format(promo.endDate, 'dd/MM/yyyy')}"
+                        ></div>
+                      </div>
+                    </td>
+                    <td class="px-6 py-4">
+                      <span
+                        th:text="${#lists.size(promo.items)} + ' items'"
+                        class="text-sm text-gray-700 dark:text-gray-300"
+                      ></span>
+                    </td>
+                    <td class="px-6 py-4">
+                      <span
+                        th:if="${promo.active}"
+                        class="inline-flex px-3 py-1 text-xs font-semibold rounded-full bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200"
+                      >
+                        Activa
+                      </span>
+                      <span
+                        th:unless="${promo.active}"
+                        class="inline-flex px-3 py-1 text-xs font-semibold rounded-full bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300"
+                      >
+                        Inactiva
+                      </span>
+                    </td>
+                    <td class="px-6 py-4">
+                      <div class="flex justify-center gap-2">
+                        <a
+                          th:href="@{/admin/promotions/edit/{id}(id=${promo.idPromotion})}"
+                          class="text-blue-600 hover:text-blue-800 dark:text-blue-400"
+                          title="Editar"
+                        >
+                          <span class="material-symbols-outlined">edit</span>
+                        </a>
+
+                        <form
+                          th:if="${promo.active}"
+                          th:action="@{/admin/promotions/{id}/deactivate(id=${promo.idPromotion})}"
+                          method="post"
+                          class="inline toggle-form"
+                          th:data-promo-name="${promo.name}"
+                          data-action="deactivate"
+                          onsubmit="return confirmToggle(event, this);"
+                        >
+                          <button
+                            type="submit"
+                            class="text-orange-600 hover:text-orange-800 dark:text-orange-400"
+                            title="Desactivar"
+                          >
+                            <span class="material-symbols-outlined"
+                              >toggle_on</span
+                            >
+                          </button>
+                        </form>
+
+                        <form
+                          th:unless="${promo.active}"
+                          th:action="@{/admin/promotions/{id}/activate(id=${promo.idPromotion})}"
+                          method="post"
+                          class="inline toggle-form"
+                          th:data-promo-name="${promo.name}"
+                          data-action="activate"
+                          onsubmit="return confirmToggle(event, this);"
+                        >
+                          <button
+                            type="submit"
+                            class="text-green-600 hover:text-green-800 dark:text-green-400"
+                            title="Activar"
+                          >
+                            <span class="material-symbols-outlined"
+                              >toggle_off</span
+                            >
+                          </button>
+                        </form>
+
+                        <form
+                          th:action="@{/admin/promotions/{id}/delete(id=${promo.idPromotion})}"
+                          method="post"
+                          class="inline delete-form"
+                          th:data-promo-name="${promo.name}"
+                          onsubmit="return confirmDelete(event, this);"
+                        >
+                          <button
+                            type="submit"
+                            class="text-red-600 hover:text-red-800 dark:text-red-400"
+                            title="Eliminar"
+                          >
+                            <span class="material-symbols-outlined"
+                              >delete</span
+                            >
+                          </button>
+                        </form>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <!-- Sidebar Scripts Fragment -->
+    <div th:replace="~{fragments/sidebar :: sidebarScripts}"></div>
+    <!-- Theme Script -->
+    <div th:replace="~{fragments/theme :: themeScript}"></div>
+
+    <script>
+      function confirmDelete(event, form) {
+        event.preventDefault();
+
+        const promoName = form.getAttribute("data-promo-name");
+
+        Swal.fire({
+          title: "¿Eliminar promoción?",
+          html: `¿Estás seguro de que deseas eliminar la promoción <strong>"${promoName}"</strong>?<br><br><span class="text-sm text-gray-600 dark:text-gray-400">Esta acción no se puede deshacer.</span>`,
+          icon: "warning",
+          showCancelButton: true,
+          confirmButtonColor: "#ef4444",
+          cancelButtonColor: "#6b7280",
+          confirmButtonText:
+            '<span class="flex items-center gap-2"><span class="material-symbols-outlined text-lg">delete</span> Sí, eliminar</span>',
+          cancelButtonText: "Cancelar",
+          background: document.documentElement.classList.contains("dark")
+            ? "#1f2937"
+            : "#ffffff",
+          color: document.documentElement.classList.contains("dark")
+            ? "#f3f4f6"
+            : "#1f2937",
+          customClass: {
+            popup: "rounded-2xl",
+            confirmButton: "rounded-lg px-4 py-2",
+            cancelButton: "rounded-lg px-4 py-2",
+          },
+        }).then((result) => {
+          if (result.isConfirmed) {
+            form.submit();
+          }
+        });
+
+        return false;
+      }
+
+      function confirmToggle(event, form) {
+        event.preventDefault();
+
+        const promoName = form.getAttribute("data-promo-name");
+        const action = form.getAttribute("data-action");
+        const isActivate = action === "activate";
+
+        Swal.fire({
+          title: isActivate ? "¿Activar promoción?" : "¿Desactivar promoción?",
+          html: `¿Estás seguro de que deseas ${
+            isActivate ? "activar" : "desactivar"
+          } la promoción <strong>"${promoName}"</strong>?`,
+          icon: "question",
+          showCancelButton: true,
+          confirmButtonColor: isActivate ? "#22c55e" : "#f97316",
+          cancelButtonColor: "#6b7280",
+          confirmButtonText: `<span class="flex items-center gap-2"><span class="material-symbols-outlined text-lg">${
+            isActivate ? "toggle_on" : "toggle_off"
+          }</span> Sí, ${isActivate ? "activar" : "desactivar"}</span>`,
+          cancelButtonText: "Cancelar",
+          background: document.documentElement.classList.contains("dark")
+            ? "#1f2937"
+            : "#ffffff",
+          color: document.documentElement.classList.contains("dark")
+            ? "#f3f4f6"
+            : "#1f2937",
+          customClass: {
+            popup: "rounded-2xl",
+            confirmButton: "rounded-lg px-4 py-2",
+            cancelButton: "rounded-lg px-4 py-2",
+          },
+        }).then((result) => {
+          if (result.isConfirmed) {
+            form.submit();
+          }
+        });
+
+        return false;
+      }
+    </script>
+  </body>
+</html>

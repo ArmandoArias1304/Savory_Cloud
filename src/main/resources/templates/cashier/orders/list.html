@@ -1,0 +1,1639 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title th:text="${globalSystemConfig.systemName + ' - Mis Pedidos'}">
+      El Gran Sazón - Mis Pedidos
+    </title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@300;400;500;600;700"
+      rel="stylesheet"
+    />
+
+    <!-- Sistema de Temas (Modo Claro/Oscuro) -->
+    <div th:replace="~{fragments/theme :: themeResources}"></div>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#38e07b",
+              "primary-dark": "#2bc866",
+              "background-light": "#f8faf9",
+              "background-dark": "#0f1713",
+            },
+            fontFamily: {
+              display: ["Work Sans"],
+            },
+            borderRadius: {
+              DEFAULT: "0.5rem",
+              lg: "0.75rem",
+              xl: "1rem",
+              "2xl": "1.5rem",
+              full: "9999px",
+            },
+          },
+        },
+      };
+    </script>
+
+    <style>
+      .table-responsive {
+        overflow-x: auto;
+        max-width: 100%;
+      }
+
+      .table-responsive::-webkit-scrollbar {
+        height: 8px;
+      }
+
+      .table-responsive::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 10px;
+      }
+
+      .table-responsive::-webkit-scrollbar-thumb {
+        background: #38e07b;
+        border-radius: 10px;
+      }
+
+      .table-responsive::-webkit-scrollbar-thumb:hover {
+        background: #2bc866;
+      }
+    </style>
+  </head>
+  <body
+    class="bg-gradient-to-br from-background-light to-gray-50 dark:from-background-dark dark:to-gray-900 font-display text-gray-800 dark:text-gray-200"
+  >
+    <div class="min-h-screen">
+      <!-- MAIN CONTENT -->
+      <main class="w-full">
+        <div class="p-4 sm:p-6 lg:p-8 pb-32">
+          <!-- HEADER -->
+          <div
+            class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6 sm:mb-8"
+          >
+            <div class="flex items-center gap-3">
+              <a
+                th:href="@{/cashier/dashboard}"
+                class="flex h-10 w-10 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 transition-colors"
+              >
+                <span class="material-symbols-outlined">arrow_back</span>
+              </a>
+              <div>
+                <h2
+                  class="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white mb-1"
+                >
+                  Mis Pedidos
+                </h2>
+                <p
+                  class="text-sm sm:text-base text-gray-600 dark:text-gray-400"
+                >
+                  Gestiona tus pedidos asignados
+                </p>
+              </div>
+            </div>
+            <div class="flex flex-col sm:flex-row gap-3">
+              <a
+                th:href="@{/cashier/orders/select-table}"
+                class="flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl bg-gradient-to-r from-primary to-primary-dark text-white font-semibold hover:shadow-lg hover:shadow-primary/30 transition-all shadow-md text-sm sm:text-base"
+              >
+                <span class="material-symbols-outlined text-2xl">add</span>
+                <span>Nuevo Pedido</span>
+              </a>
+            </div>
+          </div>
+          <div
+            th:if="${successMessage}"
+            class="mb-6 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl"
+          >
+            <p
+              class="text-green-800 dark:text-green-300"
+              th:text="${successMessage}"
+            ></p>
+          </div>
+
+          <div
+            th:if="${errorMessage}"
+            class="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl"
+          >
+            <p
+              class="text-red-800 dark:text-red-300"
+              th:text="${errorMessage}"
+            ></p>
+          </div>
+
+          <!-- STATS -->
+          <div
+            class="mb-6 sm:mb-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-6"
+          >
+            <!-- Paid Orders Today -->
+            <div
+              class="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 sm:p-6 shadow-lg"
+            >
+              <div class="flex items-center justify-between mb-3">
+                <h3
+                  class="text-sm font-medium text-gray-600 dark:text-gray-400"
+                >
+                  Pedidos Cobrados
+                </h3>
+                <span class="material-symbols-outlined text-2xl text-blue-500"
+                  >payments</span
+                >
+              </div>
+              <p
+                class="text-3xl font-bold text-blue-500"
+                th:text="${paidCount}"
+              >
+                0
+              </p>
+            </div>
+
+            <!-- Today's Revenue (Cash Register) -->
+            <div
+              class="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 sm:p-6 shadow-lg"
+            >
+              <div class="flex items-center justify-between mb-3">
+                <h3
+                  class="text-sm font-medium text-gray-600 dark:text-gray-400"
+                >
+                  En Caja Hoy
+                </h3>
+                <span class="material-symbols-outlined text-2xl text-primary"
+                  >payments</span
+                >
+              </div>
+              <p class="text-3xl font-bold text-primary">
+                $<span th:text="${#numbers.formatDecimal(todayRevenue, 1, 2)}"
+                  >0.00</span
+                >
+              </p>
+            </div>
+
+            <!-- Pending Orders -->
+            <div
+              class="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 sm:p-6 shadow-lg"
+            >
+              <div class="flex items-center justify-between mb-3">
+                <h3
+                  class="text-sm font-medium text-gray-600 dark:text-gray-400"
+                >
+                  Pendientes Hoy
+                </h3>
+                <span class="material-symbols-outlined text-2xl text-yellow-500"
+                  >pending</span
+                >
+              </div>
+              <p
+                class="text-3xl font-bold text-yellow-500"
+                th:text="${myPendingCount}"
+              >
+                0
+              </p>
+            </div>
+
+            <!-- In Preparation -->
+            <div
+              class="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 sm:p-6 shadow-lg"
+            >
+              <div class="flex items-center justify-between mb-3">
+                <h3
+                  class="text-sm font-medium text-gray-600 dark:text-gray-400"
+                >
+                  En Preparación Hoy
+                </h3>
+                <span class="material-symbols-outlined text-2xl text-orange-500"
+                  >restaurant</span
+                >
+              </div>
+              <p
+                class="text-3xl font-bold text-orange-500"
+                th:text="${inPreparationCount}"
+              >
+                0
+              </p>
+            </div>
+
+            <!-- My Own Revenue Today -->
+            <div
+              class="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 sm:p-6 shadow-lg"
+            >
+              <div class="flex items-center justify-between mb-3">
+                <h3
+                  class="text-sm font-medium text-gray-600 dark:text-gray-400"
+                >
+                  Ingresos Hoy Propios
+                </h3>
+                <span class="material-symbols-outlined text-2xl text-purple-500"
+                  >account_balance_wallet</span
+                >
+              </div>
+              <p class="text-3xl font-bold text-purple-500">
+                $<span th:text="${#numbers.formatDecimal(myOwnRevenue, 1, 2)}"
+                  >0.00</span
+                >
+              </p>
+            </div>
+          </div>
+
+          <!-- FILTERS CARD -->
+          <div
+            id="mainFiltersSection"
+            class="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 sm:p-6 shadow-lg mb-6"
+          >
+            <div class="flex items-center gap-2 mb-4">
+              <span class="material-symbols-outlined text-primary text-2xl"
+                >filter_alt</span
+              >
+              <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+                Filtros de Búsqueda
+              </h3>
+            </div>
+
+            <div
+              class="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-4"
+            >
+              <div
+                class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 flex-1"
+              >
+                <!-- Table Filter -->
+                <div>
+                  <label
+                    class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                    >Mesa</label
+                  >
+                  <select
+                    id="filterTable"
+                    class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                  >
+                    <option value="">Todas las mesas</option>
+                    <option
+                      th:each="table : ${tables}"
+                      th:value="${table.id}"
+                      th:text="${'Mesa #' + table.tableNumber}"
+                      th:selected="${selectedTableId != null && selectedTableId == table.id}"
+                    ></option>
+                  </select>
+                </div>
+
+                <!-- Status Filter -->
+                <div>
+                  <label
+                    class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                    >Estado</label
+                  >
+                  <select
+                    id="filterStatus"
+                    class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                  >
+                    <option value="">Todos los estados</option>
+                    <option
+                      th:each="status : ${statuses}"
+                      th:if="${status.name() != 'CANCELLED'}"
+                      th:value="${status}"
+                      th:text="${status.displayName}"
+                      th:selected="${selectedStatus != null && selectedStatus == status}"
+                    ></option>
+                  </select>
+                </div>
+
+                <!-- Order Type Filter -->
+                <div>
+                  <label
+                    class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                    >Tipo</label
+                  >
+                  <select
+                    id="filterOrderType"
+                    class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                  >
+                    <option value="">Todos los tipos</option>
+                    <option
+                      th:each="type : ${orderTypes}"
+                      th:value="${type}"
+                      th:text="${type.displayName}"
+                      th:selected="${selectedOrderType != null && selectedOrderType == type}"
+                    ></option>
+                  </select>
+                </div>
+
+                <!-- Date Filter -->
+                <div>
+                  <label
+                    class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                    >Fecha</label
+                  >
+                  <input
+                    type="date"
+                    id="filterDate"
+                    th:value="${selectedDate}"
+                    class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                  />
+                </div>
+              </div>
+
+              <!-- Filter Actions -->
+              <div class="flex gap-2">
+                <button
+                  onclick="applyFilters()"
+                  class="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-primary to-primary-dark text-white font-semibold hover:shadow-lg hover:shadow-primary/30 transition-all"
+                >
+                  <span class="material-symbols-outlined text-lg">search</span>
+                  Filtrar
+                </button>
+                <button
+                  onclick="clearFilters()"
+                  class="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-semibold hover:bg-gray-200 dark:hover:bg-gray-700 transition-all"
+                >
+                  <span class="material-symbols-outlined text-lg">close</span>
+                  Limpiar
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- ORDERS TABLE -->
+          <div
+            class="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-lg overflow-hidden"
+          >
+            <div
+              class="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-800"
+            >
+              <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary text-2xl"
+                  >receipt_long</span
+                >
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+                  Lista de Pedidos
+                </h3>
+              </div>
+            </div>
+
+            <div class="table-responsive">
+              <table class="w-full text-sm text-left">
+                <thead
+                  class="text-xs uppercase bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300"
+                >
+                  <tr>
+                    <th class="px-6 py-4 font-semibold">Nº Pedido</th>
+                    <th class="px-6 py-4 font-semibold">Fecha/Hora</th>
+                    <th class="px-6 py-4 font-semibold">Mesa</th>
+                    <th class="px-6 py-4 font-semibold">Tipo</th>
+                    <th class="px-6 py-4 font-semibold">Cliente</th>
+                    <th class="px-6 py-4 font-semibold">Total</th>
+                    <th class="px-6 py-4 font-semibold">Pago</th>
+                    <th class="px-6 py-4 font-semibold">Estado</th>
+                    <th class="px-6 py-4 font-semibold">Cobrado por</th>
+                    <th class="px-6 py-4 font-semibold text-center">
+                      Acciones
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr th:if="${myOrders.empty}">
+                    <td
+                      colspan="10"
+                      class="px-6 py-12 text-center text-gray-500 dark:text-gray-400"
+                    >
+                      <span
+                        class="material-symbols-outlined text-6xl text-gray-300 dark:text-gray-700 mb-4 block"
+                        >receipt_long</span
+                      >
+                      <p class="text-lg font-medium">
+                        No tienes pedidos registrados
+                      </p>
+                    </td>
+                  </tr>
+                  <tr
+                    th:each="order : ${myOrders}"
+                    th:data-order-id="${order.idOrder}"
+                    class="border-b border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                  >
+                    <!-- Order Number -->
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <span
+                        class="text-sm font-mono font-semibold text-primary"
+                        th:text="${order.orderNumber}"
+                      ></span>
+                    </td>
+
+                    <!-- Date/Time -->
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <div
+                        class="text-sm text-gray-900 dark:text-white"
+                        th:text="${#temporals.format(order.createdAt, 'dd/MM/yyyy')}"
+                      ></div>
+                      <div
+                        class="text-xs text-gray-500 dark:text-gray-400"
+                        th:text="${#temporals.format(order.createdAt, 'HH:mm')}"
+                      ></div>
+                    </td>
+
+                    <!-- Table -->
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <span
+                        th:if="${order.table != null}"
+                        class="text-sm text-gray-900 dark:text-white"
+                        th:text="${'Mesa #' + order.table.tableNumber}"
+                      ></span>
+                      <span
+                        th:if="${order.table == null}"
+                        class="text-sm text-gray-400"
+                        >N/A</span
+                      >
+                    </td>
+
+                    <!-- Order Type -->
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <span
+                        class="px-3 py-1 text-xs rounded-full font-medium"
+                        th:classappend="${order.orderType.name() == 'DINE_IN'} ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' : (${order.orderType.name() == 'TAKEOUT'} ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400' : 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400')"
+                        th:text="${order.orderType.displayName}"
+                      >
+                      </span>
+                    </td>
+
+                    <!-- Customer -->
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <div
+                        class="text-sm text-gray-900 dark:text-white"
+                        th:text="${order.customerName}"
+                      ></div>
+                      <div
+                        class="text-xs text-gray-500 dark:text-gray-400"
+                        th:text="${order.customerPhone}"
+                      ></div>
+                    </td>
+
+                    <!-- Total -->
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <span class="text-sm font-semibold text-primary"
+                        >$<span
+                          th:text="${#numbers.formatDecimal(order.total, 1, 2)}"
+                        ></span
+                      ></span>
+                    </td>
+
+                    <!-- Payment Method -->
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <span
+                        class="px-3 py-1 text-xs rounded-full font-medium"
+                        th:classappend="${order.paymentMethod.name() == 'CASH'} ? 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400' : 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'"
+                        th:text="${order.paymentMethod.displayName}"
+                      >
+                      </span>
+                    </td>
+
+                    <!-- Status -->
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <span
+                        class="status-badge px-3 py-1 text-xs rounded-full font-medium"
+                        th:classappend="${order.status.name() == 'PENDING'} ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' : 
+                                                     (${order.status.name() == 'IN_PREPARATION'} ? 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400' : 
+                                                     (${order.status.name() == 'READY'} ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' :
+                                                     (${order.status.name() == 'ON_THE_WAY'} ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400' :
+                                                     (${order.status.name() == 'DELIVERED'} ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
+                                                     (${order.status.name() == 'PAID'} ? 'bg-primary/20 text-primary' : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400')))))"
+                        th:text="${order.status.displayName}"
+                      >
+                      </span>
+                    </td>
+
+                    <!-- Paid By -->
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <div
+                        th:if="${order.paidBy != null}"
+                        class="text-sm text-gray-900 dark:text-white"
+                        th:text="${order.paidBy.nombre + ' ' + order.paidBy.apellido}"
+                      ></div>
+                      <span
+                        th:if="${order.paidBy == null}"
+                        class="text-sm text-gray-400"
+                        >-</span
+                      >
+                    </td>
+
+                    <!-- Actions -->
+                    <td class="px-6 py-4 whitespace-nowrap text-center">
+                      <div class="flex items-center justify-center gap-2">
+                        <!-- View -->
+                        <a
+                          th:href="@{/{role}/orders/view/{id}(role=${currentRole},id=${order.idOrder})}"
+                          class="p-2 rounded-lg bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-all"
+                          title="Ver detalles"
+                        >
+                          <i class="fas fa-eye"></i>
+                        </a>
+
+                        <!-- Download Ticket (only for PAID orders) -->
+                        <a
+                          th:if="${order.status.name() == 'PAID'}"
+                          th:href="@{/{role}/orders/{id}/download-ticket(role=${currentRole},id=${order.idOrder})}"
+                          class="p-2 rounded-lg bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/40 transition-all"
+                          title="Descargar ticket"
+                        >
+                          <i class="fas fa-receipt"></i>
+                        </a>
+
+                        <!-- Add Items (only for DINE_IN and TAKEOUT orders that can accept new items) -->
+                        <a
+                          th:if="${order.canAcceptNewItems()}"
+                          th:href="@{/{role}/orders/{id}/add-items(role=${currentRole},id=${order.idOrder})}"
+                          class="p-2 rounded-lg bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-900/40 transition-all"
+                          title="Agregar items al pedido"
+                        >
+                          <i class="fas fa-plus-circle"></i>
+                        </a>
+
+                        <!-- Edit (disabled for PAID and CANCELLED) -->
+                        <a
+                          th:if="${order.status.name() != 'PAID' && order.status.name() != 'CANCELLED'}"
+                          th:href="@{/{role}/orders/edit/{id}(role=${currentRole},id=${order.idOrder})}"
+                          class="p-2 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400 hover:bg-yellow-100 dark:hover:bg-yellow-900/40 transition-all"
+                          title="Editar"
+                        >
+                          <i class="fas fa-edit"></i>
+                        </a>
+
+                        <!-- Change Status (not CANCELLED, PAID or DELIVERED) -->
+                        <button
+                          th:if="${order.status.name() != 'CANCELLED' && order.status.name() != 'PAID' && order.status.name() != 'DELIVERED'}"
+                          class="btn-change-status p-2 rounded-lg bg-primary/10 dark:bg-primary/20 text-primary hover:bg-primary/20 dark:hover:bg-primary/30 transition-all"
+                          th:data-order-id="${order.idOrder}"
+                          th:data-order-number="${order.orderNumber}"
+                          th:data-order-status="${order.status.name()}"
+                          th:data-payment-method="${order.paymentMethod.name()}"
+                          title="Cambiar estado"
+                        >
+                          <i class="fas fa-exchange-alt"></i>
+                        </button>
+
+                        <!-- Pay (CASHIER can collect ALL payment methods) -->
+                        <a
+                          th:if="${order.status.name() == 'DELIVERED'}"
+                          th:href="@{/cashier/payments/form/{id}(id=${order.idOrder})}"
+                          class="p-2 rounded-lg bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/40 transition-all"
+                          title="Cobrar pedido"
+                        >
+                          <i class="fas fa-hand-holding-usd"></i>
+                        </a>
+
+                        <!-- Cancel (PENDING, IN_PREPARATION, READY) -->
+                        <button
+                          th:if="${order.status == T(com.aatechsolutions.elgransazon.domain.entity.OrderStatus).PENDING || order.status.name() == 'IN_PREPARATION' || order.status.name() == 'READY'}"
+                          class="btn-cancel-order p-2 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 transition-all"
+                          th:data-order-id="${order.idOrder}"
+                          th:data-order-number="${order.orderNumber}"
+                          title="Cancelar pedido"
+                        >
+                          <i class="fas fa-times-circle"></i>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Pagination Controls for My Orders -->
+            <div
+              id="paginationControlsMyOrders"
+              th:if="${totalElements > 0}"
+              class="px-6 py-4 border-t border-gray-200 dark:border-gray-800 flex flex-col sm:flex-row items-center justify-between gap-4"
+            >
+              <div class="text-sm text-gray-600 dark:text-gray-400">
+                Mostrando
+                <span th:text="${(currentPage - 1) * pageSize + 1}">1</span> -
+                <span
+                  th:text="${currentPage * pageSize > totalElements ? totalElements : currentPage * pageSize}"
+                  >15</span
+                >
+                de <span th:text="${totalElements}">0</span> pedidos
+              </div>
+              <div class="flex items-center gap-2">
+                <button
+                  onclick="changePageMyOrders(-1)"
+                  th:disabled="${currentPage == 1}"
+                  class="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                >
+                  <span class="material-symbols-outlined text-lg"
+                    >chevron_left</span
+                  >
+                </button>
+                <div
+                  id="pageNumbersMyOrders"
+                  class="flex items-center gap-1"
+                ></div>
+                <button
+                  onclick="changePageMyOrders(1)"
+                  th:disabled="${currentPage >= totalPages}"
+                  class="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                >
+                  <span class="material-symbols-outlined text-lg"
+                    >chevron_right</span
+                  >
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- GLOBAL TABLE FILTERS CARD -->
+          <div
+            id="globalFiltersSection"
+            class="rounded-2xl border border-orange-200 dark:border-orange-800 bg-white dark:bg-gray-900 p-4 sm:p-6 shadow-lg mb-6 mt-8"
+          >
+            <div class="flex items-center gap-2 mb-4">
+              <span class="material-symbols-outlined text-orange-500 text-2xl"
+                >filter_alt</span
+              >
+              <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+                Filtros - Pedidos Globales
+              </h3>
+            </div>
+
+            <div
+              class="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-4"
+            >
+              <div
+                class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 flex-1"
+              >
+                <!-- Global Table Filter -->
+                <div>
+                  <label
+                    class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                    >Mesa</label
+                  >
+                  <select
+                    id="globalFilterTable"
+                    class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
+                  >
+                    <option value="">Todas las mesas</option>
+                    <option
+                      th:each="table : ${tables}"
+                      th:value="${table.id}"
+                      th:text="${'Mesa #' + table.tableNumber}"
+                      th:selected="${selectedGlobalTableId != null && selectedGlobalTableId == table.id}"
+                    ></option>
+                  </select>
+                </div>
+
+                <!-- Global Status Filter -->
+                <div>
+                  <label
+                    class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                    >Estado</label
+                  >
+                  <select
+                    id="globalFilterStatus"
+                    class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
+                  >
+                    <option value="">Todos los estados</option>
+                    <option
+                      th:each="status : ${statuses}"
+                      th:if="${status.name() != 'CANCELLED'}"
+                      th:value="${status}"
+                      th:text="${status.displayName}"
+                      th:selected="${selectedGlobalStatus != null && selectedGlobalStatus == status}"
+                    ></option>
+                  </select>
+                </div>
+
+                <!-- Global Order Type Filter -->
+                <div>
+                  <label
+                    class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                    >Tipo</label
+                  >
+                  <select
+                    id="globalFilterOrderType"
+                    class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
+                  >
+                    <option value="">Todos los tipos</option>
+                    <option
+                      th:each="type : ${orderTypes}"
+                      th:value="${type}"
+                      th:text="${type.displayName}"
+                      th:selected="${selectedGlobalOrderType != null && selectedGlobalOrderType == type}"
+                    ></option>
+                  </select>
+                </div>
+
+                <!-- Global Date Filter -->
+                <div>
+                  <label
+                    class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                    >Fecha</label
+                  >
+                  <input
+                    type="date"
+                    id="globalFilterDate"
+                    th:value="${selectedGlobalDate}"
+                    class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
+                  />
+                </div>
+              </div>
+
+              <!-- Filter Actions -->
+              <div class="flex gap-2">
+                <button
+                  onclick="applyGlobalFilters()"
+                  class="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 text-white font-semibold hover:shadow-lg hover:shadow-orange-500/30 transition-all"
+                >
+                  <span class="material-symbols-outlined text-lg">search</span>
+                  Filtrar
+                </button>
+                <button
+                  onclick="clearGlobalFilters()"
+                  class="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-semibold hover:bg-gray-200 dark:hover:bg-gray-700 transition-all"
+                >
+                  <span class="material-symbols-outlined text-lg">close</span>
+                  Limpiar
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- GLOBAL ORDERS TABLE (All orders - PENDING to PAID - Includes history) -->
+          <div
+            class="rounded-2xl border border-orange-200 dark:border-orange-800 bg-white dark:bg-gray-900 shadow-lg overflow-hidden mt-8"
+          >
+            <div
+              class="p-4 sm:p-6 border-b border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-900/20"
+            >
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <span
+                    class="material-symbols-outlined text-orange-500 text-2xl"
+                    >receipt_long</span
+                  >
+                  <div>
+                    <h3
+                      class="text-lg font-semibold text-gray-900 dark:text-white"
+                    >
+                      Pedidos Globales e Historial de Cobros
+                    </h3>
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                      <span class="font-semibold" th:text="${unpaidCount}"
+                        >0</span
+                      >
+                      pedidos pendientes •
+                      <span
+                        class="font-semibold text-emerald-600 dark:text-emerald-400"
+                        th:text="${paidOrdersCount}"
+                        >0</span
+                      >
+                      cobrados (historial)
+                    </p>
+                  </div>
+                </div>
+                <div class="text-right">
+                  <p class="text-sm text-gray-600 dark:text-gray-400">
+                    Total por cobrar
+                  </p>
+                  <p class="text-2xl font-bold text-orange-500">
+                    $<span
+                      th:text="${#numbers.formatDecimal(unpaidTotal, 1, 2)}"
+                      >0.00</span
+                    >
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div class="table-responsive">
+              <table class="w-full text-sm text-left">
+                <thead
+                  class="text-xs uppercase bg-orange-50 dark:bg-orange-900/20 text-gray-700 dark:text-gray-300"
+                >
+                  <tr>
+                    <th class="px-6 py-4 font-semibold">Nº Pedido</th>
+                    <th class="px-6 py-4 font-semibold">Fecha/Hora</th>
+                    <th class="px-6 py-4 font-semibold">Tipo de Pedido</th>
+                    <th class="px-6 py-4 font-semibold">Creado Por</th>
+                    <th class="px-6 py-4 font-semibold">Total</th>
+                    <th class="px-6 py-4 font-semibold">Estado</th>
+                    <th class="px-6 py-4 font-semibold">Cobrado por</th>
+                    <th class="px-6 py-4 font-semibold text-center">
+                      Acciones
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr th:if="${unpaidOrders.empty}">
+                    <td
+                      colspan="8"
+                      class="px-6 py-12 text-center text-gray-500 dark:text-gray-400"
+                    >
+                      <span
+                        class="material-symbols-outlined text-6xl text-gray-300 dark:text-gray-700 mb-4 block"
+                        >check_circle</span
+                      >
+                      <p class="text-lg font-medium">
+                        No hay pedidos pendientes de cobro
+                      </p>
+                    </td>
+                  </tr>
+                  <tr
+                    th:each="order : ${unpaidOrders}"
+                    th:data-order-id="${order.idOrder}"
+                    class="border-b border-gray-200 dark:border-gray-800 hover:bg-orange-50/50 dark:hover:bg-orange-900/10 transition-colors"
+                  >
+                    <!-- Order Number -->
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <span
+                        class="text-sm font-mono font-semibold text-orange-600 dark:text-orange-400"
+                        th:text="${order.orderNumber}"
+                      ></span>
+                    </td>
+
+                    <!-- Date/Time -->
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <div
+                        class="text-sm text-gray-900 dark:text-white"
+                        th:text="${#temporals.format(order.createdAt, 'dd/MM/yyyy')}"
+                      ></div>
+                      <div
+                        class="text-xs text-gray-500 dark:text-gray-400"
+                        th:text="${#temporals.format(order.createdAt, 'HH:mm')}"
+                      ></div>
+                    </td>
+
+                    <!-- Order Type -->
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <span
+                        th:if="${order.orderType.name() == 'DINE_IN'}"
+                        class="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
+                      >
+                        <span class="material-symbols-outlined text-sm"
+                          >restaurant</span
+                        >
+                        <span
+                          th:text="${order.table != null ? 'Mesa #' + order.table.tableNumber : 'En Restaurante'}"
+                        ></span>
+                      </span>
+                      <span
+                        th:if="${order.orderType.name() == 'TAKEOUT'}"
+                        class="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium rounded-full bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400"
+                      >
+                        <span class="material-symbols-outlined text-sm"
+                          >shopping_bag</span
+                        >
+                        Para pasar a recoger
+                      </span>
+                      <span
+                        th:if="${order.orderType.name() == 'DELIVERY'}"
+                        class="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium rounded-full bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400"
+                      >
+                        <span class="material-symbols-outlined text-sm"
+                          >local_shipping</span
+                        >
+                        Domicilio
+                      </span>
+                    </td>
+
+                    <!-- Created By -->
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <span
+                        th:if="${order.customer != null}"
+                        class="inline-flex items-center gap-1 text-sm text-primary font-medium"
+                      >
+                        <span class="material-symbols-outlined text-sm"
+                          >person</span
+                        >
+                        <span th:text="${order.customer.fullName}"></span>
+                      </span>
+                      <span
+                        th:if="${order.customer == null && order.employee != null}"
+                        class="text-sm text-gray-700 dark:text-gray-300"
+                        th:text="${order.employee.fullName}"
+                      ></span>
+                      <span
+                        th:if="${order.customer == null && order.employee == null}"
+                        class="text-sm text-gray-400"
+                        >N/A</span
+                      >
+                    </td>
+
+                    <!-- Total -->
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <span
+                        class="text-sm font-bold text-gray-900 dark:text-white"
+                        th:text="${'$' + #numbers.formatDecimal(order.total, 1, 2)}"
+                      ></span>
+                    </td>
+
+                    <!-- Status -->
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <span
+                        class="status-badge inline-flex items-center gap-1 px-3 py-1 text-xs font-medium rounded-full"
+                        th:classappend="${order.status.name() == 'PENDING' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' :
+                                      order.status.name() == 'IN_PREPARATION' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400' :
+                                      order.status.name() == 'READY' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' :
+                                      order.status.name() == 'DELIVERED' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
+                                      order.status.name() == 'PAID' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400' :
+                                      'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400'}"
+                        th:text="${order.status.displayName}"
+                      >
+                      </span>
+                    </td>
+
+                    <!-- Paid By -->
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <div
+                        th:if="${order.paidBy != null}"
+                        class="text-sm text-gray-900 dark:text-white"
+                        th:text="${order.paidBy.nombre + ' ' + order.paidBy.apellido}"
+                      ></div>
+                      <span
+                        th:if="${order.paidBy == null}"
+                        class="text-sm text-gray-400"
+                        >-</span
+                      >
+                    </td>
+
+                    <!-- Actions -->
+                    <td class="px-6 py-4 whitespace-nowrap text-center">
+                      <div class="flex items-center justify-center gap-2">
+                        <!-- View Details -->
+                        <a
+                          th:href="@{/cashier/orders/view/{id}(id=${order.idOrder})}"
+                          class="p-2 rounded-lg bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-all"
+                          title="Ver detalles"
+                        >
+                          <i class="fas fa-eye"></i>
+                        </a>
+
+                        <!-- Download Ticket (only for PAID orders) -->
+                        <a
+                          th:if="${order.status.name() == 'PAID'}"
+                          th:href="@{/cashier/orders/{id}/download-ticket(id=${order.idOrder})}"
+                          class="p-2 rounded-lg bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/40 transition-all"
+                          title="Descargar ticket"
+                        >
+                          <i class="fas fa-receipt"></i>
+                        </a>
+
+                        <!-- Add Items (only for orders that can accept new items) -->
+                        <a
+                          th:if="${order.canAcceptNewItems()}"
+                          th:href="@{/cashier/orders/{id}/add-items(id=${order.idOrder})}"
+                          class="p-2 rounded-lg bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-900/40 transition-all"
+                          title="Agregar items al pedido"
+                        >
+                          <i class="fas fa-plus-circle"></i>
+                        </a>
+
+                        <!-- Edit (disabled for PAID and CANCELLED) -->
+                        <a
+                          th:if="${order.status.name() != 'PAID' && order.status.name() != 'CANCELLED'}"
+                          th:href="@{/cashier/orders/edit/{id}(id=${order.idOrder})}"
+                          class="p-2 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400 hover:bg-yellow-100 dark:hover:bg-yellow-900/40 transition-all"
+                          title="Editar"
+                        >
+                          <i class="fas fa-edit"></i>
+                        </a>
+
+                        <!-- Change Status (not CANCELLED, PAID or DELIVERED) -->
+                        <button
+                          th:if="${order.status.name() != 'CANCELLED' && order.status.name() != 'PAID' && order.status.name() != 'DELIVERED'}"
+                          class="btn-change-status p-2 rounded-lg bg-primary/10 dark:bg-primary/20 text-primary hover:bg-primary/20 dark:hover:bg-primary/30 transition-all"
+                          th:data-order-id="${order.idOrder}"
+                          th:data-order-number="${order.orderNumber}"
+                          th:data-order-status="${order.status.name()}"
+                          th:data-payment-method="${order.paymentMethod.name()}"
+                          title="Cambiar estado"
+                        >
+                          <i class="fas fa-exchange-alt"></i>
+                        </button>
+
+                        <!-- Collect Payment (only for DELIVERED status) -->
+                        <a
+                          th:if="${order.status.name() == 'DELIVERED'}"
+                          th:href="@{/cashier/payments/form/{id}(id=${order.idOrder})}"
+                          class="p-2 rounded-lg bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/40 transition-all"
+                          title="Cobrar pedido"
+                        >
+                          <i class="fas fa-hand-holding-usd"></i>
+                        </a>
+
+                        <!-- Mark as Delivered (only for READY status AND TAKEOUT/DINE_IN orders) -->
+                        <button
+                          th:if="${order.status.name() == 'READY' && (order.orderType.name() == 'TAKEOUT' || order.orderType.name() == 'DINE_IN')}"
+                          class="btn-mark-delivered p-2 rounded-lg bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 hover:bg-purple-100 dark:hover:bg-purple-900/40 transition-all"
+                          th:data-order-id="${order.idOrder}"
+                          th:data-order-number="${order.orderNumber}"
+                          title="Marcar como Entregado"
+                        >
+                          <i class="fas fa-check-circle"></i>
+                        </button>
+
+                        <!-- Cancel (PENDING, IN_PREPARATION, READY) -->
+                        <button
+                          th:if="${order.status.name() == 'PENDING' || order.status.name() == 'IN_PREPARATION' || order.status.name() == 'READY'}"
+                          class="btn-cancel-order p-2 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 transition-all"
+                          th:data-order-id="${order.idOrder}"
+                          th:data-order-number="${order.orderNumber}"
+                          title="Cancelar pedido"
+                        >
+                          <i class="fas fa-times-circle"></i>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Pagination Controls for Global Orders -->
+            <div
+              id="paginationControlsGlobalOrders"
+              th:if="${globalTotalElements > 0}"
+              class="px-6 py-4 border-t border-orange-200 dark:border-orange-800 flex flex-col sm:flex-row items-center justify-between gap-4"
+            >
+              <div class="text-sm text-gray-600 dark:text-gray-400">
+                Mostrando
+                <span th:text="${(globalCurrentPage - 1) * pageSize + 1}"
+                  >1</span
+                >
+                -
+                <span
+                  th:text="${globalCurrentPage * pageSize > globalTotalElements ? globalTotalElements : globalCurrentPage * pageSize}"
+                  >15</span
+                >
+                de <span th:text="${globalTotalElements}">0</span> pedidos
+              </div>
+              <div class="flex items-center gap-2">
+                <button
+                  onclick="changePageGlobalOrders(-1)"
+                  th:disabled="${globalCurrentPage == 1}"
+                  class="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                >
+                  <span class="material-symbols-outlined text-lg"
+                    >chevron_left</span
+                  >
+                </button>
+                <div
+                  id="pageNumbersGlobalOrders"
+                  class="flex items-center gap-1"
+                ></div>
+                <button
+                  onclick="changePageGlobalOrders(1)"
+                  th:disabled="${globalCurrentPage >= globalTotalPages}"
+                  class="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                >
+                  <span class="material-symbols-outlined text-lg"
+                    >chevron_right</span
+                  >
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <script th:inline="javascript">
+      /*<![CDATA[*/
+      const currentRole = /*[[${currentRole}]]*/ "waiter";
+      /*]]>*/
+
+      // ============================================
+      // SERVER-SIDE PAGINATION
+      // ============================================
+      const serverCurrentPage = /*[[${currentPage}]]*/ 1;
+      const serverTotalPages = /*[[${totalPages}]]*/ 1;
+      const serverGlobalCurrentPage = /*[[${globalCurrentPage}]]*/ 1;
+      const serverGlobalTotalPages = /*[[${globalTotalPages}]]*/ 1;
+
+      function goToMyOrdersPage(page) {
+        const url = new URL(window.location.href);
+        url.searchParams.set("page", page);
+        url.hash = "mainFiltersSection";
+        window.location.href = url.toString();
+      }
+
+      function goToGlobalOrdersPage(page) {
+        const url = new URL(window.location.href);
+        url.searchParams.set("globalPage", page);
+        url.hash = "globalFiltersSection";
+        window.location.href = url.toString();
+      }
+
+      function changePageMyOrders(delta) {
+        const newPage = serverCurrentPage + delta;
+        if (newPage >= 1 && newPage <= serverTotalPages) {
+          goToMyOrdersPage(newPage);
+        }
+      }
+
+      function changePageGlobalOrders(delta) {
+        const newPage = serverGlobalCurrentPage + delta;
+        if (newPage >= 1 && newPage <= serverGlobalTotalPages) {
+          goToGlobalOrdersPage(newPage);
+        }
+      }
+
+      // Generate page number buttons for both tables
+      document.addEventListener("DOMContentLoaded", function () {
+        // My Orders page numbers
+        const myPageNumbersDiv = document.getElementById("pageNumbersMyOrders");
+        if (myPageNumbersDiv && serverTotalPages > 1) {
+          let startPage = Math.max(1, serverCurrentPage - 2);
+          let endPage = Math.min(serverTotalPages, startPage + 4);
+          if (endPage - startPage < 4) startPage = Math.max(1, endPage - 4);
+
+          for (let i = startPage; i <= endPage; i++) {
+            const btn = document.createElement("button");
+            btn.textContent = i;
+            btn.onclick = () => goToMyOrdersPage(i);
+            btn.className =
+              i === serverCurrentPage
+                ? "px-3 py-1 rounded-lg bg-primary text-white font-semibold"
+                : "px-3 py-1 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all";
+            myPageNumbersDiv.appendChild(btn);
+          }
+        }
+
+        // Global Orders page numbers
+        const globalPageNumbersDiv = document.getElementById(
+          "pageNumbersGlobalOrders",
+        );
+        if (globalPageNumbersDiv && serverGlobalTotalPages > 1) {
+          let startPage = Math.max(1, serverGlobalCurrentPage - 2);
+          let endPage = Math.min(serverGlobalTotalPages, startPage + 4);
+          if (endPage - startPage < 4) startPage = Math.max(1, endPage - 4);
+
+          for (let i = startPage; i <= endPage; i++) {
+            const btn = document.createElement("button");
+            btn.textContent = i;
+            btn.onclick = () => goToGlobalOrdersPage(i);
+            btn.className =
+              i === serverGlobalCurrentPage
+                ? "px-3 py-1 rounded-lg bg-orange-500 text-white font-semibold"
+                : "px-3 py-1 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all";
+            globalPageNumbersDiv.appendChild(btn);
+          }
+        }
+      });
+
+      // Filter functions
+      function applyFilters() {
+        const tableId = document.getElementById("filterTable").value;
+        const status = document.getElementById("filterStatus").value;
+        const orderType = document.getElementById("filterOrderType").value;
+        const date = document.getElementById("filterDate").value;
+
+        const params = new URLSearchParams(window.location.search);
+
+        if (tableId) params.set("tableId", tableId);
+        else params.delete("tableId");
+        if (status) params.set("status", status);
+        else params.delete("status");
+        if (orderType) params.set("orderType", orderType);
+        else params.delete("orderType");
+        if (date) params.set("date", date);
+        else params.delete("date");
+
+        window.location.href = `/${currentRole}/orders?${params.toString()}#mainFiltersSection`;
+      }
+
+      function clearFilters() {
+        const params = new URLSearchParams(window.location.search);
+        params.delete("tableId");
+        params.delete("status");
+        params.delete("orderType");
+        params.delete("date");
+        window.location.href = `/${currentRole}/orders?${params.toString()}#mainFiltersSection`;
+      }
+
+      function applyGlobalFilters() {
+        const tableId = document.getElementById("globalFilterTable").value;
+        const status = document.getElementById("globalFilterStatus").value;
+        const orderType = document.getElementById(
+          "globalFilterOrderType",
+        ).value;
+        const date = document.getElementById("globalFilterDate").value;
+
+        const params = new URLSearchParams(window.location.search);
+
+        if (tableId) params.set("globalTableId", tableId);
+        else params.delete("globalTableId");
+        if (status) params.set("globalStatus", status);
+        else params.delete("globalStatus");
+        if (orderType) params.set("globalOrderType", orderType);
+        else params.delete("globalOrderType");
+        if (date) params.set("globalDate", date);
+        else params.delete("globalDate");
+
+        window.location.href = `/${currentRole}/orders?${params.toString()}#globalFiltersSection`;
+      }
+
+      function clearGlobalFilters() {
+        const params = new URLSearchParams(window.location.search);
+        params.delete("globalTableId");
+        params.delete("globalStatus");
+        params.delete("globalOrderType");
+        params.delete("globalDate");
+        window.location.href = `/${currentRole}/orders?${params.toString()}#globalFiltersSection`;
+      }
+
+      // Helper function to get SweetAlert dark mode classes
+      function getSwalDarkModeClasses() {
+        const isDark = document.documentElement.classList.contains("dark");
+        return isDark
+          ? {
+              popup: "rounded-2xl !bg-gray-800 !text-gray-100",
+              title: "!text-gray-100",
+              htmlContainer: "!text-gray-300",
+              confirmButton: "rounded-xl px-6 py-2.5 font-semibold",
+              cancelButton: "rounded-xl px-6 py-2.5 font-semibold",
+              input: "!bg-gray-700 !text-gray-100 !border-gray-600",
+              validationMessage: "!bg-red-900 !text-red-200",
+            }
+          : {
+              popup: "rounded-2xl",
+              confirmButton: "rounded-xl px-6 py-2.5 font-semibold",
+              cancelButton: "rounded-xl px-6 py-2.5 font-semibold",
+            };
+      }
+
+      // Cancel order with AJAX
+      function confirmCancel(orderId, orderNumber) {
+        Swal.fire({
+          title: "¿Cancelar pedido?",
+          html:
+            `<p>¿Estás seguro de que deseas cancelar el pedido <strong>${orderNumber}</strong>?</p>` +
+            `<p class="text-sm text-gray-600 dark:text-gray-400 mt-3">` +
+            `El sistema analizará cada item y devolverá el stock según corresponda.` +
+            `</p>`,
+          icon: "warning",
+          showCancelButton: true,
+          confirmButtonColor: "#38e07b",
+          cancelButtonColor: "#ef4444",
+          confirmButtonText: "Sí, cancelar",
+          cancelButtonText: "No",
+          reverseButtons: true,
+          showLoaderOnConfirm: true,
+          customClass: getSwalDarkModeClasses(),
+          preConfirm: () => {
+            return fetch(`/${currentRole}/orders/${orderId}/cancel`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+            })
+              .then((response) => response.json())
+              .then((data) => {
+                if (!data.success) {
+                  throw new Error(data.message);
+                }
+                return data;
+              })
+              .catch((error) => {
+                Swal.showValidationMessage(`Error: ${error.message}`);
+              });
+          },
+          allowOutsideClick: () => !Swal.isLoading(),
+        }).then((result) => {
+          if (result.isConfirmed && result.value) {
+            let message = result.value.message;
+
+            // Add stock info if available
+            if (result.value.stockInfo) {
+              message += `<br><br><p class="text-sm mt-2">${result.value.stockInfo}</p>`;
+            }
+
+            if (result.value.warning) {
+              message +=
+                '<br><br><strong class="text-orange-600">⚠️ ' +
+                result.value.warning +
+                "</strong>";
+            }
+
+            Swal.fire({
+              icon: "success",
+              title: "¡Pedido Cancelado!",
+              html: message,
+              confirmButtonColor: "#38e07b",
+              confirmButtonText: "Aceptar",
+              customClass: getSwalDarkModeClasses(),
+            }).then(() => {
+              window.location.reload();
+            });
+          }
+        });
+      }
+
+      // Mark as Paid - Cashier can collect ALL payment methods
+      function markAsPaid(orderId, orderNumber) {
+        Swal.fire({
+          title: "¿Marcar como Pagado?",
+          text: `¿Confirmar que el pedido ${orderNumber} ha sido pagado?`,
+          icon: "question",
+          showCancelButton: true,
+          confirmButtonColor: "#38e07b",
+          cancelButtonColor: "#6b7280",
+          confirmButtonText: "Sí, confirmar",
+          cancelButtonText: "Cancelar",
+          reverseButtons: true,
+          showLoaderOnConfirm: true,
+          customClass: getSwalDarkModeClasses(),
+          preConfirm: () => {
+            return fetch(
+              `/${currentRole}/orders/${orderId}/change-status?newStatus=PAID`,
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/x-www-form-urlencoded",
+                },
+              },
+            )
+              .then((response) => response.json())
+              .then((data) => {
+                if (!data.success) {
+                  throw new Error(data.message);
+                }
+                return data;
+              })
+              .catch((error) => {
+                Swal.showValidationMessage(`Error: ${error.message}`);
+              });
+          },
+          allowOutsideClick: () => !Swal.isLoading(),
+        }).then((result) => {
+          if (result.isConfirmed && result.value) {
+            Swal.fire({
+              icon: "success",
+              title: "¡Pedido Pagado!",
+              text: result.value.message,
+              confirmButtonColor: "#38e07b",
+              confirmButtonText: "Aceptar",
+              customClass: getSwalDarkModeClasses(),
+            }).then(() => {
+              window.location.reload();
+            });
+          }
+        });
+      }
+
+      // Change status modal with AJAX
+      function showStatusModal(
+        orderId,
+        orderNumber,
+        currentStatus,
+        paymentMethod,
+      ) {
+        // First, get valid statuses from backend
+        fetch(`/${currentRole}/orders/${orderId}/valid-statuses`)
+          .then((response) => response.json())
+          .then((data) => {
+            if (!data.success || data.validStatuses.length === 0) {
+              Swal.fire({
+                icon: "info",
+                title: "Información",
+                text: "No hay cambios de estado disponibles para este pedido",
+                confirmButtonColor: "#38e07b",
+                customClass: getSwalDarkModeClasses(),
+              });
+              return;
+            }
+
+            // Build options HTML
+            let optionsHtml =
+              '<option value="">Seleccionar nuevo estado</option>';
+            data.validStatuses.forEach((status) => {
+              optionsHtml += `<option value="${status.value}">${status.label}</option>`;
+            });
+
+            // Add warning for CASH payments if PAID status is not available
+            let warningHtml = "";
+            if (paymentMethod === "CASH" && !data.canMarkAsPaid) {
+              warningHtml =
+                '<div class="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-800"><i class="fas fa-exclamation-triangle mr-2"></i>Los pagos en efectivo solo pueden ser procesados por el cajero</div>';
+            }
+
+            // Show modal
+            const isDark = document.documentElement.classList.contains("dark");
+            Swal.fire({
+              title: "Cambiar Estado del Pedido",
+              html: `
+                <div class="text-left mb-4">
+                    <p class="mb-2 ${isDark ? "text-gray-300" : "text-gray-700"}">Pedido: <strong class="text-primary">${orderNumber}</strong></p>
+                    <p class="mb-2 ${isDark ? "text-gray-300" : "text-gray-700"}">Tipo: <strong>${
+                      data.orderType === "DELIVERY"
+                        ? "Entrega a Domicilio"
+                        : data.orderType === "TAKEOUT"
+                          ? "Para pasar a recoger"
+                          : "Para Comer Aquí"
+                    }</strong></p>
+                    <p class="mb-4 ${isDark ? "text-gray-300" : "text-gray-700"}">Estado Actual: <span class="px-3 py-1 text-xs rounded-full bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">${
+                      data.currentStatusLabel
+                    }</span></p>
+                    <label class="block text-sm font-medium ${isDark ? "text-gray-300" : "text-gray-700"} mb-2">Nuevo Estado:</label>
+                    <select id="newStatus" class="w-full border ${isDark ? "border-gray-600 bg-gray-700 text-gray-100" : "border-gray-300"} rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary">
+                        ${optionsHtml}
+                    </select>
+                    ${warningHtml}
+                </div>
+              `,
+              icon: "question",
+              showCancelButton: true,
+              confirmButtonColor: "#38e07b",
+              cancelButtonColor: "#6b7280",
+              confirmButtonText: "Cambiar Estado",
+              cancelButtonText: "Cancelar",
+              reverseButtons: true,
+              showLoaderOnConfirm: true,
+              customClass: getSwalDarkModeClasses(),
+              preConfirm: () => {
+                const newStatus = document.getElementById("newStatus").value;
+                if (!newStatus) {
+                  Swal.showValidationMessage("Debes seleccionar un estado");
+                  return false;
+                }
+
+                return fetch(
+                  `/${currentRole}/orders/${orderId}/change-status?newStatus=${newStatus}`,
+                  {
+                    method: "POST",
+                    headers: {
+                      "Content-Type": "application/x-www-form-urlencoded",
+                    },
+                  },
+                )
+                  .then((response) => response.json())
+                  .then((data) => {
+                    if (!data.success) {
+                      throw new Error(data.message);
+                    }
+                    return data;
+                  })
+                  .catch((error) => {
+                    Swal.showValidationMessage(`Error: ${error.message}`);
+                  });
+              },
+              allowOutsideClick: () => !Swal.isLoading(),
+            }).then((result) => {
+              if (result.isConfirmed && result.value) {
+                Swal.fire({
+                  icon: "success",
+                  title: "¡Estado Actualizado!",
+                  text: result.value.message,
+                  timer: 2000,
+                  showConfirmButton: false,
+                  customClass: getSwalDarkModeClasses(),
+                });
+
+                setTimeout(() => {
+                  window.location.reload();
+                }, 2100);
+              }
+            });
+          })
+          .catch((error) => {
+            Swal.fire({
+              icon: "error",
+              title: "Error",
+              text:
+                "No se pudieron cargar los estados disponibles: " +
+                error.message,
+              confirmButtonColor: "#38e07b",
+              customClass: getSwalDarkModeClasses(),
+            });
+          });
+      }
+
+      // Event listeners for action buttons
+      document.addEventListener("DOMContentLoaded", function () {
+        // Cancel order buttons
+        document.querySelectorAll(".btn-cancel-order").forEach((button) => {
+          button.addEventListener("click", function () {
+            const orderId = this.getAttribute("data-order-id");
+            const orderNumber = this.getAttribute("data-order-number");
+            confirmCancel(orderId, orderNumber);
+          });
+        });
+
+        // Change status buttons
+        document.querySelectorAll(".btn-change-status").forEach((button) => {
+          button.addEventListener("click", function () {
+            const orderId = this.getAttribute("data-order-id");
+            const orderNumber = this.getAttribute("data-order-number");
+            const orderStatus = this.getAttribute("data-order-status");
+            const paymentMethod = this.getAttribute("data-payment-method");
+            showStatusModal(orderId, orderNumber, orderStatus, paymentMethod);
+          });
+        });
+
+        // Mark as Paid buttons
+        document.querySelectorAll(".btn-mark-paid").forEach((button) => {
+          button.addEventListener("click", function () {
+            const orderId = this.getAttribute("data-order-id");
+            const orderNumber = this.getAttribute("data-order-number");
+            markAsPaid(orderId, orderNumber);
+          });
+        });
+
+        // Mark as Delivered buttons (for global orders table)
+        document.querySelectorAll(".btn-mark-delivered").forEach((button) => {
+          button.addEventListener("click", function () {
+            const orderId = this.getAttribute("data-order-id");
+            const orderNumber = this.getAttribute("data-order-number");
+            markAsDelivered(orderId, orderNumber);
+          });
+        });
+      });
+
+      // Mark as Delivered - For READY orders in global table
+      function markAsDelivered(orderId, orderNumber) {
+        Swal.fire({
+          title: "¿Marcar como Entregado?",
+          text: `¿Confirmar que el pedido ${orderNumber} ha sido entregado al cliente?`,
+          icon: "question",
+          showCancelButton: true,
+          confirmButtonColor: "#38e07b",
+          cancelButtonColor: "#6b7280",
+          confirmButtonText: "Sí, confirmar",
+          cancelButtonText: "Cancelar",
+          reverseButtons: true,
+          showLoaderOnConfirm: true,
+          customClass: getSwalDarkModeClasses(),
+          preConfirm: () => {
+            return fetch(
+              `/${currentRole}/orders/${orderId}/change-status?newStatus=DELIVERED`,
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/x-www-form-urlencoded",
+                },
+              },
+            )
+              .then((response) => response.json())
+              .then((data) => {
+                if (!data.success) {
+                  throw new Error(data.message);
+                }
+                return data;
+              })
+              .catch((error) => {
+                Swal.showValidationMessage(`Error: ${error.message}`);
+              });
+          },
+          allowOutsideClick: () => !Swal.isLoading(),
+        }).then((result) => {
+          if (result.isConfirmed && result.value) {
+            Swal.fire({
+              icon: "success",
+              title: "¡Pedido Entregado!",
+              text: result.value.message,
+              timer: 2000,
+              showConfirmButton: false,
+              customClass: getSwalDarkModeClasses(),
+            });
+
+            setTimeout(() => {
+              window.location.reload();
+            }, 2100);
+          }
+        });
+      }
+
+      // Format currency
+      function formatCurrency(amount) {
+        return new Intl.NumberFormat("es-CO", {
+          style: "currency",
+          currency: "COP",
+          minimumFractionDigits: 0,
+        }).format(amount);
+      }
+
+      // Auto-download ticket PDF after payment
+      document.addEventListener("DOMContentLoaded", function () {
+        const downloadTicket = /*[[${downloadTicket}]]*/ false;
+        if (downloadTicket) {
+          // Trigger download after a short delay
+          setTimeout(function () {
+            window.location.href = "/cashier/payments/download-ticket";
+          }, 500);
+        }
+      });
+    </script>
+
+    <!-- Script del Sistema de Temas -->
+    <div th:replace="~{fragments/theme :: themeScript}"></div>
+  </body>
+</html>

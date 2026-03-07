@@ -1,0 +1,683 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title th:text="${globalSystemConfig.systemName + ' - Mis Pedidos'}">
+      El Gran Sazón - Mis Pedidos
+    </title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@300;400;500;600;700"
+      rel="stylesheet"
+    />
+
+    <!-- Sistema de Temas (Modo Claro/Oscuro) -->
+    <div th:replace="~{fragments/theme :: themeResources}"></div>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#38e07b",
+              "primary-dark": "#2bc866",
+              "background-light": "#f8faf9",
+            },
+            fontFamily: {
+              display: ["Work Sans"],
+            },
+            borderRadius: {
+              DEFAULT: "0.5rem",
+              lg: "0.75rem",
+              xl: "1rem",
+              "2xl": "1.5rem",
+              full: "9999px",
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      .material-symbols-outlined {
+        font-variation-settings:
+          "FILL" 0,
+          "wght" 400,
+          "GRAD" 0,
+          "opsz" 24;
+      }
+
+      body {
+        font-family: "Work Sans", sans-serif;
+      }
+    </style>
+  </head>
+  <body
+    class="bg-gradient-to-br from-background-light to-gray-50 dark:from-gray-900 dark:to-gray-800 font-display text-gray-800 dark:text-gray-100"
+  >
+    <div class="flex flex-col min-h-screen">
+      <!-- Header -->
+      <header
+        class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-lg sticky top-0 z-30"
+      >
+        <div class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+          <div
+            class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+          >
+            <div class="flex items-center gap-3 sm:gap-4">
+              <div
+                class="w-12 h-12 bg-gradient-to-br from-primary to-primary-dark rounded-xl flex items-center justify-center shadow-lg shadow-primary/30"
+              >
+                <span class="material-symbols-outlined text-white text-2xl"
+                  >history</span
+                >
+              </div>
+              <div>
+                <h1
+                  class="text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white"
+                >
+                  📋 Historial de Pedidos
+                </h1>
+                <p class="text-sm text-gray-600 dark:text-gray-300">
+                  <span th:if="${isBarista}"
+                    >Pedidos completados por la barra</span
+                  >
+                  <span th:unless="${isBarista}"
+                    >Pedidos completados por la cocina</span
+                  >
+                </p>
+              </div>
+            </div>
+            <div
+              class="grid grid-cols-2 sm:flex sm:items-center gap-3 w-full sm:w-auto"
+            >
+              <a
+                th:href="@{/chef/orders/pending}"
+                class="flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-xl bg-blue-600 hover:bg-blue-700 text-white hover:shadow-lg hover:shadow-blue-500/30 transition-all"
+              >
+                <span class="material-symbols-outlined">restaurant</span>
+                Pedidos
+              </a>
+              <a
+                th:href="@{/chef/dashboard}"
+                class="flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-xl bg-gradient-to-r from-primary to-primary-dark text-white hover:shadow-lg hover:shadow-primary/30 transition-all"
+              >
+                <span class="material-symbols-outlined">dashboard</span>
+                Dashboard
+              </a>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- Main Content -->
+      <main
+        class="flex-1 w-full max-w-screen-2xl px-4 py-6 mx-auto sm:px-6 lg:px-8 pb-32"
+      >
+        <!-- Empty State -->
+        <div
+          th:if="${orders.isEmpty()}"
+          class="flex flex-col items-center justify-center py-16 bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700"
+        >
+          <div
+            class="w-24 h-24 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600 rounded-2xl flex items-center justify-center mb-6"
+          >
+            <span
+              class="material-symbols-outlined text-6xl text-gray-400 dark:text-gray-300"
+            >
+              restaurant_menu
+            </span>
+          </div>
+          <h3 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+            No hay pedidos completados
+          </h3>
+          <p class="text-gray-600 dark:text-gray-300 mb-6">
+            Los pedidos completados aparecerán aquí
+          </p>
+          <a
+            th:href="@{/chef/orders/pending}"
+            class="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all"
+          >
+            <span class="material-symbols-outlined">restaurant</span>
+            Ir a Gestión de Pedidos
+          </a>
+        </div>
+
+        <!-- Orders Grid -->
+        <div
+          th:if="${!orders.isEmpty()}"
+          class="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4"
+        >
+          <!-- ORDER CARD -->
+          <div
+            th:each="order : ${orders}"
+            class="bg-white dark:bg-gray-800 rounded-3xl shadow-md hover:shadow-2xl flex flex-col overflow-hidden transition-all duration-300 h-[490px]"
+            th:classappend="${order.status.name() == 'READY'} ? 'border-2 border-green-400 dark:border-green-500' : (${order.status.name() == 'DELIVERED'} ? 'border-2 border-purple-400 dark:border-purple-500' : (${order.status.name() == 'CANCELLED'} ? 'border-2 border-red-400 dark:border-red-500' : (${order.status.name() == 'PAID'} ? 'border-2 border-yellow-400 dark:border-yellow-500' : 'border border-gray-300 dark:border-gray-700')))"
+          >
+            <!-- Card Header -->
+            <div
+              class="px-6 py-5 flex justify-between items-center border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 flex-shrink-0"
+            >
+              <div>
+                <h3 class="text-xl font-bold text-gray-900 dark:text-white">
+                  <span
+                    th:if="${order.table != null}"
+                    th:text="'Mesa ' + ${order.table.tableNumber}"
+                  ></span>
+                  <span
+                    th:if="${order.table == null && order.orderType.name() == 'TAKEOUT'}"
+                  >
+                    Para pasar a recoger
+                  </span>
+                  <span
+                    th:if="${order.table == null && order.orderType.name() == 'DELIVERY'}"
+                  >
+                    Delivery
+                  </span>
+                  <span
+                    th:if="${order.table == null && order.customerName != null && order.orderType.name() == 'DINE_IN'}"
+                    th:text="${order.customerName}"
+                  ></span>
+                </h3>
+                <p class="text-sm text-gray-600 dark:text-gray-300 font-medium">
+                  Atendido por:
+                  <span
+                    th:text="${order.employee != null ? order.employee.fullName : systemConfig.restaurantName}"
+                  ></span>
+                </p>
+                <p
+                  class="text-xs text-gray-500 dark:text-gray-400 font-semibold mt-0.5"
+                >
+                  Pedido <span th:text="${order.orderNumber}"></span>
+                </p>
+              </div>
+              <div class="flex flex-col items-end gap-2">
+                <!-- Order Type Badge -->
+                <span
+                  th:if="${order.orderType.name() == 'DINE_IN'}"
+                  class="px-4 py-2 rounded-full text-xs font-semibold bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300"
+                >
+                  🍽️ Mesa
+                </span>
+                <span
+                  th:if="${order.orderType.name() == 'TAKEOUT'}"
+                  class="px-4 py-2 rounded-full text-xs font-semibold bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300"
+                >
+                  📦 Llevar
+                </span>
+                <span
+                  th:if="${order.orderType.name() == 'DELIVERY'}"
+                  class="px-4 py-2 rounded-full text-xs font-semibold bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300"
+                >
+                  🚗 Delivery
+                </span>
+
+                <!-- Status Badge -->
+                <span
+                  th:if="${order.status.name() == 'READY'}"
+                  class="px-5 py-2.5 rounded-full text-sm font-bold inline-flex items-center gap-2 bg-gradient-to-br from-primary to-primary-dark text-white shadow-md"
+                >
+                  <span class="material-symbols-outlined !text-base"
+                    >check_circle</span
+                  >
+                  Listo
+                </span>
+                <span
+                  th:if="${order.status.name() == 'DELIVERED'}"
+                  class="px-5 py-2.5 rounded-full text-sm font-bold inline-flex items-center gap-2 bg-gradient-to-br from-purple-500 to-purple-600 text-white shadow-md"
+                >
+                  <span class="material-symbols-outlined !text-base"
+                    >local_shipping</span
+                  >
+                  Entregado
+                </span>
+                <span
+                  th:if="${order.status.name() == 'PAID'}"
+                  class="px-5 py-2.5 rounded-full text-sm font-bold inline-flex items-center gap-2 bg-gradient-to-br from-yellow-400 to-amber-500 text-white shadow-md"
+                >
+                  <span class="material-symbols-outlined !text-base"
+                    >payments</span
+                  >
+                  Pagado
+                </span>
+                <span
+                  th:if="${order.status.name() == 'CANCELLED'}"
+                  class="px-5 py-2.5 rounded-full text-sm font-bold inline-flex items-center gap-2 bg-gradient-to-br from-red-400 to-red-500 text-white shadow-md"
+                >
+                  <span class="material-symbols-outlined !text-base"
+                    >cancel</span
+                  >
+                  Cancelado
+                </span>
+              </div>
+            </div>
+
+            <!-- Card Body - Order Details -->
+            <div class="p-5 flex-1 overflow-y-auto overflow-x-hidden">
+              <h4
+                class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 uppercase tracking-wide"
+              >
+                Detalles del Pedido:
+              </h4>
+              <div class="space-y-1">
+                <!-- FILTER: Chef sees items with requiresPreparation, Barista sees items with requiresBaristaPreparation -->
+                <div
+                  th:each="detail : ${order.orderDetails}"
+                  th:if="${isBarista ? (detail.itemMenu.requiresBaristaPreparation == true) : (detail.itemMenu.requiresPreparation == true)}"
+                  class="py-4 border-b border-gray-100 dark:border-gray-700 flex flex-col gap-2 last:border-b-0"
+                >
+                  <div class="flex items-center justify-between w-full gap-2">
+                    <p
+                      class="text-base font-semibold text-gray-900 dark:text-white"
+                    >
+                      <span th:text="${detail.quantity} + 'x'"></span>
+                      <span th:text="${detail.itemMenu.name}"></span>
+                      <span
+                        th:if="${detail.comboChild}"
+                        class="inline-flex items-center px-1.5 py-0.5 text-[10px] font-bold bg-teal-100 dark:bg-teal-900/40 text-teal-700 dark:text-teal-300 rounded ml-1"
+                      >
+                        <span
+                          class="material-symbols-outlined !text-[10px] mr-0.5"
+                          >inventory_2</span
+                        >
+                        COMBO
+                      </span>
+                    </p>
+                    <span
+                      class="px-2 py-0.5 rounded text-[10px] font-bold uppercase border"
+                      th:classappend="${detail.itemStatus.name() == 'READY'} ? 'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800' : 
+                                     (${detail.itemStatus.name() == 'IN_PREPARATION'} ? 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800' : 
+                                     (${detail.itemStatus.name() == 'DELIVERED'} ? 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-800' : 
+                                     (${detail.itemStatus.name() == 'CANCELLED'} ? 'bg-red-50 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-800' : 
+                                     'bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600')))"
+                      th:text="${detail.itemStatus.displayName}"
+                    >
+                    </span>
+                  </div>
+                  <!-- Complements and Sauces -->
+                  <div
+                    th:if="${detail.selectedComplements != null && !detail.selectedComplements.isEmpty()}"
+                    class="pl-4 mt-1 space-y-1"
+                  >
+                    <!-- Sauces -->
+                    <th:block th:each="comp : ${detail.selectedComplements}">
+                      <div
+                        th:if="${comp.complement.isSauce != null && comp.complement.isSauce}"
+                        class="flex items-center gap-1.5"
+                      >
+                        <span
+                          class="material-symbols-outlined text-blue-500 dark:text-blue-400 !text-sm"
+                          >add_circle</span
+                        >
+                        <span
+                          class="text-sm text-blue-700 dark:text-blue-300 font-medium"
+                          th:text="${comp.complement.name}"
+                        ></span>
+                        <span
+                          th:if="${comp.quantity > 1}"
+                          class="text-xs text-gray-500 dark:text-gray-400"
+                          th:text="'x' + ${comp.quantity}"
+                        ></span>
+                      </div>
+                    </th:block>
+                    <!-- Regular Complements -->
+                    <th:block th:each="comp : ${detail.selectedComplements}">
+                      <div
+                        th:if="${comp.complement.isSauce == null || !comp.complement.isSauce}"
+                        class="flex items-center gap-1.5"
+                      >
+                        <span
+                          class="material-symbols-outlined text-purple-500 dark:text-purple-400 !text-sm"
+                          >add_circle</span
+                        >
+                        <span
+                          class="text-sm text-purple-700 dark:text-purple-300 font-medium"
+                          th:text="${comp.complement.name}"
+                        ></span>
+                        <span
+                          th:if="${comp.quantity > 1}"
+                          class="text-xs text-gray-500 dark:text-gray-400"
+                          th:text="'x' + ${comp.quantity}"
+                        ></span>
+                      </div>
+                    </th:block>
+                  </div>
+
+                  <p
+                    th:if="${detail.displayComments != null}"
+                    class="text-sm text-gray-600 dark:text-gray-300 pl-4"
+                  >
+                    💬 <span th:text="${detail.displayComments}"></span>
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Card Footer -->
+            <div
+              class="p-5 bg-gray-50 dark:bg-gray-900 flex flex-col gap-3 border-t border-gray-100 dark:border-gray-700 flex-shrink-0"
+            >
+              <!-- Server and Time Info -->
+              <div class="text-xs text-gray-600 dark:text-gray-300 space-y-2">
+                <div
+                  class="flex justify-between pb-2 border-b border-gray-200 dark:border-gray-600"
+                >
+                  <span class="font-medium">Levantado por:</span>
+                  <span
+                    class="font-semibold text-gray-900 dark:text-white"
+                    th:text="${order.employee != null ? order.employee.fullName : systemConfig.restaurantName}"
+                  ></span>
+                </div>
+                <div
+                  class="flex justify-between pb-2 border-b border-gray-200 dark:border-gray-600"
+                >
+                  <span class="font-medium">Preparado por:</span>
+                  <span
+                    class="font-semibold text-primary"
+                    th:text="${(order.preparedBy != null && order.preparedByBarista != null) ? (order.preparedBy.fullName + ' (Chef), ' + order.preparedByBarista.fullName + ' (Barista)') : ((order.preparedBy != null) ? (order.preparedBy.fullName + ' (Chef)') : ((order.preparedByBarista != null) ? (order.preparedByBarista.fullName + ' (Barista)') : 'N/A'))}"
+                  ></span>
+                </div>
+                <div
+                  th:if="${order.paidBy != null}"
+                  class="flex justify-between pb-2 border-b border-gray-200 dark:border-gray-600"
+                >
+                  <span class="font-medium">Cobrado por:</span>
+                  <span
+                    class="font-semibold text-blue-600 dark:text-blue-400"
+                    th:text="${order.paidBy.fullName}"
+                  ></span>
+                </div>
+                <div
+                  class="flex justify-between pb-2 border-b border-gray-200 dark:border-gray-600"
+                >
+                  <span class="font-medium">Creado:</span>
+                  <span
+                    class="font-semibold text-gray-900 dark:text-white"
+                    th:text="${#temporals.format(order.createdAt, 'HH:mm')}"
+                  ></span>
+                </div>
+                <div class="flex justify-between pb-2">
+                  <span class="font-medium">Tiempo preparación:</span>
+                  <span class="font-semibold text-primary">
+                    <span
+                      th:text="${#temporals.format(order.updatedAt, 'HH:mm')} + ' (' + ${T(java.time.Duration).between(order.createdAt, order.updatedAt).toMinutes()} + ' min)'"
+                    ></span>
+                  </span>
+                </div>
+              </div>
+
+              <!-- Status indicator -->
+              <div
+                class="w-full px-4 py-3 font-semibold rounded-xl text-center border-2 flex items-center justify-center gap-2"
+                th:classappend="${order.status.name() == 'READY'} ? 'bg-green-50 text-green-800 border-green-300' : (${order.status.name() == 'DELIVERED'} ? 'bg-purple-50 text-purple-800 border-purple-300' : (${order.status.name() == 'CANCELLED'} ? 'bg-red-50 text-red-800 border-red-300' : (${order.status.name() == 'PAID'} ? 'bg-yellow-50 text-yellow-800 border-yellow-300' : 'bg-gray-50 text-gray-800 border-gray-300')))"
+              >
+                <span class="material-symbols-outlined"> check_circle </span>
+                <span th:text="${order.status.displayName}">Estado</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <!-- WebSocket Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+    <script th:inline="javascript">
+      /*<![CDATA[*/
+      const currentRole = /*[[${isBarista ? 'barista' : 'chef'}]]*/ "chef";
+      const companyId = /*[[${systemConfig.company != null ? systemConfig.company.idCompany : 0}]]*/ 0;
+      /*]]>*/
+
+      let stompClient = null;
+      let reconnectAttempts = 0;
+      const MAX_RECONNECT_ATTEMPTS = 5;
+      const RECONNECT_DELAY = 3000;
+
+      function connectWebSocket() {
+        const socket = new SockJS("/ws");
+        stompClient = Stomp.over(socket);
+        stompClient.debug = null;
+
+        stompClient.connect(
+          {},
+          function (frame) {
+            reconnectAttempts = 0;
+
+            // Subscribe to role-specific orders channel
+            // Chef subscribes to /topic/chef/orders/{companyId}
+            // Barista subscribes to /topic/barista/orders/{companyId}
+            const ordersTopic = `/topic/${currentRole}/orders/${companyId}`;
+
+            stompClient.subscribe(ordersTopic, function (message) {
+              const notification = JSON.parse(message.body);
+              handleOrderNotification(notification);
+            });
+
+            // Subscribe to personal queue for assigned orders
+            stompClient.subscribe("/user/queue/orders", function (message) {
+              const notification = JSON.parse(message.body);
+              handleOrderNotification(notification);
+            });
+          },
+          function (error) {
+            console.error("WebSocket Error:", error);
+            attemptReconnect();
+          },
+        );
+
+        socket.onclose = function () {
+          attemptReconnect();
+        };
+      }
+
+      function attemptReconnect() {
+        if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+          reconnectAttempts++;
+          setTimeout(connectWebSocket, RECONNECT_DELAY);
+        } else {
+          console.error("Max reconnection attempts reached");
+        }
+      }
+
+      function handleOrderNotification(notification) {
+
+        // Handle NEW_ORDER - show notification with sound
+        if (notification.notificationType === "NEW_ORDER") {
+
+          // Play notification sound
+          playNotificationSound();
+
+          // Request browser notification
+          requestBrowserNotification(
+            "🔔 Nuevo Pedido",
+            `Pedido #${notification.orderNumber} - ${notification.itemCount} items`,
+          );
+
+          Swal.fire({
+            icon: "info",
+            title: "🔔 Nuevo Pedido",
+            html: `<p>Pedido <strong>#${notification.orderNumber}</strong></p>
+                   <p>${notification.orderType} - ${notification.itemCount} items</p>
+                   <p class="text-sm text-gray-500">Ve a Pedidos Pendientes para gestionarlo</p>`,
+            toast: true,
+            position: "top-end",
+            showConfirmButton: false,
+            timer: 5000,
+            timerProgressBar: true,
+            background: document.documentElement.classList.contains("dark")
+              ? "#1f2937"
+              : "#ffffff",
+            color: document.documentElement.classList.contains("dark")
+              ? "#f3f4f6"
+              : "#1f2937",
+          });
+          return;
+        }
+
+        // Handle ORDER_CANCELLED - remove cancelled order from view
+        if (notification.notificationType === "ORDER_CANCELLED") {
+
+          Swal.fire({
+            icon: "warning",
+            title: "⚠️ Pedido Cancelado",
+            text:
+              notification.message ||
+              `El pedido #${notification.orderNumber} ha sido cancelado`,
+            toast: true,
+            position: "top-end",
+            showConfirmButton: false,
+            timer: 2500,
+            timerProgressBar: true,
+            background: document.documentElement.classList.contains("dark")
+              ? "#1f2937"
+              : "#ffffff",
+            color: document.documentElement.classList.contains("dark")
+              ? "#f3f4f6"
+              : "#1f2937",
+          });
+
+          // Reload page to remove cancelled order from view
+          setTimeout(() => {
+            window.location.reload();
+          }, 1500);
+          return;
+        }
+
+        // Handle ITEM_DELETED - reload to update order view
+        if (notification.notificationType === "ITEM_DELETED") {
+
+          Swal.fire({
+            icon: "info",
+            title: "🗑️ Item Eliminado",
+            text: `Pedido #${notification.orderNumber} - ${
+              notification.message || "Un item fue eliminado"
+            }`,
+            toast: true,
+            position: "top-end",
+            showConfirmButton: false,
+            timer: 2000,
+            timerProgressBar: true,
+            background: document.documentElement.classList.contains("dark")
+              ? "#1f2937"
+              : "#ffffff",
+            color: document.documentElement.classList.contains("dark")
+              ? "#f3f4f6"
+              : "#1f2937",
+          });
+
+          // Reload page to update the order view
+          setTimeout(() => {
+            window.location.reload();
+          }, 1500);
+          return;
+        }
+
+        // If items are added to an order, just reload to update view
+        // The order will disappear from my-orders if it now has pending items
+        if (notification.notificationType === "ITEMS_ADDED") {
+
+          Swal.fire({
+            icon: "info",
+            title: "➕ Items Agregados",
+            text: `Se agregaron nuevos items al Pedido #${notification.orderNumber}`,
+            toast: true,
+            position: "top-end",
+            showConfirmButton: false,
+            timer: 2000,
+            timerProgressBar: true,
+            background: document.documentElement.classList.contains("dark")
+              ? "#1f2937"
+              : "#ffffff",
+            color: document.documentElement.classList.contains("dark")
+              ? "#f3f4f6"
+              : "#1f2937",
+          });
+
+          // Reload to remove order from this view
+          setTimeout(() => {
+            window.location.reload();
+          }, 1500);
+          return;
+        }
+
+        // Also reload for status changes that might affect this view
+        if (notification.notificationType === "STATUS_CHANGE") {
+          setTimeout(() => {
+            window.location.reload();
+          }, 1000);
+          return;
+        }
+
+      }
+
+      // Play notification sound
+      function playNotificationSound() {
+        try {
+          const audio = new Audio("/sounds/notification.mp3");
+          audio.volume = 0.5;
+
+
+          audio
+            .play()
+            .then(() => {
+            })
+            .catch((error) => {
+              console.warn(
+                "⚠️ [MY-ORDERS] Sound playback prevented:",
+                error.message,
+              );
+            });
+
+          audio.onerror = function (e) {
+            console.error(
+              "❌ [MY-ORDERS] Audio file not found or failed to load:",
+              e,
+            );
+          };
+        } catch (e) {
+          console.error("❌ [MY-ORDERS] Error creating audio:", e);
+        }
+      }
+
+      // Request browser notification
+      function requestBrowserNotification(title, body) {
+        if (!("Notification" in window)) {
+          return;
+        }
+
+        if (Notification.permission === "granted") {
+          new Notification(title, { body: body, icon: "/images/logo.png" });
+        } else if (Notification.permission !== "denied") {
+          Notification.requestPermission().then(function (permission) {
+            if (permission === "granted") {
+              new Notification(title, { body: body, icon: "/images/logo.png" });
+            }
+          });
+        }
+      }
+
+      // Initialize WebSocket on page load
+      document.addEventListener("DOMContentLoaded", function () {
+        connectWebSocket();
+      });
+
+      // Cleanup on page unload
+      window.addEventListener("beforeunload", function () {
+        if (stompClient !== null) {
+          stompClient.disconnect();
+        }
+      });
+    </script>
+
+    <!-- Script del Sistema de Temas -->
+    <div th:replace="~{fragments/theme :: themeScript}"></div>
+  </body>
+</html>

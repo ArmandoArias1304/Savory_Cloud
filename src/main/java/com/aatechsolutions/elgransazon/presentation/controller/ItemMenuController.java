@@ -1,0 +1,1308 @@
+package com.aatechsolutions.elgransazon.presentation.controller;
+
+import com.aatechsolutions.elgransazon.application.service.BusinessHoursService;
+import com.aatechsolutions.elgransazon.application.service.CategoryService;
+import com.aatechsolutions.elgransazon.application.service.ComplementService;
+import com.aatechsolutions.elgransazon.application.service.ImageStorageService;
+import com.aatechsolutions.elgransazon.application.service.IngredientService;
+import com.aatechsolutions.elgransazon.application.service.ItemMenuService;
+import com.aatechsolutions.elgransazon.domain.entity.*;
+import com.aatechsolutions.elgransazon.domain.repository.ItemMenuComplementRepository;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+
+import org.springframework.http.ResponseEntity;
+
+import java.math.BigDecimal;
+import java.time.LocalTime;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+/**
+ * Controller for ItemMenu (Menu Items) management
+ * Accessible by ADMIN and MANAGER roles
+ */
+@Controller
+@RequestMapping("/admin/menu-items")
+@PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_MANAGER')")
+@RequiredArgsConstructor
+@Slf4j
+public class ItemMenuController {
+
+    private final ItemMenuService itemMenuService;
+    private final CategoryService categoryService;
+    private final IngredientService ingredientService;
+    private final ImageStorageService imageStorageService;
+    private final ComplementService complementService;
+    private final ItemMenuComplementRepository itemMenuComplementRepository;
+    private final BusinessHoursService businessHoursService;
+
+    /**
+     * Show list of all menu items
+     */
+    @GetMapping
+    public String listMenuItems(Model model) {
+        log.debug("Displaying menu items list");
+
+        List<ItemMenu> menuItems = itemMenuService.findAllOrderByCategoryAndName();
+        List<Category> categories = categoryService.getAllCategories();
+
+        long totalCount = itemMenuService.countAll();
+        long activeCount = itemMenuService.countActive();
+        long availableCount = itemMenuService.countAvailable();
+        long unavailableCount = itemMenuService.countUnavailable();
+
+        model.addAttribute("menuItems", menuItems);
+        model.addAttribute("categories", categories);
+        model.addAttribute("totalCount", totalCount);
+        model.addAttribute("activeCount", activeCount);
+        model.addAttribute("availableCount", availableCount);
+        model.addAttribute("unavailableCount", unavailableCount);
+
+        return "admin/menu-items/list";
+    }
+
+    /**
+     * Show form to create a new menu item
+     */
+    @GetMapping("/new")
+    public String newMenuItemForm(Model model, RedirectAttributes redirectAttributes) {
+        log.debug("Displaying new menu item form");
+
+        // Verificar que existan categorías activas
+        List<Category> categories = categoryService.getAllActiveCategories();
+        if (categories.isEmpty()) {
+            log.warn("No active categories found. Cannot create menu item.");
+            redirectAttributes.addFlashAttribute("errorMessage", 
+                "No hay categorías disponibles. Debes crear al menos una categoría antes de crear items del menú.");
+            return "redirect:/admin/menu-items";
+        }
+
+        ItemMenu itemMenu = new ItemMenu();
+        itemMenu.setActive(true);
+        itemMenu.setAvailable(true);
+        itemMenu.setRequiresPreparation(true); // ✅ Inicializar explícitamente
+        
+        // Set default availability schedule from business hours
+        itemMenuService.setDefaultAvailabilitySchedule(itemMenu);
+        List<Ingredient> ingredients = ingredientService.findAll();
+        
+        // Convertir ingredientes a DTOs simples para evitar referencias circulares
+        List<Map<String, Object>> ingredientsDTO = ingredients.stream()
+            .map(ing -> {
+                Map<String, Object> dto = new HashMap<>();
+                dto.put("idIngredient", ing.getIdIngredient());
+                dto.put("name", ing.getName());
+                dto.put("unitOfMeasure", ing.getUnitOfMeasure());
+                dto.put("currentStock", ing.getCurrentStock());
+                dto.put("categoryName", ing.getCategory() != null ? ing.getCategory().getName() : "");
+                return dto;
+            })
+            .collect(java.util.stream.Collectors.toList());
+
+        model.addAttribute("itemMenu", itemMenu);
+        model.addAttribute("categories", categories);
+        model.addAttribute("ingredients", ingredients);
+        model.addAttribute("ingredientsDTO", ingredientsDTO);
+        model.addAttribute("recipe", new ArrayList<ItemIngredient>());
+        model.addAttribute("formAction", "/admin/menu-items");
+        
+        // Add combo data for new items
+        model.addAttribute("comboItems", new ArrayList<>());
+        List<ItemMenu> allNonComboItems = itemMenuService.findAll().stream()
+            .filter(i -> !Boolean.TRUE.equals(i.getIsCombo()))
+            .collect(Collectors.toList());
+        model.addAttribute("availableComboChildItems", allNonComboItems);
+        
+        // Add availability data
+        loadAvailabilityFormData(model, itemMenu);
+
+        return "admin/menu-items/form";
+    }
+
+    /**
+     * Show form to edit an existing menu item
+     */
+    @GetMapping("/edit/{id}")
+    public String editMenuItemForm(@PathVariable Long id, Model model, RedirectAttributes redirectAttributes) {
+        log.debug("Displaying edit form for menu item ID: {}", id);
+
+        return itemMenuService.findById(id)
+                .map(itemMenu -> {
+                    List<Category> categories = categoryService.getAllCategories();
+                    List<Ingredient> ingredients = ingredientService.findAll();
+                    List<ItemIngredient> recipe = itemMenuService.getRecipe(id);
+                    
+                    // Convertir ingredientes a DTOs simples para evitar referencias circulares
+                    List<Map<String, Object>> ingredientsDTO = ingredients.stream()
+                        .map(ing -> {
+                            Map<String, Object> dto = new HashMap<>();
+                            dto.put("idIngredient", ing.getIdIngredient());
+                            dto.put("name", ing.getName());
+                            dto.put("unitOfMeasure", ing.getUnitOfMeasure());
+                            dto.put("currentStock", ing.getCurrentStock());
+                            dto.put("categoryName", ing.getCategory() != null ? ing.getCategory().getName() : "");
+                            return dto;
+                        })
+                        .collect(java.util.stream.Collectors.toList());
+
+                    model.addAttribute("itemMenu", itemMenu);
+                    model.addAttribute("categories", categories);
+                    model.addAttribute("ingredients", ingredients);
+                    model.addAttribute("ingredientsDTO", ingredientsDTO);
+                    model.addAttribute("recipe", recipe);
+                    model.addAttribute("formAction", "/admin/menu-items/" + id);
+                    
+                    // Add combo items data if this item is a combo
+                    if (Boolean.TRUE.equals(itemMenu.getIsCombo())) {
+                        List<ItemMenuComboItem> comboItems = itemMenuService.getComboItems(id);
+                        model.addAttribute("comboItems", comboItems);
+                    } else {
+                        model.addAttribute("comboItems", new ArrayList<>());
+                    }
+                    
+                    // Add all non-combo items for combo selection dropdown
+                    List<ItemMenu> allNonComboItems = itemMenuService.findAll().stream()
+                        .filter(i -> !Boolean.TRUE.equals(i.getIsCombo()) && !i.getIdItemMenu().equals(id))
+                        .collect(Collectors.toList());
+                    model.addAttribute("availableComboChildItems", allNonComboItems);
+                    
+                    // Add availability data
+                    loadAvailabilityFormData(model, itemMenu);
+                    
+                    return "admin/menu-items/form";
+                })
+                .orElseGet(() -> {
+                    redirectAttributes.addFlashAttribute("errorMessage", "Item del menú no encontrado");
+                    return "redirect:/admin/menu-items";
+                });
+    }
+
+    /**
+     * Create a new menu item with recipe
+     */
+    @PostMapping
+    public String createMenuItem(
+            @Valid @ModelAttribute("itemMenu") ItemMenu itemMenu,
+            BindingResult bindingResult,
+            @RequestParam(value = "imageFile", required = false) MultipartFile imageFile,
+            @RequestParam(value = "ingredientIds", required = false) List<Long> ingredientIds,
+            @RequestParam(value = "quantities", required = false) List<BigDecimal> quantities,
+            @RequestParam(value = "units", required = false) List<String> units,
+            @RequestParam(value = "requiresPreparation", required = false) Boolean requiresPreparationParam,
+            @RequestParam(value = "requiresBaristaPreparation", required = false) Boolean requiresBaristaPreparationParam,
+            @RequestParam(value = "isBuffet", required = false) Boolean isBuffetParam,
+            @RequestParam(value = "isCombo", required = false) Boolean isComboParam,
+            @RequestParam(value = "comboItemIds", required = false) List<Long> comboItemIds,
+            @RequestParam(value = "comboItemQuantities", required = false) List<Integer> comboItemQuantities,
+            @RequestParam(value = "associateAllSauces", required = false) Boolean associateAllSauces,
+            @RequestParam(value = "hasCustomSchedule", required = false) Boolean hasCustomSchedule,
+            @RequestParam Map<String, String> allParams,
+            Model model,
+            RedirectAttributes redirectAttributes) {
+
+        log.info("Creating new menu item: {}", itemMenu.getName());
+        log.info("🔍 requiresPreparation received from form: {}", itemMenu.getRequiresPreparation());
+        log.info("🔍 requiresPreparation as @RequestParam: {}", requiresPreparationParam);
+        log.info("🔍 requiresBaristaPreparation received from form: {}", itemMenu.getRequiresBaristaPreparation());
+        log.info("🔍 requiresBaristaPreparation as @RequestParam: {}", requiresBaristaPreparationParam);
+        log.info("🔍 isBuffet: {}", isBuffetParam);
+        log.info("🔍 associateAllSauces: {}", associateAllSauces);
+        log.info("🔍 hasCustomSchedule: {}", hasCustomSchedule);
+        
+        // Si el parámetro está presente, usarlo (para debug)
+        if (requiresPreparationParam != null) {
+            log.info("🔍 Using @RequestParam value for Chef: {}", requiresPreparationParam);
+            itemMenu.setRequiresPreparation(requiresPreparationParam);
+        }
+        
+        if (requiresBaristaPreparationParam != null) {
+            log.info("🔍 Using @RequestParam value for Barista: {}", requiresBaristaPreparationParam);
+            itemMenu.setRequiresBaristaPreparation(requiresBaristaPreparationParam);
+        }
+        
+        // Set isBuffet on item
+        itemMenu.setIsBuffet(Boolean.TRUE.equals(isBuffetParam));
+        
+        // Set isCombo on item
+        itemMenu.setIsCombo(Boolean.TRUE.equals(isComboParam));
+        
+        // Set hasCustomSchedule on item
+        itemMenu.setHasCustomSchedule(Boolean.TRUE.equals(hasCustomSchedule));
+
+        // Validate mutual exclusion: only one of Chef, Barista, Buffet, or Combo can be selected
+        int selectedOptions = 0;
+        if (Boolean.TRUE.equals(itemMenu.getRequiresPreparation())) selectedOptions++;
+        if (Boolean.TRUE.equals(itemMenu.getRequiresBaristaPreparation())) selectedOptions++;
+        if (Boolean.TRUE.equals(itemMenu.getIsBuffet())) selectedOptions++;
+        if (Boolean.TRUE.equals(itemMenu.getIsCombo())) selectedOptions++;
+        if (selectedOptions > 1) {
+             model.addAttribute("errorMessage", "Solo puede seleccionar una opción: preparación por Chef, preparación por Barista, Buffet o Combo.");
+             List<ItemIngredient> recipe = buildRecipe(ingredientIds, quantities, units);
+             loadFormData(model, itemMenu, recipe);
+             loadAvailabilityFormData(model, itemMenu);
+             return "admin/menu-items/form";
+        }
+
+        if (bindingResult.hasErrors()) {
+            loadFormData(model, itemMenu, new ArrayList<>());
+            loadAvailabilityFormData(model, itemMenu);
+            return "admin/menu-items/form";
+        }
+
+        try {
+            // Handle image upload
+            if (imageFile != null && !imageFile.isEmpty()) {
+                if (!imageStorageService.isValidImage(imageFile)) {
+                    model.addAttribute("errorMessage", "Imagen inválida. Solo se permiten imágenes JPG, PNG, GIF o WEBP de máximo 5MB");
+                    List<ItemIngredient> recipe = buildRecipe(ingredientIds, quantities, units);
+                    loadFormData(model, itemMenu, recipe);
+                    loadAvailabilityFormData(model, itemMenu);
+                    return "admin/menu-items/form";
+                }
+                String imagePath = imageStorageService.saveImage(imageFile, "menu-items", itemMenu.getName());
+                itemMenu.setImageUrl(imagePath);
+            }
+
+            // Build recipe from form data
+            List<ItemIngredient> recipe = buildRecipe(ingredientIds, quantities, units);
+
+            // Validate ingredients based on type flags
+            if (Boolean.TRUE.equals(itemMenu.getIsBuffet()) || Boolean.TRUE.equals(itemMenu.getIsCombo())) {
+                // Buffet and Combo items must NOT have ingredients - force empty recipe
+                recipe = new ArrayList<>();
+            } else {
+                // Non-buffet/non-combo items must have at least one ingredient
+                if (recipe.isEmpty()) {
+                    model.addAttribute("errorMessage", "Debe agregar al menos un ingrediente a la receta");
+                    loadFormData(model, itemMenu, recipe);
+                    loadAvailabilityFormData(model, itemMenu);
+                    return "admin/menu-items/form";
+                }
+            }
+            
+            // Validate combo items if this is a combo
+            if (Boolean.TRUE.equals(itemMenu.getIsCombo())) {
+                if (comboItemIds == null || comboItemIds.isEmpty()) {
+                    model.addAttribute("errorMessage", "Un combo debe tener al menos 1 item del menú asociado");
+                    loadFormData(model, itemMenu, new ArrayList<>());
+                    loadAvailabilityFormData(model, itemMenu);
+                    return "admin/menu-items/form";
+                }
+                
+                // Validate that all combo child items are active
+                List<String> inactiveItems = new ArrayList<>();
+                for (Long childId : comboItemIds) {
+                    Optional<ItemMenu> childItem = itemMenuService.findById(childId);
+                    if (childItem.isEmpty() || !Boolean.TRUE.equals(childItem.get().getActive())) {
+                        inactiveItems.add(childItem.isPresent() ? childItem.get().getName() : "ID: " + childId);
+                    }
+                }
+                
+                if (!inactiveItems.isEmpty()) {
+                    model.addAttribute("errorMessage", 
+                        "No se puede crear el combo con items inactivos: " + String.join(", ", inactiveItems) + 
+                        ". Por favor, active estos items o seléccione otros.");
+                    loadFormData(model, itemMenu, recipe);
+                    loadAvailabilityFormData(model, itemMenu);
+                    return "admin/menu-items/form";
+                }
+            }
+            
+            ItemMenu created = itemMenuService.create(itemMenu, recipe);
+            
+            // Save combo items if this is a combo
+            if (Boolean.TRUE.equals(itemMenu.getIsCombo()) && comboItemIds != null && !comboItemIds.isEmpty()) {
+                itemMenuService.updateComboItems(created.getIdItemMenu(), comboItemIds, comboItemQuantities);
+                log.info("Saved {} combo items for combo '{}'", comboItemIds.size(), created.getName());
+            }
+            
+            // Save availability schedule only if custom schedule is enabled
+            if (Boolean.TRUE.equals(hasCustomSchedule)) {
+                Map<DayOfWeek, LocalTime[]> manualSchedule = extractManualSchedule(allParams);
+                if (!manualSchedule.isEmpty()) {
+                    itemMenuService.updateAvailabilityScheduleManual(created.getIdItemMenu(), manualSchedule);
+                } else {
+                    // Custom schedule enabled but no days selected - disable it
+                    log.info("Custom schedule enabled but no days selected, disabling custom schedule for item {}", created.getIdItemMenu());
+                    itemMenuService.clearAvailabilitySchedule(created.getIdItemMenu());
+                }
+            } else {
+                // No custom schedule - clear any existing availability days
+                itemMenuService.clearAvailabilitySchedule(created.getIdItemMenu());
+            }
+            
+            // Associate all active sauces if checkbox was selected
+            if (Boolean.TRUE.equals(associateAllSauces)) {
+                associateAllActiveSaucesToItem(created.getIdItemMenu());
+                log.info("Associated all active sauces to item: {}", created.getName());
+            }
+
+            log.info("Menu item created successfully with ID: {}", created.getIdItemMenu());
+            redirectAttributes.addFlashAttribute("successMessage",
+                    "Item del menú '" + created.getName() + "' creado exitosamente" + 
+                    (Boolean.TRUE.equals(associateAllSauces) ? " (con todas las salsas asociadas)" : ""));
+            return "redirect:/admin/menu-items";
+
+
+        } catch (IllegalArgumentException e) {
+            log.error("Validation error creating menu item: {}", e.getMessage());
+            model.addAttribute("errorMessage", e.getMessage());
+            List<ItemIngredient> recipe = buildRecipe(ingredientIds, quantities, units);
+            loadFormData(model, itemMenu, recipe);
+            loadAvailabilityFormData(model, itemMenu);
+            return "admin/menu-items/form";
+
+        } catch (Exception e) {
+            log.error("Error creating menu item", e);
+            model.addAttribute("errorMessage", "Error al crear el item del menú: " + e.getMessage());
+            List<ItemIngredient> recipe = buildRecipe(ingredientIds, quantities, units);
+            loadFormData(model, itemMenu, recipe);
+            loadAvailabilityFormData(model, itemMenu);
+            return "admin/menu-items/form";
+        }
+    }
+
+    /**
+     * Update an existing menu item and its recipe
+     */
+    @PostMapping("/{id}")
+    public String updateMenuItem(
+            @PathVariable Long id,
+            @Valid @ModelAttribute("itemMenu") ItemMenu itemMenu,
+            BindingResult bindingResult,
+            @RequestParam(value = "imageFile", required = false) MultipartFile imageFile,
+            @RequestParam(value = "ingredientIds", required = false) List<Long> ingredientIds,
+            @RequestParam(value = "quantities", required = false) List<String> quantities,
+            @RequestParam(value = "units", required = false) List<String> units,
+            @RequestParam(value = "requiresPreparation", required = false) Boolean requiresPreparationParam,
+            @RequestParam(value = "requiresBaristaPreparation", required = false) Boolean requiresBaristaPreparationParam,
+            @RequestParam(value = "isBuffet", required = false) Boolean isBuffetParam,
+            @RequestParam(value = "isCombo", required = false) Boolean isComboParam,
+            @RequestParam(value = "comboItemIds", required = false) List<Long> comboItemIds,
+            @RequestParam(value = "comboItemQuantities", required = false) List<Integer> comboItemQuantities,
+            @RequestParam(value = "associateAllSauces", required = false) Boolean associateAllSauces,
+            @RequestParam(value = "hasCustomSchedule", required = false) Boolean hasCustomSchedule,
+            @RequestParam Map<String, String> allParams,
+            Model model,
+            RedirectAttributes redirectAttributes) {
+
+        log.info("Updating menu item with ID: {}", id);
+        log.info("🔍 requiresPreparation received from form: {}", itemMenu.getRequiresPreparation());
+        log.info("🔍 requiresPreparation as @RequestParam: {}", requiresPreparationParam);
+        log.info("🔍 requiresBaristaPreparation received from form: {}", itemMenu.getRequiresBaristaPreparation());
+        log.info("🔍 requiresBaristaPreparation as @RequestParam: {}", requiresBaristaPreparationParam);
+        log.info("🔍 isBuffet: {}", isBuffetParam);
+        log.info("🔍 associateAllSauces: {}", associateAllSauces);
+        log.info("🔍 hasCustomSchedule: {}", hasCustomSchedule);
+        
+        // Si el parámetro está presente, usarlo (para debug)
+        if (requiresPreparationParam != null) {
+            log.info("🔍 Using @RequestParam value for Chef: {}", requiresPreparationParam);
+            itemMenu.setRequiresPreparation(requiresPreparationParam);
+        }
+        
+        if (requiresBaristaPreparationParam != null) {
+            log.info("🔍 Using @RequestParam value for Barista: {}", requiresBaristaPreparationParam);
+            itemMenu.setRequiresBaristaPreparation(requiresBaristaPreparationParam);
+        }
+        
+        // Set isBuffet on item
+        itemMenu.setIsBuffet(Boolean.TRUE.equals(isBuffetParam));
+        
+        // Set isCombo on item
+        itemMenu.setIsCombo(Boolean.TRUE.equals(isComboParam));
+        log.info("🔍 isCombo: {}", isComboParam);
+        
+        // Set hasCustomSchedule on item
+        itemMenu.setHasCustomSchedule(Boolean.TRUE.equals(hasCustomSchedule));
+
+        // Validate mutual exclusion: only one of Chef, Barista, Buffet, or Combo can be selected
+        int selectedOptions = 0;
+        if (Boolean.TRUE.equals(itemMenu.getRequiresPreparation())) selectedOptions++;
+        if (Boolean.TRUE.equals(itemMenu.getRequiresBaristaPreparation())) selectedOptions++;
+        if (Boolean.TRUE.equals(itemMenu.getIsBuffet())) selectedOptions++;
+        if (Boolean.TRUE.equals(itemMenu.getIsCombo())) selectedOptions++;
+        if (selectedOptions > 1) {
+             model.addAttribute("errorMessage", "Solo puede seleccionar una opción: preparación por Chef, preparación por Barista, Buffet o Combo.");
+             List<BigDecimal> quantitiesBD = convertQuantities(quantities);
+             List<ItemIngredient> recipe = buildRecipe(ingredientIds, quantitiesBD, units);
+             loadFormData(model, itemMenu, recipe);
+             loadAvailabilityFormData(model, itemMenu);
+             model.addAttribute("formAction", "/admin/menu-items/" + id);
+             return "admin/menu-items/form";
+        }
+
+        if (bindingResult.hasErrors()) {
+            loadFormData(model, itemMenu, itemMenuService.getRecipe(id));
+            loadAvailabilityFormData(model, itemMenu);
+            model.addAttribute("formAction", "/admin/menu-items/" + id);
+            return "admin/menu-items/form";
+        }
+
+        try {
+            // Handle image upload
+            if (imageFile != null && !imageFile.isEmpty()) {
+                if (!imageStorageService.isValidImage(imageFile)) {
+                    model.addAttribute("errorMessage", "Imagen inválida. Solo se permiten imágenes JPG, PNG, GIF o WEBP de máximo 5MB");
+                    loadFormData(model, itemMenu, itemMenuService.getRecipe(id));
+                    loadAvailabilityFormData(model, itemMenu);
+                    model.addAttribute("formAction", "/admin/menu-items/" + id);
+                    return "admin/menu-items/form";
+                }
+                
+                // Delete old image if exists
+                itemMenuService.findById(id).ifPresent(existing -> {
+                    if (existing.getImageUrl() != null && !existing.getImageUrl().isEmpty()) {
+                        imageStorageService.deleteImage(existing.getImageUrl());
+                    }
+                });
+                
+                String imagePath = imageStorageService.saveImage(imageFile, "menu-items", itemMenu.getName());
+                itemMenu.setImageUrl(imagePath);
+            } else {
+                // No new image uploaded — check if user removed the existing image
+                String submittedUrl = itemMenu.getImageUrl();
+                if (submittedUrl == null || submittedUrl.trim().isEmpty()) {
+                    // User cleared the image → delete old one from Cloudinary
+                    itemMenuService.findById(id).ifPresent(existing -> {
+                        if (existing.getImageUrl() != null && !existing.getImageUrl().isEmpty()) {
+                            imageStorageService.deleteImage(existing.getImageUrl());
+                            log.info("Image removed for item ID: {}", id);
+                        }
+                    });
+                    itemMenu.setImageUrl(null);
+                } else {
+                    // Image not changed — keep the existing URL
+                    itemMenu.setImageUrl(submittedUrl);
+                }
+            }
+
+            // Build recipe from form data
+            List<ItemIngredient> recipe = null;
+            if (ingredientIds != null && !ingredientIds.isEmpty()) {
+                // Convert String quantities to BigDecimal safely
+                List<BigDecimal> quantitiesBD = convertQuantities(quantities);
+                recipe = buildRecipe(ingredientIds, quantitiesBD, units);
+            }
+
+            // Validate ingredients based on type flags
+            if (Boolean.TRUE.equals(itemMenu.getIsBuffet()) || Boolean.TRUE.equals(itemMenu.getIsCombo())) {
+                // Buffet and Combo items must NOT have ingredients - force empty recipe
+                // (silently discard any submitted ingredients when converting to buffet/combo)
+                recipe = new ArrayList<>();
+            } else {
+                // Non-buffet/non-combo items must have at least one ingredient
+                if (recipe == null || recipe.isEmpty()) {
+                    model.addAttribute("errorMessage", "Debe agregar al menos un ingrediente a la receta");
+                    loadFormData(model, itemMenu, itemMenuService.getRecipe(id));
+                    loadAvailabilityFormData(model, itemMenu);
+                    model.addAttribute("formAction", "/admin/menu-items/" + id);
+                    return "admin/menu-items/form";
+                }
+            }
+            
+            // Validate combo items if this is a combo
+            if (Boolean.TRUE.equals(itemMenu.getIsCombo())) {
+                if (comboItemIds == null || comboItemIds.isEmpty()) {
+                    model.addAttribute("errorMessage", "Un combo debe tener al menos 1 item del menú asociado");
+                    loadFormData(model, itemMenu, new ArrayList<>());
+                    loadAvailabilityFormData(model, itemMenu);
+                    model.addAttribute("formAction", "/admin/menu-items/" + id);
+                    return "admin/menu-items/form";
+                }
+                
+                // Validate that all combo child items are active
+                List<String> inactiveItems = new ArrayList<>();
+                for (Long childId : comboItemIds) {
+                    Optional<ItemMenu> childItem = itemMenuService.findById(childId);
+                    if (childItem.isEmpty() || !Boolean.TRUE.equals(childItem.get().getActive())) {
+                        inactiveItems.add(childItem.isPresent() ? childItem.get().getName() : "ID: " + childId);
+                    }
+                }
+                
+                if (!inactiveItems.isEmpty()) {
+                    model.addAttribute("errorMessage", 
+                        "No se puede actualizar el combo con items inactivos: " + String.join(", ", inactiveItems) + 
+                        ". Por favor, active estos items o seléccione otros.");
+                    loadFormData(model, itemMenu, new ArrayList<>());
+                    loadAvailabilityFormData(model, itemMenu);
+                    model.addAttribute("formAction", "/admin/menu-items/" + id);
+                    return "admin/menu-items/form";
+                }
+            }
+            
+            ItemMenu updated = itemMenuService.update(id, itemMenu, recipe);
+            
+            // Update combo items if this is a combo
+            if (Boolean.TRUE.equals(itemMenu.getIsCombo()) && comboItemIds != null && !comboItemIds.isEmpty()) {
+                itemMenuService.updateComboItems(id, comboItemIds, comboItemQuantities);
+                log.info("Updated {} combo items for combo '{}'", comboItemIds.size(), updated.getName());
+            }
+            
+            // Update availability schedule only if custom schedule is enabled
+            if (Boolean.TRUE.equals(hasCustomSchedule)) {
+                Map<DayOfWeek, LocalTime[]> manualSchedule = extractManualSchedule(allParams);
+                if (!manualSchedule.isEmpty()) {
+                    itemMenuService.updateAvailabilityScheduleManual(id, manualSchedule);
+                } else {
+                    // Custom schedule enabled but no days selected - disable it
+                    log.info("Custom schedule enabled but no days selected, disabling custom schedule for item {}", id);
+                    itemMenuService.clearAvailabilitySchedule(id);
+                }
+            } else {
+                // No custom schedule - clear any existing availability days
+                itemMenuService.clearAvailabilitySchedule(id);
+            }
+            
+            // Associate all active sauces if checkbox was selected
+            if (Boolean.TRUE.equals(associateAllSauces)) {
+                int saucesAdded = associateAllActiveSaucesToItem(id);
+                log.info("Associated {} new sauces to item: {}", saucesAdded, updated.getName());
+            }
+
+            log.info("Menu item updated successfully: {}", updated.getIdItemMenu());
+            redirectAttributes.addFlashAttribute("successMessage",
+                    "Item del menú '" + updated.getName() + "' actualizado exitosamente" +
+                    (Boolean.TRUE.equals(associateAllSauces) ? " (salsas asociadas)" : ""));
+            return "redirect:/admin/menu-items";
+
+        } catch (IllegalArgumentException e) {
+            log.error("Validation error updating menu item: {}", e.getMessage(), e);
+            model.addAttribute("errorMessage", e.getMessage());
+            loadFormData(model, itemMenu, itemMenuService.getRecipe(id));
+            loadAvailabilityFormData(model, itemMenu);
+            model.addAttribute("formAction", "/admin/menu-items/" + id);
+            return "admin/menu-items/form";
+
+        } catch (Exception e) {
+            log.error("Error updating menu item: {}", e.getMessage(), e);
+            model.addAttribute("errorMessage", "Error al actualizar el item del menú: " + e.getMessage());
+            loadFormData(model, itemMenu, itemMenuService.getRecipe(id));
+            loadAvailabilityFormData(model, itemMenu);
+            model.addAttribute("formAction", "/admin/menu-items/" + id);
+            return "admin/menu-items/form";
+        }
+    }
+
+    /**
+     * Activate a menu item
+     */
+    @PostMapping("/{id}/activate")
+    public String activateMenuItem(@PathVariable Long id, RedirectAttributes redirectAttributes) {
+        log.info("Activating menu item with ID: {}", id);
+
+        try {
+            ItemMenu item = itemMenuService.activate(id);
+            redirectAttributes.addFlashAttribute("successMessage",
+                    "Item '" + item.getName() + "' activado exitosamente");
+        } catch (Exception e) {
+            log.error("Error activating menu item", e);
+            redirectAttributes.addFlashAttribute("errorMessage",
+                    "Error al activar el item: " + e.getMessage());
+        }
+
+        return "redirect:/admin/menu-items";
+    }
+
+    /**
+     * Deactivate a menu item
+     */
+    @PostMapping("/{id}/deactivate")
+    public String deactivateMenuItem(@PathVariable Long id, RedirectAttributes redirectAttributes) {
+        log.info("Deactivating menu item with ID: {}", id);
+
+        try {
+            ItemMenu item = itemMenuService.deactivate(id);
+            redirectAttributes.addFlashAttribute("successMessage",
+                    "Item '" + item.getName() + "' desactivado exitosamente");
+        } catch (Exception e) {
+            log.error("Error deactivating menu item", e);
+            redirectAttributes.addFlashAttribute("errorMessage",
+                    "Error al desactivar el item: " + e.getMessage());
+        }
+
+        return "redirect:/admin/menu-items";
+    }
+
+    /**
+     * Delete a menu item
+     */
+    @PostMapping("/{id}/delete")
+    public String deleteMenuItem(@PathVariable Long id, RedirectAttributes redirectAttributes) {
+        log.info("Deleting menu item with ID: {}", id);
+
+        try {
+            itemMenuService.delete(id);
+            redirectAttributes.addFlashAttribute("successMessage", "Item del menú eliminado exitosamente");
+        } catch (Exception e) {
+            log.error("Error deleting menu item", e);
+            redirectAttributes.addFlashAttribute("errorMessage",
+                    "Error al eliminar el item: " + e.getMessage());
+        }
+
+        return "redirect:/admin/menu-items";
+    }
+
+    // ========== AJAX Endpoints ==========
+
+    /**
+     * Get ingredient details by ID (AJAX)
+     * Returns unit of measure and other relevant info
+     */
+    @GetMapping("/ingredient/{ingredientId}")
+    @ResponseBody
+    public Map<String, Object> getIngredientDetails(@PathVariable Long ingredientId) {
+        log.debug("Fetching ingredient details for ID: {}", ingredientId);
+        
+        Map<String, Object> response = new HashMap<>();
+        try {
+            Ingredient ingredient = ingredientService.findById(ingredientId)
+                    .orElseThrow(() -> new IllegalArgumentException("Ingrediente no encontrado"));
+            
+            response.put("success", true);
+            response.put("id", ingredient.getIdIngredient());
+            response.put("name", ingredient.getName());
+            response.put("unitOfMeasure", ingredient.getUnitOfMeasure());
+            response.put("currentStock", ingredient.getCurrentStock());
+            response.put("costPerUnit", ingredient.getCostPerUnit());
+            
+        } catch (Exception e) {
+            response.put("success", false);
+            response.put("error", e.getMessage());
+        }
+        
+        return response;
+    }
+
+    /**
+     * Get recipe for a menu item (AJAX)
+     */
+    @GetMapping("/{id}/recipe")
+    @ResponseBody
+    public List<Map<String, Object>> getRecipe(@PathVariable Long id) {
+        log.debug("Fetching recipe for menu item ID: {}", id);
+        
+        List<ItemIngredient> recipe = itemMenuService.getRecipe(id);
+        List<Map<String, Object>> response = new ArrayList<>();
+        
+        for (ItemIngredient item : recipe) {
+            Map<String, Object> ingredientData = new HashMap<>();
+            ingredientData.put("id", item.getIdItemIngredient());
+            ingredientData.put("ingredientId", item.getIngredient().getIdIngredient());
+            ingredientData.put("ingredientName", item.getIngredient().getName());
+            ingredientData.put("quantity", item.getQuantity());
+            ingredientData.put("unit", item.getUnit());
+            ingredientData.put("currentStock", item.getIngredient().getCurrentStock());
+            response.add(ingredientData);
+        }
+        
+        return response;
+    }
+
+    /**
+     * Get combo items for a combo menu item (AJAX)
+     */
+    @GetMapping("/{id}/combo-items")
+    @ResponseBody
+    public Map<String, Object> getComboItems(@PathVariable Long id) {
+        log.debug("Fetching combo items for menu item ID: {}", id);
+        
+        Map<String, Object> response = new HashMap<>();
+        try {
+            List<ItemMenuComboItem> comboItems = itemMenuService.getComboItems(id);
+            List<Map<String, Object>> items = new ArrayList<>();
+            
+            for (ItemMenuComboItem ci : comboItems) {
+                Map<String, Object> itemData = new HashMap<>();
+                itemData.put("id", ci.getIdComboItem());
+                itemData.put("childItemId", ci.getChildMenu().getIdItemMenu());
+                itemData.put("childItemName", ci.getChildMenu().getName());
+                itemData.put("childItemPrice", ci.getChildMenu().getPrice());
+                itemData.put("childItemImageUrl", ci.getChildMenu().getImageUrl());
+                itemData.put("childRequiresPreparation", ci.getChildMenu().getRequiresPreparation());
+                itemData.put("childRequiresBaristaPreparation", ci.getChildMenu().getRequiresBaristaPreparation());
+                itemData.put("childActive", ci.getChildMenu().getActive());
+                itemData.put("quantity", ci.getQuantity());
+                itemData.put("displayOrder", ci.getDisplayOrder());
+                items.add(itemData);
+            }
+            
+            response.put("success", true);
+            response.put("comboItems", items);
+        } catch (Exception e) {
+            log.error("Error fetching combo items for item {}: {}", id, e.getMessage());
+            response.put("success", false);
+            response.put("error", e.getMessage());
+            response.put("comboItems", new ArrayList<>());
+        }
+        
+        return response;
+    }
+
+    /**
+     * Get all available (non-combo) items for combo child selection (AJAX)
+     */
+    @GetMapping("/available-for-combo")
+    @ResponseBody
+    public List<Map<String, Object>> getAvailableItemsForCombo(@RequestParam(required = false) Long excludeId) {
+        log.debug("Fetching available items for combo selection, excluding ID: {}", excludeId);
+        
+        return itemMenuService.findAll().stream()
+            .filter(item -> !Boolean.TRUE.equals(item.getIsCombo()))
+            .filter(item -> Boolean.TRUE.equals(item.getActive()))
+            .filter(item -> excludeId == null || !item.getIdItemMenu().equals(excludeId))
+            .map(item -> {
+                Map<String, Object> dto = new HashMap<>();
+                dto.put("id", item.getIdItemMenu());
+                dto.put("name", item.getName());
+                dto.put("price", item.getPrice());
+                dto.put("imageUrl", item.getImageUrl());
+                dto.put("categoryName", item.getCategory() != null ? item.getCategory().getName() : "");
+                dto.put("requiresPreparation", item.getRequiresPreparation());
+                dto.put("requiresBaristaPreparation", item.getRequiresBaristaPreparation());
+                dto.put("isBuffet", item.getIsBuffet());
+                dto.put("active", item.getActive());
+                return dto;
+            })
+            .collect(Collectors.toList());
+    }
+
+    /**
+     * Check stock availability (AJAX)
+     */
+    @GetMapping("/{id}/check-stock")
+    @ResponseBody
+    public Map<String, Object> checkStock(@PathVariable Long id, @RequestParam int quantity) {
+        log.debug("Checking stock for menu item {} quantity {}", id, quantity);
+        
+        Map<String, Object> response = new HashMap<>();
+        try {
+            boolean hasStock = itemMenuService.hasEnoughStock(id, quantity);
+            response.put("hasStock", hasStock);
+            response.put("success", true);
+        } catch (Exception e) {
+            response.put("success", false);
+            response.put("error", e.getMessage());
+        }
+        
+        return response;
+    }
+
+    /**
+     * Get maximum available quantity for an item based on ingredient stock (AJAX)
+     */
+    @GetMapping("/{id}/max-quantity")
+    @ResponseBody
+    public Map<String, Object> getMaxQuantity(@PathVariable Long id) {
+        log.debug("Getting max available quantity for menu item {}", id);
+        
+        Map<String, Object> response = new HashMap<>();
+        try {
+            int maxQuantity = itemMenuService.getMaxAvailableQuantity(id);
+            response.put("maxQuantity", maxQuantity);
+            response.put("success", true);
+        } catch (Exception e) {
+            response.put("success", false);
+            response.put("error", e.getMessage());
+            response.put("maxQuantity", 0);
+        }
+        
+        return response;
+    }
+
+    /**
+     * Get item cost calculation (AJAX)
+     */
+    @GetMapping("/{id}/cost")
+    @ResponseBody
+    public Map<String, Object> getItemCost(@PathVariable Long id) {
+        log.debug("Calculating cost for menu item ID: {}", id);
+        
+        Map<String, Object> response = new HashMap<>();
+        try {
+            ItemMenu item = itemMenuService.findByIdOrThrow(id);
+            BigDecimal cost = itemMenuService.calculateIngredientsCost(id);
+            BigDecimal profitMargin = item.calculateProfitMarginPercentage();
+            
+            response.put("cost", cost);
+            response.put("price", item.getPrice());
+            response.put("profitMargin", profitMargin);
+            response.put("success", true);
+        } catch (Exception e) {
+            response.put("success", false);
+            response.put("error", e.getMessage());
+        }
+        
+        return response;
+    }
+
+    // ========== Helper Methods ==========
+
+    /**
+     * Convert String quantities to BigDecimal safely
+     */
+    private List<BigDecimal> convertQuantities(List<String> quantities) {
+        List<BigDecimal> quantitiesBD = new ArrayList<>();
+        if (quantities != null) {
+            for (String qty : quantities) {
+                try {
+                    if (qty != null && !qty.trim().isEmpty()) {
+                        quantitiesBD.add(new BigDecimal(qty));
+                    } else {
+                        quantitiesBD.add(BigDecimal.ZERO);
+                    }
+                } catch (NumberFormatException e) {
+                    log.warn("Invalid quantity format: {}", qty);
+                    quantitiesBD.add(BigDecimal.ZERO);
+                }
+            }
+        }
+        return quantitiesBD;
+    }
+
+    /**
+     * Build recipe from form parameters
+     */
+    private List<ItemIngredient> buildRecipe(List<Long> ingredientIds, 
+                                               List<BigDecimal> quantities, 
+                                               List<String> units) {
+        List<ItemIngredient> recipe = new ArrayList<>();
+        
+        if (ingredientIds == null || ingredientIds.isEmpty()) {
+            return recipe;
+        }
+        
+        // Track ingredient IDs to detect duplicates
+        List<Long> seenIds = new ArrayList<>();
+        
+        for (int i = 0; i < ingredientIds.size(); i++) {
+            Long ingredientId = ingredientIds.get(i);
+            BigDecimal quantity = quantities != null && i < quantities.size() ? quantities.get(i) : BigDecimal.ZERO;
+            String unit = units != null && i < units.size() ? units.get(i) : "";
+            
+            if (ingredientId != null && quantity.compareTo(BigDecimal.ZERO) > 0) {
+                // Check for duplicate ingredient
+                if (seenIds.contains(ingredientId)) {
+                    // Find ingredient name for better error message
+                    Optional<Ingredient> duplicateIngredient = ingredientService.findById(ingredientId);
+                    String ingredientName = duplicateIngredient.map(Ingredient::getName).orElse("ID: " + ingredientId);
+                    throw new IllegalArgumentException(
+                        "El ingrediente '" + ingredientName + "' está repetido en la receta. " +
+                        "Si necesita más cantidad, aumente la cantidad en lugar de agregar el mismo ingrediente varias veces."
+                    );
+                }
+                
+                seenIds.add(ingredientId);
+                
+                Ingredient ingredient = new Ingredient();
+                ingredient.setIdIngredient(ingredientId);
+                
+                ItemIngredient itemIngredient = ItemIngredient.builder()
+                        .ingredient(ingredient)
+                        .quantity(quantity)
+                        .unit(unit)
+                        .build();
+                
+                recipe.add(itemIngredient);
+            }
+        }
+        
+        return recipe;
+    }
+
+    /**
+     * Load common form data
+     */
+    private void loadFormData(Model model, ItemMenu itemMenu, List<ItemIngredient> recipe) {
+        List<Category> categories = categoryService.getAllCategories();
+        List<Ingredient> ingredients = ingredientService.findAll();
+        
+        // Convertir ingredientes a DTOs simples para evitar referencias circulares
+        List<Map<String, Object>> ingredientsDTO = ingredients.stream()
+            .map(ing -> {
+                Map<String, Object> dto = new HashMap<>();
+                dto.put("idIngredient", ing.getIdIngredient());
+                dto.put("name", ing.getName());
+                dto.put("unitOfMeasure", ing.getUnitOfMeasure());
+                dto.put("currentStock", ing.getCurrentStock());
+                dto.put("categoryName", ing.getCategory() != null ? ing.getCategory().getName() : "");
+                return dto;
+            })
+            .collect(java.util.stream.Collectors.toList());
+
+        model.addAttribute("itemMenu", itemMenu);
+        model.addAttribute("categories", categories);
+        model.addAttribute("ingredients", ingredients);
+        model.addAttribute("ingredientsDTO", ingredientsDTO);
+        model.addAttribute("recipe", recipe);
+        model.addAttribute("formAction", itemMenu.getIdItemMenu() != null ? 
+                "/admin/menu-items/" + itemMenu.getIdItemMenu() : "/admin/menu-items");
+        
+        // Add combo items data
+        if (itemMenu.getIdItemMenu() != null && Boolean.TRUE.equals(itemMenu.getIsCombo())) {
+            List<ItemMenuComboItem> comboItems = itemMenuService.getComboItems(itemMenu.getIdItemMenu());
+            model.addAttribute("comboItems", comboItems);
+        } else {
+            model.addAttribute("comboItems", new ArrayList<>());
+        }
+        
+        // Add all non-combo items for combo selection dropdown
+        List<ItemMenu> allNonComboItems = itemMenuService.findAll().stream()
+            .filter(i -> !Boolean.TRUE.equals(i.getIsCombo()) && 
+                         (itemMenu.getIdItemMenu() == null || !i.getIdItemMenu().equals(itemMenu.getIdItemMenu())))
+            .collect(Collectors.toList());
+        model.addAttribute("availableComboChildItems", allNonComboItems);
+    }
+
+    /**
+     * Load availability form data (business hours and selected days)
+     */
+    private void loadAvailabilityFormData(Model model, ItemMenu itemMenu) {
+        // Get all business hours for the form
+        List<BusinessHours> allBusinessHours = businessHoursService.getAllBusinessHours();
+        
+        // Build a map of day -> availability for quick lookup
+        Map<DayOfWeek, ItemMenuAvailability> availabilityMap = new HashMap<>();
+        if (itemMenu.getAvailabilityDays() != null) {
+            for (ItemMenuAvailability avail : itemMenu.getAvailabilityDays()) {
+                availabilityMap.put(avail.getDayOfWeek(), avail);
+            }
+        }
+        
+        // Build a list of all days with their business hours info
+        List<Map<String, Object>> daysWithHours = new ArrayList<>();
+        for (DayOfWeek day : DayOfWeek.values()) {
+            Map<String, Object> dayInfo = new HashMap<>();
+            dayInfo.put("day", day);
+            dayInfo.put("displayName", day.getDisplayName());
+            
+            // Find business hours for this day
+            Optional<BusinessHours> bh = allBusinessHours.stream()
+                    .filter(h -> h.getDayOfWeek() == day)
+                    .findFirst();
+            
+            if (bh.isPresent()) {
+                dayInfo.put("isWorkDay", !bh.get().getIsClosed());
+                dayInfo.put("openTime", bh.get().getOpenTime());
+                dayInfo.put("closeTime", bh.get().getCloseTime());
+            } else {
+                dayInfo.put("isWorkDay", false);
+                dayInfo.put("openTime", null);
+                dayInfo.put("closeTime", null);
+            }
+            
+            // Check if this day is selected for the item
+            boolean isSelected = false;
+            ItemMenuAvailability dayAvailability = availabilityMap.get(day);
+            
+            // Always add per-day times (null if not selected) to avoid Thymeleaf errors
+            if (dayAvailability != null) {
+                isSelected = true;
+                // Add per-day times for custom schedule
+                dayInfo.put("selectedStartTime", dayAvailability.getStartTime());
+                dayInfo.put("selectedEndTime", dayAvailability.getEndTime());
+            } else {
+                // Set null values to avoid property-not-found errors in Thymeleaf
+                dayInfo.put("selectedStartTime", null);
+                dayInfo.put("selectedEndTime", null);
+                // For new items or items without custom schedule, don't preselect days
+            }
+            dayInfo.put("isSelected", isSelected);
+            
+            daysWithHours.add(dayInfo);
+        }
+        
+        model.addAttribute("daysWithHours", daysWithHours);
+        model.addAttribute("allDaysOfWeek", DayOfWeek.values());
+    }
+
+    /**
+     * Parse time string to LocalTime
+     */
+    private LocalTime parseTime(String timeStr) {
+        if (timeStr == null || timeStr.trim().isEmpty()) {
+            return null;
+        }
+        try {
+            return LocalTime.parse(timeStr.trim());
+        } catch (Exception e) {
+            log.warn("Failed to parse time: {}", timeStr);
+            return null;
+        }
+    }
+
+    /**
+     * Extract manual schedule from form parameters.
+     * Looks for parameters named manualDay_DAYNAME, manualStartTime_DAYNAME, manualEndTime_DAYNAME
+     * @param allParams Map of all request parameters
+     * @return Map of DayOfWeek to [startTime, endTime] array
+     */
+    private Map<DayOfWeek, LocalTime[]> extractManualSchedule(Map<String, String> allParams) {
+        Map<DayOfWeek, LocalTime[]> schedule = new java.util.LinkedHashMap<>();
+        
+        for (DayOfWeek day : DayOfWeek.values()) {
+            String dayName = day.name();
+            String dayCheckKey = "manualDay_" + dayName;
+            
+            // Check if this day is selected (checkbox checked)
+            if (allParams.containsKey(dayCheckKey)) {
+                String startTimeStr = allParams.get("manualStartTime_" + dayName);
+                String endTimeStr = allParams.get("manualEndTime_" + dayName);
+                
+                LocalTime startTime = parseTime(startTimeStr);
+                LocalTime endTime = parseTime(endTimeStr);
+                
+                // Validate time range: startTime must be before endTime
+                if (startTime != null && endTime != null && !startTime.isBefore(endTime)) {
+                    throw new IllegalArgumentException(
+                        String.format("Horario inválido para %s: La hora de inicio (%s) debe ser menor que la hora de fin (%s). Los horarios que cruzan medianoche no están soportados.",
+                            day.getDisplayName(), startTime, endTime)
+                    );
+                }
+                
+                // Only add if at least the day is selected (times can be null = all day)
+                schedule.put(day, new LocalTime[]{startTime, endTime});
+                
+                log.debug("Manual schedule for {}: {} - {}", dayName, startTime, endTime);
+            }
+        }
+        
+        log.info("Extracted manual schedule for {} days", schedule.size());
+        return schedule;
+    }
+
+    /**
+     * Associate all active sauces to a menu item (skips already associated ones)
+     * @param itemMenuId The ID of the menu item
+     * @return number of newly associated sauces
+     */
+    private int associateAllActiveSaucesToItem(Long itemMenuId) {
+        // Get all active sauces (filtered by company)
+        List<Complement> activeSauces = complementService.findAllActiveSauces();
+        log.info("Found {} active sauces to potentially associate", activeSauces.size());
+        
+        // Get already associated complement IDs for this item
+        List<Long> alreadyAssociatedIds = itemMenuComplementRepository.findByItemMenuIdItemMenu(itemMenuId)
+            .stream()
+            .map(ic -> ic.getComplement().getIdComplement())
+            .collect(Collectors.toList());
+        log.info("Item already has {} complements associated", alreadyAssociatedIds.size());
+        
+        int count = 0;
+        for (Complement sauce : activeSauces) {
+            if (!alreadyAssociatedIds.contains(sauce.getIdComplement())) {
+                // maxQuantity=1 for sauces, minQuantity=0 (optional)
+                complementService.addComplementToItemMenu(itemMenuId, sauce.getIdComplement(), 1, 0);
+                log.debug("Associated sauce '{}' (ID: {}) to item menu ID: {}", 
+                    sauce.getName(), sauce.getIdComplement(), itemMenuId);
+                count++;
+            }
+        }
+        
+        log.info("Successfully associated {} new sauces to item menu ID: {}", count, itemMenuId);
+        return count;
+    }
+
+    // ========== Complement Management for ItemMenu ==========
+
+    /**
+     * Show complements management page for a menu item
+     */
+    @GetMapping("/{id}/complements")
+    public String manageComplements(@PathVariable Long id, Model model, RedirectAttributes redirectAttributes) {
+        log.info("Managing complements for menu item ID: {}", id);
+        
+        return itemMenuService.findById(id)
+                .map(itemMenu -> {
+                    // Get complements already associated with this item
+                    List<ItemMenuComplement> itemComplements = itemMenuComplementRepository.findByItemMenuIdItemMenu(id);
+                    
+                    // Get IDs of complements already associated
+                    List<Long> usedComplementIds = itemComplements.stream()
+                            .map(ic -> ic.getComplement().getIdComplement())
+                            .collect(Collectors.toList());
+                    
+                    // Get available complements (active ones not already associated) - filtered by company
+                    List<Complement> availableComplements = complementService.findAllActive().stream()
+                            .filter(c -> !usedComplementIds.contains(c.getIdComplement()))
+                            .collect(Collectors.toList());
+                    
+                    model.addAttribute("itemMenu", itemMenu);
+                    model.addAttribute("itemComplements", itemComplements);
+                    model.addAttribute("availableComplements", availableComplements);
+                    
+                    return "admin/menu-items/complements";
+                })
+                .orElseGet(() -> {
+                    redirectAttributes.addFlashAttribute("errorMessage", "Item del menú no encontrado");
+                    return "redirect:/admin/menu-items";
+                });
+    }
+
+    /**
+     * Add complement to menu item
+     */
+    @PostMapping("/{id}/complements/add")
+    public String addComplementToItem(
+            @PathVariable Long id,
+            @RequestParam Long complementId,
+            @RequestParam(defaultValue = "3") Integer maxQuantity,
+            RedirectAttributes redirectAttributes) {
+        
+        log.info("Adding complement {} to menu item {}", complementId, id);
+        
+        // Validate maxQuantity
+        if (maxQuantity == null || maxQuantity < 1) {
+            redirectAttributes.addFlashAttribute("errorMessage", "La cantidad máxima debe ser al menos 1");
+            return "redirect:/admin/menu-items/" + id + "/complements";
+        }
+        
+        try {
+            complementService.addComplementToItemMenu(id, complementId, maxQuantity, 0);
+            redirectAttributes.addFlashAttribute("successMessage", "Complemento agregado correctamente");
+        } catch (IllegalArgumentException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+        }
+        
+        return "redirect:/admin/menu-items/" + id + "/complements";
+    }
+
+    /**
+     * Toggle complement active status for item
+     */
+    @PostMapping("/{itemId}/complements/{compId}/toggle")
+    public String toggleComplementForItem(
+            @PathVariable Long itemId,
+            @PathVariable Long compId,
+            RedirectAttributes redirectAttributes) {
+        
+        log.info("Toggling complement {} for item {}", compId, itemId);
+        
+        itemMenuComplementRepository.findByItemMenuIdItemMenuAndComplementIdComplement(itemId, compId)
+                .ifPresent(ic -> {
+                    ic.setActive(!ic.getActive());
+                    itemMenuComplementRepository.save(ic);
+                });
+        
+        redirectAttributes.addFlashAttribute("successMessage", "Estado del complemento actualizado");
+        return "redirect:/admin/menu-items/" + itemId + "/complements";
+    }
+
+    /**
+     * Remove complement from item
+     */
+    @PostMapping("/{itemId}/complements/{compId}/delete")
+    public String removeComplementFromItem(
+            @PathVariable Long itemId,
+            @PathVariable Long compId,
+            RedirectAttributes redirectAttributes) {
+        
+        log.info("Removing complement {} from item {}", compId, itemId);
+        
+        try {
+            complementService.removeComplementFromItemMenu(itemId, compId);
+            redirectAttributes.addFlashAttribute("successMessage", "Complemento eliminado del item");
+        } catch (IllegalArgumentException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+        }
+        
+        return "redirect:/admin/menu-items/" + itemId + "/complements";
+    }
+
+    /**
+     * Get complements for item (AJAX - for order-menu.html)
+     * Returns ALL complements (available and unavailable) with their current stock status
+     * Unavailable items will be shown disabled in the UI
+     */
+    @GetMapping("/{id}/complements/available")
+    @ResponseBody
+    public Map<String, Object> getAvailableComplementsForItem(@PathVariable Long id) {
+        log.debug("Getting all complements (available and unavailable) for item ID: {}", id);
+        
+        Map<String, Object> response = new HashMap<>();
+        try {
+            List<ItemMenuComplement> itemComplements = itemMenuComplementRepository
+                    .findByItemMenuIdItemMenuAndActiveTrue(id);
+            
+            List<Map<String, Object>> complementsList = itemComplements.stream()
+                    .filter(ic -> ic.getComplement().getActive())
+                    .map(ic -> {
+                        Complement complement = ic.getComplement();
+                        // Dynamically calculate availability based on current stock
+                        complement.updateAvailability();
+                        
+                        Map<String, Object> compData = new HashMap<>();
+                        compData.put("id", complement.getIdComplement());
+                        compData.put("name", complement.getName());
+                        compData.put("description", complement.getDescription());
+                        compData.put("extraPrice", complement.getExtraPrice());
+                        compData.put("imageUrl", complement.getImageUrl());
+                        compData.put("maxQuantity", ic.getMaxQuantity());
+                        compData.put("available", complement.getAvailable());
+                        return compData;
+                    })
+                    // Return ALL complements (available and unavailable)
+                    // .filter(comp -> Boolean.TRUE.equals(comp.get("available")))
+                    .collect(Collectors.toList());
+            
+            response.put("success", true);
+            response.put("complements", complementsList);
+        } catch (Exception e) {
+            log.error("Error fetching complements for item {}: {}", id, e.getMessage());
+            response.put("success", false);
+            response.put("error", e.getMessage());
+            response.put("complements", new ArrayList<>());
+        }
+        
+        return response;
+    }
+
+    /**
+     * Check dependencies before hard-deleting a menu item
+     */
+    @GetMapping("/{id}/check-delete")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> checkDeleteDependencies(@PathVariable Long id) {
+        log.info("Checking hard-delete dependencies for item ID: {}", id);
+        try {
+            Map<String, Object> result = itemMenuService.checkHardDeleteDependencies(id);
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            log.error("Error checking dependencies: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /**
+     * Permanently delete a menu item (hard delete)
+     */
+    @PostMapping("/{id}/hard-delete")
+    public String hardDeleteItem(@PathVariable Long id, RedirectAttributes redirectAttributes) {
+        log.warn("Processing hard delete for item ID: {}", id);
+        try {
+            Map<String, Object> result = itemMenuService.hardDelete(id);
+            redirectAttributes.addFlashAttribute("successMessage",
+                    "Item '" + result.get("itemName") + "' eliminado permanentemente de la base de datos.");
+        } catch (IllegalStateException e) {
+            log.error("Cannot hard-delete item: {}", e.getMessage());
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+        } catch (Exception e) {
+            log.error("Error hard-deleting item: {}", e.getMessage());
+            redirectAttributes.addFlashAttribute("errorMessage", "Error al eliminar: " + e.getMessage());
+        }
+        return "redirect:/admin/menu-items";
+    }
+}

@@ -1,0 +1,213 @@
+/* ========================================
+   SISTEMA DE TEMAS - EL GRAN SAZÓN
+   ========================================
+   
+   Este archivo es SOLO para el botón de toggle.
+   Tailwind CSS ya maneja el modo oscuro con "dark:"
+======================================== */
+
+/* ========================================
+   BOTÓN DE TOGGLE MODO OSCURO
+   ======================================== */
+.theme-toggle-btn {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 9999;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #ffffff 0%, #f3f4f6 100%);
+  border: 2px solid #d1d5db;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15), 0 4px 8px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+}
+
+.theme-toggle-btn:hover {
+  transform: scale(1.1) rotate(15deg);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25), 0 6px 12px rgba(0, 0, 0, 0.15);
+  border-color: #38e07b;
+}
+
+.theme-toggle-btn:active {
+  transform: scale(0.95) rotate(0deg);
+}
+
+.theme-toggle-btn i,
+.theme-toggle-btn span {
+  font-size: 28px;
+  color: #1f2937;
+  transition: all 0.3s ease;
+}
+
+/* Icono del sol (modo claro) */
+.theme-toggle-btn .sun-icon {
+  display: block;
+  color: #f59e0b;
+  filter: drop-shadow(0 0 8px rgba(245, 158, 11, 0.5));
+}
+
+.theme-toggle-btn .moon-icon {
+  display: none;
+}
+
+/* Modo oscuro - cambiar el botón también */
+html.dark .theme-toggle-btn {
+  background: linear-gradient(135deg, #374151 0%, #1f2937 100%);
+  border-color: #4b5563;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5), 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+html.dark .theme-toggle-btn:hover {
+  border-color: #38e07b;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.7), 0 6px 12px rgba(56, 224, 123, 0.3);
+}
+
+html.dark .theme-toggle-btn i,
+html.dark .theme-toggle-btn span {
+  color: #f9fafb;
+}
+
+/* Icono de la luna (modo oscuro) */
+html.dark .theme-toggle-btn .sun-icon {
+  display: none;
+}
+
+html.dark .theme-toggle-btn .moon-icon {
+  display: block;
+  color: #fbbf24;
+  filter: drop-shadow(0 0 10px rgba(251, 191, 36, 0.6));
+}
+
+/* Transición suave para todo */
+* {
+  transition: background-color 0.3s ease, color 0.3s ease,
+    border-color 0.3s ease;
+}
+
+/* ========================================
+   SCROLLBARS PERSONALIZADAS MODERNAS
+   ======================================== */
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 #f1f5f9;
+}
+
+html.dark * {
+  scrollbar-color: #475569 #222428;
+}
+
+/* Chrome, Edge, Safari */
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 10px;
+  margin: 4px;
+}
+
+html.dark *::-webkit-scrollbar-track {
+  background: #1e293b;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #cbd5e1 0%, #94a3b8 100%);
+  border-radius: 10px;
+  border: 2px solid #f1f5f9;
+  transition: all 0.3s ease;
+}
+
+html.dark *::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #475569 0%, #334155 100%);
+  border: 2px solid #1e293b;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #38e07b 0%, #2bc866 100%);
+  border-color: rgba(56, 224, 123, 0.2);
+  box-shadow: 0 0 10px rgba(56, 224, 123, 0.3);
+}
+
+html.dark *::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #38e07b 0%, #2bc866 100%);
+  border-color: rgba(56, 224, 123, 0.2);
+  box-shadow: 0 0 10px rgba(56, 224, 123, 0.5);
+}
+
+*::-webkit-scrollbar-thumb:active {
+  background: linear-gradient(180deg, #2bc866 0%, #22a855 100%);
+}
+
+/* Scrollbar para body específicamente (más visible) */
+body::-webkit-scrollbar {
+  width: 12px;
+}
+
+body::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #94a3b8 0%, #64748b 100%);
+  border: 3px solid #f1f5f9;
+}
+
+html.dark body::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #64748b 0%, #475569 100%);
+  border: 3px solid #0f172a;
+}
+
+/* Scrollbar horizontal */
+*::-webkit-scrollbar-corner {
+  background: #f1f5f9;
+}
+
+html.dark *::-webkit-scrollbar-corner {
+  background: #1e293b;
+}
+
+/* ========================================
+   OPTIMIZACIÓN DE CARGA DE IMÁGENES
+   ========================================
+   Smooth fade-in para imágenes que cargan progresivamente.
+   Evita el parpadeo visible durante la carga.
+======================================== */
+
+/* Fade-in suave para img tags de menú */
+.img-fade {
+  opacity: 0;
+  transition: opacity 0.3s ease-in;
+}
+
+.img-fade.loaded {
+  opacity: 1;
+}
+
+/* Skeleton pulse para contenedores de imagen mientras cargan */
+.img-skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+}
+
+html.dark .img-skeleton {
+  background: linear-gradient(90deg, #374151 25%, #4b5563 50%, #374151 75%);
+  background-size: 200% 100%;
+}
+
+@keyframes skeleton-pulse {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Background-image containers: smooth reveal */
+.bg-img-container {
+  transition: background-image 0.3s ease-in;
+}
+

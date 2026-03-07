@@ -1,0 +1,519 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title th:text="${globalSystemConfig.systemName + ' - Información del Cliente'}">
+      El Gran Sazón - Información del Cliente
+    </title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@300;400;500;600;700"
+      rel="stylesheet"
+    />
+
+    <!-- Sistema de Temas (Modo Claro/Oscuro) -->
+    <div th:replace="~{fragments/theme :: themeResources}"></div>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#38e07b",
+              "primary-dark": "#2bc866",
+              "background-light": "#f8faf9",
+              "background-dark": "#0f1713",
+            },
+            fontFamily: {
+              display: ["Work Sans"],
+            },
+            borderRadius: {
+              DEFAULT: "0.5rem",
+              lg: "0.75rem",
+              xl: "1rem",
+              "2xl": "1.5rem",
+              full: "9999px",
+            },
+          },
+        },
+      };
+    </script>
+  </head>
+  <body
+    class="bg-gradient-to-br from-background-light to-gray-50 dark:from-background-dark dark:to-gray-900 font-display text-gray-800 dark:text-gray-200"
+  >
+    <div class="min-h-screen">
+      <!-- MAIN CONTENT -->
+      <main class="w-full">
+        <div class="p-4 sm:p-6 lg:p-8 pb-32">
+          <!-- Breadcrumb -->
+          <nav class="mb-6" aria-label="Breadcrumb">
+            <ol
+              class="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400"
+            >
+              <li>
+                <a
+                  th:href="@{/cashier/orders}"
+                  class="hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
+                >
+                  Pedidos
+                </a>
+              </li>
+              <li>
+                <span class="material-symbols-outlined text-base">
+                  chevron_right
+                </span>
+              </li>
+              <li>
+                <a
+                  th:href="@{/cashier/orders/select-table}"
+                  class="hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
+                >
+                  Selección
+                </a>
+              </li>
+              <li>
+                <span class="material-symbols-outlined text-base">
+                  chevron_right
+                </span>
+              </li>
+              <li class="text-gray-900 dark:text-white font-medium">
+                Datos del Cliente
+              </li>
+            </ol>
+          </nav>
+
+          <!-- Page Header -->
+          <div class="mb-6 sm:mb-8">
+            <h2
+              class="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white mb-2"
+            >
+              Nuevo Pedido - Datos del Cliente
+            </h2>
+            <p class="text-sm sm:text-base text-gray-600 dark:text-gray-400">
+              Ingresa los datos del cliente para continuar con el pedido
+            </p>
+          </div>
+
+          <!-- Main Container -->
+          <div class="max-w-4xl mx-auto">
+            <!-- Order Info Card -->
+            <div
+              class="bg-gradient-to-br from-primary-50 to-primary-100 dark:from-primary-900/20 dark:to-primary-800/20 rounded-2xl border-2 border-primary-200 dark:border-primary-800 p-6 mb-6"
+            >
+              <h2
+                class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2"
+              >
+                <span class="material-symbols-outlined text-primary-600">
+                  receipt_long
+                </span>
+                Información del Pedido
+              </h2>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Order Type Badge -->
+                <div
+                  class="flex items-center gap-3 bg-white dark:bg-gray-800 rounded-xl p-4"
+                >
+                  <div
+                    class="w-12 h-12 rounded-xl flex items-center justify-center"
+                    th:classappend="${orderType.name() == 'DINE_IN'} ? 'bg-green-500' : 
+                                   (${orderType.name() == 'TAKEOUT'} ? 'bg-blue-500' : 'bg-orange-500')"
+                  >
+                    <span
+                      class="material-symbols-outlined text-white text-2xl"
+                      th:text="${orderType.name() == 'DINE_IN'} ? 'restaurant' : 
+                               (${orderType.name() == 'TAKEOUT'} ? 'shopping_bag' : 'delivery_dining')"
+                    >
+                      restaurant
+                    </span>
+                  </div>
+                  <div>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">
+                      Tipo de Pedido
+                    </p>
+                    <p
+                      class="text-sm font-semibold text-gray-900 dark:text-white"
+                      th:text="${orderType.displayName}"
+                    >
+                      Para Comer Aquí
+                    </p>
+                  </div>
+                </div>
+
+                <!-- Table Info (only for DINE_IN) -->
+                <div
+                  th:if="${orderType.name() == 'DINE_IN' && selectedTable != null}"
+                  class="flex items-center gap-3 bg-white dark:bg-gray-800 rounded-xl p-4"
+                >
+                  <div
+                    class="w-12 h-12 rounded-xl bg-purple-500 flex items-center justify-center"
+                  >
+                    <span class="material-symbols-outlined text-white text-2xl">
+                      table_restaurant
+                    </span>
+                  </div>
+                  <div>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Mesa</p>
+                    <p
+                      class="text-sm font-semibold text-gray-900 dark:text-white"
+                    >
+                      Mesa #<span th:text="${selectedTable.tableNumber}"
+                        >1</span
+                      >
+                      <span
+                        class="text-xs font-normal text-gray-500"
+                        th:text="'(' + ${selectedTable.capacity} + ' personas)'"
+                      >
+                        (4 personas)
+                      </span>
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Customer Info Form -->
+            <div
+              class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700"
+            >
+              <div class="p-6">
+                <h2
+                  class="text-xl font-semibold text-gray-900 dark:text-white mb-6 flex items-center gap-2"
+                >
+                  <span class="material-symbols-outlined text-green-600">
+                    person
+                  </span>
+                  Datos del Cliente
+                </h2>
+
+                <form
+                  id="customerForm"
+                  method="get"
+                  th:action="@{/cashier/orders/menu}"
+                >
+                  <!-- Hidden fields -->
+                  <input
+                    type="hidden"
+                    name="orderType"
+                    th:value="${orderType.name()}"
+                  />
+                  <input
+                    th:if="${selectedTable != null}"
+                    type="hidden"
+                    name="tableId"
+                    th:value="${selectedTable.id}"
+                  />
+
+                  <div class="space-y-6">
+                    <!-- Customer Name & Phone -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <!-- Customer Name -->
+                      <div>
+                        <label
+                          for="customerName"
+                          class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                        >
+                          Nombre del Cliente
+                          <span
+                            th:if="${orderType.name() != 'DINE_IN'}"
+                            class="text-red-500"
+                            >*</span
+                          >
+                        </label>
+                        <div class="relative">
+                          <div
+                            class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"
+                          >
+                            <span
+                              class="material-symbols-outlined text-gray-400 text-xl"
+                            >
+                              person
+                            </span>
+                          </div>
+                          <input
+                            type="text"
+                            id="customerName"
+                            name="customerName"
+                            th:required="${orderType.name() != 'DINE_IN'}"
+                            th:value="${linkedReservation != null} ? ${linkedReservation.customerName} : ''"
+                            class="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-all"
+                            placeholder="Ej: Juan Pérez"
+                          />
+                        </div>
+                      </div>
+
+                      <!-- Customer Phone -->
+                      <div>
+                        <label
+                          for="customerPhone"
+                          class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                        >
+                          Teléfono (10 dígitos)
+                          <span
+                            th:if="${orderType.name() != 'DINE_IN'}"
+                            class="text-red-500"
+                            >*</span
+                          >
+                        </label>
+                        <div class="relative">
+                          <div
+                            class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"
+                          >
+                            <span
+                              class="material-symbols-outlined text-gray-400 text-xl"
+                            >
+                              phone
+                            </span>
+                          </div>
+                          <input
+                            type="tel"
+                            id="customerPhone"
+                            name="customerPhone"
+                            th:required="${orderType.name() != 'DINE_IN'}"
+                            th:value="${linkedReservation != null} ? ${linkedReservation.customerPhone} : ''"
+                            pattern="[0-9]{10}"
+                            class="w-full pl-10 pr-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-all"
+                            placeholder="Ej: 1234567890"
+                            oninput="validatePhoneNumber(this)"
+                            maxlength="10"
+                            title="El teléfono debe tener exactamente 10 dígitos"
+                          />
+                          <p
+                            id="phoneCounter"
+                            class="text-xs mt-1 text-gray-500 dark:text-gray-400"
+                          >
+                            0/10 dígitos
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Delivery Address (only for DELIVERY) -->
+                    <div th:if="${orderType.name() == 'DELIVERY'}">
+                      <label
+                        for="deliveryAddress"
+                        class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                      >
+                        Dirección de Entrega <span class="text-red-500">*</span>
+                      </label>
+                      <div class="relative">
+                        <div
+                          class="absolute top-3 left-0 pl-3 flex items-start pointer-events-none"
+                        >
+                          <span
+                            class="material-symbols-outlined text-gray-400 text-xl"
+                          >
+                            location_on
+                          </span>
+                        </div>
+                        <input
+                          type="text"
+                          id="deliveryAddress"
+                          name="deliveryAddress"
+                          required
+                          class="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-all"
+                          placeholder="Ej: Calle 123, Colonia Centro, CP 12345"
+                        />
+                      </div>
+                    </div>
+
+                    <!-- Delivery References (only for DELIVERY) -->
+                    <div th:if="${orderType.name() == 'DELIVERY'}">
+                      <label
+                        for="deliveryReferences"
+                        class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                      >
+                        Referencias de Entrega
+                        <span class="text-gray-500 text-xs">(Opcional)</span>
+                      </label>
+                      <div class="relative">
+                        <div
+                          class="absolute top-3 left-0 pl-3 flex items-start pointer-events-none"
+                        >
+                          <span
+                            class="material-symbols-outlined text-gray-400 text-xl"
+                          >
+                            info
+                          </span>
+                        </div>
+                        <textarea
+                          id="deliveryReferences"
+                          name="deliveryReferences"
+                          rows="3"
+                          class="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-all resize-none"
+                          placeholder="Ej: Casa blanca con portón negro, entre la farmacia y la tienda"
+                        ></textarea>
+                      </div>
+                    </div>
+
+                    <!-- Optional Address for TAKEOUT -->
+                    <div th:if="${orderType.name() == 'TAKEOUT'}">
+                      <label
+                        for="deliveryAddress"
+                        class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                      >
+                        Dirección
+                        <span class="text-gray-500 text-xs">(Opcional)</span>
+                      </label>
+                      <div class="relative">
+                        <div
+                          class="absolute top-3 left-0 pl-3 flex items-start pointer-events-none"
+                        >
+                          <span
+                            class="material-symbols-outlined text-gray-400 text-xl"
+                          >
+                            location_on
+                          </span>
+                        </div>
+                        <input
+                          type="text"
+                          id="deliveryAddress"
+                          name="deliveryAddress"
+                          class="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-all"
+                          placeholder="Dirección del cliente (opcional)"
+                        />
+                      </div>
+                    </div>
+
+                    <!-- Info Message for DINE_IN -->
+                    <div
+                      th:if="${orderType.name() == 'DINE_IN'}"
+                      class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4"
+                    >
+                      <div class="flex gap-3">
+                        <span
+                          class="material-symbols-outlined text-blue-600 dark:text-blue-400 text-xl flex-shrink-0"
+                        >
+                          info
+                        </span>
+                        <p class="text-sm text-blue-800 dark:text-blue-200">
+                          Los datos del cliente son
+                          <strong>opcionales</strong> para pedidos de tipo "Para
+                          Comer Aquí". Puedes dejarlos vacíos si el cliente lo
+                          prefiere.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Action Buttons -->
+                  <div
+                    class="mt-8 flex flex-col sm:flex-row gap-3 justify-between"
+                  >
+                    <a
+                      th:href="@{/cashier/orders/select-table}"
+                      class="inline-flex items-center justify-center gap-2 px-6 py-3 border-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-all font-medium"
+                    >
+                      <span class="material-symbols-outlined">
+                        arrow_back
+                      </span>
+                      Volver
+                    </a>
+
+                    <button
+                      type="submit"
+                      class="inline-flex items-center justify-center gap-2 px-8 py-3 bg-primary text-white rounded-xl shadow-lg hover:shadow-xl transition-all font-semibold"
+                    >
+                      Siguiente
+                      <span class="material-symbols-outlined"
+                        >arrow_forward</span
+                      >
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <!-- Phone Validation Script -->
+    <script>
+      // Inicializar contador de teléfono si hay valor prellenado
+      document.addEventListener("DOMContentLoaded", function () {
+        const phoneInput = document.getElementById("customerPhone");
+        if (phoneInput && phoneInput.value) {
+          validatePhoneNumber(phoneInput);
+        }
+      });
+
+      function validatePhoneNumber(input) {
+        // Solo permitir números
+        input.value = input.value.replace(/[^0-9]/g, "").substring(0, 10);
+
+        const length = input.value.length;
+        const counter = document.getElementById("phoneCounter");
+
+        // Actualizar contador
+        counter.textContent = `${length}/10 dígitos`;
+
+        // Cambiar color según validación
+        if (length === 0) {
+          // Sin entrada - estado neutral
+          input.classList.remove(
+            "!border-red-500",
+            "!border-primary",
+            "focus:!ring-red-500",
+            "focus:!ring-primary",
+          );
+          input.classList.add(
+            "border-gray-300",
+            "dark:border-gray-600",
+            "focus:ring-primary-500",
+            "focus:border-primary-500",
+          );
+          counter.classList.remove(
+            "text-red-500",
+            "text-primary",
+            "font-semibold",
+          );
+          counter.classList.add("text-gray-500", "dark:text-gray-400");
+        } else if (length < 10) {
+          // Incompleto - rojo
+          input.classList.remove(
+            "border-gray-300",
+            "dark:border-gray-600",
+            "!border-primary",
+            "focus:ring-primary-500",
+            "focus:border-primary-500",
+            "focus:!ring-primary",
+          );
+          input.classList.add("!border-red-500", "focus:!ring-red-500");
+          counter.classList.remove(
+            "text-gray-500",
+            "dark:text-gray-400",
+            "text-primary",
+          );
+          counter.classList.add("text-red-500", "font-semibold");
+        } else {
+          // Completo - verde (primary)
+          input.classList.remove(
+            "border-gray-300",
+            "dark:border-gray-600",
+            "!border-red-500",
+            "focus:ring-primary-500",
+            "focus:border-primary-500",
+            "focus:!ring-red-500",
+          );
+          input.classList.add("!border-primary", "focus:!ring-primary");
+          counter.classList.remove(
+            "text-gray-500",
+            "dark:text-gray-400",
+            "text-red-500",
+          );
+          counter.classList.add("text-primary", "font-semibold");
+        }
+      }
+    </script>
+  </body>
+</html>

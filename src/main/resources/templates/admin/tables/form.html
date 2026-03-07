@@ -1,0 +1,428 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title
+      th:text="${globalSystemConfig.systemName + ' - ' + (isEdit ? 'Editar Mesa' : 'Nueva Mesa')}"
+    >
+      El Gran Sazón - Mesa
+    </title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@300;400;500;600;700"
+      rel="stylesheet"
+    />
+
+    <!-- Sistema de Temas (Modo Claro/Oscuro) -->
+    <div th:replace="~{fragments/theme :: themeResources}"></div>
+
+    <!-- Sidebar Styles -->
+    <div th:replace="~{fragments/sidebar :: sidebarStyles}"></div>
+
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#38e07b",
+              "primary-dark": "#2bc866",
+              "background-light": "#f8faf9",
+              "background-dark": "#0f1713",
+            },
+            fontFamily: {
+              display: ["Work Sans"],
+            },
+            borderRadius: {
+              DEFAULT: "0.5rem",
+              lg: "0.75rem",
+              xl: "1rem",
+              "2xl": "1.5rem",
+              full: "9999px",
+            },
+          },
+        },
+      };
+    </script>
+  </head>
+  <body
+    class="bg-gradient-to-br from-background-light to-gray-50 dark:from-background-dark dark:to-gray-900 font-display text-gray-800 dark:text-gray-200 overflow-hidden"
+  >
+    <!-- Menu Overlay & Toggle -->
+    <div th:replace="~{fragments/sidebar :: menuControls}"></div>
+
+    <div class="flex min-h-screen h-screen overflow-hidden">
+      <!-- SIDEBAR -->
+      <div th:replace="~{fragments/sidebar :: sidebar('tables')}"></div>
+
+      <!-- MAIN CONTENT -->
+      <main class="flex-1 overflow-y-auto h-screen">
+        <div class="p-4 sm:p-6 lg:p-8 pt-20 md:pt-20 lg:pt-8 pb-32">
+          <!-- HEADER -->
+          <div class="mb-6 sm:mb-8">
+            <div class="flex items-center gap-3 mb-4">
+              <a
+                href="/admin/tables"
+                class="flex items-center justify-center w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+              >
+                <span class="material-symbols-outlined">arrow_back</span>
+              </a>
+              <div>
+                <h2
+                  class="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white"
+                  th:text="${isEdit ? 'Editar Mesa' : 'Nueva Mesa'}"
+                >
+                  Nueva Mesa
+                </h2>
+                <p
+                  class="text-sm sm:text-base text-gray-600 dark:text-gray-400"
+                >
+                  <span th:if="${isEdit}">Modifica los datos de la mesa</span>
+                  <span th:unless="${isEdit}"
+                    >Completa los datos de la nueva mesa</span
+                  >
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Error Messages -->
+          <div
+            th:if="${errorMessage}"
+            class="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl"
+          >
+            <p
+              class="text-red-800 dark:text-red-300"
+              th:text="${errorMessage}"
+            ></p>
+          </div>
+
+          <!-- FORM -->
+          <div
+            class="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-6 sm:p-8 shadow-lg"
+          >
+            <form
+              th:action="@{${formAction}}"
+              th:object="${table}"
+              method="post"
+            >
+              <div class="space-y-6">
+                <!-- Número de Mesa y Capacidad -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label
+                      for="tableNumber"
+                      class="block text-sm font-semibold text-gray-900 dark:text-white mb-2"
+                    >
+                      Número de Mesa
+                      <span class="text-red-500">*</span>
+                    </label>
+                    <div class="relative">
+                      <div
+                        class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3"
+                      >
+                        <span
+                          class="material-symbols-outlined text-gray-400 dark:text-gray-500 text-lg"
+                          >tag</span
+                        >
+                      </div>
+                      <input
+                        type="number"
+                        id="tableNumber"
+                        th:field="*{tableNumber}"
+                        min="1"
+                        required
+                        th:readonly="${!isEdit}"
+                        th:classappend="${!isEdit} ? 'bg-gray-100 dark:bg-gray-700 cursor-not-allowed' : ''"
+                        class="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 py-3 pl-10 pr-4 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary"
+                        placeholder="Ej: 1"
+                      />
+                    </div>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                      <span th:if="${!isEdit}">
+                        Número generado automáticamente (consecutivo)
+                      </span>
+                      <span th:if="${isEdit}">
+                        Número único para identificar la mesa
+                      </span>
+                    </p>
+                    <p
+                      th:if="${#fields.hasErrors('tableNumber')}"
+                      th:errors="*{tableNumber}"
+                      class="mt-1 text-xs text-red-600 dark:text-red-400"
+                    ></p>
+                  </div>
+
+                  <div>
+                    <label
+                      for="capacity"
+                      class="block text-sm font-semibold text-gray-900 dark:text-white mb-2"
+                    >
+                      Capacidad
+                      <span class="text-red-500">*</span>
+                    </label>
+                    <div class="relative">
+                      <div
+                        class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3"
+                      >
+                        <span
+                          class="material-symbols-outlined text-gray-400 dark:text-gray-500 text-lg"
+                          >group</span
+                        >
+                      </div>
+                      <input
+                        type="number"
+                        id="capacity"
+                        th:field="*{capacity}"
+                        min="1"
+                        max="50"
+                        required
+                        class="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 py-3 pl-10 pr-4 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary"
+                        placeholder="Ej: 4"
+                      />
+                    </div>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                      Número de personas que pueden sentarse
+                    </p>
+                    <p
+                      th:if="${#fields.hasErrors('capacity')}"
+                      th:errors="*{capacity}"
+                      class="mt-1 text-xs text-red-600 dark:text-red-400"
+                    ></p>
+                  </div>
+                </div>
+
+                <!-- Ubicación y Estado -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label
+                      for="location"
+                      class="block text-sm font-semibold text-gray-900 dark:text-white mb-2"
+                    >
+                      Ubicación
+                    </label>
+                    <div class="relative">
+                      <div
+                        class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3"
+                      >
+                        <span
+                          class="material-symbols-outlined text-gray-400 dark:text-gray-500 text-lg"
+                          >location_on</span
+                        >
+                      </div>
+                      <input
+                        type="text"
+                        id="location"
+                        th:field="*{location}"
+                        maxlength="100"
+                        class="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 py-3 pl-10 pr-4 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary"
+                        placeholder="Ej: Terraza, Salón Principal"
+                      />
+                    </div>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                      Ubicación física de la mesa (opcional)
+                    </p>
+                    <p
+                      th:if="${#fields.hasErrors('location')}"
+                      th:errors="*{location}"
+                      class="mt-1 text-xs text-red-600 dark:text-red-400"
+                    ></p>
+                  </div>
+
+                  <div>
+                    <label
+                      for="status"
+                      class="block text-sm font-semibold text-gray-900 dark:text-white mb-2"
+                    >
+                      Estado
+                      <span class="text-red-500">*</span>
+                    </label>
+                    <div class="relative">
+                      <div
+                        class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3"
+                      >
+                        <span
+                          class="material-symbols-outlined text-gray-400 dark:text-gray-500 text-lg"
+                          >info</span
+                        >
+                      </div>
+                      <select
+                        id="status"
+                        th:field="*{status}"
+                        required
+                        class="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 py-3 pl-10 pr-10 text-gray-900 dark:text-white focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary appearance-none"
+                      >
+                        <option
+                          th:each="statusOption : ${allStatuses}"
+                          th:if="${statusOption.name() != 'OCCUPIED'}"
+                          th:value="${statusOption.name()}"
+                          th:text="${statusOption.displayName}"
+                          th:selected="${statusOption == table.status}"
+                        ></option>
+                      </select>
+                      <div
+                        class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3"
+                      >
+                        <span
+                          class="material-symbols-outlined text-gray-400 dark:text-gray-500 text-lg"
+                          >arrow_drop_down</span
+                        >
+                      </div>
+                    </div>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                      Estado actual de la mesa
+                    </p>
+                    <p
+                      th:if="${#fields.hasErrors('status')}"
+                      th:errors="*{status}"
+                      class="mt-1 text-xs text-red-600 dark:text-red-400"
+                    ></p>
+                  </div>
+                </div>
+
+                <!-- Comentarios -->
+                <div>
+                  <label
+                    for="comments"
+                    class="block text-sm font-semibold text-gray-900 dark:text-white mb-2"
+                  >
+                    Comentarios
+                  </label>
+                  <div class="relative">
+                    <textarea
+                      id="comments"
+                      th:field="*{comments}"
+                      rows="4"
+                      maxlength="500"
+                      class="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 py-3 px-4 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+                      placeholder="Observaciones adicionales sobre la mesa..."
+                    ></textarea>
+                  </div>
+                  <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    Notas u observaciones adicionales (opcional, máx. 500
+                    caracteres)
+                  </p>
+                  <p
+                    th:if="${#fields.hasErrors('comments')}"
+                    th:errors="*{comments}"
+                    class="mt-1 text-xs text-red-600 dark:text-red-400"
+                  ></p>
+                </div>
+
+                <!-- Info de auditoría (solo en modo edición) -->
+                <div
+                  th:if="${isEdit}"
+                  class="p-4 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700"
+                >
+                  <h3
+                    class="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2"
+                  >
+                    <span class="material-symbols-outlined text-primary text-lg"
+                      >history</span
+                    >
+                    Información de Auditoría
+                  </h3>
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                    <div>
+                      <span class="text-gray-500 dark:text-gray-400"
+                        >Creado por:</span
+                      >
+                      <span
+                        class="ml-2 text-gray-900 dark:text-white font-medium"
+                        th:text="${table.createdBy ?: 'Desconocido'}"
+                      ></span>
+                    </div>
+                    <div>
+                      <span class="text-gray-500 dark:text-gray-400"
+                        >Fecha de creación:</span
+                      >
+                      <span
+                        class="ml-2 text-gray-900 dark:text-white font-medium"
+                        th:text="${table.formattedCreatedAt}"
+                      ></span>
+                    </div>
+                    <div>
+                      <span class="text-gray-500 dark:text-gray-400"
+                        >Actualizado por:</span
+                      >
+                      <span
+                        class="ml-2 text-gray-900 dark:text-white font-medium"
+                        th:text="${table.updatedBy ?: 'Nunca'}"
+                      ></span>
+                    </div>
+                    <div>
+                      <span class="text-gray-500 dark:text-gray-400"
+                        >Última actualización:</span
+                      >
+                      <span
+                        class="ml-2 text-gray-900 dark:text-white font-medium"
+                        th:text="${table.formattedUpdatedAt}"
+                      ></span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- BOTONES -->
+              <div
+                class="flex flex-col sm:flex-row gap-3 mt-8 pt-6 border-t border-gray-200 dark:border-gray-700"
+              >
+                <button
+                  type="submit"
+                  class="flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-primary to-primary-dark text-white font-semibold hover:shadow-lg hover:shadow-primary/30 transition-all shadow-md"
+                >
+                  <span class="material-symbols-outlined text-lg">save</span>
+                  <span th:text="${isEdit ? 'Actualizar Mesa' : 'Guardar Mesa'}"
+                    >Guardar Mesa</span
+                  >
+                </button>
+                <a
+                  href="/admin/tables"
+                  class="flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-gray-200 dark:bg-gray-800 text-gray-800 dark:text-white font-semibold hover:bg-gray-300 dark:hover:bg-gray-700 transition-colors"
+                >
+                  <span class="material-symbols-outlined text-lg">close</span>
+                  Cancelar
+                </a>
+              </div>
+            </form>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <!-- Sidebar Scripts -->
+    <div th:replace="~{fragments/sidebar :: sidebarScripts}"></div>
+
+    <script>
+      const commentsTextarea = document.getElementById("comments");
+      if (commentsTextarea) {
+        const maxLength = commentsTextarea.getAttribute("maxlength");
+        const counterDiv = document.createElement("div");
+        counterDiv.className =
+          "mt-1 text-xs text-right text-gray-500 dark:text-gray-400";
+        commentsTextarea.parentNode.insertBefore(
+          counterDiv,
+          commentsTextarea.nextSibling,
+        );
+
+        function updateCounter() {
+          const currentLength = commentsTextarea.value.length;
+          counterDiv.textContent = `${currentLength}/${maxLength} caracteres`;
+        }
+
+        commentsTextarea.addEventListener("input", updateCounter);
+        updateCounter();
+      }
+    </script>
+
+    <!-- Script del Sistema de Temas -->
+    <div th:replace="~{fragments/theme :: themeScript}"></div>
+  </body>
+</html>

@@ -1,0 +1,568 @@
+<!doctype html>
+<html
+  lang="es"
+  xmlns:th="http://www.thymeleaf.org"
+  xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+>
+  <head>
+    <!-- SIDEBAR CSS Fragment -->
+    <th:block th:fragment="sidebarStyles">
+      <style>
+        .nav-item {
+          transition: all 0.2s ease;
+          position: relative;
+        }
+
+        .nav-item::before {
+          content: "";
+          position: absolute;
+          left: 0;
+          top: 50%;
+          transform: translateY(-50%);
+          width: 3px;
+          height: 0;
+          background: #38e07b;
+          border-radius: 0 3px 3px 0;
+          transition: height 0.2s ease;
+        }
+
+        .nav-item:hover::before,
+        .nav-item.active::before {
+          height: 70%;
+        }
+
+        #sidebar.open {
+          transform: translateX(0);
+        }
+
+        #menuOverlay {
+          display: none;
+          position: fixed;
+          inset: 0;
+          background: rgba(0, 0, 0, 0.5);
+          z-index: 30;
+        }
+
+        #menuOverlay.show {
+          display: block;
+        }
+      </style>
+    </th:block>
+  </head>
+  <body>
+    <!-- MENU OVERLAY & TOGGLE Fragment -->
+    <th:block th:fragment="menuControls">
+      <div id="menuOverlay"></div>
+
+      <button
+        id="menuToggle"
+        class="fixed top-4 left-4 z-50 lg:hidden w-12 h-12 bg-white dark:bg-gray-900 rounded-xl shadow-lg flex items-center justify-center"
+      >
+        <span class="material-symbols-outlined text-primary">menu</span>
+      </button>
+    </th:block>
+
+    <!-- SIDEBAR HTML Fragment -->
+    <aside
+      th:fragment="sidebar(activeMenu)"
+      id="sidebar"
+      class="fixed lg:static w-72 h-screen flex-shrink-0 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 shadow-xl transform -translate-x-full lg:translate-x-0 transition-transform duration-300 ease-in-out z-40 flex flex-col"
+    >
+      <div class="flex flex-col h-full overflow-y-auto p-4 sm:p-6 pb-28">
+        <div class="mb-6 sm:mb-10">
+          <div class="flex items-center gap-3 mb-2">
+            <!-- Logo del restaurante -->
+            <div
+              class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl shadow-lg shadow-primary/30 overflow-hidden flex-shrink-0"
+              th:if="${globalSystemConfig != null and globalSystemConfig.systemLogoUrl != null and !globalSystemConfig.systemLogoUrl.isEmpty()}"
+            >
+              <img
+                th:src="${@cloudinaryUrl.logoSmall(globalSystemConfig.systemLogoUrl)}"
+                th:alt="${globalSystemConfig.systemName}"
+                class="w-full h-full object-cover"
+              />
+            </div>
+            <div>
+              <h1
+                class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white"
+                th:text="${globalSystemConfig != null and globalSystemConfig.systemName != null ? globalSystemConfig.systemName : 'SavoryCloud'}"
+              >
+                SavoryCloud
+              </h1>
+              <p
+                class="text-xs text-primary font-semibold"
+                th:text="${globalSystemConfig != null and globalSystemConfig.systemSlogan != null ? globalSystemConfig.systemSlogan : 'Admin Dashboard'}"
+              >
+                Admin Dashboard
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <nav class="flex flex-col gap-1 flex-1">
+          <a
+            th:href="@{/admin/dashboard}"
+            th:classappend="${activeMenu == 'dashboard'} ? 'active bg-gradient-to-r from-primary/20 to-primary/10 text-gray-900 dark:text-white font-semibold' : 'text-gray-700 dark:text-gray-300 font-medium'"
+            class="nav-item flex items-center gap-3 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 text-sm sm:text-base"
+          >
+            <span
+              th:classappend="${activeMenu == 'dashboard'} ? 'text-primary' : ''"
+              class="material-symbols-outlined text-xl"
+              >dashboard</span
+            >
+            <span>Dashboard</span>
+          </a>
+          <a
+            th:href="@{/admin/menu-items}"
+            th:classappend="${activeMenu == 'menu'} ? 'active bg-gradient-to-r from-primary/20 to-primary/10 text-gray-900 dark:text-white font-semibold' : 'text-gray-700 dark:text-gray-300 font-medium'"
+            class="nav-item flex items-center gap-3 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 text-sm sm:text-base"
+          >
+            <span
+              th:classappend="${activeMenu == 'menu'} ? 'text-primary' : ''"
+              class="material-symbols-outlined text-xl"
+              >restaurant_menu</span
+            >
+            <span>Menú</span>
+          </a>
+          <a
+            th:href="@{/admin/promotions}"
+            th:classappend="${activeMenu == 'promotions'} ? 'active bg-gradient-to-r from-primary/20 to-primary/10 text-gray-900 dark:text-white font-semibold' : 'text-gray-700 dark:text-gray-300 font-medium'"
+            class="nav-item flex items-center gap-3 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 text-sm sm:text-base"
+          >
+            <span
+              th:classappend="${activeMenu == 'promotions'} ? 'text-primary' : ''"
+              class="material-symbols-outlined text-xl"
+              >local_offer</span
+            >
+            <span>Promociones</span>
+          </a>
+          <a
+            th:href="@{/admin/complements}"
+            th:classappend="${activeMenu == 'complements'} ? 'active bg-gradient-to-r from-primary/20 to-primary/10 text-gray-900 dark:text-white font-semibold' : 'text-gray-700 dark:text-gray-300 font-medium'"
+            class="nav-item flex items-center gap-3 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 text-sm sm:text-base"
+          >
+            <span
+              th:classappend="${activeMenu == 'complements'} ? 'text-primary' : ''"
+              class="material-symbols-outlined text-xl"
+              >skillet</span
+            >
+            <span>Complementos</span>
+          </a>
+          <a
+            th:href="@{/admin/kitchen}"
+            th:classappend="${activeMenu == 'kitchen'} ? 'active bg-gradient-to-r from-primary/20 to-primary/10 text-gray-900 dark:text-white font-semibold' : 'text-gray-700 dark:text-gray-300 font-medium'"
+            class="nav-item flex items-center gap-3 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 text-sm sm:text-base"
+          >
+            <span
+              th:classappend="${activeMenu == 'kitchen'} ? 'text-primary' : ''"
+              class="material-symbols-outlined text-xl"
+              >soup_kitchen</span
+            >
+            <span>Cocina</span>
+          </a>
+          <a
+            th:href="@{/admin/orders/select-table}"
+            th:classappend="${activeMenu == 'create-order'} ? 'active bg-gradient-to-r from-primary/20 to-primary/10 text-gray-900 dark:text-white font-semibold' : 'text-gray-700 dark:text-gray-300 font-medium'"
+            class="nav-item flex items-center gap-3 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 text-sm sm:text-base"
+          >
+            <span
+              th:classappend="${activeMenu == 'create-order'} ? 'text-primary' : ''"
+              class="material-symbols-outlined text-xl"
+              >add_shopping_cart</span
+            >
+            <span>Crear Pedido</span>
+          </a>
+          <a
+            th:href="@{/admin/orders}"
+            th:classappend="${activeMenu == 'orders'} ? 'active bg-gradient-to-r from-primary/20 to-primary/10 text-gray-900 dark:text-white font-semibold' : 'text-gray-700 dark:text-gray-300 font-medium'"
+            class="nav-item flex items-center gap-3 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 text-sm sm:text-base"
+          >
+            <span
+              th:classappend="${activeMenu == 'orders'} ? 'text-primary' : ''"
+              class="material-symbols-outlined text-xl"
+              >receipt_long</span
+            >
+            <span>Pedidos</span>
+          </a>
+          <a
+            th:href="@{/admin/tables}"
+            th:classappend="${activeMenu == 'tables'} ? 'active bg-gradient-to-r from-primary/20 to-primary/10 text-gray-900 dark:text-white font-semibold' : 'text-gray-700 dark:text-gray-300 font-medium'"
+            class="nav-item flex items-center gap-3 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 text-sm sm:text-base"
+          >
+            <span
+              th:classappend="${activeMenu == 'tables'} ? 'text-primary' : ''"
+              class="material-symbols-outlined text-xl"
+              >table_restaurant</span
+            >
+            <span>Mesas</span>
+          </a>
+          <a
+            th:href="@{/admin/reservations}"
+            th:classappend="${activeMenu == 'reservations'} ? 'active bg-gradient-to-r from-primary/20 to-primary/10 text-gray-900 dark:text-white font-semibold' : 'text-gray-700 dark:text-gray-300 font-medium'"
+            class="nav-item flex items-center gap-3 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 text-sm sm:text-base"
+          >
+            <span
+              th:classappend="${activeMenu == 'reservations'} ? 'text-primary' : ''"
+              class="material-symbols-outlined text-xl"
+              >event_seat</span
+            >
+            <span>Reservaciones</span>
+          </a>
+          <a
+            th:href="@{/admin/employees}"
+            th:classappend="${activeMenu == 'employees'} ? 'active bg-gradient-to-r from-primary/20 to-primary/10 text-gray-900 dark:text-white font-semibold' : 'text-gray-700 dark:text-gray-300 font-medium'"
+            class="nav-item flex items-center gap-3 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 text-sm sm:text-base"
+          >
+            <span
+              th:classappend="${activeMenu == 'employees'} ? 'text-primary' : ''"
+              class="material-symbols-outlined text-xl"
+              >group</span
+            >
+            <span>Empleados</span>
+          </a>
+          <a
+            th:href="@{/admin/suppliers}"
+            th:classappend="${activeMenu == 'suppliers'} ? 'active bg-gradient-to-r from-primary/20 to-primary/10 text-gray-900 dark:text-white font-semibold' : 'text-gray-700 dark:text-gray-300 font-medium'"
+            class="nav-item flex items-center gap-3 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 text-sm sm:text-base"
+          >
+            <span
+              th:classappend="${activeMenu == 'suppliers'} ? 'text-primary' : ''"
+              class="material-symbols-outlined text-xl"
+              >local_shipping</span
+            >
+            <span>Proveedores</span>
+          </a>
+          <a
+            th:href="@{/admin/sales}"
+            th:classappend="${activeMenu == 'sales'} ? 'active bg-gradient-to-r from-primary/20 to-primary/10 text-gray-900 dark:text-white font-semibold' : 'text-gray-700 dark:text-gray-300 font-medium'"
+            class="nav-item flex items-center gap-3 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 text-sm sm:text-base"
+          >
+            <span
+              th:classappend="${activeMenu == 'sales'} ? 'text-primary' : ''"
+              class="material-symbols-outlined text-xl"
+              >trending_up</span
+            >
+            <span>Ventas</span>
+          </a>
+          <a
+            th:href="@{/admin/reports}"
+            th:classappend="${activeMenu == 'reports'} ? 'active bg-gradient-to-r from-primary/20 to-primary/10 text-gray-900 dark:text-white font-semibold' : 'text-gray-700 dark:text-gray-300 font-medium'"
+            class="nav-item flex items-center gap-3 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 text-sm sm:text-base"
+          >
+            <span
+              th:classappend="${activeMenu == 'reports'} ? 'text-primary' : ''"
+              class="material-symbols-outlined text-xl"
+              >bar_chart</span
+            >
+            <span>Reportes</span>
+          </a>
+          <a
+            th:href="@{/admin/ingredients}"
+            th:classappend="${activeMenu == 'inventory'} ? 'active bg-gradient-to-r from-primary/20 to-primary/10 text-gray-900 dark:text-white font-semibold' : 'text-gray-700 dark:text-gray-300 font-medium'"
+            class="nav-item flex items-center gap-3 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 text-sm sm:text-base"
+          >
+            <span
+              th:classappend="${activeMenu == 'inventory'} ? 'text-primary' : ''"
+              class="material-symbols-outlined text-xl"
+              >inventory_2</span
+            >
+            <span>Inventario</span>
+          </a>
+          <a
+            href="/flyers/flyers.html"
+            th:classappend="${activeMenu == 'flyers'} ? 'active bg-gradient-to-r from-primary/20 to-primary/10 text-gray-900 dark:text-white font-semibold' : 'text-gray-700 dark:text-gray-300 font-medium'"
+            class="nav-item flex items-center gap-3 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 text-sm sm:text-base"
+          >
+            <span
+              th:classappend="${activeMenu == 'flyers'} ? 'text-primary' : ''"
+              class="material-symbols-outlined text-xl"
+              >campaign</span
+            >
+            <span>Flyers</span>
+          </a>
+          <a
+            th:href="@{/admin/reviews}"
+            th:classappend="${activeMenu == 'reviews'} ? 'active bg-gradient-to-r from-primary/20 to-primary/10 text-gray-900 dark:text-white font-semibold' : 'text-gray-700 dark:text-gray-300 font-medium'"
+            class="nav-item flex items-center gap-3 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 text-sm sm:text-base"
+          >
+            <span
+              th:classappend="${activeMenu == 'reviews'} ? 'text-primary' : ''"
+              class="material-symbols-outlined text-xl"
+              >rate_review</span
+            >
+            <span>Reseñas</span>
+          </a>
+          <!-- Clientes - Solo visible con paquete ECOMMERCE y para ADMIN/MANAGER -->
+          <a
+            sec:authorize="hasAnyRole('ROLE_ADMIN', 'ROLE_MANAGER')"
+            th:if="${@licenseService.hasCustomerModuleAccess()}"
+            th:href="@{/admin/customers}"
+            th:classappend="${activeMenu == 'customers'} ? 'active bg-gradient-to-r from-primary/20 to-primary/10 text-gray-900 dark:text-white font-semibold' : 'text-gray-700 dark:text-gray-300 font-medium'"
+            class="nav-item flex items-center gap-3 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 text-sm sm:text-base"
+          >
+            <span
+              th:classappend="${activeMenu == 'customers'} ? 'text-primary' : ''"
+              class="material-symbols-outlined text-xl"
+              >person_search</span
+            >
+            <span>Clientes</span>
+          </a>
+
+          <div
+            class="mt-auto pt-4 border-t border-gray-200 dark:border-gray-800"
+          >
+            <!-- Only ADMIN can access System Configuration -->
+            <a
+              sec:authorize="hasRole('ROLE_ADMIN')"
+              th:href="@{/admin/system-configuration}"
+              th:classappend="${activeMenu == 'settings'} ? 'active bg-gradient-to-r from-primary/20 to-primary/10 text-gray-900 dark:text-white font-semibold' : 'text-gray-700 dark:text-gray-300 font-medium'"
+              class="nav-item flex items-center gap-3 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 text-sm sm:text-base"
+            >
+              <span
+                th:classappend="${activeMenu == 'settings'} ? 'text-primary' : ''"
+                class="material-symbols-outlined text-xl"
+                >settings</span
+              >
+              <span>Configuración</span>
+            </a>
+
+            <div
+              class="mt-4 p-3 sm:p-4 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 rounded-xl border border-gray-200 dark:border-gray-700"
+            >
+              <div class="flex items-center gap-3 mb-3">
+                <div
+                  class="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-primary to-primary-dark rounded-full flex items-center justify-center text-white font-bold text-sm sm:text-base shadow-lg flex-shrink-0"
+                  th:text="${#authentication.name.substring(0,1).toUpperCase()}"
+                >
+                  A
+                </div>
+                <div class="flex-1 min-w-0">
+                  <p
+                    class="font-semibold text-sm sm:text-base text-gray-900 dark:text-white truncate"
+                    th:text="${#authentication.name}"
+                  >
+                    Admin
+                  </p>
+                  <p class="text-xs text-gray-500 dark:text-gray-400 truncate">
+                    <span sec:authorize="hasRole('ROLE_ADMIN')"
+                      >Administrador</span
+                    >
+                    <span sec:authorize="hasRole('ROLE_MANAGER')">Gerente</span>
+                  </p>
+                </div>
+              </div>
+              <form
+                action="/logout"
+                method="post"
+                style="display: inline; width: 100%"
+              >
+                <button
+                  type="submit"
+                  class="w-full flex items-center justify-center gap-2 px-3 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium text-xs sm:text-sm transition-colors shadow-md hover:shadow-lg"
+                >
+                  <span class="material-symbols-outlined text-lg">logout</span>
+                  <span>Cerrar Sesión</span>
+                </button>
+              </form>
+            </div>
+          </div>
+        </nav>
+      </div>
+    </aside>
+
+    <!-- SIDEBAR JAVASCRIPT Fragment -->
+    <th:block th:fragment="sidebarScripts">
+      <script>
+        // Sidebar toggle
+        const menuToggle = document.getElementById("menuToggle");
+        const sidebar = document.getElementById("sidebar");
+        const menuOverlay = document.getElementById("menuOverlay");
+
+        menuToggle.addEventListener("click", () => {
+          sidebar.classList.toggle("open");
+          menuOverlay.classList.toggle("show");
+        });
+
+        menuOverlay.addEventListener("click", () => {
+          sidebar.classList.remove("open");
+          menuOverlay.classList.remove("show");
+        });
+
+        const navItems = document.querySelectorAll(".nav-item");
+        navItems.forEach((item) => {
+          item.addEventListener("click", () => {
+            if (window.innerWidth < 1024) {
+              sidebar.classList.remove("open");
+              menuOverlay.classList.remove("show");
+            }
+          });
+        });
+      </script>
+
+      <!-- User Limit Enforcement Script (only for ADMIN when limit is exceeded) -->
+      <script th:if="${session.userLimitExceeded}" th:inline="javascript">
+        (function () {
+          var userLimitInfo = /*[[${session.userLimitExceededInfo}]]*/ "";
+          var maxUsers = /*[[${session.userLimitMax}]]*/ 0;
+          var currentUsers = /*[[${session.userLimitCurrent}]]*/ 0;
+          var excessCount = /*[[${session.userLimitExcess}]]*/ 0;
+
+          // Detect dark mode
+          var isDark = document.documentElement.classList.contains("dark");
+
+          // 1. Block ALL sidebar nav items except "Empleados" and "Cerrar Sesión"
+          function lockSidebar() {
+            var allNavLinks = document.querySelectorAll(
+              "#sidebar nav a.nav-item",
+            );
+            allNavLinks.forEach(function (link) {
+              var href = link.getAttribute("href") || "";
+              // Only allow /admin/employees
+              if (href.indexOf("/admin/employees") === -1) {
+                link.style.pointerEvents = "none";
+                link.style.opacity = "0.4";
+                link.style.cursor = "not-allowed";
+                link.classList.add("user-limit-locked");
+                // Prevent click
+                link.addEventListener("click", function (e) {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  Swal.fire({
+                    icon: "warning",
+                    title: "Acceso Bloqueado",
+                    text: "Debes resolver el exceso de empleados activos antes de acceder a otras secciones.",
+                    confirmButtonColor: "#38e07b",
+                    confirmButtonText: "Ir a Empleados",
+                    background: isDark ? "#1f2937" : "#ffffff",
+                    color: isDark ? "#f3f4f6" : "#1f2937",
+                    customClass: {
+                      popup: "rounded-2xl",
+                      confirmButton: "rounded-xl px-6 py-2.5 font-semibold",
+                    },
+                  }).then(function () {
+                    window.location.href = "/admin/employees";
+                  });
+                });
+              }
+            });
+
+            // Also lock the settings link
+            var settingsLink = document.querySelector(
+              '#sidebar a[href*="system-configuration"]',
+            );
+            if (settingsLink) {
+              settingsLink.style.pointerEvents = "none";
+              settingsLink.style.opacity = "0.4";
+              settingsLink.style.cursor = "not-allowed";
+              settingsLink.classList.add("user-limit-locked");
+            }
+          }
+
+          // 2. Show informative SweetAlert on page load
+          function showLimitAlert() {
+            // Only show the full alert once per session (on first load)
+            var alertShown = sessionStorage.getItem("userLimitAlertShown");
+
+            if (
+              !alertShown ||
+              window.location.pathname !== "/admin/employees"
+            ) {
+              // Build HTML with concatenation to avoid Thymeleaf/JS conflicts
+              var boxBg = isDark ? "#1e1e2e" : "#fef2f2";
+              var boxBorder = isDark ? "#7f1d1d" : "#fecaca";
+              var labelColor = isDark ? "#fca5a5" : "#991b1b";
+              var redVal = isDark ? "#f87171" : "#dc2626";
+              var greenVal = isDark ? "#4ade80" : "#16a34a";
+              var noteColor = isDark ? "#9ca3af" : "#6b7280";
+
+              var alertHtml =
+                '<div style="text-align: left; font-size: 14px;">' +
+                '<p style="margin-bottom: 12px;">' +
+                userLimitInfo +
+                "</p>" +
+                '<div style="background:' +
+                boxBg +
+                "; border: 1px solid " +
+                boxBorder +
+                '; border-radius: 12px; padding: 16px; margin-top: 8px;">' +
+                '<div style="display: flex; justify-content: space-between; margin-bottom: 8px;">' +
+                '<span style="color:' +
+                labelColor +
+                '; font-weight: 600;">Empleados activos:</span>' +
+                '<span style="color:' +
+                redVal +
+                '; font-weight: 700;">' +
+                currentUsers +
+                "</span>" +
+                "</div>" +
+                '<div style="display: flex; justify-content: space-between; margin-bottom: 8px;">' +
+                '<span style="color:' +
+                labelColor +
+                '; font-weight: 600;">Límite permitido:</span>' +
+                '<span style="color:' +
+                greenVal +
+                '; font-weight: 700;">' +
+                maxUsers +
+                "</span>" +
+                "</div>" +
+                '<div style="display: flex; justify-content: space-between;">' +
+                '<span style="color:' +
+                labelColor +
+                '; font-weight: 600;">Empleados a desactivar:</span>' +
+                '<span style="color:' +
+                redVal +
+                '; font-weight: 700;">' +
+                excessCount +
+                "</span>" +
+                "</div>" +
+                "</div>" +
+                '<p style="margin-top: 12px; color:' +
+                noteColor +
+                '; font-size: 13px;">' +
+                "<strong>Nota:</strong> El sistema permanecerá bloqueado hasta que reduzcas la cantidad de empleados activos al límite permitido. " +
+                "Solo la sección de <strong>Empleados</strong> está disponible." +
+                "</p>" +
+                "</div>";
+
+              Swal.fire({
+                icon: "error",
+                title: "⚠️ Límite de Usuarios Excedido",
+                html: alertHtml,
+                confirmButtonColor: "#38e07b",
+                confirmButtonText: "Ir a Gestión de Empleados",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                background: isDark ? "#1f2937" : "#ffffff",
+                color: isDark ? "#f3f4f6" : "#1f2937",
+                customClass: {
+                  popup: "rounded-2xl",
+                  confirmButton: "rounded-xl px-6 py-2.5 font-semibold",
+                },
+              }).then(function () {
+                sessionStorage.setItem("userLimitAlertShown", "true");
+                if (window.location.pathname !== "/admin/employees") {
+                  window.location.href = "/admin/employees";
+                }
+              });
+            }
+          }
+
+          // Execute on DOM ready
+          document.addEventListener("DOMContentLoaded", function () {
+            lockSidebar();
+            showLimitAlert();
+          });
+
+          // If already loaded
+          if (
+            document.readyState === "complete" ||
+            document.readyState === "interactive"
+          ) {
+            lockSidebar();
+            showLimitAlert();
+          }
+        })();
+      </script>
+    </th:block>
+  </body>
+</html>

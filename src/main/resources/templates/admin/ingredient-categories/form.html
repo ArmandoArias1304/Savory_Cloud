@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title
+      th:text="${globalSystemConfig.systemName + ' - ' + (category.idCategory != null ? 'Editar Categoría' : 'Nueva Categoría')}"
+    >
+      El Gran Sazón - Categoría
+    </title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@300;400;500;600;700"
+      rel="stylesheet"
+    />
+
+    <!-- Sistema de Temas (Modo Claro/Oscuro) -->
+    <div th:replace="~{fragments/theme :: themeResources}"></div>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#38e07b",
+              "primary-dark": "#2bc866",
+              "background-light": "#f8faf9",
+              "background-dark": "#0f1713",
+            },
+            fontFamily: {
+              display: ["Work Sans"],
+            },
+          },
+        },
+      };
+    </script>
+  </head>
+  <body
+    class="bg-gradient-to-br from-background-light to-gray-50 dark:from-background-dark dark:to-gray-900 font-display text-gray-800 dark:text-gray-200"
+  >
+    <div class="min-h-screen p-4 sm:p-6 lg:p-8 pb-32">
+      <div class="max-w-4xl mx-auto">
+        <!-- HEADER -->
+        <div class="mb-6">
+          <a
+            th:href="@{/admin/ingredient-categories}"
+            class="inline-flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-primary transition-colors mb-4"
+          >
+            <span class="material-symbols-outlined">arrow_back</span>
+            <span class="font-semibold">Volver a categorías</span>
+          </a>
+          <h1
+            class="text-3xl font-bold text-gray-900 dark:text-white"
+            th:text="${category.idCategory != null ? 'Editar Categoría' : 'Nueva Categoría'}"
+          >
+            Nueva Categoría
+          </h1>
+          <p class="text-gray-600 dark:text-gray-400 mt-2">
+            Completa los datos de la categoría de ingredientes
+          </p>
+        </div>
+
+        <!-- ALERTS -->
+        <div
+          th:if="${successMessage}"
+          class="mb-6 p-4 bg-green-100 dark:bg-green-900/30 border border-green-400 dark:border-green-700 text-green-700 dark:text-green-400 rounded-xl"
+        >
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined">check_circle</span>
+            <span th:text="${successMessage}"></span>
+          </div>
+        </div>
+
+        <div
+          th:if="${errorMessage}"
+          class="mb-6 p-4 bg-red-100 dark:bg-red-900/30 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-400 rounded-xl"
+        >
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined">error</span>
+            <span th:text="${errorMessage}"></span>
+          </div>
+        </div>
+
+        <!-- FORM -->
+        <form
+          th:action="${category.idCategory != null ? '/admin/ingredient-categories/' + category.idCategory : '/admin/ingredient-categories'}"
+          method="post"
+          th:object="${category}"
+          class="bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800 overflow-hidden"
+        >
+          <!-- INFORMACIÓN BÁSICA -->
+          <div class="p-6 border-b border-gray-200 dark:border-gray-800">
+            <h2
+              class="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2 mb-6"
+            >
+              <span class="material-symbols-outlined text-primary">info</span>
+              Información Básica
+            </h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <!-- Nombre -->
+              <div>
+                <label
+                  for="name"
+                  class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+                >
+                  Nombre <span class="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  id="name"
+                  th:field="*{name}"
+                  required
+                  maxlength="100"
+                  class="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-primary focus:outline-none"
+                  placeholder="Ej: Verduras, Carnes, Lácteos"
+                />
+                <p
+                  th:if="${#fields.hasErrors('name')}"
+                  th:errors="*{name}"
+                  class="mt-1 text-sm text-red-600 dark:text-red-400"
+                ></p>
+              </div>
+
+              <!-- Icono -->
+              <div>
+                <label
+                  for="icon"
+                  class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+                >
+                  Icono (Material Symbol) <span class="text-red-500">*</span>
+                </label>
+                <div class="relative">
+                  <span
+                    class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                    id="iconPreview"
+                    th:text="${category.icon} ?: 'category'"
+                    >category</span
+                  >
+                  <input
+                    type="text"
+                    id="icon"
+                    th:field="*{icon}"
+                    required
+                    maxlength="50"
+                    class="w-full pl-12 pr-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-primary focus:outline-none"
+                    placeholder="Ej: restaurant, local_dining, nutrition"
+                    oninput="
+                      document.getElementById('iconPreview').textContent =
+                        this.value
+                    "
+                  />
+                </div>
+                <p
+                  th:if="${#fields.hasErrors('icon')}"
+                  th:errors="*{icon}"
+                  class="mt-1 text-sm text-red-600 dark:text-red-400"
+                ></p>
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  Ver iconos en:
+                  <a
+                    href="https://fonts.google.com/icons"
+                    target="_blank"
+                    class="text-primary hover:underline"
+                    >Material Symbols</a
+                  >
+                </p>
+              </div>
+
+              <!-- Color -->
+              <div>
+                <label
+                  for="color"
+                  class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+                >
+                  Color (Hex) <span class="text-red-500">*</span>
+                </label>
+                <div class="flex gap-3 items-center">
+                  <input
+                    type="color"
+                    id="colorPicker"
+                    th:value="${category.color} ?: '#38e07b'"
+                    class="w-12 h-12 sm:w-16 sm:h-12 rounded-lg border-2 border-gray-200 dark:border-gray-700 cursor-pointer flex-shrink-0 p-0.5"
+                    oninput="
+                      document.getElementById('color').value = this.value
+                    "
+                  />
+                  <input
+                    type="text"
+                    id="color"
+                    th:field="*{color}"
+                    required
+                    pattern="^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$"
+                    maxlength="7"
+                    class="flex-1 min-w-0 px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-primary focus:outline-none"
+                    placeholder="#38e07b"
+                    oninput="
+                      document.getElementById('colorPicker').value = this.value
+                    "
+                  />
+                </div>
+                <p
+                  th:if="${#fields.hasErrors('color')}"
+                  th:errors="*{color}"
+                  class="mt-1 text-sm text-red-600 dark:text-red-400"
+                ></p>
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  Formato hexadecimal (Ej: #38e07b, #FF5733)
+                </p>
+              </div>
+
+              <!-- Estado -->
+              <div class="flex items-center">
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    th:field="*{active}"
+                    class="sr-only peer"
+                  />
+                  <div
+                    class="w-14 h-7 bg-gray-300 dark:bg-gray-700 rounded-full peer peer-checked:bg-primary transition-colors"
+                  ></div>
+                  <div
+                    class="absolute left-1 top-1 w-5 h-5 bg-white rounded-full transition-transform peer-checked:translate-x-7"
+                  ></div>
+                  <span
+                    class="ml-3 text-sm font-semibold text-gray-700 dark:text-gray-300"
+                    >Categoría Activa</span
+                  >
+                </label>
+              </div>
+            </div>
+
+            <!-- Descripción -->
+            <div class="mt-6">
+              <label
+                for="description"
+                class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+              >
+                Descripción
+              </label>
+              <textarea
+                id="description"
+                th:field="*{description}"
+                rows="3"
+                maxlength="500"
+                class="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-primary focus:outline-none resize-none"
+                placeholder="Descripción opcional de la categoría..."
+              ></textarea>
+              <p
+                th:if="${#fields.hasErrors('description')}"
+                th:errors="*{description}"
+                class="mt-1 text-sm text-red-600 dark:text-red-400"
+              ></p>
+            </div>
+          </div>
+
+          <!-- ACTIONS -->
+          <div
+            class="p-6 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 flex flex-col sm:flex-row gap-3 justify-end"
+          >
+            <a
+              th:href="@{/admin/ingredient-categories}"
+              class="px-6 py-3 rounded-xl bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-semibold hover:bg-gray-300 dark:hover:bg-gray-700 transition-colors text-center"
+            >
+              Cancelar
+            </a>
+            <button
+              type="submit"
+              class="px-6 py-3 rounded-xl bg-gradient-to-r from-primary to-primary-dark text-white font-semibold hover:shadow-lg hover:shadow-primary/30 transition-all"
+            >
+              <span
+                th:text="${category.idCategory != null ? 'Actualizar Categoría' : 'Crear Categoría'}"
+                >Crear Categoría</span
+              >
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </body>
+</html>

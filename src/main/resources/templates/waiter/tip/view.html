@@ -1,0 +1,455 @@
+<!doctype html>
+<html
+  lang="es"
+  xmlns:th="http://www.thymeleaf.org"
+  xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title th:text="${globalSystemConfig.systemName + ' - Mis Propinas'}">
+      El Gran Sazón - Mis Propinas
+    </title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@300;400;500;600;700"
+      rel="stylesheet"
+    />
+
+    <!-- Sistema de Temas (Modo Claro/Oscuro) -->
+    <div th:replace="~{fragments/theme :: themeResources}"></div>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#38e07b",
+              "primary-dark": "#2bc866",
+              "background-light": "#f8faf9",
+              "background-dark": "#0f1713",
+            },
+            fontFamily: {
+              display: ["Work Sans"],
+            },
+            borderRadius: {
+              DEFAULT: "0.5rem",
+              lg: "0.75rem",
+              xl: "1rem",
+              "2xl": "1.5rem",
+              "3xl": "2rem",
+              full: "9999px",
+            },
+          },
+        },
+      };
+    </script>
+
+    <style>
+      @keyframes fadeInDown {
+        from {
+          opacity: 0;
+          transform: translateY(-20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @keyframes fadeInUp {
+        from {
+          opacity: 0;
+          transform: translateY(20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @keyframes scaleIn {
+        from {
+          opacity: 0;
+          transform: scale(0.9);
+        }
+        to {
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
+
+      @keyframes slideInLeft {
+        from {
+          opacity: 0;
+          transform: translateX(-30px);
+        }
+        to {
+          opacity: 1;
+          transform: translateX(0);
+        }
+      }
+
+      .animate-fadeInDown {
+        animation: fadeInDown 0.6s ease-out;
+      }
+
+      .animate-fadeInUp {
+        animation: fadeInUp 0.6s ease-out;
+      }
+
+      .animate-scaleIn {
+        animation: scaleIn 0.5s ease-out;
+      }
+
+      .animate-slideInLeft {
+        animation: slideInLeft 0.6s ease-out;
+      }
+
+      .tip-card {
+        transition: all 0.3s ease;
+      }
+
+      .tip-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 15px 35px rgba(56, 224, 123, 0.2);
+      }
+
+      .stat-card {
+        transition: all 0.3s ease;
+      }
+
+      .stat-card:hover {
+        transform: scale(1.02);
+      }
+    </style>
+  </head>
+  <body
+    class="bg-gradient-to-br from-background-light to-gray-50 dark:from-background-dark dark:to-gray-900 font-display min-h-screen"
+  >
+    <!-- NAVIGATION BAR -->
+    <nav
+      class="bg-gradient-to-r from-primary to-primary-dark shadow-lg animate-fadeInDown"
+    >
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between items-center h-16 sm:h-20">
+          <!-- Back Button & Title -->
+          <div class="flex items-center gap-4">
+            <a
+              href="/waiter/dashboard"
+              class="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/20 hover:bg-white/30 text-white font-semibold transition-all border border-white/30"
+            >
+              <span class="material-symbols-outlined">arrow_back</span>
+              <span class="hidden sm:inline">Volver</span>
+            </a>
+            <div class="flex items-center gap-3">
+              <span
+                class="material-symbols-outlined text-white text-3xl sm:text-4xl"
+              >
+                volunteer_activism
+              </span>
+              <span
+                class="text-white text-xl sm:text-2xl font-bold tracking-tight"
+              >
+                Mis Propinas
+              </span>
+            </div>
+          </div>
+
+          <!-- User Info & Logout -->
+          <div class="flex items-center gap-3 sm:gap-6">
+            <div class="hidden sm:flex items-center gap-2 text-white">
+              <span class="material-symbols-outlined">account_circle</span>
+              <span class="text-sm font-medium">
+                <strong th:text="${employee.fullName}">Usuario</strong>
+              </span>
+            </div>
+            <form th:action="@{/logout}" method="post" class="inline">
+              <button
+                type="submit"
+                class="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/20 hover:bg-white/30 text-white font-semibold transition-all border border-white/30 text-sm sm:text-base"
+              >
+                <span class="material-symbols-outlined text-lg">logout</span>
+                <span class="hidden sm:inline">Cerrar Sesión</span>
+                <span class="sm:hidden">Salir</span>
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <!-- MAIN CONTENT -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 pb-32">
+      <!-- WELCOME HEADER -->
+      <div
+        class="rounded-3xl bg-white dark:bg-gray-900 shadow-xl p-6 sm:p-8 mb-8 border border-gray-200 dark:border-gray-800 animate-scaleIn"
+      >
+        <div class="flex items-center gap-4">
+          <div
+            class="flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center text-white shadow-lg"
+          >
+            <span class="material-symbols-outlined text-3xl sm:text-4xl">
+              savings
+            </span>
+          </div>
+          <div class="flex-1">
+            <h1
+              class="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-1"
+            >
+              Resumen de Propinas
+            </h1>
+            <p class="text-sm sm:text-base text-gray-600 dark:text-gray-400">
+              Visualiza tus propinas acumuladas y del día de hoy
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- MAIN TIPS CARDS -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 mb-8">
+        <!-- TODAY'S TIPS CARD -->
+        <div
+          class="tip-card rounded-3xl bg-gradient-to-br from-blue-500 to-blue-600 shadow-xl p-8 sm:p-10 animate-slideInLeft"
+          style="animation-delay: 0.1s"
+        >
+          <div class="flex flex-col h-full">
+            <!-- Header -->
+            <div class="flex items-center gap-3 mb-6">
+              <div class="p-3 rounded-xl bg-white/20 backdrop-blur-sm">
+                <span class="material-symbols-outlined text-white text-4xl">
+                  today
+                </span>
+              </div>
+              <h2 class="text-2xl sm:text-3xl font-bold text-white">
+                Propinas de Hoy
+              </h2>
+            </div>
+
+            <!-- Amount -->
+            <div class="flex-1 flex flex-col justify-center mb-6">
+              <div class="text-center">
+                <p class="text-sm text-white/80 mb-2">Total del Día</p>
+                <p
+                  class="text-5xl sm:text-6xl font-bold text-white mb-4"
+                  th:text="${#numbers.formatCurrency(todayTips)}"
+                >
+                  $0.00
+                </p>
+                <div
+                  class="flex items-center justify-center gap-2 text-white/90"
+                >
+                  <span class="material-symbols-outlined text-lg"
+                    >receipt_long</span
+                  >
+                  <span class="text-lg font-semibold" th:text="${todayOrders}"
+                    >0</span
+                  >
+                  <span class="text-sm">pedidos hoy</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Average -->
+            <div
+              class="p-4 rounded-xl bg-white/10 backdrop-blur-sm border border-white/20"
+            >
+              <div class="flex items-center justify-between">
+                <span class="text-white/80 text-sm font-medium"
+                  >Promedio por pedido:</span
+                >
+                <span
+                  class="text-white text-lg font-bold"
+                  th:text="${#numbers.formatCurrency(todayAverageTip)}"
+                >
+                  $0.00
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TOTAL TIPS CARD -->
+        <div
+          class="tip-card rounded-3xl bg-gradient-to-br from-primary to-primary-dark shadow-xl p-8 sm:p-10 animate-slideInLeft"
+          style="animation-delay: 0.2s"
+        >
+          <div class="flex flex-col h-full">
+            <!-- Header -->
+            <div class="flex items-center gap-3 mb-6">
+              <div class="p-3 rounded-xl bg-white/20 backdrop-blur-sm">
+                <span class="material-symbols-outlined text-white text-4xl">
+                  trending_up
+                </span>
+              </div>
+              <h2 class="text-2xl sm:text-3xl font-bold text-white">
+                Total Acumulado
+              </h2>
+            </div>
+
+            <!-- Amount -->
+            <div class="flex-1 flex flex-col justify-center mb-6">
+              <div class="text-center">
+                <p class="text-sm text-white/80 mb-2">Desde el Inicio</p>
+                <p
+                  class="text-5xl sm:text-6xl font-bold text-white mb-4"
+                  th:text="${#numbers.formatCurrency(totalTips)}"
+                >
+                  $0.00
+                </p>
+                <div
+                  class="flex items-center justify-center gap-2 text-white/90"
+                >
+                  <span class="material-symbols-outlined text-lg"
+                    >shopping_bag</span
+                  >
+                  <span class="text-lg font-semibold" th:text="${totalOrders}"
+                    >0</span
+                  >
+                  <span class="text-sm">pedidos en total</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Average -->
+            <div
+              class="p-4 rounded-xl bg-white/10 backdrop-blur-sm border border-white/20"
+            >
+              <div class="flex items-center justify-between">
+                <span class="text-white/80 text-sm font-medium"
+                  >Promedio por pedido:</span
+                >
+                <span
+                  class="text-white text-lg font-bold"
+                  th:text="${#numbers.formatCurrency(averageTip)}"
+                >
+                  $0.00
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STATISTICS CARDS -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
+        <!-- Stat 1: Today Orders -->
+        <div
+          class="stat-card rounded-2xl bg-white dark:bg-gray-900 shadow-lg border border-gray-200 dark:border-gray-800 p-6 animate-fadeInUp"
+          style="animation-delay: 0.3s"
+        >
+          <div class="flex flex-col items-center text-center">
+            <div
+              class="p-3 rounded-full bg-purple-500/10 dark:bg-purple-500/20 mb-3"
+            >
+              <span class="material-symbols-outlined text-purple-500 text-3xl">
+                assignment
+              </span>
+            </div>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">
+              Pedidos Hoy
+            </p>
+            <p
+              class="text-3xl font-bold text-gray-900 dark:text-white"
+              th:text="${todayOrders}"
+            >
+              0
+            </p>
+          </div>
+        </div>
+
+        <!-- Stat 2: Total Orders -->
+        <div
+          class="stat-card rounded-2xl bg-white dark:bg-gray-900 shadow-lg border border-gray-200 dark:border-gray-800 p-6 animate-fadeInUp"
+          style="animation-delay: 0.35s"
+        >
+          <div class="flex flex-col items-center text-center">
+            <div
+              class="p-3 rounded-full bg-orange-500/10 dark:bg-orange-500/20 mb-3"
+            >
+              <span class="material-symbols-outlined text-orange-500 text-3xl">
+                inventory_2
+              </span>
+            </div>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">
+              Total Pedidos
+            </p>
+            <p
+              class="text-3xl font-bold text-gray-900 dark:text-white"
+              th:text="${totalOrders}"
+            >
+              0
+            </p>
+          </div>
+        </div>
+
+        <!-- Stat 3: Today Average -->
+        <div
+          class="stat-card rounded-2xl bg-white dark:bg-gray-900 shadow-lg border border-gray-200 dark:border-gray-800 p-6 animate-fadeInUp"
+          style="animation-delay: 0.4s"
+        >
+          <div class="flex flex-col items-center text-center">
+            <div
+              class="p-3 rounded-full bg-blue-500/10 dark:bg-blue-500/20 mb-3"
+            >
+              <span class="material-symbols-outlined text-blue-500 text-3xl">
+                calculate
+              </span>
+            </div>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">
+              Promedio Hoy
+            </p>
+            <p
+              class="text-2xl font-bold text-gray-900 dark:text-white"
+              th:text="${#numbers.formatCurrency(todayAverageTip)}"
+            >
+              $0.00
+            </p>
+          </div>
+        </div>
+
+        <!-- Stat 4: Total Average -->
+        <div
+          class="stat-card rounded-2xl bg-white dark:bg-gray-900 shadow-lg border border-gray-200 dark:border-gray-800 p-6 animate-fadeInUp"
+          style="animation-delay: 0.45s"
+        >
+          <div class="flex flex-col items-center text-center">
+            <div
+              class="p-3 rounded-full bg-green-500/10 dark:bg-green-500/20 mb-3"
+            >
+              <span class="material-symbols-outlined text-green-500 text-3xl">
+                analytics
+              </span>
+            </div>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">
+              Promedio Total
+            </p>
+            <p
+              class="text-2xl font-bold text-gray-900 dark:text-white"
+              th:text="${#numbers.formatCurrency(averageTip)}"
+            >
+              $0.00
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- FOOTER INFO -->
+      <div
+        class="mt-12 text-center text-sm text-gray-500 dark:text-gray-400 animate-fadeInUp"
+        style="animation-delay: 0.5s"
+      >
+        <p>
+          Sistema de Gestión de Restaurante &copy; 2024 El Gran Sazón. Todos los
+          derechos reservados.
+        </p>
+      </div>
+    </div>
+  </body>
+</html>

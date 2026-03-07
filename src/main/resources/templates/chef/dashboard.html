@@ -1,0 +1,603 @@
+<!doctype html>
+<html
+  lang="es"
+  xmlns:th="http://www.thymeleaf.org"
+  xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title th:text="${globalSystemConfig.systemName + ' - Dashboard ' + role}">
+      El Gran Sazón - Dashboard Chef
+    </title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@300;400;500;600;700"
+      rel="stylesheet"
+    />
+    <!-- Sistema de Temas (Modo Claro/Oscuro) -->
+    <div th:replace="~{fragments/theme :: themeResources}"></div>
+
+    <!-- SweetAlert2 for Notifications -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#38e07b",
+              "primary-dark": "#2bc866",
+              "background-light": "#f8faf9",
+              "background-dark": "#0f1713",
+            },
+            fontFamily: {
+              display: ["Work Sans"],
+            },
+            borderRadius: {
+              DEFAULT: "0.5rem",
+              lg: "0.75rem",
+              xl: "1rem",
+              "2xl": "1.5rem",
+              "3xl": "2rem",
+              full: "9999px",
+            },
+          },
+        },
+      };
+    </script>
+
+    <style>
+      /* Animaciones suaves */
+      @keyframes fadeInDown {
+        from {
+          opacity: 0;
+          transform: translateY(-20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @keyframes fadeInUp {
+        from {
+          opacity: 0;
+          transform: translateY(20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @keyframes scaleIn {
+        from {
+          opacity: 0;
+          transform: scale(0.9);
+        }
+        to {
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
+
+      .animate-fadeInDown {
+        animation: fadeInDown 0.6s ease-out;
+      }
+
+      .animate-fadeInUp {
+        animation: fadeInUp 0.6s ease-out;
+      }
+
+      .animate-scaleIn {
+        animation: scaleIn 0.5s ease-out;
+      }
+
+      /* Efectos de hover mejorados */
+      .dashboard-card {
+        transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      }
+
+      .dashboard-card:hover {
+        transform: translateY(-8px) scale(1.02);
+      }
+
+      .dashboard-card:active {
+        transform: translateY(-4px) scale(1.01);
+      }
+
+      /* Reloj digital */
+      .clock-time {
+        font-family: "Courier New", monospace;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+      }
+
+      .clock-date {
+        font-family: "Work Sans", sans-serif;
+        font-weight: 600;
+      }
+    </style>
+  </head>
+  <body
+    class="bg-gradient-to-br from-background-light to-gray-50 dark:from-background-dark dark:to-gray-900 font-display min-h-screen"
+  >
+    <!-- NAVIGATION BAR -->
+    <nav
+      class="bg-gradient-to-r from-primary to-primary-dark shadow-lg animate-fadeInDown"
+    >
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between items-center h-16 sm:h-20">
+          <!-- Logo/Brand -->
+          <div class="flex items-center gap-3">
+            <!-- Restaurant Logo -->
+            <div
+              class="w-10 h-10 sm:w-12 sm:h-12 shrink-0 bg-white rounded-xl flex items-center justify-center shadow-lg overflow-hidden"
+            >
+              <img
+                th:if="${globalSystemConfig.systemLogoUrl != null and !globalSystemConfig.systemLogoUrl.isEmpty()}"
+                th:src="${@cloudinaryUrl.logoSmall(globalSystemConfig.systemLogoUrl)}"
+                th:alt="${globalSystemConfig.systemName}"
+                class="w-full h-full object-contain p-1"
+              />
+            </div>
+
+            <span
+              class="text-white text-xl sm:text-2xl font-bold tracking-tight"
+              th:text="${globalSystemConfig.systemName != null and !globalSystemConfig.systemName.isEmpty()} ? ${globalSystemConfig.systemName} : 'SavoryCloud'"
+            >
+              SavoryCloud
+            </span>
+          </div>
+
+          <!-- User Info & Logout -->
+          <div class="flex items-center gap-3 sm:gap-6">
+            <div class="hidden sm:flex items-center gap-2 text-white">
+              <span class="material-symbols-outlined">account_circle</span>
+              <span class="text-sm font-medium">
+                Bienvenido,
+                <strong th:text="${username}">Usuario</strong>
+              </span>
+            </div>
+
+            <form th:action="@{/logout}" method="post" class="inline">
+              <button
+                type="submit"
+                class="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/20 hover:bg-white/30 text-white font-semibold transition-all border border-white/30 text-sm sm:text-base"
+              >
+                <span class="material-symbols-outlined text-lg">logout</span>
+                <span class="hidden sm:inline">Cerrar Sesión</span>
+                <span class="sm:hidden">Salir</span>
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <!-- MAIN CONTENT -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 pb-32">
+      <!-- WELCOME CARD -->
+      <div
+        class="rounded-3xl bg-white dark:bg-gray-900 shadow-xl p-8 sm:p-12 text-center mb-8 sm:mb-12 border border-gray-200 dark:border-gray-800 animate-scaleIn"
+      >
+        <div class="mb-4">
+          <span
+            class="inline-block p-4 rounded-full bg-primary/10 dark:bg-primary/20"
+          >
+            <span
+              class="material-symbols-outlined text-primary text-5xl sm:text-6xl"
+              >restaurant</span
+            >
+          </span>
+        </div>
+        <h1
+          class="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 dark:text-white mb-3"
+        >
+          <span th:if="${isBarista}">☕ Panel de Control de Barra</span>
+          <span th:unless="${isBarista}">👨‍🍳 Panel de Control de Cocina</span>
+        </h1>
+        <p
+          class="text-base sm:text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto"
+        >
+          <span th:if="${isBarista}"
+            >Gestiona las bebidas y preparaciones de la barra</span
+          >
+          <span th:unless="${isBarista}"
+            >Gestiona los pedidos de la cocina y prepara deliciosos
+            platillos</span
+          >
+        </p>
+      </div>
+
+      <!-- DASHBOARD GRID -->
+      <div
+        class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6"
+      >
+        <!-- CARD 1: Gestión de Pedidos -->
+        <!-- CARD 1: Gestión de Pedidos -->
+        <a
+          th:href="@{/chef/orders/pending}"
+          class="dashboard-card block rounded-3xl bg-white dark:bg-gray-900 shadow-lg hover:shadow-2xl border border-gray-200 dark:border-gray-800 p-6 sm:p-8 text-center animate-fadeInUp"
+          style="animation-delay: 0.1s"
+        >
+          <div class="flex flex-col items-center">
+            <div class="mb-4">
+              <span
+                class="material-symbols-outlined text-6xl sm:text-7xl text-pink-500"
+                >fastfood</span
+              >
+            </div>
+            <h3
+              class="text-lg sm:text-xl font-bold text-gray-900 dark:text-white mb-2"
+            >
+              Preparar Pedidos
+            </h3>
+            <p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+              Selecciona un pedido para realizarlo
+            </p>
+          </div>
+        </a>
+
+        <!-- CARD 2: Historial de Pedidos -->
+        <a
+          th:href="@{/chef/orders/my-orders}"
+          class="dashboard-card block rounded-3xl bg-white dark:bg-gray-900 shadow-lg hover:shadow-2xl border border-gray-200 dark:border-gray-800 p-6 sm:p-8 text-center animate-fadeInUp"
+          style="animation-delay: 0.15s"
+        >
+          <div class="flex flex-col items-center">
+            <div class="mb-4">
+              <span
+                class="material-symbols-outlined text-6xl sm:text-7xl text-purple-500"
+                >receipt_long</span
+              >
+            </div>
+            <h3
+              class="text-lg sm:text-xl font-bold text-gray-900 dark:text-white mb-2"
+            >
+              Mis Pedidos
+            </h3>
+            <p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+              Gestionar mis pedidos realizados
+            </p>
+          </div>
+        </a>
+
+        <!-- CARD 3: Menú -->
+        <a
+          th:href="@{/chef/menu/view}"
+          class="dashboard-card block rounded-3xl bg-white dark:bg-gray-900 shadow-lg hover:shadow-2xl border border-gray-200 dark:border-gray-800 p-6 sm:p-8 text-center animate-fadeInUp"
+          style="animation-delay: 0.2s"
+        >
+          <div class="flex flex-col items-center">
+            <div class="mb-4">
+              <span
+                class="material-symbols-outlined text-6xl sm:text-7xl text-orange-500"
+                >restaurant_menu</span
+              >
+            </div>
+            <h3
+              class="text-lg sm:text-xl font-bold text-gray-900 dark:text-white mb-2"
+            >
+              Menú
+            </h3>
+            <p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+              Platillos y precios
+            </p>
+          </div>
+        </a>
+
+        <!-- CARD 4: Ranking -->
+        <a
+          href="/chef/ranking/view"
+          class="dashboard-card block rounded-3xl bg-white dark:bg-gray-900 shadow-lg hover:shadow-2xl border border-gray-200 dark:border-gray-800 p-6 sm:p-8 text-center animate-fadeInUp"
+          style="animation-delay: 0.25s"
+        >
+          <div class="flex flex-col items-center">
+            <div class="mb-4">
+              <span
+                class="material-symbols-outlined text-6xl sm:text-7xl text-yellow-500"
+                >emoji_events</span
+              >
+            </div>
+            <h3
+              class="text-lg sm:text-xl font-bold text-gray-900 dark:text-white mb-2"
+            >
+              Ranking
+            </h3>
+            <p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+              Top meseros
+            </p>
+          </div>
+        </a>
+
+        <!-- CARD 5: Reportes -->
+        <a
+          href="/chef/reports/view"
+          class="dashboard-card block rounded-3xl bg-white dark:bg-gray-900 shadow-lg hover:shadow-2xl border border-gray-200 dark:border-gray-800 p-6 sm:p-8 text-center animate-fadeInUp"
+          style="animation-delay: 0.3s"
+        >
+          <div class="flex flex-col items-center">
+            <div class="mb-4">
+              <span
+                class="material-symbols-outlined text-6xl sm:text-7xl text-primary"
+                >bar_chart</span
+              >
+            </div>
+            <h3
+              class="text-lg sm:text-xl font-bold text-gray-900 dark:text-white mb-2"
+            >
+              Reportes
+            </h3>
+            <p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+              Análisis y ventas
+            </p>
+          </div>
+        </a>
+
+        <!-- CARD 6: Perfil -->
+        <a
+          href="/chef/profile"
+          class="dashboard-card block rounded-3xl bg-white dark:bg-gray-900 shadow-lg hover:shadow-2xl border border-gray-200 dark:border-gray-800 p-6 sm:p-8 text-center animate-fadeInUp"
+          style="animation-delay: 0.35s"
+        >
+          <div class="flex flex-col items-center">
+            <div class="mb-4">
+              <span
+                class="material-symbols-outlined text-6xl sm:text-7xl text-indigo-500"
+                >account_circle</span
+              >
+            </div>
+            <h3
+              class="text-lg sm:text-xl font-bold text-gray-900 dark:text-white mb-2"
+            >
+              Perfil
+            </h3>
+            <p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+              Mi cuenta
+            </p>
+          </div>
+        </a>
+
+        <!-- CARD 7: Reloj en Tiempo Real (NO ES BOTÓN) -->
+        <div
+          class="rounded-3xl bg-gradient-to-br from-primary to-primary-dark shadow-lg border-2 border-primary-dark p-6 sm:p-8 text-center animate-fadeInUp"
+          style="animation-delay: 0.4s"
+        >
+          <div class="flex flex-col items-center justify-center h-full">
+            <div class="mb-2">
+              <span
+                class="material-symbols-outlined text-white text-4xl sm:text-5xl"
+                >schedule</span
+              >
+            </div>
+            <!-- Fecha -->
+            <div
+              id="currentDate"
+              class="clock-date text-white text-sm sm:text-base mb-3"
+            >
+              01.01.2024
+            </div>
+            <!-- Hora -->
+            <div
+              id="currentTime"
+              class="clock-time text-white text-2xl sm:text-3xl font-bold"
+            >
+              00:00:00
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- FOOTER INFO -->
+      <div
+        class="mt-12 text-center text-sm text-gray-500 dark:text-gray-400 animate-fadeInUp"
+        style="animation-delay: 0.5s"
+      >
+        <p>
+          Sistema de Gestión de Restaurante &copy; 2024 El Gran Sazón. Todos los
+          derechos reservados.
+        </p>
+      </div>
+    </div>
+
+    <!-- SCRIPT PARA RELOJ EN TIEMPO REAL -->
+    <script>
+      function updateClock() {
+        const now = new Date();
+
+        // Formato de fecha: D.M.AÑO (ejemplo: 24.10.2024)
+        const day = now.getDate();
+        const month = now.getMonth() + 1; // Los meses van de 0-11
+        const year = now.getFullYear();
+        const dateString = `${day}.${month}.${year}`;
+
+        // Formato de hora: HH:MM:SS (ejemplo: 14:35:42)
+        const hours = String(now.getHours()).padStart(2, "0");
+        const minutes = String(now.getMinutes()).padStart(2, "0");
+        const seconds = String(now.getSeconds()).padStart(2, "0");
+        const timeString = `${hours}:${minutes}:${seconds}`;
+
+        // Actualizar el DOM
+        document.getElementById("currentDate").textContent = dateString;
+        document.getElementById("currentTime").textContent = timeString;
+      }
+
+      // Actualizar el reloj cada segundo
+      setInterval(updateClock, 1000);
+
+      // Inicializar el reloj inmediatamente
+      updateClock();
+    </script>
+
+    <!-- WebSocket Scripts for Real-time Notifications -->
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+    <script th:inline="javascript">
+      /*<![CDATA[*/
+      const currentRole = /*[[${isBarista ? 'barista' : 'chef'}]]*/ "chef";
+      const companyId = /*[[${systemConfig.company != null ? systemConfig.company.idCompany : 0}]]*/ 0;
+      /*]]>*/
+
+      let stompClient = null;
+
+      function connectWebSocket() {
+        const socket = new SockJS("/ws");
+        stompClient = Stomp.over(socket);
+        stompClient.debug = null; // Disable debug logging
+
+        stompClient.connect(
+          {},
+          function (frame) {
+            // WebSocket connected
+
+            // Subscribe to role-specific orders channel (company-specific)
+            const ordersTopic = `/topic/${currentRole}/orders/${companyId}`;
+
+            stompClient.subscribe(ordersTopic, function (message) {
+              const notification = JSON.parse(message.body);
+              handleDashboardNotification(notification);
+            });
+
+            // Subscribe to personal queue for assigned orders
+            stompClient.subscribe("/user/queue/orders", function (message) {
+              const notification = JSON.parse(message.body);
+              handleDashboardNotification(notification);
+            });
+          },
+          function (error) {
+            console.error("WebSocket Error:", error);
+            // Retry connection after 5 seconds
+            setTimeout(connectWebSocket, 5000);
+          },
+        );
+      }
+
+      function handleDashboardNotification(notification) {
+        let title = "Actualización de Pedido";
+        let icon = "info";
+        let message = notification.message || "Hay cambios en los pedidos";
+
+        // Customize notification based on type
+        if (notification.notificationType === "NEW_ORDER") {
+          title = "🔔 Nuevo Pedido";
+          message = `Pedido #${notification.orderNumber} - ${notification.itemCount} items - $${notification.total}`;
+          icon = "info";
+
+          // ALWAYS play notification sound for new orders
+          playNotificationSound();
+
+          // Request browser notification
+          requestBrowserNotification(
+            "Nuevo Pedido",
+            `Pedido #${notification.orderNumber} - ${notification.itemCount} items`,
+          );
+        } else if (notification.notificationType === "ITEMS_ADDED") {
+          title = "➕ Items Agregados";
+          message = `Pedido #${notification.orderNumber} - Se agregaron nuevos items`;
+          icon = "info";
+
+          // Play sound when items are added to existing order
+          playNotificationSound();
+        } else if (notification.notificationType === "STATUS_CHANGE") {
+          if (notification.status === "CANCELLED") {
+            title = "🗑️ Pedido Cancelado";
+            icon = "warning";
+          } else {
+            title = "📊 Actualización";
+            icon = "success";
+          }
+          message = `Pedido #${notification.orderNumber} - ${notification.message}`;
+
+          // NO sound for regular status changes
+        }
+
+        // Show toast notification in top-right corner (no buttons, auto-dismiss after 5 seconds)
+        Swal.fire({
+          icon: icon,
+          title: title,
+          text: message,
+          toast: true,
+          position: "top-end",
+          showConfirmButton: false,
+          timer: 5000,
+          timerProgressBar: true,
+          showCloseButton: true,
+          background: document.documentElement.classList.contains("dark")
+            ? "#1f2937"
+            : "#ffffff",
+          color: document.documentElement.classList.contains("dark")
+            ? "#f3f4f6"
+            : "#1f2937",
+        });
+      }
+
+      function playNotificationSound() {
+        try {
+          const audio = new Audio("/sounds/notification.mp3");
+          audio.volume = 0.5;
+
+          // Log attempt
+
+          audio
+            .play()
+            .then(() => {
+            })
+            .catch((error) => {
+              console.warn("⚠️ Sound playback prevented:", error.message);
+            });
+
+          // Handle audio errors
+          audio.onerror = function (e) {
+            console.error("❌ Audio file not found or failed to load:", e);
+          };
+        } catch (e) {
+          console.error("❌ Error creating audio:", e);
+        }
+      }
+
+      function requestBrowserNotification(title, body) {
+        if (!("Notification" in window)) return;
+
+        if (Notification.permission === "granted") {
+          new Notification(title, { body: body, icon: "/images/logo.png" });
+        } else if (Notification.permission !== "denied") {
+          Notification.requestPermission().then(function (permission) {
+            if (permission === "granted") {
+              new Notification(title, { body: body, icon: "/images/logo.png" });
+            }
+          });
+        }
+      }
+
+      // Initialize WebSocket on page load
+      document.addEventListener("DOMContentLoaded", function () {
+        // Request notification permission
+        if ("Notification" in window && Notification.permission === "default") {
+          Notification.requestPermission();
+        }
+
+        // Connect to WebSocket
+        connectWebSocket();
+      });
+
+      // Cleanup on page unload
+      window.addEventListener("beforeunload", function () {
+        if (stompClient !== null) {
+          stompClient.disconnect();
+        }
+      });
+    </script>
+
+    <!-- Script del Sistema de Temas -->
+    <div th:replace="~{fragments/theme :: themeScript}"></div>
+  </body>
+</html>

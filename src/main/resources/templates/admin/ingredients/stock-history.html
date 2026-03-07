@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title
+      th:text="${globalSystemConfig.systemName + ' - Historial de Stock - ' + ingredient.name}"
+    >
+      El Gran Sazón - Historial de Stock
+    </title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@300;400;500;600;700"
+      rel="stylesheet"
+    />
+
+    <!-- Sistema de Temas (Modo Claro/Oscuro) -->
+    <div th:replace="~{fragments/theme :: themeResources}"></div>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#38e07b",
+              "primary-dark": "#2bc866",
+              "background-light": "#f8faf9",
+              "background-dark": "#0f1713",
+            },
+            fontFamily: {
+              display: ["Work Sans"],
+            },
+          },
+        },
+      };
+    </script>
+  </head>
+  <body
+    class="bg-gradient-to-br from-background-light to-gray-50 dark:from-background-dark dark:to-gray-900 font-display text-gray-800 dark:text-gray-200 min-h-screen"
+  >
+    <div class="container mx-auto px-4 py-8 pb-32">
+      <!-- Header -->
+      <div class="mb-6">
+        <a
+          th:href="@{/admin/ingredients/{id}/edit(id=${ingredient.idIngredient})}"
+          class="inline-flex items-center gap-2 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium mb-4 transition-colors"
+        >
+          <span class="material-symbols-outlined">arrow_back</span>
+          Volver al Ingrediente
+        </a>
+
+        <h1
+          class="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3"
+        >
+          <span class="material-symbols-outlined text-4xl">history</span>
+          Historial de Stock
+        </h1>
+        <p class="text-gray-600 dark:text-gray-400 mt-2">
+          Ingrediente: <strong th:text="${ingredient.name}">Tomate</strong> -
+          Stock actual:
+          <strong
+            th:text="${ingredient.currentStock + ' ' + ingredient.unitOfMeasure}"
+            >100 kg</strong
+          >
+        </p>
+      </div>
+
+      <!-- Resumen Total -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div
+          class="p-6 rounded-2xl bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 border-2 border-blue-200 dark:border-blue-800 shadow-lg"
+        >
+          <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">
+            Gasto Total Histórico
+          </p>
+          <p
+            class="text-3xl font-bold text-blue-600 dark:text-blue-400"
+            th:text="${#numbers.formatCurrency(totalCost)}"
+          >
+            $0.00
+          </p>
+        </div>
+
+        <div
+          class="p-6 rounded-2xl bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-2 border-green-200 dark:border-green-800 shadow-lg"
+        >
+          <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">
+            Stock Actual
+          </p>
+          <p
+            class="text-3xl font-bold text-green-600 dark:text-green-400"
+            th:text="${ingredient.currentStock + ' ' + ingredient.unitOfMeasure}"
+          >
+            100 kg
+          </p>
+        </div>
+
+        <div
+          class="p-6 rounded-2xl bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 border-2 border-purple-200 dark:border-purple-800 shadow-lg"
+        >
+          <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">
+            Total de Compras
+          </p>
+          <p
+            class="text-3xl font-bold text-purple-600 dark:text-purple-400"
+            th:text="${#lists.size(history)}"
+          >
+            0
+          </p>
+        </div>
+      </div>
+
+      <!-- Tabla de Historial -->
+      <div
+        class="bg-white dark:bg-gray-900 rounded-2xl shadow-xl overflow-hidden border border-gray-200 dark:border-gray-800"
+      >
+        <div class="overflow-x-auto">
+          <table
+            class="min-w-full divide-y divide-gray-200 dark:divide-gray-700"
+          >
+            <thead class="bg-gradient-to-r from-blue-600 to-cyan-600">
+              <tr>
+                <th
+                  class="px-6 py-4 text-left text-xs font-bold text-white uppercase tracking-wider"
+                >
+                  Fecha/Hora
+                </th>
+                <th
+                  class="px-6 py-4 text-left text-xs font-bold text-white uppercase tracking-wider"
+                >
+                  Cantidad Agregada
+                </th>
+                <th
+                  class="px-6 py-4 text-left text-xs font-bold text-white uppercase tracking-wider"
+                >
+                  Costo/Unidad
+                </th>
+                <th
+                  class="px-6 py-4 text-left text-xs font-bold text-white uppercase tracking-wider"
+                >
+                  Total
+                </th>
+                <th
+                  class="px-6 py-4 text-left text-xs font-bold text-white uppercase tracking-wider"
+                >
+                  Stock Resultante
+                </th>
+                <th
+                  class="px-6 py-4 text-left text-xs font-bold text-white uppercase tracking-wider"
+                >
+                  Agregado Por
+                </th>
+              </tr>
+            </thead>
+            <tbody
+              class="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-900"
+            >
+              <tr
+                th:each="record : ${history}"
+                class="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+              >
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <div class="flex items-center gap-2">
+                    <span
+                      class="material-symbols-outlined text-gray-400 dark:text-gray-500 text-sm"
+                      >schedule</span
+                    >
+                    <div>
+                      <p
+                        class="text-sm font-medium text-gray-900 dark:text-white"
+                        th:text="${#temporals.format(record.addedAt, 'dd/MM/yyyy')}"
+                      >
+                        19/12/2024
+                      </p>
+                      <p
+                        class="text-xs text-gray-500 dark:text-gray-400"
+                        th:text="${#temporals.format(record.addedAt, 'HH:mm:ss')}"
+                      >
+                        14:30:00
+                      </p>
+                    </div>
+                  </div>
+                </td>
+
+                <td class="px-6 py-4">
+                  <span
+                    class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400 font-semibold text-sm"
+                  >
+                    <span class="material-symbols-outlined text-sm">add</span>
+                    <span
+                      th:text="${record.quantityAdded + ' ' + ingredient.unitOfMeasure}"
+                      >50 kg</span
+                    >
+                  </span>
+                </td>
+
+                <td class="px-6 py-4">
+                  <span
+                    class="text-sm font-medium text-gray-900 dark:text-white"
+                    th:text="${#numbers.formatCurrency(record.costPerUnit)}"
+                    >$15.00</span
+                  >
+                </td>
+
+                <td class="px-6 py-4">
+                  <span
+                    class="text-base font-bold text-blue-600 dark:text-blue-400"
+                    th:text="${#numbers.formatCurrency(record.totalCost)}"
+                    >$750.00</span
+                  >
+                </td>
+
+                <td class="px-6 py-4">
+                  <div class="text-sm">
+                    <span
+                      class="text-gray-500 dark:text-gray-400"
+                      th:text="${record.previousStock + ' ' + ingredient.unitOfMeasure}"
+                      >100 kg</span
+                    >
+                    <span class="text-gray-400 dark:text-gray-500 mx-2">→</span>
+                    <span
+                      class="font-bold text-gray-900 dark:text-white"
+                      th:text="${record.newStock + ' ' + ingredient.unitOfMeasure}"
+                      >150 kg</span
+                    >
+                  </div>
+                </td>
+
+                <td class="px-6 py-4">
+                  <div class="flex items-center gap-2">
+                    <span
+                      class="material-symbols-outlined text-sm text-gray-400 dark:text-gray-500"
+                      >person</span
+                    >
+                    <span
+                      class="text-sm text-gray-700 dark:text-gray-300"
+                      th:text="${record.addedBy != null ? (record.addedBy.nombre + ' ' + record.addedBy.apellido) : 'Sistema'}"
+                      >Juan Pérez</span
+                    >
+                  </div>
+                </td>
+              </tr>
+
+              <tr th:if="${#lists.isEmpty(history)}">
+                <td colspan="6" class="px-6 py-12 text-center">
+                  <span
+                    class="material-symbols-outlined text-6xl text-gray-300 dark:text-gray-600"
+                    >inbox</span
+                  >
+                  <p class="mt-4 text-gray-500 dark:text-gray-400 text-lg">
+                    No hay registros en el historial
+                  </p>
+                  <p class="mt-2 text-sm text-gray-400 dark:text-gray-500">
+                    Las compras de stock aparecerán aquí
+                  </p>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Script del Sistema de Temas -->
+    <div th:replace="~{fragments/theme :: themeScript}"></div>
+  </body>
+</html>

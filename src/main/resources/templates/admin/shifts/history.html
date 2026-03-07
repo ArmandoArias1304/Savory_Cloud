@@ -1,0 +1,771 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title
+      th:text="${globalSystemConfig.systemName + ' - Historial - ' + shift.name}"
+    >
+      El Gran Sazón - Historial del Turno
+    </title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@300;400;500;600;700"
+      rel="stylesheet"
+    />
+
+    <!-- Sistema de Temas (Modo Claro/Oscuro) -->
+    <div th:replace="~{fragments/theme :: themeResources}"></div>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#38e07b",
+              "primary-dark": "#2bc866",
+              "background-light": "#f8faf9",
+              "background-dark": "#0f1713",
+            },
+            fontFamily: {
+              display: ["Work Sans"],
+            },
+            borderRadius: {
+              DEFAULT: "0.5rem",
+              lg: "0.75rem",
+              xl: "1rem",
+              "2xl": "1.5rem",
+              full: "9999px",
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      .material-symbols-outlined {
+        font-variation-settings:
+          "FILL" 0,
+          "wght" 400,
+          "GRAD" 0,
+          "opsz" 24;
+      }
+    </style>
+  </head>
+  <body
+    class="bg-gradient-to-br from-background-light to-gray-50 dark:from-background-dark dark:to-gray-900 font-display text-gray-800 dark:text-gray-200"
+  >
+    <div class="min-h-screen">
+      <!-- Header -->
+      <header
+        class="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 shadow-lg sticky top-0 z-30"
+      >
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+          <div
+            class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+          >
+            <div class="flex items-center gap-3 sm:gap-4">
+              <a
+                th:href="@{/admin/shifts/{id}(id=${shift.id})}"
+                class="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+              >
+                <span
+                  class="material-symbols-outlined text-gray-600 dark:text-gray-400 text-xl sm:text-2xl"
+                  >arrow_back</span
+                >
+              </a>
+              <div class="flex items-center gap-3">
+                <div
+                  class="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/30"
+                >
+                  <span
+                    class="material-symbols-outlined text-white text-xl sm:text-2xl"
+                    >history</span
+                  >
+                </div>
+                <div>
+                  <h1
+                    class="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white"
+                  >
+                    Historial de Cambios
+                  </h1>
+                  <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                    Turno:
+                    <span class="font-semibold" th:text="${shift.name}"
+                      >Matutino</span
+                    >
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- Main Content -->
+      <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 pb-32">
+        <!-- Shift Summary Card -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+          <!-- Shift Info -->
+          <div
+            class="lg:col-span-2 bg-white dark:bg-gray-900 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-800 p-6"
+          >
+            <div class="flex items-center gap-3 mb-4">
+              <div
+                class="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center"
+              >
+                <span class="material-symbols-outlined text-primary text-2xl"
+                  >schedule</span
+                >
+              </div>
+              <div class="flex-1">
+                <div class="flex items-center gap-2">
+                  <h2
+                    class="text-xl font-bold text-gray-900 dark:text-white"
+                    th:text="${shift.name}"
+                  >
+                    Turno Matutino
+                  </h2>
+                  <span
+                    th:if="${shift.active}"
+                    class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-green-100 dark:bg-green-500/20 text-green-700 dark:text-green-300"
+                  >
+                    <span class="material-symbols-outlined text-sm"
+                      >check_circle</span
+                    >
+                    Activo
+                  </span>
+                  <span
+                    th:unless="${shift.active}"
+                    class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-gray-100 dark:bg-gray-500/20 text-gray-700 dark:text-gray-300"
+                  >
+                    <span class="material-symbols-outlined text-sm"
+                      >cancel</span
+                    >
+                    Inactivo
+                  </span>
+                </div>
+                <p
+                  class="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2 mt-2"
+                >
+                  <span class="material-symbols-outlined text-base"
+                    >schedule</span
+                  >
+                  <span th:text="${shift.timeRange}">08:00 - 16:00</span>
+                </p>
+              </div>
+            </div>
+            <div class="flex flex-wrap gap-2 mb-4">
+              <span
+                th:each="day : ${shift.workDays}"
+                class="px-3 py-1.5 text-sm font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg"
+                th:text="${day.getDisplayName()}"
+              >
+                Lunes
+              </span>
+            </div>
+            <!-- Descripción del turno -->
+            <div
+              th:if="${shift.description != null and !#strings.isEmpty(shift.description)}"
+              class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700"
+            >
+              <div class="flex items-start gap-2">
+                <span
+                  class="material-symbols-outlined text-gray-400 text-lg mt-0.5"
+                  >description</span
+                >
+                <div>
+                  <p
+                    class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1"
+                  >
+                    Descripción:
+                  </p>
+                  <p
+                    class="text-sm text-gray-700 dark:text-gray-300"
+                    th:text="${shift.description}"
+                  >
+                    Turno principal de la mañana con mayor demanda de clientes
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Statistics -->
+          <div
+            class="bg-white dark:bg-gray-900 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-800 p-6"
+          >
+            <div class="flex items-center gap-3 mb-6">
+              <div
+                class="w-12 h-12 bg-blue-500/10 rounded-xl flex items-center justify-center"
+              >
+                <span class="material-symbols-outlined text-blue-500 text-2xl"
+                  >analytics</span
+                >
+              </div>
+              <h2 class="text-lg font-bold text-gray-900 dark:text-white">
+                Estadísticas
+              </h2>
+            </div>
+            <div class="space-y-4">
+              <div
+                class="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-500/10 dark:to-green-500/20 rounded-xl p-4"
+              >
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-3">
+                    <div
+                      class="w-10 h-10 bg-green-500/20 rounded-full flex items-center justify-center"
+                    >
+                      <span
+                        class="material-symbols-outlined text-green-600 dark:text-green-400 text-xl"
+                        >person_add</span
+                      >
+                    </div>
+                    <span
+                      class="text-sm font-semibold text-gray-700 dark:text-gray-300"
+                    >
+                      Asignaciones
+                    </span>
+                  </div>
+                  <p
+                    class="text-2xl font-bold text-green-600 dark:text-green-400"
+                    th:text="${assignedCount}"
+                  >
+                    0
+                  </p>
+                </div>
+              </div>
+              <div
+                class="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-500/10 dark:to-red-500/20 rounded-xl p-4"
+              >
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-3">
+                    <div
+                      class="w-10 h-10 bg-red-500/20 rounded-full flex items-center justify-center"
+                    >
+                      <span
+                        class="material-symbols-outlined text-red-600 dark:text-red-400 text-xl"
+                        >person_remove</span
+                      >
+                    </div>
+                    <span
+                      class="text-sm font-semibold text-gray-700 dark:text-gray-300"
+                    >
+                      Remociones
+                    </span>
+                  </div>
+                  <p
+                    class="text-2xl font-bold text-red-600 dark:text-red-400"
+                    th:text="${removedCount}"
+                  >
+                    0
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- History Timeline -->
+        <div
+          class="bg-white dark:bg-gray-900 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-800 overflow-hidden"
+        >
+          <div
+            class="px-6 py-4 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-800 border-b-2 border-gray-200 dark:border-gray-700"
+          >
+            <div class="flex items-center gap-3 mb-6">
+              <div
+                class="w-10 h-10 bg-blue-500/10 rounded-xl flex items-center justify-center"
+              >
+                <span class="material-symbols-outlined text-blue-500 text-xl"
+                  >timeline</span
+                >
+              </div>
+              <div>
+                <h2
+                  class="text-lg sm:text-xl font-bold text-gray-900 dark:text-white"
+                >
+                  Línea de Tiempo
+                </h2>
+                <p class="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+                  <span
+                    class="font-semibold"
+                    id="filteredCount"
+                    th:text="${history.size()}"
+                    >0</span
+                  >
+                  registro(s) total(es)
+                </p>
+              </div>
+            </div>
+
+            <!-- Filters -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <!-- Order Filter -->
+              <div>
+                <label
+                  for="orderFilter"
+                  class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+                >
+                  <span class="material-symbols-outlined text-sm align-middle"
+                    >sort</span
+                  >
+                  Ordenar por:
+                </label>
+                <select
+                  id="orderFilter"
+                  class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
+                >
+                  <option value="desc">Más reciente primero</option>
+                  <option value="asc">Más antiguo primero</option>
+                </select>
+              </div>
+
+              <!-- Employee Filter -->
+              <div>
+                <label
+                  for="employeeFilter"
+                  class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+                >
+                  <span class="material-symbols-outlined text-sm align-middle"
+                    >person</span
+                  >
+                  Empleado:
+                </label>
+                <select
+                  id="employeeFilter"
+                  class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
+                >
+                  <option value="">Todos los empleados</option>
+                  <option
+                    th:each="record : ${history}"
+                    th:value="${record.employee.idEmpleado}"
+                    th:text="${record.employee.fullName}"
+                    th:attr="data-unique=${record.employee.idEmpleado}"
+                  ></option>
+                </select>
+              </div>
+
+              <!-- Action Filter -->
+              <div>
+                <label
+                  for="actionFilter"
+                  class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+                >
+                  <span class="material-symbols-outlined text-sm align-middle"
+                    >filter_alt</span
+                  >
+                  Tipo de acción:
+                </label>
+                <select
+                  id="actionFilter"
+                  class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
+                >
+                  <option value="">Todas las acciones</option>
+                  <option value="ASSIGNED">Solo asignaciones</option>
+                  <option value="REMOVED">Solo remociones</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div th:if="${history.isEmpty()}" class="p-12 text-center">
+            <div class="flex flex-col items-center">
+              <div
+                class="w-20 h-20 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-4"
+              >
+                <span
+                  class="material-symbols-outlined text-5xl text-gray-300 dark:text-gray-600"
+                  >history_toggle_off</span
+                >
+              </div>
+              <p
+                class="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-1"
+              >
+                No hay historial de cambios
+              </p>
+              <p class="text-sm text-gray-500 dark:text-gray-400">
+                Los cambios realizados en este turno aparecerán aquí
+              </p>
+            </div>
+          </div>
+
+          <div th:if="${!history.isEmpty()}" class="p-6" id="historyContainer">
+            <div class="space-y-6" id="historyTimeline">
+              <div
+                th:each="record : ${history}"
+                class="history-record relative pl-10 pb-6 border-l-2 border-gray-200 dark:border-gray-700 last:pb-0 last:border-l-0"
+                th:attr="data-employee-id=${record.employee.idEmpleado},
+                                        data-action=${record.action.name()},
+                                        data-timestamp=${record.actionDate}"
+              >
+                <!-- Timeline Icon -->
+                <div
+                  class="absolute left-[-13px] top-0 w-6 h-6 rounded-full flex items-center justify-center shadow-md"
+                  th:classappend="${record.action.name() == 'ASSIGNED'} ? 'bg-green-500' : 'bg-red-500'"
+                >
+                  <span
+                    class="material-symbols-outlined text-white text-sm"
+                    th:text="${record.action.name() == 'ASSIGNED'} ? 'add' : 'remove'"
+                    >add</span
+                  >
+                </div>
+
+                <!-- Record Card -->
+                <div
+                  class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-5 hover:shadow-lg transition-all"
+                >
+                  <!-- Header -->
+                  <div
+                    class="flex flex-col sm:flex-row sm:items-start justify-between gap-3 mb-4"
+                  >
+                    <div class="flex items-center gap-3">
+                      <div
+                        class="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0"
+                        th:classappend="${record.action.name() == 'ASSIGNED'} ? 'bg-gradient-to-br from-green-500 to-green-600' : 'bg-gradient-to-br from-red-500 to-red-600'"
+                      >
+                        <span
+                          th:text="${#strings.substring(record.employee.fullName, 0, 1)}"
+                          >E</span
+                        >
+                      </div>
+                      <div>
+                        <h3
+                          class="font-bold text-gray-900 dark:text-white text-lg"
+                          th:text="${record.employee.fullName}"
+                        >
+                          Juan Pérez
+                        </h3>
+                        <span
+                          th:if="${record.action.name() == 'ASSIGNED'}"
+                          class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-green-100 dark:bg-green-500/20 text-green-700 dark:text-green-300 mt-1"
+                        >
+                          <span class="material-symbols-outlined text-sm"
+                            >check_circle</span
+                          >
+                          ASIGNADO
+                        </span>
+                        <span
+                          th:if="${record.action.name() == 'REMOVED'}"
+                          class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-300 mt-1"
+                        >
+                          <span class="material-symbols-outlined text-sm"
+                            >cancel</span
+                          >
+                          REMOVIDO
+                        </span>
+                      </div>
+                    </div>
+                    <div
+                      class="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400"
+                    >
+                      <span class="material-symbols-outlined text-base"
+                        >schedule</span
+                      >
+                      <span th:text="${record.getFormattedActionDate()}"
+                        >01/01/2024 10:30 AM</span
+                      >
+                    </div>
+                  </div>
+
+                  <!-- Details Grid - 3 columnas equitativas -->
+                  <div class="grid grid-cols-3 gap-6 mb-4 text-sm w-full">
+                    <!-- Usuario -->
+                    <div class="flex items-center gap-2">
+                      <span
+                        class="material-symbols-outlined text-gray-400 text-lg"
+                        >badge</span
+                      >
+                      <div>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">
+                          Usuario
+                        </p>
+                        <p
+                          class="font-medium text-gray-900 dark:text-white"
+                          th:text="${record.employee.username}"
+                        >
+                          jperez
+                        </p>
+                      </div>
+                    </div>
+
+                    <!-- Email -->
+                    <div class="flex items-center gap-2">
+                      <span
+                        class="material-symbols-outlined text-gray-400 text-lg"
+                        >calendar_today</span
+                      >
+                      <div>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">
+                          Edad
+                        </p>
+                        <p
+                          class="font-medium text-gray-900 dark:text-white"
+                          th:text="${record.employee.edad != null ? record.employee.edad + ' años' : 'No especificada'}"
+                        >
+                          25 años
+                        </p>
+                      </div>
+                    </div>
+
+                    <!-- Acción por -->
+                    <div class="flex items-center gap-2">
+                      <span
+                        class="material-symbols-outlined text-gray-400 text-lg"
+                        >person</span
+                      >
+                      <div>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">
+                          Acción por
+                        </p>
+                        <p class="font-medium text-gray-900 dark:text-white">
+                          <span
+                            th:if="${record.actionBy != null}"
+                            th:text="${record.actionBy.fullName}"
+                            >Admin</span
+                          >
+                          <span
+                            th:if="${record.actionBy == null}"
+                            class="italic text-gray-500"
+                            >Sistema</span
+                          >
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Reason -->
+                  <div
+                    th:if="${record.reason != null and !#strings.isEmpty(record.reason)}"
+                    class="p-4 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 rounded-xl"
+                  >
+                    <div class="flex items-start gap-2">
+                      <span
+                        class="material-symbols-outlined text-amber-600 dark:text-amber-400 text-lg mt-0.5"
+                        >info</span
+                      >
+                      <div>
+                        <p
+                          class="text-xs font-bold text-amber-900 dark:text-amber-300 mb-1"
+                        >
+                          Motivo:
+                        </p>
+                        <p
+                          class="text-sm text-amber-800 dark:text-amber-200"
+                          th:text="${record.reason}"
+                        >
+                          Cambio de turno solicitado por el empleado
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Pagination Controls -->
+            <div
+              class="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4 pt-6 border-t-2 border-gray-200 dark:border-gray-700"
+            >
+              <div class="text-sm text-gray-600 dark:text-gray-400">
+                Mostrando
+                <span class="font-semibold" id="showingStart">1</span> -
+                <span class="font-semibold" id="showingEnd">8</span> de
+                <span class="font-semibold" id="totalRecords">0</span> registros
+              </div>
+              <div class="flex gap-2">
+                <button
+                  id="prevPage"
+                  class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                  disabled
+                >
+                  <span class="material-symbols-outlined text-lg"
+                    >chevron_left</span
+                  >
+                  <span class="hidden sm:inline">Anterior</span>
+                </button>
+                <div
+                  class="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary/10 dark:bg-primary/20 border-2 border-primary"
+                >
+                  <span
+                    class="text-sm font-semibold text-gray-700 dark:text-gray-300"
+                    >Página</span
+                  >
+                  <span class="font-bold text-primary" id="currentPage">1</span>
+                  <span
+                    class="text-sm font-semibold text-gray-700 dark:text-gray-300"
+                    >de</span
+                  >
+                  <span class="font-bold text-primary" id="totalPages">1</span>
+                </div>
+                <button
+                  id="nextPage"
+                  class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                >
+                  <span class="hidden sm:inline">Siguiente</span>
+                  <span class="material-symbols-outlined text-lg"
+                    >chevron_right</span
+                  >
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const orderFilter = document.getElementById("orderFilter");
+        const employeeFilter = document.getElementById("employeeFilter");
+        const actionFilter = document.getElementById("actionFilter");
+        const historyTimeline = document.getElementById("historyTimeline");
+        const filteredCount = document.getElementById("filteredCount");
+
+        // Pagination variables
+        const recordsPerPage = 8;
+        let currentPage = 1;
+        let filteredRecords = [];
+
+        // Remove duplicate employee options
+        const employeeOptions = Array.from(employeeFilter.options);
+        const seen = new Set();
+        employeeOptions.forEach((option) => {
+          if (option.value && seen.has(option.value)) {
+            option.remove();
+          } else if (option.value) {
+            seen.add(option.value);
+          }
+        });
+
+        // Apply filters and pagination
+        function applyFilters() {
+          const records = Array.from(
+            document.querySelectorAll(".history-record"),
+          );
+          const orderValue = orderFilter.value;
+          const employeeValue = employeeFilter.value;
+          const actionValue = actionFilter.value;
+
+          // Filter records
+          filteredRecords = records.filter((record) => {
+            const employeeId = record.getAttribute("data-employee-id");
+            const action = record.getAttribute("data-action");
+
+            let show = true;
+
+            // Employee filter
+            if (employeeValue && employeeId !== employeeValue) {
+              show = false;
+            }
+
+            // Action filter
+            if (actionValue && action !== actionValue) {
+              show = false;
+            }
+
+            return show;
+          });
+
+          // Sort records
+          if (orderValue === "asc") {
+            filteredRecords.sort((a, b) => {
+              const dateA = new Date(a.getAttribute("data-timestamp"));
+              const dateB = new Date(b.getAttribute("data-timestamp"));
+              return dateA - dateB;
+            });
+          } else {
+            filteredRecords.sort((a, b) => {
+              const dateA = new Date(a.getAttribute("data-timestamp"));
+              const dateB = new Date(b.getAttribute("data-timestamp"));
+              return dateB - dateA;
+            });
+          }
+
+          // Update count
+          filteredCount.textContent = filteredRecords.length;
+
+          // Reset to page 1 when filters change
+          currentPage = 1;
+
+          // Update display
+          updatePagination();
+        }
+
+        // Update pagination display
+        function updatePagination() {
+          const totalPages =
+            Math.ceil(filteredRecords.length / recordsPerPage) || 1;
+          const startIndex = (currentPage - 1) * recordsPerPage;
+          const endIndex = startIndex + recordsPerPage;
+
+          // Hide all records first
+          const allRecords = document.querySelectorAll(".history-record");
+          allRecords.forEach((record) => (record.style.display = "none"));
+
+          // Show only records for current page
+          filteredRecords.forEach((record, index) => {
+            if (index >= startIndex && index < endIndex) {
+              record.style.display = "";
+              historyTimeline.appendChild(record);
+            }
+          });
+
+          // Update pagination info
+          const showingStart = filteredRecords.length > 0 ? startIndex + 1 : 0;
+          const showingEnd = Math.min(endIndex, filteredRecords.length);
+
+          document.getElementById("showingStart").textContent = showingStart;
+          document.getElementById("showingEnd").textContent = showingEnd;
+          document.getElementById("totalRecords").textContent =
+            filteredRecords.length;
+          document.getElementById("currentPage").textContent = currentPage;
+          document.getElementById("totalPages").textContent = totalPages;
+
+          // Update button states
+          document.getElementById("prevPage").disabled = currentPage === 1;
+          document.getElementById("nextPage").disabled =
+            currentPage === totalPages;
+        }
+
+        // Event listeners for filters
+        orderFilter.addEventListener("change", applyFilters);
+        employeeFilter.addEventListener("change", applyFilters);
+        actionFilter.addEventListener("change", applyFilters);
+
+        // Event listeners for pagination
+        document
+          .getElementById("prevPage")
+          .addEventListener("click", function () {
+            if (currentPage > 1) {
+              currentPage--;
+              updatePagination();
+            }
+          });
+
+        document
+          .getElementById("nextPage")
+          .addEventListener("click", function () {
+            const totalPages = Math.ceil(
+              filteredRecords.length / recordsPerPage,
+            );
+            if (currentPage < totalPages) {
+              currentPage++;
+              updatePagination();
+            }
+          });
+
+        // Initial load
+        applyFilters();
+      });
+    </script>
+
+    <!-- Script del Sistema de Temas -->
+    <div th:replace="~{fragments/theme :: themeScript}"></div>
+  </body>
+</html>
