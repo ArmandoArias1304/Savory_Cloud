@@ -4,6 +4,7 @@ import com.aatechsolutions.elgransazon.application.service.BusinessHoursService;
 import com.aatechsolutions.elgransazon.application.service.CategoryService;
 import com.aatechsolutions.elgransazon.application.service.EmployeeMonthlyStatsService;
 import com.aatechsolutions.elgransazon.application.service.ItemMenuService;
+import com.aatechsolutions.elgransazon.application.service.LandingImageService;
 import com.aatechsolutions.elgransazon.application.service.LicenseService;
 import com.aatechsolutions.elgransazon.application.service.PromotionService;
 import com.aatechsolutions.elgransazon.application.service.ReviewService;
@@ -53,6 +54,7 @@ public class HomeController {
     private final CategoryService categoryService;
     private final ItemMenuService itemMenuService;
     private final SystemConfigurationService systemConfigurationService;
+    private final LandingImageService landingImageService;
     private final ResourceLoader resourceLoader;
 
     /**
@@ -170,6 +172,10 @@ public class HomeController {
             model.addAttribute("baristaOfMonth", null);
             model.addAttribute("cashierOfMonth", null);
         }
+        
+        // Load landing page images for this company
+        Map<String, String> landingImages = landingImageService.getImageMapForCompany(currentCompany);
+        model.addAttribute("landingImages", landingImages);
         
         // MULTI-TENANT: Build company-specific landing template name
         // Example: company name "Pizza Max" → template "home/landingPizzaMax"

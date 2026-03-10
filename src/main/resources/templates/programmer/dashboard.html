@@ -647,6 +647,51 @@
             </div>
         </div>
 
+        <!-- Landing Page Images Section -->
+        <div th:if="${selectedCompany != null}" class="bg-white dark:bg-gray-900 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 overflow-hidden mb-6 animate-slide-in">
+            <div class="bg-gradient-to-r from-rose-500 to-pink-600 px-6 py-4">
+                <div class="flex items-center gap-3 text-white">
+                    <span class="material-symbols-outlined text-2xl">collections</span>
+                    <h5 class="text-xl font-bold">Imágenes de Landing Page</h5>
+                </div>
+            </div>
+            <div class="p-6">
+                <p class="text-gray-600 dark:text-gray-400 mb-4">
+                    Administra las imágenes que se muestran en la página de inicio de
+                    <strong th:text="${selectedCompany.name}" class="text-gray-900 dark:text-white">Empresa</strong>.
+                    Formatos: JPG, PNG, GIF, WEBP. Máx: 5MB por imagen.
+                </p>
+                <input type="hidden" id="landingCompanyId" th:value="${selectedCompany.idCompany}" />
+
+                <!-- Section tabs -->
+                <div class="flex flex-wrap gap-2 mb-6 border-b border-gray-200 dark:border-gray-700 pb-4">
+                    <button type="button" class="landing-tab active px-4 py-2 rounded-xl text-sm font-semibold transition-colors bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300" data-landing-section="CAROUSEL">
+                        <span class="material-symbols-outlined text-sm align-middle mr-1">view_carousel</span>Carrusel
+                    </button>
+                    <button type="button" class="landing-tab px-4 py-2 rounded-xl text-sm font-semibold transition-colors bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 hover:bg-rose-50 hover:text-rose-600" data-landing-section="HISTORY">
+                        <span class="material-symbols-outlined text-sm align-middle mr-1">history_edu</span>Historia
+                    </button>
+                    <button type="button" class="landing-tab px-4 py-2 rounded-xl text-sm font-semibold transition-colors bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 hover:bg-rose-50 hover:text-rose-600" data-landing-section="OFFERS">
+                        <span class="material-symbols-outlined text-sm align-middle mr-1">restaurant_menu</span>Ofrecemos
+                    </button>
+                    <button type="button" class="landing-tab px-4 py-2 rounded-xl text-sm font-semibold transition-colors bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 hover:bg-rose-50 hover:text-rose-600" data-landing-section="VALUES">
+                        <span class="material-symbols-outlined text-sm align-middle mr-1">diamond</span>Valores
+                    </button>
+                    <button type="button" class="landing-tab px-4 py-2 rounded-xl text-sm font-semibold transition-colors bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 hover:bg-rose-50 hover:text-rose-600" data-landing-section="CARD">
+                        <span class="material-symbols-outlined text-sm align-middle mr-1">credit_card</span>Tarjeta
+                    </button>
+                    <button type="button" class="landing-tab px-4 py-2 rounded-xl text-sm font-semibold transition-colors bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 hover:bg-rose-50 hover:text-rose-600" data-landing-section="GALLERY">
+                        <span class="material-symbols-outlined text-sm align-middle mr-1">photo_library</span>Galería
+                    </button>
+                </div>
+
+                <!-- Image grid container -->
+                <div id="landingImagesGrid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                    <!-- Populated dynamically by JS -->
+                </div>
+            </div>
+        </div>
+
         <!-- Database Backup Section -->
         <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 overflow-hidden mb-6 animate-slide-in">
             <div class="bg-gradient-to-r from-teal-500 to-teal-600 px-6 py-4">
@@ -1371,6 +1416,229 @@
         companySelector.addEventListener('change', function() {
             const selectedCompanyId = this.value;
             window.location.href = '/programmer/dashboard?companyId=' + selectedCompanyId;
+        });
+    }
+
+    // ========== LANDING PAGE IMAGES MANAGEMENT ==========
+    const LANDING_SECTIONS = {
+        CAROUSEL:  { name: 'Carrusel', max: 4, labels: ['Slide 1','Slide 2','Slide 3','Slide 4'] },
+        HISTORY:   { name: 'Historia', max: 1, labels: ['Logo / Imagen principal'] },
+        OFFERS:    { name: 'Ofrecemos', max: 6, labels: ['Comida','Bebidas','Cervezas','Postres','Entradas','Cafés'] },
+        VALUES:    { name: 'Valores', max: 3, labels: ['Valor 1','Valor 2','Valor 3'] },
+        CARD:      { name: 'Tarjeta', max: 2, labels: ['Frente','Reverso'] },
+        GALLERY:   { name: 'Galería', max: 6, labels: ['Foto 1','Foto 2','Foto 3','Foto 4','Foto 5','Foto 6'] }
+    };
+
+    let landingImages = {};
+    let currentLandingSection = 'CAROUSEL';
+    const landingCompanyIdEl = document.getElementById('landingCompanyId');
+    const landingGrid = document.getElementById('landingImagesGrid');
+
+    if (landingCompanyIdEl && landingGrid) {
+        loadLandingImages();
+
+        document.querySelectorAll('.landing-tab').forEach(tab => {
+            tab.addEventListener('click', function() {
+                document.querySelectorAll('.landing-tab').forEach(t => {
+                    t.classList.remove('active', 'bg-rose-100', 'text-rose-700', 'dark:bg-rose-900/30', 'dark:text-rose-300');
+                    t.classList.add('bg-gray-100', 'text-gray-600', 'dark:bg-gray-800', 'dark:text-gray-400');
+                });
+                this.classList.add('active', 'bg-rose-100', 'text-rose-700', 'dark:bg-rose-900/30', 'dark:text-rose-300');
+                this.classList.remove('bg-gray-100', 'text-gray-600', 'dark:bg-gray-800', 'dark:text-gray-400');
+                currentLandingSection = this.dataset.landingSection;
+                renderLandingGrid();
+            });
+        });
+    }
+
+    function loadLandingImages() {
+        const companyId = landingCompanyIdEl.value;
+        fetch('/programmer/api/landing-images?companyId=' + companyId)
+            .then(r => r.json())
+            .then(data => {
+                landingImages = {};
+                data.forEach(img => {
+                    landingImages[img.section + '_' + img.position] = img.imageUrl;
+                });
+                renderLandingGrid();
+            })
+            .catch(err => console.error('Error loading landing images:', err));
+    }
+
+    function renderLandingGrid() {
+        const sec = LANDING_SECTIONS[currentLandingSection];
+        if (!sec || !landingGrid) return;
+
+        let html = '';
+        for (let i = 1; i <= sec.max; i++) {
+            const key = currentLandingSection + '_' + i;
+            const imgUrl = landingImages[key] || null;
+            const label = sec.labels[i - 1] || ('Posición ' + i);
+            html += `
+                <div class="relative group">
+                    <div class="aspect-video rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600 overflow-hidden bg-gray-50 dark:bg-gray-800 flex items-center justify-center cursor-pointer hover:border-rose-400 transition-colors"
+                         onclick="triggerLandingUpload('${currentLandingSection}', ${i})">
+                        ${imgUrl
+                            ? `<img src="${imgUrl}" alt="${label}" class="w-full h-full object-cover" />`
+                            : `<div class="text-center p-3">
+                                 <span class="material-symbols-outlined text-3xl text-gray-400 dark:text-gray-500">add_photo_alternate</span>
+                                 <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">Subir imagen</p>
+                               </div>`
+                        }
+                    </div>
+                    <p class="text-xs text-center text-gray-600 dark:text-gray-400 mt-1.5 font-medium">${label}</p>
+                    ${imgUrl ? `
+                        <button type="button" onclick="event.stopPropagation(); deleteLandingImage('${currentLandingSection}', ${i})"
+                                class="absolute top-1 right-1 w-7 h-7 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg hover:bg-red-600"
+                                title="Eliminar imagen">
+                            <span class="material-symbols-outlined text-sm">close</span>
+                        </button>
+                        <button type="button" onclick="event.stopPropagation(); triggerLandingUpload('${currentLandingSection}', ${i})"
+                                class="absolute top-1 left-1 w-7 h-7 bg-blue-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg hover:bg-blue-600"
+                                title="Cambiar imagen">
+                            <span class="material-symbols-outlined text-sm">edit</span>
+                        </button>
+                    ` : ''}
+                </div>`;
+        }
+        landingGrid.innerHTML = html;
+    }
+
+    function triggerLandingUpload(section, position) {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/jpeg,image/png,image/gif,image/webp';
+        input.onchange = function() {
+            if (!this.files[0]) return;
+            if (this.files[0].size > 5 * 1024 * 1024) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Imagen demasiado pesada',
+                    html: 'La imagen pesa más de <b>5MB</b>.<br>Usa un formato más ligero como <b>WEBP</b>.',
+                    confirmButtonText: 'Entendido',
+                    confirmButtonColor: '#38e07b',
+                    background: document.documentElement.classList.contains('dark') ? '#1f2937' : '#ffffff',
+                    color: document.documentElement.classList.contains('dark') ? '#f3f4f6' : '#1f2937'
+                });
+                return;
+            }
+            uploadLandingImage(section, position, this.files[0]);
+        };
+        input.click();
+    }
+
+    function uploadLandingImage(section, position, file) {
+        const companyId = landingCompanyIdEl.value;
+        const formData = new FormData();
+        formData.append('companyId', companyId);
+        formData.append('section', section);
+        formData.append('position', position);
+        formData.append('file', file);
+
+        Swal.fire({
+            title: 'Subiendo imagen...',
+            html: 'Por favor espera mientras se sube la imagen',
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading(),
+            background: document.documentElement.classList.contains('dark') ? '#1f2937' : '#ffffff',
+            color: document.documentElement.classList.contains('dark') ? '#f3f4f6' : '#1f2937'
+        });
+
+        const csrfToken = document.querySelector('meta[name="_csrf"]')?.content;
+        const csrfHeader = document.querySelector('meta[name="_csrf_header"]')?.content;
+        const headers = {};
+        if (csrfToken && csrfHeader) {
+            headers[csrfHeader] = csrfToken;
+        }
+
+        fetch('/programmer/api/landing-images/upload', {
+            method: 'POST',
+            headers: headers,
+            body: formData
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                landingImages[section + '_' + position] = data.imageUrl;
+                renderLandingGrid();
+                Swal.fire({
+                    icon: 'success',
+                    title: '¡Imagen subida!',
+                    text: data.message,
+                    timer: 2000,
+                    showConfirmButton: false,
+                    background: document.documentElement.classList.contains('dark') ? '#1f2937' : '#ffffff',
+                    color: document.documentElement.classList.contains('dark') ? '#f3f4f6' : '#1f2937'
+                });
+            } else {
+                Swal.fire({ icon: 'error', title: 'Error', text: data.message,
+                    background: document.documentElement.classList.contains('dark') ? '#1f2937' : '#ffffff',
+                    color: document.documentElement.classList.contains('dark') ? '#f3f4f6' : '#1f2937'
+                });
+            }
+        })
+        .catch(err => {
+            console.error('Upload error:', err);
+            Swal.fire({ icon: 'error', title: 'Error', text: 'Error de conexión al subir la imagen',
+                background: document.documentElement.classList.contains('dark') ? '#1f2937' : '#ffffff',
+                color: document.documentElement.classList.contains('dark') ? '#f3f4f6' : '#1f2937'
+            });
+        });
+    }
+
+    function deleteLandingImage(section, position) {
+        const isDark = document.documentElement.classList.contains('dark');
+        Swal.fire({
+            title: '¿Eliminar imagen?',
+            text: 'Esta acción no se puede deshacer',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#ef4444',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Sí, eliminar',
+            cancelButtonText: 'Cancelar',
+            background: isDark ? '#1f2937' : '#ffffff',
+            color: isDark ? '#f3f4f6' : '#1f2937'
+        }).then(result => {
+            if (!result.isConfirmed) return;
+
+            const companyId = landingCompanyIdEl.value;
+            const csrfToken = document.querySelector('meta[name="_csrf"]')?.content;
+            const csrfHeader = document.querySelector('meta[name="_csrf_header"]')?.content;
+            const headers = {};
+            if (csrfToken && csrfHeader) {
+                headers[csrfHeader] = csrfToken;
+            }
+
+            fetch(`/programmer/api/landing-images?companyId=${companyId}&section=${section}&position=${position}`, {
+                method: 'DELETE',
+                headers: headers
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    delete landingImages[section + '_' + position];
+                    renderLandingGrid();
+                    Swal.fire({
+                        icon: 'success', title: '¡Eliminada!', text: data.message,
+                        timer: 2000, showConfirmButton: false,
+                        background: isDark ? '#1f2937' : '#ffffff',
+                        color: isDark ? '#f3f4f6' : '#1f2937'
+                    });
+                } else {
+                    Swal.fire({ icon: 'error', title: 'Error', text: data.message,
+                        background: isDark ? '#1f2937' : '#ffffff',
+                        color: isDark ? '#f3f4f6' : '#1f2937'
+                    });
+                }
+            })
+            .catch(err => {
+                console.error('Delete error:', err);
+                Swal.fire({ icon: 'error', title: 'Error', text: 'Error de conexión',
+                    background: isDark ? '#1f2937' : '#ffffff',
+                    color: isDark ? '#f3f4f6' : '#1f2937'
+                });
+            });
         });
     }
 </script>

@@ -3318,6 +3318,7 @@
               <!-- Slide 1: Comida Gourmet -->
               <div class="carousel-item active">
                 <img
+                  th:src="${landingImages != null and landingImages.containsKey('CAROUSEL_1')} ? ${landingImages['CAROUSEL_1']} : @{/images/carrucel1.jpg}"
                   src="images/carrucel1.jpg"
                   class="carousel-image"
                   alt="Comida Gourmet"
@@ -3334,6 +3335,7 @@
               <!-- Slide 2: Bebidas Artesanales -->
               <div class="carousel-item">
                 <img
+                  th:src="${landingImages != null and landingImages.containsKey('CAROUSEL_2')} ? ${landingImages['CAROUSEL_2']} : @{/images/carrucel2.jpg}"
                   src="images/carrucel2.jpg"
                   class="carousel-image"
                   alt="Bebidas Artesanales"
@@ -3350,6 +3352,7 @@
               <!-- Slide 3: Cervezas Artesanales -->
               <div class="carousel-item">
                 <img
+                  th:src="${landingImages != null and landingImages.containsKey('CAROUSEL_3')} ? ${landingImages['CAROUSEL_3']} : @{/images/carrucel3.jpg}"
                   src="images/carrucel3.jpg"
                   class="carousel-image"
                   alt="Cervezas Artesanales"
@@ -3366,6 +3369,7 @@
               <!-- Slide 4: Postres Deliciosos -->
               <div class="carousel-item">
                 <img
+                  th:src="${landingImages != null and landingImages.containsKey('CAROUSEL_4')} ? ${landingImages['CAROUSEL_4']} : @{/images/carrucel4.jpg}"
                   src="images/carrucel4.jpg"
                   class="carousel-image"
                   alt="Postres"
@@ -3388,6 +3392,7 @@
           <div class="row mb-5">
             <div class="col-lg-6 mb-4 fade-in-left">
               <img
+                th:src="${landingImages != null and landingImages.containsKey('HISTORY_1')} ? ${landingImages['HISTORY_1']} : @{/images/LogoNombre.png}"
                 src="images/LogoNombre.png"
                 alt="Interior del restaurante"
                 class="img-fluid rounded-3 shadow"
@@ -3633,7 +3638,11 @@
                 <!-- DESKTOP LAYOUT: Imagen central con puntos alrededor -->
                 <div class="desktop-layout">
                   <div class="center-dish">
-                    <img src="images/platillo1.jpg" alt="Comida Gourmet" />
+                    <img
+                      th:src="${landingImages != null and landingImages.containsKey('OFFERS_1')} ? ${landingImages['OFFERS_1']} : @{/images/platillo1.jpg}"
+                      src="images/platillo1.jpg"
+                      alt="Comida Gourmet"
+                    />
                   </div>
 
                   <div class="strong-point point-1">
@@ -3767,7 +3776,11 @@
                   </div>
 
                   <div class="product-image-container">
-                    <img src="images/platillo1.jpg" class="product-image" />
+                    <img
+                      th:src="${landingImages != null and landingImages.containsKey('OFFERS_1')} ? ${landingImages['OFFERS_1']} : @{/images/platillo1.jpg}"
+                      src="images/platillo1.jpg"
+                      class="product-image"
+                    />
                   </div>
                 </div>
               </div>
@@ -3777,7 +3790,11 @@
                 <!-- DESKTOP LAYOUT: Imagen central con puntos alrededor -->
                 <div class="desktop-layout">
                   <div class="center-dish">
-                    <img src="images/platillo2.jpg" alt="Bebidas" />
+                    <img
+                      th:src="${landingImages != null and landingImages.containsKey('OFFERS_2')} ? ${landingImages['OFFERS_2']} : @{/images/platillo2.jpg}"
+                      src="images/platillo2.jpg"
+                      alt="Bebidas"
+                    />
                   </div>
 
                   <div class="strong-point point-1">
@@ -3897,6 +3914,7 @@
 
                   <div class="product-image-container">
                     <img
+                      th:src="${landingImages != null and landingImages.containsKey('OFFERS_2')} ? ${landingImages['OFFERS_2']} : @{/images/platillo2.jpg}"
                       src="images/platillo2.jpg"
                       alt="Bebidas"
                       class="product-image"
@@ -3909,7 +3927,11 @@
                 <!-- DESKTOP LAYOUT: Imagen central con puntos alrededor -->
                 <div class="desktop-layout">
                   <div class="center-dish">
-                    <img src="images/platillo3.jpg" alt="Cervezas" />
+                    <img
+                      th:src="${landingImages != null and landingImages.containsKey('OFFERS_3')} ? ${landingImages['OFFERS_3']} : @{/images/platillo3.jpg}"
+                      src="images/platillo3.jpg"
+                      alt="Cervezas"
+                    />
                   </div>
 
                   <div class="strong-point point-1">
@@ -4029,6 +4051,7 @@
 
                   <div class="product-image-container">
                     <img
+                      th:src="${landingImages != null and landingImages.containsKey('OFFERS_3')} ? ${landingImages['OFFERS_3']} : @{/images/platillo3.jpg}"
                       src="images/platillo3.jpg"
                       alt="Cervezas"
                       class="product-image"
@@ -4041,7 +4064,11 @@
                 <!-- DESKTOP LAYOUT: Imagen central con puntos alrededor -->
                 <div class="desktop-layout">
                   <div class="center-dish">
-                    <img src="images/platillo4.jpg" alt="Postres" />
+                    <img
+                      th:src="${landingImages != null and landingImages.containsKey('OFFERS_4')} ? ${landingImages['OFFERS_4']} : @{/images/platillo4.jpg}"
+                      src="images/platillo4.jpg"
+                      alt="Postres"
+                    />
                   </div>
 
                   <div class="strong-point point-1">
@@ -4161,6 +4188,7 @@
 
                   <div class="product-image-container">
                     <img
+                      th:src="${landingImages != null and landingImages.containsKey('OFFERS_4')} ? ${landingImages['OFFERS_4']} : @{/images/platillo4.jpg}"
                       src="images/platillo4.jpg"
                       alt="Postres"
                       class="product-image"
@@ -4173,7 +4201,11 @@
                 <!-- DESKTOP LAYOUT: Imagen central con puntos alrededor -->
                 <div class="desktop-layout">
                   <div class="center-dish">
-                    <img src="images/platillo5.jpg" alt="Entradas" />
+                    <img
+                      th:src="${landingImages != null and landingImages.containsKey('OFFERS_5')} ? ${landingImages['OFFERS_5']} : @{/images/platillo5.jpg}"
+                      src="images/platillo5.jpg"
+                      alt="Entradas"
+                    />
                   </div>
 
                   <div class="strong-point point-1">
@@ -4293,6 +4325,7 @@
 
                   <div class="product-image-container">
                     <img
+                      th:src="${landingImages != null and landingImages.containsKey('OFFERS_5')} ? ${landingImages['OFFERS_5']} : @{/images/platillo5.jpg}"
                       src="images/platillo5.jpg"
                       alt="Entradas"
                       class="product-image"
@@ -4305,7 +4338,11 @@
                 <!-- DESKTOP LAYOUT: Imagen central con puntos alrededor -->
                 <div class="desktop-layout">
                   <div class="center-dish">
-                    <img src="images/platillo6.jpg" alt="Cafés" />
+                    <img
+                      th:src="${landingImages != null and landingImages.containsKey('OFFERS_6')} ? ${landingImages['OFFERS_6']} : @{/images/platillo6.jpg}"
+                      src="images/platillo6.jpg"
+                      alt="Cafés"
+                    />
                   </div>
 
                   <div class="strong-point point-1">
@@ -4425,6 +4462,7 @@
 
                   <div class="product-image-container">
                     <img
+                      th:src="${landingImages != null and landingImages.containsKey('OFFERS_6')} ? ${landingImages['OFFERS_6']} : @{/images/platillo6.jpg}"
                       src="images/platillo6.jpg"
                       alt="Cafés"
                       class="product-image"
@@ -4779,6 +4817,7 @@
                   <div class="value-card">
                     <div
                       class="value-card-bg"
+                      th:style="'background-image: url(' + (${landingImages != null and landingImages.containsKey('VALUES_1')} ? ${landingImages['VALUES_1']} : @{/images/define1.jpg}) + ')'"
                       style="
                         background-image: url(&quot;images/define1.jpg&quot;);
                       "
@@ -4801,6 +4840,7 @@
                   <div class="value-card">
                     <div
                       class="value-card-bg"
+                      th:style="'background-image: url(' + (${landingImages != null and landingImages.containsKey('VALUES_2')} ? ${landingImages['VALUES_2']} : @{/images/define2.jpg}) + ')'"
                       style="
                         background-image: url(&quot;images/define2.jpg&quot;);
                       "
@@ -4823,6 +4863,7 @@
                   <div class="value-card">
                     <div
                       class="value-card-bg"
+                      th:style="'background-image: url(' + (${landingImages != null and landingImages.containsKey('VALUES_3')} ? ${landingImages['VALUES_3']} : @{/images/define3.jpg}) + ')'"
                       style="
                         background-image: url(&quot;images/define3.jpg&quot;);
                       "
@@ -4854,11 +4895,19 @@
               <div class="tarjeta-3d" id="tarjeta3d">
                 <!-- Cara Frontal -->
                 <div class="cara-tarjeta cara-frente" id="caraFrente">
-                  <img src="images/tarjetafrente.png" alt="Tarjeta Frente" />
+                  <img
+                    th:src="${landingImages != null and landingImages.containsKey('CARD_1')} ? ${landingImages['CARD_1']} : @{/images/tarjetafrente.png}"
+                    src="images/tarjetafrente.png"
+                    alt="Tarjeta Frente"
+                  />
                 </div>
                 <!-- Cara Trasera -->
                 <div class="cara-tarjeta cara-atras" id="caraAtras">
-                  <img src="images/tarjetatras.png" alt="Tarjeta Reverso" />
+                  <img
+                    th:src="${landingImages != null and landingImages.containsKey('CARD_2')} ? ${landingImages['CARD_2']} : @{/images/tarjetatras.png}"
+                    src="images/tarjetatras.png"
+                    alt="Tarjeta Reverso"
+                  />
                 </div>
               </div>
             </div>
@@ -4872,6 +4921,7 @@
           <div class="row g-3 mb-5">
             <div class="col-md-4 col-sm-6 scale-up">
               <img
+                th:src="${landingImages != null and landingImages.containsKey('GALLERY_1')} ? ${landingImages['GALLERY_1']} : @{/images/galeria.jpg}"
                 src="images/galeria.jpg"
                 alt="Plato gourmet"
                 class="img-fluid rounded-3 shadow-sm"
@@ -4879,6 +4929,7 @@
             </div>
             <div class="col-md-4 col-sm-6 scale-up">
               <img
+                th:src="${landingImages != null and landingImages.containsKey('GALLERY_2')} ? ${landingImages['GALLERY_2']} : @{/images/galeria2.jpg}"
                 src="images/galeria2.jpg"
                 alt="Chef cocinando"
                 class="img-fluid rounded-3 shadow-sm"
@@ -4886,6 +4937,7 @@
             </div>
             <div class="col-md-4 col-sm-6 scale-up">
               <img
+                th:src="${landingImages != null and landingImages.containsKey('GALLERY_3')} ? ${landingImages['GALLERY_3']} : @{/images/galeria3.jpg}"
                 src="images/galeria3.jpg"
                 alt="Cócteles"
                 class="img-fluid rounded-3 shadow-sm"
@@ -4893,6 +4945,7 @@
             </div>
             <div class="col-md-4 col-sm-6 scale-up">
               <img
+                th:src="${landingImages != null and landingImages.containsKey('GALLERY_4')} ? ${landingImages['GALLERY_4']} : @{/images/galeria4.jpg}"
                 src="images/galeria4.jpg"
                 alt="Plato principal"
                 class="img-fluid rounded-3 shadow-sm"
@@ -4900,6 +4953,7 @@
             </div>
             <div class="col-md-4 col-sm-6 scale-up">
               <img
+                th:src="${landingImages != null and landingImages.containsKey('GALLERY_5')} ? ${landingImages['GALLERY_5']} : @{/images/galeria5.jpg}"
                 src="images/galeria5.jpg"
                 alt="Ambiente"
                 class="img-fluid rounded-3 shadow-sm"
@@ -4907,6 +4961,7 @@
             </div>
             <div class="col-md-4 col-sm-6 scale-up">
               <img
+                th:src="${landingImages != null and landingImages.containsKey('GALLERY_6')} ? ${landingImages['GALLERY_6']} : @{/images/galeria6.jpg}"
                 src="images/galeria6.jpg"
                 alt="Postres"
                 class="img-fluid rounded-3 shadow-sm"

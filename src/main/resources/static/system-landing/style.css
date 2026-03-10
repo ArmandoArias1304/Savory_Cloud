@@ -232,7 +232,8 @@ svg {
   gap: 10px;
   font-weight: 700;
   font-size: 1.25rem;
-  z-index: 1001;
+  z-index: 1100;
+  position: relative;
 }
 
 .navbar__brand-text {
@@ -320,7 +321,8 @@ svg {
   border: none;
   cursor: pointer;
   padding: 6px;
-  z-index: 1001;
+  z-index: 1100;
+  position: relative;
 }
 
 .navbar__toggle span {
@@ -342,6 +344,35 @@ svg {
 }
 .navbar__toggle.is-active span:nth-child(3) {
   transform: translateY(-7.5px) rotate(-45deg);
+}
+
+/* Close button appearance when wheel menu is open */
+.navbar__toggle.is-active {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1.5px solid rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition:
+    background 0.3s ease,
+    border-color 0.3s ease;
+}
+.navbar__toggle.is-active span {
+  background: #fff;
+  width: 20px;
+}
+[data-theme="light"] .navbar__toggle.is-active {
+  background: rgba(0, 0, 0, 0.08);
+  border-color: rgba(0, 0, 0, 0.15);
+}
+[data-theme="light"] .navbar__toggle.is-active span {
+  background: #222;
 }
 
 /* ============================================================
@@ -1863,34 +1894,7 @@ svg {
   }
 
   .navbar__links {
-    position: fixed;
-    top: 0;
-    right: 0;
-    width: 100%;
-    height: 100vh;
-    height: 100dvh;
-    background: var(--color-bg);
-    flex-direction: column;
-    justify-content: center;
-    gap: 28px;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.4s ease;
-  }
-
-  .navbar__links.is-open {
-    opacity: 1;
-    pointer-events: all;
-  }
-
-  .navbar__links a {
-    font-size: 1.2rem;
-  }
-
-  .navbar__links a.rolling-text {
-    --line-height-abs: 1.68em;
-    height: var(--line-height-abs);
-    line-height: var(--line-height-abs);
+    display: none;
   }
 }
 
@@ -3397,5 +3401,206 @@ svg {
 @media (max-width: 479.98px) {
   .intro-hero__title {
     font-size: clamp(2rem, 14vw, 3.5rem);
+  }
+}
+
+/* ============================================================
+   WHEEL PICKER MOBILE MENU
+   ============================================================ */
+
+/* Hidden on desktop */
+.wheel-menu {
+  display: none;
+}
+
+@media (max-width: 991.98px) {
+  /* ── Responsive tiers: S / M / L ── */
+  .wheel-menu {
+    --wm-item-h: 60px;
+    --wm-font: 1rem;
+    --wm-icon: 20px;
+    --wm-gap: 8px;
+    --wm-track-w: 85vw;
+  }
+  @media (min-width: 375px) {
+    .wheel-menu {
+      --wm-item-h: 70px;
+      --wm-font: 1.12rem;
+      --wm-icon: 24px;
+      --wm-gap: 10px;
+      --wm-track-w: min(360px, 85vw);
+    }
+  }
+  @media (min-width: 414px) {
+    .wheel-menu {
+      --wm-item-h: 80px;
+      --wm-font: 1.25rem;
+      --wm-icon: 28px;
+      --wm-gap: 12px;
+      --wm-track-w: min(400px, 85vw);
+    }
+  }
+
+  .wheel-menu {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 1050;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .wheel-menu.is-open {
+    opacity: 1;
+    pointer-events: all;
+  }
+
+  /* Glassmorphism backdrop */
+  .wheel-menu__backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(8, 8, 8, 0.82);
+    backdrop-filter: blur(24px) saturate(1.3);
+    -webkit-backdrop-filter: blur(24px) saturate(1.3);
+  }
+
+  [data-theme="light"] .wheel-menu__backdrop {
+    background: rgba(240, 240, 240, 0.82);
+  }
+
+  /* Close button — top right corner */
+  .wheel-menu__close {
+    position: absolute;
+    top: 18px;
+    right: 18px;
+    z-index: 10;
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1.5px solid rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    cursor: pointer;
+    color: #fff;
+    transition:
+      background 0.25s ease,
+      transform 0.25s ease;
+    padding: 0;
+  }
+  .wheel-menu__close:active {
+    transform: scale(0.9);
+  }
+  [data-theme="light"] .wheel-menu__close {
+    background: rgba(0, 0, 0, 0.08);
+    border-color: rgba(0, 0, 0, 0.15);
+    color: #222;
+  }
+
+  /* Container — centers the wheel vertically */
+  .wheel-menu__container {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Center highlight band — invisible, just a spacing reference */
+  .wheel-menu__highlight {
+    display: none;
+  }
+
+  /* Scrollable track */
+  .wheel-menu__track {
+    position: relative;
+    z-index: 2;
+    width: var(--wm-track-w);
+    height: calc(var(--wm-item-h) * 5); /* 5 visible slots */
+    overflow-y: auto;
+    scroll-snap-type: y mandatory;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    display: flex;
+    flex-direction: column;
+    /* Top/bottom padding = 2 slots so first/last item can center */
+    padding: calc(var(--wm-item-h) * 2) 0;
+  }
+
+  .wheel-menu__track::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Each nav item */
+  .wheel-menu__item {
+    scroll-snap-align: center;
+    flex-shrink: 0;
+    height: var(--wm-item-h);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--wm-gap);
+    font-family: var(--font-body);
+    font-size: var(--wm-font);
+    font-weight: 500;
+    color: var(--color-text-secondary);
+    text-decoration: none;
+    opacity: 0.3;
+    transform: scale(0.8);
+    transition:
+      opacity 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+      transform 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+      color 0.35s ease;
+    will-change: transform, opacity;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+    position: relative;
+  }
+
+  /* Icon via ::before using data-icon + Material Symbols */
+  .wheel-menu__item::before {
+    content: attr(data-icon);
+    font-family: "Material Symbols Outlined";
+    font-size: var(--wm-icon);
+    font-weight: 400;
+    font-style: normal;
+    line-height: 1;
+    letter-spacing: normal;
+    text-transform: none;
+    white-space: nowrap;
+    word-wrap: normal;
+    direction: ltr;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    font-feature-settings: "liga";
+  }
+
+  /* Active/centered item — text and icon in green */
+  .wheel-menu__item.is-centered {
+    opacity: 1;
+    transform: scale(1);
+    color: var(--color-primary);
+    font-weight: 600;
+  }
+
+  .wheel-menu__item.is-centered::before {
+    color: var(--color-primary);
+  }
+
+  /* Adjacent items (1 away from center) */
+  .wheel-menu__item.is-adjacent {
+    opacity: 0.4;
+    transform: scale(0.85);
+  }
+
+  /* CTA item special accent */
+  .wheel-menu__item--cta.is-centered {
+    color: var(--color-primary);
   }
 }

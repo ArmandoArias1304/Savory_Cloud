@@ -5,16 +5,19 @@ import com.aatechsolutions.elgransazon.application.service.CompanyService;
 import com.aatechsolutions.elgransazon.application.service.EmployeeService;
 import com.aatechsolutions.elgransazon.application.service.GlobalSystemConfigService;
 import com.aatechsolutions.elgransazon.application.service.ImageStorageService;
+import com.aatechsolutions.elgransazon.application.service.LandingImageService;
 import com.aatechsolutions.elgransazon.application.service.LicenseService;
 import com.aatechsolutions.elgransazon.domain.repository.CustomerRepository;
 import com.aatechsolutions.elgransazon.domain.repository.ItemMenuRepository;
 import com.aatechsolutions.elgransazon.domain.repository.OrderRepository;
 import com.aatechsolutions.elgransazon.domain.entity.Company;
 import com.aatechsolutions.elgransazon.domain.entity.GlobalSystemConfig;
+import com.aatechsolutions.elgransazon.domain.entity.LandingImage;
 import com.aatechsolutions.elgransazon.domain.entity.LicenseEvent;
 import com.aatechsolutions.elgransazon.domain.entity.SystemLicense;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
@@ -23,7 +26,9 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Controller for programmer/vendor dashboard
@@ -41,6 +46,7 @@ public class ProgrammerController {
     private final CompanyService companyService;
     private final GlobalSystemConfigService globalSystemConfigService;
     private final ImageStorageService imageStorageService;
+    private final LandingImageService landingImageService;
     private final EmployeeService employeeService;
     private final ItemMenuRepository itemMenuRepository;
     private final OrderRepository orderRepository;
@@ -409,6 +415,117 @@ public class ProgrammerController {
         }
 
         return "redirect:/programmer/dashboard";
+    }
+
+    /**
+     * Get all landing images for a company (AJAX)
+     */
+    @GetMapping("/api/landing-images")
+    @ResponseBody
+    public ResponseEntity<List<Map<String, Object>>> getLandingImages(@RequestParam Long companyId) {
+        Company company = companyService.findById(companyId).orElse(null);
+        if (company == null) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        List<LandingImage> images = landingImageService.findByCompany(company);
+        List<Map<String, Object>> result = images.stream().map(img -> {
+            Map<String, Object> map = new HashMap<>();
+            map.put("id", img.getId());
+            map.put("section", img.getSection().name());
+            map.put("position", img.getPosition());
+            map.put("imageUrl", img.getImageUrl());
+            return map;
+        }).toList();
+
+        return ResponseEntity.ok(result);
+    }
+
+    /**
+     * Upload a landing image for a specific company/section/position (AJAX)
+     */
+    @PostMapping("/api/landing-images/upload")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> uploadLandingImage(
+            @RequestParam Long companyId,
+            @RequestParam String section,
+            @RequestParam int position,
+            @RequestParam("file") MultipartFile file,
+            Authentication authentication) {
+
+        Map<String, Object> response = new HashMap<>();
+        try {
+            Company company = companyService.findById(companyId).orElse(null);
+            if (company == null) {
+                response.put("success", false);
+                response.put("message", "Empresa no encontrada");
+                return ResponseEntity.badRequest().body(response);
+            }
+
+            LandingImage.Section sec = LandingImage.Section.valueOf(section);
+            if (position < 1 || position > sec.getMaxPositions()) {
+                response.put("success", false);
+                response.put("message", "Posición inválida para la sección " + sec.getDisplayName());
+                return ResponseEntity.badRequest().body(response);
+            }
+
+            LandingImage saved = landingImageService.uploadImage(company, sec, position, file);
+            response.put("success", true);
+            response.put("imageUrl", saved.getImageUrl());
+            response.put("message", "Imagen subida exitosamente");
+
+            log.info("Landing image uploaded by {} for company {} section {} position {}",
+                    authentication.getName(), company.getSlug(), section, position);
+
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            response.put("success", false);
+            response.put("message", "Sección inválida: " + section);
+            return ResponseEntity.badRequest().body(response);
+        } catch (Exception e) {
+            log.error("Error uploading landing image: {}", e.getMessage());
+            response.put("success", false);
+            response.put("message", "Error al subir la imagen: " + e.getMessage());
+            return ResponseEntity.internalServerError().body(response);
+        }
+    }
+
+    /**
+     * Delete a landing image (AJAX)
+     */
+    @DeleteMapping("/api/landing-images")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> deleteLandingImage(
+            @RequestParam Long companyId,
+            @RequestParam String section,
+            @RequestParam int position,
+            Authentication authentication) {
+
+        Map<String, Object> response = new HashMap<>();
+        try {
+            Company company = companyService.findById(companyId).orElse(null);
+            if (company == null) {
+                response.put("success", false);
+                response.put("message", "Empresa no encontrada");
+                return ResponseEntity.badRequest().body(response);
+            }
+
+            LandingImage.Section sec = LandingImage.Section.valueOf(section);
+            landingImageService.deleteImage(company, sec, position);
+
+            response.put("success", true);
+            response.put("message", "Imagen eliminada exitosamente");
+
+            log.info("Landing image deleted by {} for company {} section {} position {}",
+                    authentication.getName(), company.getSlug(), section, position);
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("Error deleting landing image: {}", e.getMessage());
+            response.put("success", false);
+            response.put("message", "Error al eliminar la imagen: " + e.getMessage());
+            return ResponseEntity.internalServerError().body(response);
+        }
     }
 
     /**

@@ -191,26 +191,121 @@ document.addEventListener("DOMContentLoaded", () => {
   window.addEventListener("scroll", handleNavScroll, { passive: true });
   handleNavScroll(); // run on init
 
-  /* ─── Mobile nav toggle ─── */
+  /* ─── Mobile nav toggle → Wheel Picker ─── */
   const navToggle = document.getElementById("navToggle");
-  const navLinks = document.getElementById("navLinks");
+  const wheelMenu = document.getElementById("wheelMenu");
+  const wheelTrack = document.getElementById("wheelTrack");
+  const wheelItems = wheelTrack
+    ? Array.from(wheelTrack.querySelectorAll(".wheel-menu__item"))
+    : [];
 
-  navToggle.addEventListener("click", () => {
-    navToggle.classList.toggle("is-active");
-    navLinks.classList.toggle("is-open");
-    document.body.style.overflow = navLinks.classList.contains("is-open")
-      ? "hidden"
-      : "";
-  });
+  // Dynamic item height — reads the actual rendered size (adapts to S/M/L CSS)
+  function getItemH() {
+    return wheelItems[0] ? wheelItems[0].offsetHeight : 64;
+  }
 
-  // Close mobile nav when a link is clicked
-  navLinks.querySelectorAll("a").forEach((link) => {
-    link.addEventListener("click", () => {
-      navToggle.classList.remove("is-active");
-      navLinks.classList.remove("is-open");
-      document.body.style.overflow = "";
+  // Detect which section the user is currently viewing
+  function getCurrentSectionIndex() {
+    // Use getBoundingClientRect for reliable position regardless of nesting
+    const vpMid = window.innerHeight / 2;
+    let bestIdx = 0;
+    let bestDist = Infinity;
+
+    for (let i = 0; i < wheelItems.length; i++) {
+      const href = wheelItems[i].getAttribute("href");
+      const sec = href ? document.querySelector(href) : null;
+      if (!sec) continue;
+
+      const rect = sec.getBoundingClientRect();
+      // Section is "current" if the viewport middle is inside it
+      if (rect.top <= vpMid && rect.bottom >= vpMid) {
+        return i;
+      }
+      // Otherwise find the closest section top to viewport middle
+      const dist = Math.abs(rect.top - vpMid);
+      if (dist < bestDist) {
+        bestDist = dist;
+        bestIdx = i;
+      }
+    }
+    return bestIdx;
+  }
+
+  function openWheel() {
+    navToggle.classList.add("is-active");
+    wheelMenu.classList.add("is-open");
+    document.body.style.overflow = "hidden";
+    // Scroll to the item matching the section the user is currently on
+    const idx = getCurrentSectionIndex();
+    wheelTrack.scrollTop = idx * getItemH();
+    updateWheelFocus();
+  }
+
+  function closeWheel() {
+    navToggle.classList.remove("is-active");
+    wheelMenu.classList.remove("is-open");
+    document.body.style.overflow = "";
+  }
+
+  function updateWheelFocus() {
+    const trackRect = wheelTrack.getBoundingClientRect();
+    const centerY = trackRect.top + trackRect.height / 2;
+    const itemH = getItemH();
+
+    wheelItems.forEach((item) => {
+      const rect = item.getBoundingClientRect();
+      const itemCenterY = rect.top + rect.height / 2;
+      const dist = Math.abs(itemCenterY - centerY);
+
+      item.classList.remove("is-centered", "is-adjacent");
+
+      if (dist < itemH * 0.5) {
+        item.classList.add("is-centered");
+      } else if (dist < itemH * 1.5) {
+        item.classList.add("is-adjacent");
+      }
     });
-  });
+  }
+
+  if (navToggle && wheelMenu && wheelTrack) {
+    navToggle.addEventListener("click", () => {
+      if (wheelMenu.classList.contains("is-open")) {
+        closeWheel();
+      } else {
+        openWheel();
+      }
+    });
+
+    // Update focus on scroll
+    wheelTrack.addEventListener("scroll", updateWheelFocus, { passive: true });
+
+    // Click on centered item → navigate & close
+    wheelItems.forEach((item) => {
+      item.addEventListener("click", (e) => {
+        if (!item.classList.contains("is-centered")) {
+          e.preventDefault();
+          // Scroll so clicked item becomes centered
+          const idx = wheelItems.indexOf(item);
+          wheelTrack.scrollTo({
+            top: idx * getItemH(),
+            behavior: "smooth",
+          });
+        } else {
+          // Item is centered — navigate
+          closeWheel();
+        }
+      });
+    });
+
+    // Close on backdrop click
+    wheelMenu
+      .querySelector(".wheel-menu__backdrop")
+      .addEventListener("click", closeWheel);
+
+    // Close button
+    var wheelCloseBtn = document.getElementById("wheelClose");
+    if (wheelCloseBtn) wheelCloseBtn.addEventListener("click", closeWheel);
+  }
 
   /* ─── SpotlightCard: cursor-following green glow on feature cards ─── */
   document.querySelectorAll(".feature-card").forEach((card) => {
