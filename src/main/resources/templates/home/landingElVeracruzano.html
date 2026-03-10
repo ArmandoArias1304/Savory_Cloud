@@ -1,0 +1,5789 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title th:text="${systemConfig.restaurantName} + ' - Restaurante'">
+      Restaurante
+    </title>
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="96x96"
+      th:href="${@cloudinaryUrl.logoSmall(systemConfig.restaurantLogoUrl)}"
+      th:if="${systemConfig != null and systemConfig.restaurantLogoUrl != null and !systemConfig.restaurantLogoUrl.isEmpty()}"
+    />
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <!-- Fuente Work Sans de Google Fonts -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+
+    <style>
+      body {
+        background-color: #38e07b;
+        margin: 0;
+        padding: 0;
+        font-family: "Work Sans", sans-serif; /* aquí cambias la fuente */
+        overflow-x: hidden;
+      }
+
+      html {
+        overflow-x: hidden;
+      }
+
+      /* Textos con mejor contraste */
+      .text-muted {
+        color: #444 !important;
+      }
+
+      h3,
+      h4,
+      h5,
+      h6 {
+        color: #2d2d2d;
+      }
+
+      p {
+        color: #444;
+      }
+
+      .hero-section {
+        background: linear-gradient(
+          135deg,
+          #38e07b 0%,
+          #38e07b 50%,
+          #38e07b 100%
+        );
+        padding: 60px 20px 30px 20px;
+        min-height: 400px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .hero-section::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-image:
+          radial-gradient(
+            circle at 20% 50%,
+            rgba(255, 255, 255, 0.1) 0%,
+            transparent 50%
+          ),
+          radial-gradient(
+            circle at 80% 80%,
+            rgba(255, 255, 255, 0.08) 0%,
+            transparent 50%
+          ),
+          radial-gradient(
+            circle at 40% 20%,
+            rgba(255, 255, 255, 0.06) 0%,
+            transparent 50%
+          );
+        animation: moveBackground 15s ease-in-out infinite;
+        opacity: 0.8;
+      }
+
+      .hero-section::after {
+        content: "";
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: repeating-linear-gradient(
+          45deg,
+          transparent,
+          transparent 60px,
+          rgba(255, 255, 255, 0.03) 60px,
+          rgba(255, 255, 255, 0.03) 120px
+        );
+        animation: rotatePattern 30s linear infinite;
+      }
+
+      @keyframes moveBackground {
+        0%,
+        100% {
+          transform: translate(0, 0);
+        }
+        50% {
+          transform: translate(30px, -30px);
+        }
+      }
+
+      @keyframes rotatePattern {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+
+      .hero-wrapper {
+        position: relative;
+        z-index: 1;
+        width: 100%;
+        max-width: 1200px;
+        margin: 0 auto;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 40px;
+      }
+
+      .hero-content {
+        text-align: center;
+        max-width: 800px;
+        margin: 0 auto;
+        flex: 1;
+      }
+
+      .hero-logo {
+        display: none;
+      }
+
+      /* Vista de PC */
+      @media (min-width: 992px) {
+        .hero-wrapper {
+          justify-content: space-between;
+          gap: 0px;
+          max-width: 900px;
+        }
+
+        .hero-content {
+          text-align: left;
+          max-width: 550px;
+          margin: 0;
+        }
+
+        .hero-logo {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+        }
+
+        .hero-logo-circle {
+          width: 300px;
+          height: 300px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          animation: float 3s ease-in-out infinite;
+        }
+
+        .hero-logo-circle img {
+          width: 100%;
+          height: 100%;
+          object-fit: contain;
+          filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.15));
+        }
+
+        @keyframes float {
+          0%,
+          100% {
+            transform: translateY(0px);
+          }
+          50% {
+            transform: translateY(-20px);
+          }
+        }
+
+        .hero-buttons {
+          justify-content: flex-start !important;
+        }
+      }
+
+      .hero-title {
+        color: #2d2d2d;
+        font-size: 4.5rem;
+        font-weight: 800;
+        margin-bottom: 20px;
+        text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.15);
+        cursor: default;
+        letter-spacing: 2px;
+        line-height: 1.2;
+        word-spacing: normal;
+      }
+
+      /* Ocultar salto de línea en desktop */
+      .hero-title br.mobile-break {
+        display: none;
+      }
+
+      .hero-title span {
+        display: inline-block;
+        transition: 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+        animation: wave-letter 3s ease-in-out infinite;
+      }
+
+      /* Animación automática de ola - cada letra con delay diferente */
+      .hero-title span:nth-child(1) {
+        animation-delay: 0s;
+      }
+      .hero-title span:nth-child(2) {
+        animation-delay: 0.1s;
+      }
+      .hero-title span:nth-child(3) {
+        animation-delay: 0.2s;
+      }
+      .hero-title span:nth-child(4) {
+        animation-delay: 0.3s;
+      }
+      .hero-title span:nth-child(5) {
+        animation-delay: 0.4s;
+      }
+      .hero-title span:nth-child(6) {
+        animation-delay: 0.5s;
+      }
+      .hero-title span:nth-child(7) {
+        animation-delay: 0.6s;
+      }
+      .hero-title span:nth-child(8) {
+        animation-delay: 0.7s;
+      }
+      .hero-title span:nth-child(9) {
+        animation-delay: 0.8s;
+      }
+      .hero-title span:nth-child(10) {
+        animation-delay: 0.9s;
+      }
+      .hero-title span:nth-child(11) {
+        animation-delay: 1s;
+      }
+      .hero-title span:nth-child(12) {
+        animation-delay: 1.1s;
+      }
+
+      @keyframes wave-letter {
+        0%,
+        100% {
+          transform: translateY(0);
+        }
+        15% {
+          transform: translateY(-15px);
+          text-shadow: 4px 6px 10px rgba(0, 0, 0, 0.25);
+        }
+        30% {
+          transform: translateY(0);
+        }
+      }
+
+      /* Efecto hover adicional */
+      .hero-title span:hover {
+        transform: translateY(-20px) scale(1.1);
+        text-shadow: 5px 5px 12px rgba(0, 0, 0, 0.3);
+        color: #1a1a1a;
+        animation-play-state: paused;
+      }
+
+      .hero-title .emoji {
+        display: inline-block;
+        margin-left: 10px;
+        animation: wave-emoji 3s ease-in-out infinite;
+        animation-delay: 1.2s;
+      }
+
+      @keyframes wave-emoji {
+        0%,
+        100% {
+          transform: translateY(0) rotate(0deg);
+        }
+        15% {
+          transform: translateY(-15px) rotate(20deg);
+        }
+        30% {
+          transform: translateY(0) rotate(0deg);
+        }
+      }
+
+      .hero-title .emoji:hover {
+        transform: translateY(-20px) rotate(25deg) scale(1.2);
+        animation-play-state: paused;
+      }
+
+      .hero-subtitle {
+        color: white;
+        font-size: 1.6rem;
+        font-weight: 600;
+        margin-bottom: 15px;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+      }
+
+      .hero-description {
+        color: white;
+        font-size: 1.15rem;
+        font-weight: 400;
+        margin-bottom: 25px;
+        line-height: 1.6;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.25);
+      }
+
+      .hero-buttons {
+        display: flex;
+        gap: 15px;
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+
+      .btn-primary {
+        background-color: rgb(39, 39, 39);
+        color: #38e07b;
+        padding: 15px 35px;
+        border-radius: 30px;
+        text-decoration: none;
+        font-weight: 700;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        transition: all 0.3s;
+      }
+
+      .btn-primary:hover {
+        background-color: #555555;
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+      }
+
+      .btn-secondary {
+        background-color: transparent;
+        color: white;
+        padding: 15px 35px;
+        border-radius: 30px;
+        text-decoration: none;
+        font-weight: 700;
+        border: 2px solid white;
+        transition: all 0.3s;
+      }
+
+      .btn-secondary:hover {
+        background-color: white;
+        color: #38e07b;
+      }
+
+      .white-container {
+        background-color: rgb(32, 32, 32);
+        border-radius: 30px 30px 0 0;
+        padding: 30px 0 3rem 0;
+        margin-top: 10px;
+        margin-bottom: 0;
+        min-height: calc(100vh - 280px);
+      }
+
+      /* Contenedor del carrusel y secciones regulares */
+      .white-container .container {
+        padding-left: 0;
+        padding-right: 0;
+        max-width: 100%;
+      }
+
+      /* Hacer que las secciones especiales ocupen todo el ancho del contenedor gris */
+      .offer-section,
+      .how-to-order-section,
+      .values-section,
+      .promociones-section,
+      .tarjeta-3d-section,
+      .testimonios-section,
+      .logo-loop-section {
+        margin-left: 0;
+        margin-right: 0;
+        width: 100%;
+      }
+
+      .carousel-container {
+        margin-left: 40px;
+        margin-right: 40px;
+        width: calc(100% - 80px);
+      }
+
+      .carousel-container {
+        border-radius: 20px;
+        overflow: hidden;
+        margin-bottom: 30px;
+        box-shadow: 0 8px 25px rgba(56, 224, 123, 0.3);
+      }
+
+      .carousel-item {
+        height: 400px;
+        position: relative;
+      }
+
+      .carousel-image {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        filter: brightness(0.7);
+      }
+
+      .carousel-caption {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        text-align: center;
+        width: 90%;
+      }
+
+      .carousel-title {
+        font-size: 2.5rem;
+        font-weight: bold;
+        margin-bottom: 15px;
+        text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.5);
+      }
+
+      .carousel-subtitle {
+        color: white;
+        font-size: 1.2rem;
+        text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.5);
+      }
+
+      .carousel-control-prev-icon,
+      .carousel-control-next-icon {
+        background-color: rgba(56, 224, 123, 0.8);
+        border-radius: 50%;
+        padding: 20px;
+      }
+
+      .section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 80px;
+        margin-top: 20px;
+        padding: 0 40px;
+      }
+
+      .section-title {
+        font-size: 1.3rem;
+        font-weight: bold;
+        color: white;
+      }
+
+      /* Textos de la sección Nuestra Historia */
+      .white-container h3 {
+        color: white;
+      }
+
+      .white-container .text-muted {
+        color: #d0d0d0 !important;
+      }
+
+      /* Padding para la sección de historia */
+      .white-container .row.mb-5 {
+        padding: 0 40px;
+      }
+
+      /* Quitar sombra y borde de la imagen de Nuestra Historia */
+      .white-container .shadow {
+        box-shadow: none !important;
+      }
+
+      .white-container .rounded-3 {
+        border-radius: 0 !important;
+      }
+
+      /* Encabezado de Sección Empleados del Mes */
+      .employee-section-header {
+        text-align: center;
+        padding: 0 20px;
+      }
+
+      .employee-section-title {
+        font-size: 3rem;
+        font-weight: 800;
+        color: #38e07b;
+        letter-spacing: 2px;
+        margin-bottom: 15px;
+        text-shadow: 0 4px 10px rgba(56, 224, 123, 0.3);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 20px;
+      }
+
+      .employee-section-title i {
+        font-size: 2rem;
+        color: #ffd700;
+        animation: sparkle 2s ease-in-out infinite;
+      }
+
+      .employee-section-subtitle {
+        font-size: 1.3rem;
+        color: #ffffff;
+        font-weight: 400;
+        font-style: italic;
+        opacity: 0.9;
+        max-width: 700px;
+        margin: 0 auto;
+        line-height: 1.6;
+      }
+
+      @keyframes sparkle {
+        0%,
+        100% {
+          transform: scale(1);
+          opacity: 1;
+        }
+        50% {
+          transform: scale(1.2);
+          opacity: 0.8;
+        }
+      }
+
+      @media (max-width: 768px) {
+        .employee-section-title {
+          font-size: 2rem;
+          flex-direction: column;
+          gap: 10px;
+        }
+
+        .employee-section-title i {
+          font-size: 1.5rem;
+        }
+
+        .employee-section-subtitle {
+          font-size: 1.1rem;
+        }
+      }
+
+      /* Estilos para Empleados del Mes - Modo Oscuro */
+      .employee-card {
+        background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+        border-radius: 20px;
+        padding: 30px;
+        text-align: center;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+        height: 100%;
+        min-height: 380px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        border: 2px solid #38e07b;
+      }
+
+      .employee-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 40px rgba(56, 224, 123, 0.4);
+        border-color: #2dd46f;
+      }
+
+      .employee-badge {
+        position: absolute;
+        top: 20px;
+        right: -35px;
+        background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+        color: #2d2d2d;
+        padding: 8px 50px;
+        font-weight: bold;
+        font-size: 0.85rem;
+        box-shadow: 0 4px 15px rgba(255, 215, 0, 0.4);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        transform: rotate(45deg);
+        width: 200px;
+        text-align: center;
+      }
+
+      .employee-badge i {
+        font-size: 1rem;
+      }
+
+      .chef-badge {
+        background: linear-gradient(135deg, #38e07b 0%, #2dd46f 100%);
+        color: white;
+      }
+
+      .barista-badge {
+        background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
+        color: white;
+      }
+
+      .cashier-badge {
+        background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+        color: white;
+      }
+
+      .employee-photo-container {
+        width: 150px;
+        height: 150px;
+        margin: 30px auto 20px;
+        position: relative;
+      }
+
+      .employee-photo {
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 5px solid #38e07b;
+        box-shadow: 0 8px 20px rgba(56, 224, 123, 0.3);
+      }
+
+      .employee-photo-default {
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #38e07b 0%, #2dd46f 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 4rem;
+        border: 5px solid #2dd46f;
+        box-shadow: 0 8px 20px rgba(56, 224, 123, 0.3);
+      }
+
+      .chef-photo {
+        background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+        border-color: #ffd700;
+        box-shadow: 0 8px 20px rgba(255, 215, 0, 0.3);
+        color: #2d2d2d;
+      }
+
+      .barista-photo {
+        background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
+        border-color: #8b5cf6;
+        box-shadow: 0 8px 20px rgba(139, 92, 246, 0.3);
+        color: white;
+      }
+
+      .cashier-photo {
+        background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+        border-color: #06b6d4;
+        box-shadow: 0 8px 20px rgba(6, 182, 212, 0.3);
+        color: white;
+      }
+
+      .employee-name {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: #ffffff;
+        margin-bottom: 15px;
+      }
+
+      .employee-role {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        background: rgba(56, 224, 123, 0.15);
+        border-radius: 15px;
+        padding: 12px 25px;
+        margin-top: 15px;
+        color: #38e07b;
+        font-weight: 600;
+        font-size: 1.1rem;
+      }
+
+      .employee-role i {
+        font-size: 1.3rem;
+      }
+
+      .employee-stats {
+        background: rgba(56, 224, 123, 0.1);
+        border-radius: 15px;
+        padding: 20px;
+        margin-top: 10px;
+      }
+
+      .stat-item {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      .stat-item i {
+        color: #38e07b;
+        font-size: 1.3rem;
+      }
+
+      .stat-label {
+        color: #999;
+        font-weight: 500;
+      }
+
+      .stat-value {
+        color: #38e07b;
+        font-size: 1.8rem;
+        font-weight: bold;
+      }
+
+      .employee-empty-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 40px 20px;
+        color: #666;
+      }
+
+      .employee-empty-state i {
+        font-size: 4rem;
+        color: #444;
+        margin-bottom: 20px;
+      }
+
+      .employee-empty-state p {
+        font-size: 1.2rem;
+        font-weight: 500;
+        margin-bottom: 5px;
+        color: #999;
+      }
+
+      .employee-empty-state small {
+        color: #666;
+        font-size: 0.9rem;
+      }
+
+      /* Modal de Felicitaciones */
+      .congratulations-modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.8);
+        z-index: 9999;
+        justify-content: center;
+        align-items: center;
+        animation: fadeIn 0.3s ease;
+      }
+
+      .congratulations-modal.show {
+        display: flex;
+      }
+
+      .congratulations-content {
+        background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+        border: 3px solid #38e07b;
+        border-radius: 25px;
+        padding: 50px 40px;
+        text-align: center;
+        max-width: 500px;
+        position: relative;
+        animation: scaleIn 0.4s ease;
+        box-shadow: 0 20px 60px rgba(56, 224, 123, 0.3);
+      }
+
+      .congratulations-content h2 {
+        color: #38e07b;
+        font-size: 2.5rem;
+        font-weight: bold;
+        margin-bottom: 20px;
+      }
+
+      .congratulations-content p {
+        color: #ffffff;
+        font-size: 1.3rem;
+        margin-bottom: 30px;
+        line-height: 1.6;
+      }
+
+      .congratulations-content .trophy-icon {
+        font-size: 5rem;
+        color: #ffd700;
+        margin-bottom: 20px;
+        animation: bounce 1s infinite;
+      }
+
+      .congratulations-close {
+        background: linear-gradient(135deg, #38e07b 0%, #2dd46f 100%);
+        color: white;
+        border: none;
+        padding: 15px 40px;
+        border-radius: 25px;
+        font-size: 1.1rem;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.3s ease;
+      }
+
+      .congratulations-close:hover {
+        transform: scale(1.05);
+        box-shadow: 0 8px 20px rgba(56, 224, 123, 0.4);
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
+      }
+
+      @keyframes scaleIn {
+        from {
+          transform: scale(0.8);
+          opacity: 0;
+        }
+        to {
+          transform: scale(1);
+          opacity: 1;
+        }
+      }
+
+      @keyframes bounce {
+        0%,
+        100% {
+          transform: translateY(0);
+        }
+        50% {
+          transform: translateY(-10px);
+        }
+      }
+
+      @media (max-width: 768px) {
+        .employee-card {
+          min-height: 320px;
+        }
+
+        .employee-badge {
+          font-size: 0.8rem;
+          padding: 8px 15px;
+        }
+
+        .employee-photo-container {
+          width: 120px;
+          height: 120px;
+        }
+
+        .employee-name {
+          font-size: 1.3rem;
+        }
+
+        .employee-role {
+          font-size: 1rem;
+          padding: 10px 20px;
+        }
+
+        .congratulations-content {
+          margin: 20px;
+          padding: 40px 30px;
+        }
+
+        .congratulations-content h2 {
+          font-size: 2rem;
+        }
+
+        .congratulations-content p {
+          font-size: 1.1rem;
+        }
+      }
+
+      .offer-section {
+        padding: 120px 20px;
+        background: linear-gradient(135deg, #e8fdf1 0%, #d4f8e3 100%);
+        border-radius: 0;
+        position: relative;
+        overflow: visible;
+      }
+
+      .offer-title {
+        text-align: center;
+        margin-bottom: 10px;
+        color: #2d2d2d !important;
+        font-size: 1.2rem;
+        font-weight: 500;
+      }
+
+      .offer-main-title {
+        text-align: center;
+        margin-bottom: 50px;
+        color: #38e07b;
+        font-size: 2.5rem;
+        font-weight: bold;
+      }
+
+      .category-buttons {
+        display: flex;
+        justify-content: center;
+        gap: 15px;
+        flex-wrap: wrap;
+        margin-bottom: 50px;
+      }
+
+      .category-btn {
+        padding: 12px 30px;
+        border: 2px solid #38e07b;
+        background-color: white;
+        color: #3d3d3d;
+        border-radius: 25px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.3s;
+      }
+
+      .category-btn:hover {
+        background-color: #38e07b;
+        color: white;
+        transform: translateY(-2px);
+      }
+
+      .category-btn.active {
+        background-color: #38e07b;
+        color: white;
+      }
+
+      .offer-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        position: relative;
+      }
+
+      .offer-content {
+        display: none;
+      }
+
+      .offer-content.active {
+        display: block;
+      }
+
+      /* DESKTOP: Layout con imagen central y puntos alrededor */
+      .desktop-layout {
+        position: relative;
+        min-height: 600px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .center-dish {
+        position: relative;
+        width: 400px;
+        height: 400px;
+        margin: 0 auto;
+        background: white;
+        border-radius: 50%;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 2;
+      }
+
+      .center-dish img {
+        width: 350px;
+        height: 350px;
+        border-radius: 50%;
+        object-fit: cover;
+      }
+
+      .strong-point {
+        position: absolute;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        width: 280px;
+        min-height: 110px;
+        background: white;
+        padding: 20px;
+        border-radius: 15px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        transition:
+          transform 0.3s,
+          box-shadow 0.3s;
+      }
+
+      .strong-point:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 6px 30px rgba(0, 0, 0, 0.15);
+      }
+
+      .strong-point-icon {
+        width: 60px;
+        height: 60px;
+        background-color: #f8f9fa;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+      }
+
+      .strong-point-icon i {
+        font-size: 2rem;
+        color: #38e07b;
+      }
+
+      .strong-point-text h4 {
+        font-size: 1rem;
+        font-weight: 700;
+        color: #2d2d2d;
+        margin-bottom: 6px;
+        line-height: 1.3;
+      }
+
+      .strong-point-text p {
+        font-size: 0.85rem;
+        color: #555;
+        margin: 0;
+        line-height: 1.4;
+      }
+
+      /* Posiciones de los strong points alrededor de la imagen */
+      .point-1 {
+        top: 20px;
+        left: 45px;
+      }
+      .point-2 {
+        top: 20px;
+        right: 45px;
+        flex-direction: row-reverse;
+      }
+      .point-3 {
+        top: 40%;
+        left: -25px;
+        transform: translateY(-50%);
+      }
+      .point-4 {
+        top: 40%;
+        right: -25px;
+        transform: translateY(-50%);
+        flex-direction: row-reverse;
+      }
+      .point-5 {
+        bottom: 20px;
+        left: 95px;
+      }
+      .point-6 {
+        bottom: 20px;
+        right: 100px;
+        flex-direction: row-reverse;
+      }
+
+      /* MOBILE: Layout vertical escondido por defecto */
+      .mobile-layout {
+        display: none;
+      }
+
+      /* Animaciones para cambio de contenido */
+      .offer-content {
+        opacity: 0;
+        transform: translateY(20px);
+        transition:
+          opacity 0.5s ease-out,
+          transform 0.5s ease-out;
+      }
+
+      .offer-content.active {
+        opacity: 1;
+        transform: translateY(0);
+        animation: fadeInContent 0.5s ease-out;
+      }
+
+      @keyframes fadeInContent {
+        from {
+          opacity: 0;
+          transform: translateY(20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @keyframes fadeOutContent {
+        from {
+          opacity: 1;
+          transform: translateY(0);
+        }
+        to {
+          opacity: 0;
+          transform: translateY(-20px);
+        }
+      }
+
+      @keyframes fadeInUp {
+        from {
+          opacity: 0;
+          transform: translateY(20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @keyframes fadeInScale {
+        from {
+          opacity: 0;
+          transform: scale(0.95);
+        }
+        to {
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
+
+      /* Desktop: animaciones para strong points */
+      .desktop-layout .strong-point {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+
+      .offer-content.active .desktop-layout .strong-point {
+        animation: fadeInUp 0.5s ease-out forwards;
+      }
+
+      .offer-content.active .desktop-layout .point-1 {
+        animation-delay: 0.1s;
+      }
+
+      .offer-content.active .desktop-layout .point-2 {
+        animation-delay: 0.15s;
+      }
+
+      .offer-content.active .desktop-layout .point-3 {
+        animation-delay: 0.2s;
+      }
+
+      .offer-content.active .desktop-layout .point-4 {
+        animation-delay: 0.25s;
+      }
+
+      .offer-content.active .desktop-layout .point-5 {
+        animation-delay: 0.3s;
+      }
+
+      .offer-content.active .desktop-layout .point-6 {
+        animation-delay: 0.35s;
+      }
+
+      .offer-content.active .desktop-layout .center-dish {
+        opacity: 0;
+        animation: fadeInScale 0.6s ease-out 0.2s forwards;
+      }
+
+      @media (max-width: 768px) {
+        .hero-title {
+          font-size: 2.5rem;
+          letter-spacing: 1px;
+          word-spacing: normal;
+          line-height: 1.3;
+        }
+
+        /* Forzar salto de línea después de "Buen" en móvil */
+        .hero-title br.mobile-break {
+          display: block;
+        }
+
+        .hero-section {
+          padding: 50px 20px 25px 20px;
+          min-height: 450px;
+        }
+
+        /* Reducir espacio del carrusel en móvil */
+        .carousel-container {
+          margin-left: 20px;
+          margin-right: 20px;
+          width: calc(100% - 40px);
+        }
+
+        /* Hacer la animación más sutil en móvil */
+        @keyframes wave-letter {
+          0%,
+          100% {
+            transform: translateY(0);
+          }
+          15% {
+            transform: translateY(-10px);
+            text-shadow: 3px 4px 8px rgba(0, 0, 0, 0.2);
+          }
+          30% {
+            transform: translateY(0);
+          }
+        }
+
+        @keyframes wave-emoji {
+          0%,
+          100% {
+            transform: translateY(0) rotate(0deg);
+          }
+          15% {
+            transform: translateY(-10px) rotate(15deg);
+          }
+          30% {
+            transform: translateY(0) rotate(0deg);
+          }
+        }
+
+        .hero-title span {
+          /* En móvil el efecto también funciona al tocar */
+          transition: 0.2s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+
+        .hero-subtitle {
+          font-size: 1.35rem;
+        }
+
+        .hero-description {
+          font-size: 1.05rem;
+        }
+
+        .hero-buttons {
+          flex-direction: column;
+          align-items: center;
+          gap: 12px;
+        }
+
+        .btn-primary,
+        .btn-secondary {
+          width: 100%;
+          max-width: 320px;
+          padding: 14px 30px;
+          font-size: 1rem;
+        }
+
+        /* Eliminar márgenes negativos en móvil para evitar scroll horizontal */
+        .offer-section,
+        .how-to-order-section,
+        .values-section {
+          margin-left: 0;
+          margin-right: 0;
+          width: 100%;
+        }
+
+        .carousel-title {
+          font-size: 1.8rem;
+        }
+
+        .carousel-subtitle {
+          font-size: 1rem;
+        }
+
+        .carousel-item {
+          height: 300px;
+        }
+
+        .offer-main-title {
+          font-size: 1.8rem;
+        }
+
+        .category-btn {
+          padding: 10px 20px;
+          font-size: 0.9rem;
+        }
+
+        /* Esconder layout de desktop */
+        .desktop-layout {
+          display: none !important;
+        }
+
+        /* Mostrar layout móvil */
+        .mobile-layout {
+          display: block !important;
+        }
+
+        .mobile-layout .strong-points-grid {
+          display: grid;
+          grid-template-columns: 1fr;
+          gap: 20px;
+          margin-bottom: 30px;
+          padding: 0 15px;
+          max-width: 100%;
+        }
+
+        .mobile-layout .strong-point {
+          position: relative;
+          display: flex;
+          align-items: flex-start;
+          gap: 15px;
+          background: white;
+          padding: 18px;
+          border-radius: 15px;
+          box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+          width: 100%;
+          max-width: 100%;
+          opacity: 0;
+          transform: translateY(20px);
+        }
+
+        /* Animación escalonada en móvil */
+        .offer-content.active .mobile-layout .strong-point:nth-child(1) {
+          animation: fadeInUp 0.5s ease-out 0.1s forwards;
+        }
+
+        .offer-content.active .mobile-layout .strong-point:nth-child(2) {
+          animation: fadeInUp 0.5s ease-out 0.2s forwards;
+        }
+
+        .offer-content.active .mobile-layout .strong-point:nth-child(3) {
+          animation: fadeInUp 0.5s ease-out 0.3s forwards;
+        }
+
+        /* Ocultar puntos 4, 5, 6 en móvil */
+        .mobile-layout .strong-point:nth-child(n + 4) {
+          display: none !important;
+        }
+
+        .mobile-layout .product-image-container {
+          display: flex;
+          justify-content: center;
+          padding: 0 20px;
+          opacity: 0;
+          transform: scale(0.95);
+        }
+
+        .offer-content.active .mobile-layout .product-image-container {
+          animation: fadeInScale 0.6s ease-out 0.4s forwards;
+        }
+
+        .mobile-layout .product-image {
+          width: 100%;
+          max-width: 500px;
+          height: 300px;
+          border-radius: 20px;
+          object-fit: cover;
+          box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .strong-point-text h4 {
+          font-size: 1.05rem;
+        }
+
+        .strong-point-text p {
+          font-size: 0.9rem;
+          line-height: 1.5;
+        }
+
+        .strong-point-icon {
+          width: 55px;
+          height: 55px;
+        }
+
+        .strong-point-icon i {
+          font-size: 1.8rem;
+        }
+      }
+
+      /* Media query para móviles más grandes y tablets pequeñas (480px - 768px) */
+      @media (min-width: 480px) and (max-width: 768px) {
+        .mobile-layout .strong-points-grid {
+          padding: 0 30px;
+          max-width: 600px;
+          margin-left: auto;
+          margin-right: auto;
+        }
+
+        .mobile-layout .strong-point {
+          padding: 20px;
+        }
+
+        .mobile-layout .product-image-container {
+          max-width: 600px;
+          margin: 0 auto;
+        }
+      }
+
+      /* ========== SECCIÓN PROMOCIONES ========== */
+      .promociones-section {
+        padding: 80px 20px;
+        background: linear-gradient(135deg, #2d2d2d 0%, #1a1a1a 100%);
+        position: relative;
+        overflow: hidden;
+      }
+
+      .promociones-title {
+        font-size: 2.5rem;
+        font-weight: bold;
+        color: white;
+        text-align: center;
+        margin-bottom: 20px;
+      }
+
+      .promociones-subtitle {
+        text-align: center;
+        font-size: 1.1rem;
+        color: #38e07b;
+        margin-bottom: 50px;
+      }
+
+      .promociones-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 350px);
+        gap: 30px;
+        max-width: 1200px;
+        margin: 0 auto;
+        justify-content: center;
+      }
+
+      .promo-card {
+        background: white;
+        border-radius: 20px;
+        overflow: hidden;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        transition: all 0.4s ease;
+        position: relative;
+      }
+
+      .promo-card:hover {
+        transform: translateY(-10px) scale(1.02);
+        box-shadow: 0 20px 50px rgba(56, 224, 123, 0.3);
+      }
+
+      .promo-badge {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        background: linear-gradient(135deg, #dd3131 0%, #e82946 100%);
+        color: white;
+        padding: 8px 20px;
+        border-radius: 25px;
+        font-weight: bold;
+        font-size: 0.9rem;
+        z-index: 2;
+        box-shadow: 0 5px 15px rgba(255, 107, 107, 0.4);
+      }
+
+      .promo-image {
+        width: 100%;
+        height: 200px;
+        object-fit: cover;
+        transition: transform 0.4s ease;
+      }
+
+      .promo-card:hover .promo-image {
+        transform: scale(1.1);
+      }
+
+      .promo-content {
+        padding: 25px;
+      }
+
+      .promo-title {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: #000000 !important;
+        margin-bottom: 10px;
+      }
+
+      .promo-description {
+        font-size: 1rem;
+        color: #444 !important;
+        line-height: 1.6;
+        margin-bottom: 20px;
+      }
+
+      .promo-price-container {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        margin-bottom: 20px;
+      }
+
+      .promo-price-old {
+        font-size: 1.2rem;
+        color: #999;
+        text-decoration: line-through;
+      }
+
+      .promo-price-new {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #38e07b;
+      }
+
+      .promo-discount {
+        background: #38e07b;
+        color: white;
+        padding: 5px 12px;
+        border-radius: 8px;
+        font-weight: bold;
+        font-size: 0.9rem;
+      }
+
+      .promo-btn {
+        width: 100%;
+        padding: 15px;
+        background: linear-gradient(135deg, #38e07b 0%, #2bc96a 100%);
+        color: white;
+        border: none;
+        border-radius: 12px;
+        font-weight: bold;
+        font-size: 1.1rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 5px 15px rgba(56, 224, 123, 0.3);
+      }
+
+      .promo-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(56, 224, 123, 0.5);
+      }
+
+      .promo-timer {
+        text-align: center;
+        margin-top: 15px;
+        padding: 12px;
+        background: #424242;
+        border-radius: 8px;
+        font-weight: 600;
+        color: #ffffff;
+      }
+
+      .promo-timer i {
+        color: #de2d2d;
+        margin-right: 8px;
+      }
+
+      @media (max-width: 768px) {
+        .promociones-title {
+          font-size: 2rem;
+        }
+
+        .promociones-grid {
+          grid-template-columns: 1fr;
+          max-width: 350px;
+        }
+
+        .promo-price-new {
+          font-size: 1.6rem;
+        }
+      }
+
+      @media (min-width: 769px) and (max-width: 1100px) {
+        .promociones-grid {
+          grid-template-columns: repeat(2, 350px);
+        }
+      }
+
+      .how-to-order-section {
+        padding: 60px 20px;
+        background-color: rgb(32, 32, 32);
+        text-align: center;
+      }
+
+      .how-to-order-title {
+        font-size: 2.5rem;
+        font-weight: bold;
+        color: white;
+        margin-bottom: 60px;
+      }
+
+      /* Sección Lo Que Nos Define */
+      .values-section {
+        padding: 120px 20px;
+        background: linear-gradient(135deg, #e8fdf1 0%, #d4f8e3 100%);
+        border-radius: 0;
+        position: relative;
+        overflow: visible;
+      }
+
+      .values-title {
+        text-align: center;
+        font-size: 2.5rem;
+        font-weight: bold;
+        color: #2d2d2d;
+        margin-bottom: 20px;
+      }
+
+      .values-subtitle {
+        text-align: center;
+        font-size: 1.1rem;
+        color: #555;
+        margin-bottom: 50px;
+        max-width: 700px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+
+      .value-card {
+        position: relative;
+        background: white;
+        border-radius: 20px;
+        padding: 0;
+        text-align: center;
+        transition: all 0.5s ease;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        height: 400px;
+        border: 2px solid transparent;
+        overflow: hidden;
+        cursor: pointer;
+      }
+
+      .value-card-bg {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-size: cover;
+        background-position: center;
+        filter: grayscale(100%);
+        transition: filter 0.5s ease;
+        z-index: 1;
+      }
+
+      .value-card-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.3);
+        transition: background 0.5s ease;
+        z-index: 2;
+      }
+
+      .value-card-content {
+        position: relative;
+        z-index: 3;
+        padding: 40px 30px;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        color: white;
+        opacity: 0;
+        transform: translateY(20px);
+        transition: all 0.5s ease;
+      }
+
+      /* Hover en PC */
+      @media (min-width: 768px) {
+        .value-card:hover .value-card-bg {
+          filter: grayscale(0%);
+        }
+
+        .value-card:hover .value-card-overlay {
+          background: rgba(0, 0, 0, 0.5);
+        }
+
+        .value-card:hover .value-card-content {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      /* Activación en móvil con scroll */
+      @media (max-width: 767px) {
+        .value-card.active .value-card-bg {
+          filter: grayscale(0%);
+        }
+
+        .value-card.active .value-card-overlay {
+          background: rgba(0, 0, 0, 0.5);
+        }
+
+        .value-card.active .value-card-content {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .value-icon-container {
+        width: 80px;
+        height: 80px;
+        background: linear-gradient(135deg, #38e07b 0%, #2bc96a 100%);
+        border-radius: 15px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 20px;
+        transition: all 0.3s ease;
+        box-shadow: 0 5px 20px rgba(56, 224, 123, 0.5);
+      }
+
+      .value-icon-container i {
+        font-size: 2.5rem;
+        color: white;
+      }
+
+      .value-card-content h4 {
+        font-size: 1.8rem;
+        font-weight: bold;
+        color: white;
+        margin-bottom: 15px;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+      }
+
+      .value-card-content p {
+        font-size: 1rem;
+        line-height: 1.6;
+        color: white;
+        margin: 0;
+        text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.5);
+      }
+
+      @media (max-width: 768px) {
+        .values-title {
+          font-size: 1.8rem;
+        }
+
+        .values-subtitle {
+          font-size: 1rem;
+          margin-bottom: 40px;
+        }
+
+        .value-card {
+          padding: 30px 20px;
+          margin-bottom: 20px;
+        }
+
+        .value-icon-container {
+          width: 80px;
+          height: 80px;
+        }
+
+        .value-icon-container i {
+          font-size: 2.5rem;
+        }
+
+        .value-card h4 {
+          font-size: 1.2rem;
+        }
+
+        .value-card p {
+          font-size: 0.95rem;
+        }
+      }
+
+      .steps-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 30px;
+        flex-wrap: nowrap;
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 0 20px;
+      }
+
+      .step-item {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        flex: 1;
+        max-width: 350px;
+      }
+
+      .step-icon {
+        width: 80px;
+        height: 80px;
+        background: linear-gradient(135deg, #38e07b 0%, #2bc96a 100%);
+        border: 3px solid #38e07b;
+        border-radius: 15px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        transition: all 0.3s ease;
+      }
+
+      .step-icon:hover {
+        transform: scale(1.1);
+        box-shadow: 0 5px 20px rgba(56, 224, 123, 0.5);
+      }
+
+      .step-icon i {
+        font-size: 2.5rem;
+        color: white;
+      }
+
+      .step-text h3 {
+        font-size: 1.2rem;
+        font-weight: bold;
+        color: white;
+        margin-bottom: 8px;
+        text-align: left;
+      }
+
+      .step-text p {
+        font-size: 0.9rem;
+        color: #d0d0d0;
+        margin: 0;
+        text-align: left;
+        line-height: 1.5;
+      }
+
+      .step-divider {
+        font-size: 1.5rem;
+        color: #38e07b;
+        font-weight: bold;
+        flex-shrink: 0;
+      }
+
+      @media (max-width: 768px) {
+        .how-to-order-title {
+          font-size: 1.8rem;
+        }
+
+        .steps-container {
+          flex-direction: column;
+          gap: 30px;
+          flex-wrap: wrap;
+        }
+
+        .step-divider {
+          display: none;
+        }
+
+        .step-item {
+          max-width: 100%;
+        }
+      }
+      /* ========== SPLASH SCREEN ========== */
+      .splash-screen {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100vh;
+        background: linear-gradient(135deg, #38e07b 0%, #2bc96a 100%);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+        opacity: 1;
+      }
+
+      .splash-screen.fade-out {
+        animation: backgroundFadeOut 1s ease-in forwards;
+      }
+
+      .splash-content {
+        text-align: center;
+        width: 100%;
+        max-width: 500px;
+        padding: 0 20px;
+      }
+
+      .logo-container {
+        opacity: 0;
+        animation: logoFadeIn 1.5s ease-out 0.5s forwards;
+      }
+
+      .logo-circle {
+        width: 200px;
+        height: 200px;
+        background: transparent;
+        border-radius: 50%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin: 0 auto 80px;
+        box-shadow: none;
+      }
+
+      .logo-circle img {
+        width: 340px;
+        height: 340px;
+        object-fit: contain;
+        filter: drop-shadow(0 10px 30px rgba(0, 0, 0, 0.3));
+      }
+
+      .logo-icon {
+        font-size: 4rem;
+        color: #38e07b;
+        animation: iconFloat 2s ease-in-out infinite;
+      }
+
+      .splash-title {
+        color: white;
+        font-size: 3rem;
+        font-weight: 800;
+        margin-bottom: 10px;
+        text-shadow: 3px 3px 10px rgba(0, 0, 0, 0.2);
+        letter-spacing: 2px;
+      }
+
+      .splash-slogan {
+        color: rgba(255, 255, 255, 0.95);
+        font-size: 1.3rem;
+        font-weight: 500;
+        margin-bottom: 40px;
+        text-shadow: 2px 2px 6px rgba(0, 0, 0, 0.15);
+      }
+
+      /* Barra de carga */
+      .loading-bar-container {
+        width: 100%;
+        height: 6px;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 10px;
+        overflow: hidden;
+        margin-top: 40px;
+        opacity: 0;
+        animation: barFadeIn 0.5s ease-out 1s forwards;
+      }
+
+      .loading-bar {
+        height: 100%;
+        background: linear-gradient(
+          90deg,
+          rgba(255, 255, 255, 0.8) 0%,
+          rgba(255, 255, 255, 1) 50%,
+          rgba(255, 255, 255, 0.8) 100%
+        );
+        border-radius: 10px;
+        width: 0%;
+        animation: loadingProgress 2.5s ease-out forwards;
+        box-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+      }
+
+      /* Animación del contenido principal */
+      .main-content {
+        opacity: 0;
+        visibility: hidden;
+      }
+
+      .main-content.fade-in {
+        visibility: visible;
+        animation: contentFadeIn 1s ease-out forwards;
+      }
+
+      /* ========== KEYFRAMES ========== */
+
+      /* Fondo entra difuminado */
+      @keyframes backgroundFadeIn {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
+      }
+
+      /* Fondo sale difuminado */
+      @keyframes backgroundFadeOut {
+        from {
+          opacity: 1;
+        }
+        to {
+          opacity: 0;
+        }
+      }
+
+      /* Logo y texto aparecen difuminados */
+      @keyframes logoFadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(30px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      /* Icono flotante suave */
+      @keyframes iconFloat {
+        0%,
+        100% {
+          transform: translateY(0);
+        }
+        50% {
+          transform: translateY(-10px);
+        }
+      }
+
+      /* Barra de carga aparece */
+      @keyframes barFadeIn {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
+      }
+
+      /* Barra se llena */
+      @keyframes loadingProgress {
+        from {
+          width: 0%;
+        }
+        to {
+          width: 100%;
+        }
+      }
+
+      /* Contenido entra difuminado */
+      @keyframes contentFadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(30px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      /* Responsive para móvil */
+      @media (max-width: 768px) {
+        .logo-circle {
+          width: 120px;
+          height: 120px;
+        }
+
+        .logo-circle img {
+          width: 240px;
+          height: 240px;
+        }
+
+        .logo-icon {
+          font-size: 3rem;
+        }
+
+        .splash-title {
+          font-size: 2.2rem;
+          letter-spacing: 1px;
+        }
+
+        .splash-slogan {
+          font-size: 1.1rem;
+        }
+
+        .loading-bar-container {
+          height: 5px;
+        }
+      }
+
+      /* ========== GALERÍA ========== */
+      .row.g-3.mb-5 {
+        margin-bottom: 0 !important;
+      }
+
+      .row.g-3.mb-5 img {
+        width: 100%;
+        height: 300px;
+        object-fit: cover;
+      }
+
+      /* ========== FOOTER PROFESIONAL ========== */
+      .footer-section {
+        background: linear-gradient(180deg, #1a1a1a 0%, #0d0d0d 100%);
+        color: #b0b0b0;
+        padding: 60px 0 0 0;
+        margin-top: 0;
+        width: 100%;
+      }
+
+      .footer-content {
+        max-width: 100%;
+        margin: 0 auto;
+        padding: 0 40px;
+      }
+
+      .footer-content .row {
+        max-width: 1400px;
+        margin: 0 auto;
+      }
+
+      .footer-brand h3 {
+        color: white;
+        font-size: 2rem;
+        font-weight: 800;
+        margin-bottom: 10px;
+      }
+
+      .footer-slogan {
+        color: #38e07b;
+        font-size: 1rem;
+        font-weight: 600;
+        margin-bottom: 15px;
+      }
+
+      .footer-description {
+        color: #888;
+        font-size: 0.95rem;
+        line-height: 1.6;
+        margin-bottom: 25px;
+      }
+
+      /* Redes sociales */
+      .footer-social {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        max-width: 200px; /* 4 iconos x 40px + 3 gaps x 12px = 196px */
+      }
+
+      .social-icon {
+        width: 40px;
+        height: 40px;
+        background: #2a2a2a;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #b0b0b0;
+        transition: all 0.3s ease;
+        text-decoration: none;
+      }
+
+      .social-icon:hover {
+        background: #38e07b;
+        color: white;
+        transform: translateY(-3px);
+      }
+
+      /* Títulos de columnas */
+      .footer-title {
+        color: white;
+        font-size: 1.2rem;
+        font-weight: 700;
+        margin-bottom: 20px;
+        position: relative;
+        padding-bottom: 10px;
+      }
+
+      .footer-title::after {
+        content: "";
+        position: absolute;
+        left: 0;
+        bottom: 0;
+        width: 50px;
+        height: 3px;
+        background: #38e07b;
+        border-radius: 2px;
+      }
+
+      /* Enlaces */
+      .footer-links {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+      }
+
+      .footer-links li {
+        margin-bottom: 12px;
+      }
+
+      .footer-links a {
+        color: #888;
+        text-decoration: none;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.3s ease;
+        font-size: 0.95rem;
+      }
+
+      .footer-links a i {
+        font-size: 0.7rem;
+        color: #38e07b;
+      }
+
+      .footer-links a:hover {
+        color: #38e07b;
+        padding-left: 5px;
+      }
+
+      /* Horarios */
+      .footer-schedule {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+      }
+
+      .footer-schedule li {
+        display: flex;
+        gap: 15px;
+        margin-bottom: 15px;
+        align-items: flex-start;
+      }
+
+      .footer-schedule i {
+        color: #38e07b;
+        font-size: 1.2rem;
+        margin-top: 2px;
+      }
+
+      .footer-schedule strong {
+        color: white;
+        display: block;
+        font-size: 0.95rem;
+      }
+
+      .footer-schedule span {
+        color: #888;
+        font-size: 0.9rem;
+      }
+
+      /* Contacto */
+      .footer-contact {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+      }
+
+      .footer-contact li {
+        display: flex;
+        gap: 15px;
+        margin-bottom: 15px;
+        align-items: flex-start;
+      }
+
+      .footer-contact i {
+        color: #38e07b;
+        font-size: 1.1rem;
+        margin-top: 2px;
+        min-width: 20px;
+      }
+
+      .footer-contact span {
+        color: #888;
+        font-size: 0.95rem;
+        line-height: 1.5;
+      }
+
+      /* Mapa de Google */
+      .footer-map {
+        width: 100%;
+        height: 250px;
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+        margin-top: 15px;
+      }
+
+      .footer-map iframe {
+        width: 100%;
+        height: 100%;
+        display: block;
+      }
+
+      /* Línea divisoria */
+      .footer-divider {
+        height: 1px;
+        background: linear-gradient(
+          90deg,
+          transparent 0%,
+          #2a2a2a 20%,
+          #2a2a2a 80%,
+          transparent 100%
+        );
+        margin: 40px 0 25px 0;
+      }
+
+      /* Bottom del footer */
+      .footer-bottom {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 25px 0;
+        border-top: 1px solid #1a1a1a;
+        background: #0a0a0a;
+        margin: 0 -20px;
+        padding-left: 20px;
+        padding-right: 20px;
+      }
+
+      .footer-bottom p {
+        margin: 0;
+        color: #666;
+        font-size: 0.9rem;
+      }
+
+      .footer-bottom-links {
+        display: flex;
+        gap: 15px;
+        align-items: center;
+      }
+
+      .footer-bottom-links a {
+        color: #888;
+        text-decoration: none;
+        font-size: 0.9rem;
+        transition: color 0.3s ease;
+      }
+
+      .footer-bottom-links a:hover {
+        color: #38e07b;
+      }
+
+      .footer-bottom-links span {
+        color: #444;
+      }
+
+      /* Responsive */
+      @media (max-width: 768px) {
+        .footer-section {
+          padding: 40px 0 0 0;
+          margin-top: 0;
+          text-align: center;
+        }
+
+        .footer-content {
+          padding: 0 20px;
+        }
+
+        .footer-brand h3 {
+          font-size: 1.5rem;
+        }
+
+        .footer-title {
+          font-size: 1.1rem;
+          margin-top: 30px;
+        }
+
+        .footer-title::after {
+          left: 50%;
+          transform: translateX(-50%);
+        }
+
+        .footer-links,
+        .footer-schedule,
+        .footer-contact {
+          text-align: center;
+        }
+
+        .footer-links a {
+          justify-content: center;
+        }
+
+        .footer-schedule li,
+        .footer-contact li {
+          justify-content: center;
+        }
+
+        .footer-map {
+          height: 200px;
+          margin-top: 20px;
+        }
+
+        .footer-bottom {
+          flex-direction: column;
+          gap: 15px;
+          text-align: center;
+        }
+
+        .footer-bottom-links {
+          flex-wrap: wrap;
+          justify-content: center;
+        }
+
+        .footer-social {
+          justify-content: center;
+          max-width: 260px; /* 5 iconos x 40px + 4 gaps x 12px = 248px */
+        }
+      }
+
+      /* ========== ANIMACIONES DE SCROLL ========== */
+      .scroll-animation {
+        opacity: 0;
+        transform: translateY(50px);
+        transition:
+          opacity 0.8s ease-out,
+          transform 0.8s ease-out;
+      }
+
+      .scroll-animation.animate {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      /* Variaciones de animación */
+      .fade-in-left {
+        opacity: 0;
+        transform: translateX(-50px);
+        transition:
+          opacity 0.8s ease-out,
+          transform 0.8s ease-out;
+      }
+
+      .fade-in-left.animate {
+        opacity: 1;
+        transform: translateX(0);
+      }
+
+      .fade-in-right {
+        opacity: 0;
+        transform: translateX(50px);
+        transition:
+          opacity 0.8s ease-out,
+          transform 0.8s ease-out;
+      }
+
+      .fade-in-right.animate {
+        opacity: 1;
+        transform: translateX(0);
+      }
+
+      .scale-up {
+        opacity: 0;
+        transform: scale(0.9);
+        transition:
+          opacity 0.8s ease-out,
+          transform 0.8s ease-out;
+      }
+
+      .scale-up.animate {
+        opacity: 1;
+        transform: scale(1);
+      }
+
+      /* ========== TARJETA 3D INTERACTIVA ========== */
+      .tarjeta-3d-section {
+        padding: 10px 10px;
+        background: transparent;
+        text-align: center;
+      }
+
+      .tarjeta-3d-title {
+        font-size: 2.5rem;
+        font-weight: bold;
+        color: #38e07b;
+        margin-top: 60px;
+        margin-bottom: 20px;
+        text-align: center;
+      }
+
+      .iconos-movimiento {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        background: rgba(56, 224, 123, 0.9);
+        color: white;
+        padding: 15px 20px;
+        border-radius: 15px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        box-shadow: 0 5px 20px rgba(56, 224, 123, 0.4);
+        z-index: 10;
+        animation: pulseIcon 2s ease-in-out infinite;
+        transition: opacity 0.5s ease;
+      }
+
+      .iconos-movimiento i {
+        font-size: 1.5rem;
+        animation: moveHand 1.5s ease-in-out infinite;
+      }
+
+      @keyframes pulseIcon {
+        0%,
+        100% {
+          transform: scale(1);
+        }
+        50% {
+          transform: scale(1.05);
+        }
+      }
+
+      @keyframes moveHand {
+        0%,
+        100% {
+          transform: translate(0, 0);
+        }
+        25% {
+          transform: translate(5px, -5px);
+        }
+        50% {
+          transform: translate(10px, 0);
+        }
+        75% {
+          transform: translate(5px, 5px);
+        }
+      }
+
+      .iconos-movimiento.oculto {
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      .escena-3d {
+        width: 100%;
+        height: 450px;
+        perspective: 1000px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 30px 0;
+        padding: 0 40px;
+      }
+
+      .tarjeta-3d {
+        width: 400px;
+        height: 250px;
+        position: relative;
+        transform-style: preserve-3d;
+        transition: transform 0.1s ease-out;
+        cursor: grab;
+      }
+
+      .tarjeta-3d:active {
+        cursor: grabbing;
+      }
+
+      .cara-tarjeta {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        backface-visibility: hidden;
+        border-radius: 15px;
+        box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+      }
+
+      .cara-frente {
+        transform: translateZ(2px);
+      }
+
+      .cara-atras {
+        transform: rotateY(180deg) translateZ(2px);
+      }
+
+      .cara-tarjeta img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      .placeholder-imagen {
+        text-align: center;
+        color: #6c757d;
+        padding: 20px;
+      }
+
+      .placeholder-imagen i {
+        font-size: 60px;
+        margin-bottom: 15px;
+        opacity: 0.5;
+      }
+
+      .controles-tarjeta {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 0 20px;
+      }
+
+      .boton-carga-wrapper {
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 15px;
+        padding: 25px;
+        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+        margin-bottom: 20px;
+      }
+
+      .boton-carga {
+        position: relative;
+        overflow: hidden;
+        display: inline-block;
+        width: 100%;
+      }
+
+      .boton-carga input[type="file"] {
+        position: absolute;
+        left: -9999px;
+      }
+
+      .boton-carga label {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        padding: 12px 20px;
+        background: linear-gradient(135deg, #38e07b 0%, #2bc96a 100%);
+        color: white;
+        border-radius: 10px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-weight: 600;
+        width: 100%;
+      }
+
+      .boton-carga label:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(56, 224, 123, 0.4);
+      }
+
+      .badge-preview {
+        display: inline-block;
+        padding: 5px 12px;
+        background: #38e07b;
+        color: white;
+        border-radius: 20px;
+        font-size: 12px;
+        margin-top: 10px;
+      }
+
+      .btn-reiniciar-tarjeta {
+        background: rgba(255, 255, 255, 0.95);
+        color: #333;
+        border: 2px solid white;
+        padding: 12px 30px;
+        border-radius: 10px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+      }
+
+      .btn-reiniciar-tarjeta:hover {
+        background: white;
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+      }
+
+      @media (max-width: 768px) {
+        .escena-3d {
+          height: 350px;
+        }
+
+        .tarjeta-3d {
+          width: 320px;
+          height: 200px;
+        }
+
+        .placeholder-imagen i {
+          font-size: 40px;
+        }
+
+        .tarjeta-3d-title {
+          font-size: 2rem;
+        }
+
+        .iconos-movimiento {
+          top: 10px;
+          right: 10px;
+          padding: 12px 15px;
+          font-size: 0.8rem;
+        }
+
+        .iconos-movimiento i {
+          font-size: 1.2rem;
+        }
+      }
+
+      @media (max-width: 576px) {
+        .tarjeta-3d {
+          width: 280px;
+          height: 175px;
+        }
+
+        .escena-3d {
+          height: 300px;
+        }
+
+        .iconos-movimiento {
+          padding: 10px 12px;
+          font-size: 0.75rem;
+        }
+
+        .iconos-movimiento p {
+          display: none;
+        }
+      }
+
+      /* ========== TESTIMONIOS ========== */
+      .testimonios-section {
+        padding: 120px 20px;
+        background: linear-gradient(135deg, #e8fdf1 0%, #d4f8e3 100%);
+        position: relative;
+        overflow: visible;
+        margin-top: 60px;
+      }
+
+      .testimonios-title {
+        font-size: 2.5rem;
+        font-weight: bold;
+        color: #2d2d2d;
+        text-align: center;
+        margin-bottom: 50px;
+      }
+
+      .testimonios-container {
+        position: relative;
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 60px;
+      }
+
+      .testimonios-wrapper {
+        overflow: hidden;
+        position: relative;
+      }
+
+      .testimonios-track {
+        display: flex;
+        transition: transform 0.5s ease;
+        gap: 30px;
+      }
+
+      .testimonio-card {
+        min-width: 350px;
+        max-width: 350px;
+        width: 350px;
+        height: 280px;
+        background: white;
+        border-radius: 20px;
+        padding: 30px 25px;
+        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+        transition:
+          transform 0.3s ease,
+          box-shadow 0.3s ease;
+        flex-shrink: 0;
+      }
+
+      .testimonio-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 30px rgba(56, 224, 123, 0.2);
+      }
+
+      .testimonio-header {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+      }
+
+      .testimonio-avatar {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #38e07b 0%, #2bc96a 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        box-shadow: 0 5px 15px rgba(56, 224, 123, 0.3);
+      }
+
+      .testimonio-avatar span {
+        font-size: 1.2rem;
+        font-weight: bold;
+        color: white;
+      }
+
+      .testimonio-info h4 {
+        font-size: 1.1rem;
+        font-weight: bold;
+        color: #2d2d2d;
+        margin: 0;
+      }
+
+      .testimonio-estrellas {
+        display: flex;
+        gap: 5px;
+        margin-top: 5px;
+      }
+
+      .testimonio-estrellas i {
+        color: #ffc107;
+        font-size: 1rem;
+      }
+
+      .testimonio-texto {
+        font-size: 0.95rem;
+        color: #555;
+        line-height: 1.6;
+        font-style: italic;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: -webkit-box;
+        -webkit-line-clamp: 4;
+        -webkit-box-orient: vertical;
+        flex: 1;
+      }
+
+      .testimonio-nav {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 50px;
+        height: 50px;
+        background: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        transition: all 0.3s ease;
+        z-index: 10;
+      }
+
+      .testimonio-nav:hover {
+        background: #38e07b;
+        transform: translateY(-50%) scale(1.1);
+      }
+
+      .testimonio-nav:hover i {
+        color: white;
+      }
+
+      .testimonio-nav i {
+        font-size: 1.5rem;
+        color: #2d2d2d;
+        transition: color 0.3s ease;
+      }
+
+      .testimonio-nav.prev {
+        left: 0;
+      }
+
+      .testimonio-nav.next {
+        right: 0;
+      }
+
+      .testimonio-dots {
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+        margin-top: 40px;
+      }
+
+      .testimonio-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: #ddd;
+        cursor: pointer;
+        transition: all 0.3s ease;
+      }
+
+      .testimonio-dot.active {
+        background: #38e07b;
+        width: 30px;
+        border-radius: 10px;
+      }
+
+      @media (max-width: 992px) {
+        .testimonio-card {
+          min-width: 320px;
+          max-width: 320px;
+          width: 320px;
+          height: 280px;
+        }
+
+        .testimonios-title {
+          font-size: 2rem;
+        }
+      }
+
+      @media (max-width: 768px) {
+        .testimonio-card {
+          min-width: 300px;
+          max-width: 300px;
+          width: 300px;
+          height: 280px;
+          padding: 25px 20px;
+        }
+
+        .testimonio-texto {
+          font-size: 0.9rem;
+          line-height: 1.5;
+          overflow: hidden;
+          display: -webkit-box;
+          -webkit-line-clamp: 4;
+          line-clamp: 4;
+          -webkit-box-orient: vertical;
+        }
+
+        .testimonio-avatar {
+          width: 50px;
+          height: 50px;
+        }
+
+        .testimonio-avatar span {
+          font-size: 1.2rem;
+        }
+
+        .testimonio-info h4 {
+          font-size: 1rem;
+        }
+
+        .testimonio-estrellas i {
+          font-size: 0.85rem;
+        }
+
+        .testimonios-container {
+          padding: 0 20px;
+        }
+
+        .testimonio-nav {
+          display: none;
+        }
+
+        .testimonio-nav i {
+          font-size: 1.2rem;
+        }
+
+        .testimonios-title {
+          font-size: 1.8rem;
+        }
+      }
+
+      /* ========== LOGO LOOP ========== */
+      .logo-loop-section {
+        background: rgb(32, 32, 32);
+        padding: 60px 0;
+        overflow: hidden;
+        position: relative;
+      }
+
+      .logo-loop-title {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #38e07b;
+        text-align: center;
+        margin-bottom: 40px;
+      }
+
+      .logo-loop-container {
+        display: flex;
+        width: fit-content;
+        animation: scrollLogos 20s linear infinite;
+      }
+
+      .logo-loop-track {
+        display: flex;
+        gap: 60px;
+        padding: 0 30px;
+      }
+
+      .logo-item {
+        flex-shrink: 0;
+        width: 150px;
+        height: 100px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: white;
+        border-radius: 15px;
+        padding: 20px;
+        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+        transition:
+          transform 0.3s ease,
+          box-shadow 0.3s ease;
+      }
+
+      .logo-item:hover {
+        transform: translateY(-10px);
+        box-shadow: 0 10px 30px rgba(56, 224, 123, 0.4);
+      }
+
+      .logo-item img {
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+        filter: grayscale(100%);
+        transition: filter 0.3s ease;
+      }
+
+      .logo-item:hover img {
+        filter: grayscale(0%);
+      }
+
+      @keyframes scrollLogos {
+        0% {
+          transform: translateX(0);
+        }
+        100% {
+          transform: translateX(-50%);
+        }
+      }
+
+      @media (max-width: 768px) {
+        .logo-loop-title {
+          font-size: 1.6rem;
+        }
+
+        .logo-item {
+          width: 120px;
+          height: 80px;
+          padding: 15px;
+        }
+
+        .logo-loop-track {
+          gap: 40px;
+        }
+      }
+
+      @media (max-width: 576px) {
+        .logo-item {
+          width: 100px;
+          height: 70px;
+          padding: 12px;
+        }
+
+        .logo-loop-track {
+          gap: 30px;
+        }
+      }
+
+      /* ========== BADGE ESTADO RESTAURANTE ========== */
+      .status-badge {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 1000;
+        padding: 12px 20px;
+        border-radius: 25px;
+        font-weight: 600;
+        font-size: 14px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        animation: slideInRight 0.5s ease-out;
+      }
+
+      .status-badge.open {
+        background: linear-gradient(135deg, #38e07b 0%, #2bc866 100%);
+        color: white;
+      }
+
+      .status-badge.closed {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        color: white;
+      }
+
+      .status-badge i {
+        font-size: 16px;
+      }
+
+      @keyframes slideInRight {
+        from {
+          transform: translateX(100px);
+          opacity: 0;
+        }
+        to {
+          transform: translateX(0);
+          opacity: 1;
+        }
+      }
+
+      @media (max-width: 768px) {
+        .status-badge {
+          top: 10px;
+          right: 10px;
+          padding: 10px 16px;
+          font-size: 12px;
+        }
+      }
+
+      /* ========== WAVE DIVIDERS (DIVISIONES CON ONDAS) ========== */
+      .offer-section::before,
+      .offer-section::after,
+      .values-section::before,
+      .values-section::after,
+      .testimonios-section::before,
+      .testimonios-section::after {
+        content: "";
+        position: absolute;
+        left: 0;
+        width: 100%;
+        height: 60px;
+        background-size: 100% 100%;
+        background-repeat: no-repeat;
+        pointer-events: none;
+        z-index: 1;
+      }
+
+      .offer-section::before,
+      .values-section::before,
+      .testimonios-section::before {
+        top: 0;
+      }
+
+      .offer-section::after,
+      .values-section::after,
+      .testimonios-section::after {
+        bottom: 0;
+      }
+
+      /* Offer section waves - smooth S-curve */
+      .offer-section::before {
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 60' preserveAspectRatio='none'%3E%3Cpath fill='%23202020' d='M0,0 H1440 V20 C1200,55 720,5 0,45 Z'/%3E%3C/svg%3E");
+      }
+
+      .offer-section::after {
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 60' preserveAspectRatio='none'%3E%3Cpath fill='%23202020' d='M0,15 C360,55 1080,5 1440,40 V60 H0 Z'/%3E%3C/svg%3E");
+      }
+
+      /* Values section waves - mountain peaks */
+      .values-section::before {
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 60' preserveAspectRatio='none'%3E%3Cpath fill='%23202020' d='M0,0 H1440 V15 C1080,60 360,0 0,50 Z'/%3E%3C/svg%3E");
+      }
+
+      .values-section::after {
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 60' preserveAspectRatio='none'%3E%3Cpath fill='%23202020' d='M0,10 C480,60 960,0 1440,45 V60 H0 Z'/%3E%3C/svg%3E");
+      }
+
+      /* Testimonios section waves - triple wave */
+      .testimonios-section::before {
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 60' preserveAspectRatio='none'%3E%3Cpath fill='%23202020' d='M0,0 H1440 V25 Q1080,0 720,40 Q360,60 0,35 Z'/%3E%3C/svg%3E");
+      }
+
+      .testimonios-section::after {
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 60' preserveAspectRatio='none'%3E%3Cpath fill='%23202020' d='M0,25 Q360,0 720,20 Q1080,60 1440,35 V60 H0 Z'/%3E%3C/svg%3E");
+      }
+
+      @media (max-width: 768px) {
+        .offer-section::before,
+        .offer-section::after,
+        .values-section::before,
+        .values-section::after,
+        .testimonios-section::before,
+        .testimonios-section::after {
+          height: 40px;
+        }
+
+        .offer-section,
+        .values-section,
+        .testimonios-section {
+          padding-top: 80px;
+          padding-bottom: 80px;
+        }
+      }
+
+      /* ========== BOTÓN VOLVER AL INICIO ========== */
+      .footer-section {
+        position: relative;
+      }
+
+      .btn-back-to-top-wrapper {
+        position: absolute;
+        top: 0;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 10;
+      }
+
+      .btn-back-to-top {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        background: #1db954;
+        color: #fff;
+        border: 3px solid #1a1a1a;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        box-shadow: 0 4px 15px rgba(29, 185, 84, 0.4);
+        transition: all 0.3s ease;
+      }
+
+      .btn-back-to-top:hover {
+        background: #17a347;
+        transform: translateY(-4px);
+        box-shadow: 0 6px 20px rgba(29, 185, 84, 0.5);
+      }
+
+      @media (max-width: 768px) {
+        .btn-back-to-top {
+          width: 44px;
+          height: 44px;
+          font-size: 18px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Badge de Estado del Restaurante -->
+    <div
+      th:class="${isOpen ? 'status-badge open' : 'status-badge closed'}"
+      th:if="${todayHours != null}"
+    >
+      <i th:class="${isOpen ? 'fas fa-clock' : 'fas fa-times-circle'}"></i>
+      <span th:text="${isOpen ? 'Abierto Ahora' : 'Cerrado'}">Estado</span>
+    </div>
+
+    <!-- Splash Screen -->
+    <div class="splash-screen" id="splashScreen">
+      <div class="splash-content">
+        <div class="logo-container">
+          <div class="logo-circle">
+            <img
+              th:if="${systemConfig != null and systemConfig.restaurantLogoUrl != null and !systemConfig.restaurantLogoUrl.isEmpty()}"
+              th:src="${@cloudinaryUrl.logoLarge(systemConfig.restaurantLogoUrl)}"
+              th:alt="${systemConfig.restaurantName}"
+            />
+          </div>
+          <h1 class="splash-title" th:text="${systemConfig.restaurantName}">
+            El Restaurante
+          </h1>
+          <p class="splash-slogan" th:text="${systemConfig.slogan}">
+            Sabor casero
+          </p>
+        </div>
+
+        <!-- Barra de carga -->
+        <div class="loading-bar-container">
+          <div class="loading-bar"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Contenido Principal -->
+    <div id="mainContent" class="main-content">
+      <!-- Hero Section -->
+      <section class="hero-section">
+        <div class="hero-wrapper">
+          <div class="hero-content">
+            <h1
+              class="hero-title"
+              id="heroTitle"
+              th:attr="data-name=${systemConfig.restaurantName}"
+            >
+              <!-- El JavaScript generará las letras dinámicamente -->
+            </h1>
+            <p class="hero-subtitle" th:text="${systemConfig.slogan}">
+              Sabor casero, hecho con amor
+            </p>
+            <p class="hero-description">
+              Ordena en línea y recibe en tu puerta o recoge en tienda.
+            </p>
+            <div class="hero-buttons">
+              <a href="/home/menu" class="btn-primary">Ver Menú Completo</a>
+              <a
+                th:href="@{${hasCustomerModule ? '/client/login' : '/login'}}"
+                class="btn-secondary"
+                >Iniciar Sesión</a
+              >
+            </div>
+          </div>
+          <div class="hero-logo">
+            <div class="hero-logo-circle">
+              <img
+                th:if="${systemConfig != null and systemConfig.restaurantLogoUrl != null and !systemConfig.restaurantLogoUrl.isEmpty()}"
+                th:src="${@cloudinaryUrl.logoLarge(systemConfig.restaurantLogoUrl)}"
+                th:alt="${systemConfig.restaurantName + ' Logo'}"
+              />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Contenedor blanco con esquinas redondeadas -->
+      <div class="white-container">
+        <div class="container">
+          <!-- Carrusel automático -->
+          <div
+            id="restaurantCarousel"
+            class="carousel slide carousel-container"
+            data-bs-ride="carousel"
+            data-bs-interval="3000"
+          >
+            <div class="carousel-indicators">
+              <button
+                type="button"
+                data-bs-target="#restaurantCarousel"
+                data-bs-slide-to="0"
+                class="active"
+              ></button>
+              <button
+                type="button"
+                data-bs-target="#restaurantCarousel"
+                data-bs-slide-to="1"
+              ></button>
+              <button
+                type="button"
+                data-bs-target="#restaurantCarousel"
+                data-bs-slide-to="2"
+              ></button>
+              <button
+                type="button"
+                data-bs-target="#restaurantCarousel"
+                data-bs-slide-to="3"
+              ></button>
+            </div>
+
+            <div class="carousel-inner">
+              <!-- Slide 1: Comida Gourmet -->
+              <div class="carousel-item active">
+                <img
+                  th:src="${landingImages != null and landingImages.containsKey('CAROUSEL_1')} ? ${landingImages['CAROUSEL_1']} : @{/images/carrucel1.jpg}"
+                  src="images/carrucel1.jpg"
+                  class="carousel-image"
+                  alt="Comida Gourmet"
+                />
+                <div class="carousel-caption">
+                  <h2 class="carousel-title">Comida Gourmet</h2>
+                  <p class="carousel-subtitle">
+                    Experiencias culinarias únicas preparadas por nuestros chefs
+                    expertos
+                  </p>
+                </div>
+              </div>
+
+              <!-- Slide 2: Bebidas Artesanales -->
+              <div class="carousel-item">
+                <img
+                  th:src="${landingImages != null and landingImages.containsKey('CAROUSEL_2')} ? ${landingImages['CAROUSEL_2']} : @{/images/carrucel2.jpg}"
+                  src="images/carrucel2.jpg"
+                  class="carousel-image"
+                  alt="Bebidas Artesanales"
+                />
+                <div class="carousel-caption">
+                  <h2 class="carousel-title">Bebidas Artesanales</h2>
+                  <p class="carousel-subtitle">
+                    Cócteles únicos y refrescantes preparados con ingredientes
+                    frescos
+                  </p>
+                </div>
+              </div>
+
+              <!-- Slide 3: Cervezas Artesanales -->
+              <div class="carousel-item">
+                <img
+                  th:src="${landingImages != null and landingImages.containsKey('CAROUSEL_3')} ? ${landingImages['CAROUSEL_3']} : @{/images/carrucel3.jpg}"
+                  src="images/carrucel3.jpg"
+                  class="carousel-image"
+                  alt="Cervezas Artesanales"
+                />
+                <div class="carousel-caption">
+                  <h2 class="carousel-title">Cervezas Artesanales</h2>
+                  <p class="carousel-subtitle">
+                    Amplia selección de cervezas artesanales locales e
+                    importadas
+                  </p>
+                </div>
+              </div>
+
+              <!-- Slide 4: Postres Deliciosos -->
+              <div class="carousel-item">
+                <img
+                  th:src="${landingImages != null and landingImages.containsKey('CAROUSEL_4')} ? ${landingImages['CAROUSEL_4']} : @{/images/carrucel4.jpg}"
+                  src="images/carrucel4.jpg"
+                  class="carousel-image"
+                  alt="Postres"
+                />
+                <div class="carousel-caption">
+                  <h2 class="carousel-title">isitos</h2>
+                  <p class="carousel-subtitle">
+                    Dulces tentaciones hechas en casa para endulzar tu día
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Sección Sobre Nosotros -->
+          <div class="section-header scroll-animation">
+            <h2 class="section-title">Nuestra Historia</h2>
+          </div>
+
+          <div class="row mb-5">
+            <div class="col-lg-6 mb-4 fade-in-left">
+              <img
+                th:src="${landingImages != null and landingImages.containsKey('HISTORY_1')} ? ${landingImages['HISTORY_1']} : @{/images/LogoNombre.png}"
+                src="images/LogoNombre.png"
+                alt="Interior del restaurante"
+                class="img-fluid rounded-3 shadow"
+              />
+            </div>
+            <div class="col-lg-6 fade-in-right">
+              <h3 class="mb-3">Bienvenidos a El Buen Sazón</h3>
+              <p class="text-muted" style="line-height: 1.8">
+                Desde 2015, El Buen Sazón ha sido el lugar donde la pasión por
+                la buena comida se encuentra con la hospitalidad excepcional.
+                Nuestro restaurante nació del sueño de crear un espacio donde
+                cada platillo cuenta una historia y cada visita se convierte en
+                un recuerdo inolvidable.
+              </p>
+              <p class="text-muted" style="line-height: 1.8">
+                Ubicados en el corazón de Nueva York, nos enorgullecemos de usar
+                ingredientes frescos y locales para crear experiencias
+                culinarias que deleitan los sentidos. Cada receta es
+                cuidadosamente elaborada por nuestro equipo de chefs con años de
+                experiencia internacional.
+              </p>
+            </div>
+          </div>
+
+          <!-- Sección Empleados del Mes -->
+          <div
+            class="employee-section-header"
+            style="margin-top: 60px; margin-bottom: 50px"
+          >
+            <h2 class="employee-section-title">Empleados del Mes</h2>
+            <p class="employee-section-subtitle">
+              Reconocemos el esfuerzo y dedicación de nuestro equipo excepcional
+            </p>
+          </div>
+
+          <div class="row mb-5" style="padding: 0 40px">
+            <!-- Mesero del Mes -->
+            <div class="col-lg-3 col-md-6 mb-4 fade-in-left">
+              <div class="employee-card">
+                <div class="employee-badge">
+                  <i class="fas fa-trophy"></i>
+                  <span>Mesero del Mes</span>
+                </div>
+
+                <div th:if="${waiterOfMonth != null}">
+                  <div class="employee-photo-container">
+                    <div class="employee-photo-default">
+                      <span
+                        th:text="${waiterOfMonth.employee.initials}"
+                        style="font-size: 3rem; font-weight: bold"
+                        >NN</span
+                      >
+                    </div>
+                  </div>
+
+                  <h4
+                    class="employee-name"
+                    th:text="${waiterOfMonth.employee.nombre + ' ' + waiterOfMonth.employee.apellido}"
+                  >
+                    Nombre del Empleado
+                  </h4>
+
+                  <div class="employee-role">
+                    <i class="fas fa-concierge-bell"></i>
+                    <span>Mesero</span>
+                  </div>
+                </div>
+
+                <div
+                  th:if="${waiterOfMonth == null}"
+                  class="employee-empty-state"
+                >
+                  <i class="fas fa-award"></i>
+                  <p>Aún no hay mesero del mes</p>
+                  <small>Las estadísticas se actualizarán pronto</small>
+                </div>
+              </div>
+            </div>
+
+            <!-- Chef del Mes -->
+            <div class="col-lg-3 col-md-6 mb-4 scale-up">
+              <div class="employee-card">
+                <div class="employee-badge chef-badge">
+                  <i class="fas fa-trophy"></i>
+                  <span>Chef del Mes</span>
+                </div>
+
+                <div th:if="${chefOfMonth != null}">
+                  <div class="employee-photo-container">
+                    <div class="employee-photo-default chef-photo">
+                      <span
+                        th:text="${chefOfMonth.employee.initials}"
+                        style="font-size: 3rem; font-weight: bold"
+                        >NN</span
+                      >
+                    </div>
+                  </div>
+
+                  <h4
+                    class="employee-name"
+                    th:text="${chefOfMonth.employee.nombre + ' ' + chefOfMonth.employee.apellido}"
+                  >
+                    Nombre del Empleado
+                  </h4>
+
+                  <div class="employee-role">
+                    <i class="fas fa-hat-chef"></i>
+                    <span>Chef</span>
+                  </div>
+                </div>
+
+                <div
+                  th:if="${chefOfMonth == null}"
+                  class="employee-empty-state"
+                >
+                  <i class="fas fa-award"></i>
+                  <p>Aún no hay chef del mes</p>
+                  <small>Las estadísticas se actualizarán pronto</small>
+                </div>
+              </div>
+            </div>
+
+            <!-- Barista del Mes -->
+            <div class="col-lg-3 col-md-6 mb-4 fade-in-right">
+              <div class="employee-card">
+                <div class="employee-badge barista-badge">
+                  <i class="fas fa-trophy"></i>
+                  <span>Barista del Mes</span>
+                </div>
+
+                <div th:if="${baristaOfMonth != null}">
+                  <div class="employee-photo-container">
+                    <div class="employee-photo-default barista-photo">
+                      <span
+                        th:text="${baristaOfMonth.employee.initials}"
+                        style="font-size: 3rem; font-weight: bold"
+                        >NN</span
+                      >
+                    </div>
+                  </div>
+
+                  <h4
+                    class="employee-name"
+                    th:text="${baristaOfMonth.employee.nombre + ' ' + baristaOfMonth.employee.apellido}"
+                  >
+                    Nombre del Empleado
+                  </h4>
+
+                  <div class="employee-role">
+                    <i class="fas fa-mug-hot"></i>
+                    <span>Barista</span>
+                  </div>
+                </div>
+
+                <div
+                  th:if="${baristaOfMonth == null}"
+                  class="employee-empty-state"
+                >
+                  <i class="fas fa-award"></i>
+                  <p>Aún no hay barista del mes</p>
+                  <small>Las estadísticas se actualizarán pronto</small>
+                </div>
+              </div>
+            </div>
+
+            <!-- Cajero del Mes -->
+            <div class="col-lg-3 col-md-6 mb-4 scale-up">
+              <div class="employee-card">
+                <div class="employee-badge cashier-badge">
+                  <i class="fas fa-trophy"></i>
+                  <span>Cajero del Mes</span>
+                </div>
+
+                <div th:if="${cashierOfMonth != null}">
+                  <div class="employee-photo-container">
+                    <div class="employee-photo-default cashier-photo">
+                      <span
+                        th:text="${cashierOfMonth.employee.initials}"
+                        style="font-size: 3rem; font-weight: bold"
+                        >NN</span
+                      >
+                    </div>
+                  </div>
+
+                  <h4
+                    class="employee-name"
+                    th:text="${cashierOfMonth.employee.nombre + ' ' + cashierOfMonth.employee.apellido}"
+                  >
+                    Nombre del Empleado
+                  </h4>
+
+                  <div class="employee-role">
+                    <i class="fas fa-cash-register"></i>
+                    <span>Cajero</span>
+                  </div>
+                </div>
+
+                <div
+                  th:if="${cashierOfMonth == null}"
+                  class="employee-empty-state"
+                >
+                  <i class="fas fa-award"></i>
+                  <p>Aún no hay cajero del mes</p>
+                  <small>Las estadísticas se actualizarán pronto</small>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Sección de Oferta con Strong Points -->
+          <div class="offer-section">
+            <h3 class="offer-title scroll-animation">
+              Descubre Nuestras Especialidades
+            </h3>
+            <h2 class="offer-main-title scroll-animation">
+              Lo Que Te Ofrecemos
+            </h2>
+
+            <!-- Botones de Categoría -->
+            <div class="category-buttons scroll-animation">
+              <button class="category-btn active" data-category="comida">
+                Comida
+              </button>
+              <button class="category-btn" data-category="bebidas">
+                Bebidas
+              </button>
+              <button class="category-btn" data-category="cervezas">
+                Cervezas
+              </button>
+              <button class="category-btn" data-category="postres">
+                Postres
+              </button>
+              <button class="category-btn" data-category="entradas">
+                Entradas
+              </button>
+              <button class="category-btn" data-category="cafes">Cafés</button>
+            </div>
+
+            <!-- Contenedor de ofertas -->
+            <div class="offer-container">
+              <!-- Comida -->
+              <div class="offer-content active" data-category="comida">
+                <!-- DESKTOP LAYOUT: Imagen central con puntos alrededor -->
+                <div class="desktop-layout">
+                  <div class="center-dish">
+                    <img
+                      th:src="${landingImages != null and landingImages.containsKey('OFFERS_1')} ? ${landingImages['OFFERS_1']} : @{/images/platillo1.jpg}"
+                      src="images/platillo1.jpg"
+                      alt="Comida Gourmet"
+                    />
+                  </div>
+
+                  <div class="strong-point point-1">
+                    <div class="strong-point-icon">
+                      <i class="fas fa-utensils"></i>
+                    </div>
+                    <div class="strong-point-text">
+                      <h4>Ingredientes Premium</h4>
+                      <p>
+                        Selección cuidadosa de los mejores ingredientes frescos
+                      </p>
+                    </div>
+                  </div>
+
+                  <div class="strong-point point-2">
+                    <div class="strong-point-icon">
+                      <i class="fas fa-fire"></i>
+                    </div>
+                    <div class="strong-point-text">
+                      <h4>Cocinado al Momento</h4>
+                      <p>Cada platillo preparado fresco cuando lo ordenas</p>
+                    </div>
+                  </div>
+
+                  <div class="strong-point point-3">
+                    <div class="strong-point-icon">
+                      <i class="fas fa-award"></i>
+                    </div>
+                    <div class="strong-point-text">
+                      <h4>Recetas Premiadas</h4>
+                      <p>Platos galardonados por críticos culinarios</p>
+                    </div>
+                  </div>
+
+                  <div class="strong-point point-4">
+                    <div class="strong-point-icon">
+                      <i class="fas fa-heart"></i>
+                    </div>
+                    <div class="strong-point-text">
+                      <h4>Hecho con Amor</h4>
+                      <p>Pasión y dedicación en cada preparación</p>
+                    </div>
+                  </div>
+
+                  <div class="strong-point point-5">
+                    <div class="strong-point-icon">
+                      <i class="fas fa-clock"></i>
+                    </div>
+                    <div class="strong-point-text">
+                      <h4>Servicio Rápido</h4>
+                      <p>Tiempo de espera mínimo sin sacrificar calidad</p>
+                    </div>
+                  </div>
+
+                  <div class="strong-point point-6">
+                    <div class="strong-point-icon">
+                      <i class="fas fa-leaf"></i>
+                    </div>
+                    <div class="strong-point-text">
+                      <h4>Opciones Saludables</h4>
+                      <p>Menú balanceado con alternativas nutritivas</p>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- MOBILE LAYOUT: Vertical (textos arriba, imagen abajo) -->
+                <div class="mobile-layout">
+                  <div class="strong-points-grid">
+                    <div class="strong-point">
+                      <div class="strong-point-icon">
+                        <i class="fas fa-utensils"></i>
+                      </div>
+                      <div class="strong-point-text">
+                        <h4>Ingredientes Premium</h4>
+                        <p>
+                          Selección cuidadosa de los mejores ingredientes
+                          frescos y locales
+                        </p>
+                      </div>
+                    </div>
+
+                    <div class="strong-point">
+                      <div class="strong-point-icon">
+                        <i class="fas fa-fire"></i>
+                      </div>
+                      <div class="strong-point-text">
+                        <h4>Cocinado al Momento</h4>
+                        <p>Cada platillo preparado fresco cuando lo ordenas</p>
+                      </div>
+                    </div>
+
+                    <div class="strong-point">
+                      <div class="strong-point-icon">
+                        <i class="fas fa-award"></i>
+                      </div>
+                      <div class="strong-point-text">
+                        <h4>Recetas Premiadas</h4>
+                        <p>Platos galardonados por críticos culinarios</p>
+                      </div>
+                    </div>
+
+                    <div class="strong-point">
+                      <div class="strong-point-icon">
+                        <i class="fas fa-heart"></i>
+                      </div>
+                      <div class="strong-point-text">
+                        <h4>Hecho con Amor</h4>
+                        <p>Pasión y dedicación en cada preparación</p>
+                      </div>
+                    </div>
+
+                    <div class="strong-point">
+                      <div class="strong-point-icon">
+                        <i class="fas fa-clock"></i>
+                      </div>
+                      <div class="strong-point-text">
+                        <h4>Servicio Rápido</h4>
+                        <p>Tiempo de espera mínimo sin sacrificar calidad</p>
+                      </div>
+                    </div>
+
+                    <div class="strong-point">
+                      <div class="strong-point-icon">
+                        <i class="fas fa-leaf"></i>
+                      </div>
+                      <div class="strong-point-text">
+                        <h4>Opciones Saludables</h4>
+                        <p>Menú balanceado con alternativas nutritivas</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="product-image-container">
+                    <img
+                      th:src="${landingImages != null and landingImages.containsKey('OFFERS_1')} ? ${landingImages['OFFERS_1']} : @{/images/platillo1.jpg}"
+                      src="images/platillo1.jpg"
+                      class="product-image"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <!-- Bebidas -->
+              <div class="offer-content" data-category="bebidas">
+                <!-- DESKTOP LAYOUT: Imagen central con puntos alrededor -->
+                <div class="desktop-layout">
+                  <div class="center-dish">
+                    <img
+                      th:src="${landingImages != null and landingImages.containsKey('OFFERS_2')} ? ${landingImages['OFFERS_2']} : @{/images/platillo2.jpg}"
+                      src="images/platillo2.jpg"
+                      alt="Bebidas"
+                    />
+                  </div>
+
+                  <div class="strong-point point-1">
+                    <div class="strong-point-icon">
+                      <i class="fas fa-cocktail"></i>
+                    </div>
+                    <div class="strong-point-text">
+                      <h4>Mixología Artesanal</h4>
+                      <p>Cócteles creativos preparados por expertos</p>
+                    </div>
+                  </div>
+                  <div class="strong-point point-2">
+                    <div class="strong-point-icon">
+                      <i class="fas fa-lemon"></i>
+                    </div>
+                    <div class="strong-point-text">
+                      <h4>Frutas Frescas</h4>
+                      <p>Jugos naturales exprimidos al momento</p>
+                    </div>
+                  </div>
+                  <div class="strong-point point-3">
+                    <div class="strong-point-icon">
+                      <i class="fas fa-glass-whiskey"></i>
+                    </div>
+                    <div class="strong-point-text">
+                      <h4>Licores Premium</h4>
+                      <p>Selección de las mejores marcas del mundo</p>
+                    </div>
+                  </div>
+                  <div class="strong-point point-4">
+                    <div class="strong-point-icon">
+                      <i class="fas fa-ice-cream"></i>
+                    </div>
+                    <div class="strong-point-text">
+                      <h4>Smoothies Deliciosos</h4>
+                      <p>Batidos cremosos y refrescantes</p>
+                    </div>
+                  </div>
+                  <div class="strong-point point-5">
+                    <div class="strong-point-icon">
+                      <i class="fas fa-wine-glass"></i>
+                    </div>
+                    <div class="strong-point-text">
+                      <h4>Vinos Selectos</h4>
+                      <p>Carta de vinos cuidadosamente curada</p>
+                    </div>
+                  </div>
+                  <div class="strong-point point-6">
+                    <div class="strong-point-icon">
+                      <i class="fas fa-mug-hot"></i>
+                    </div>
+                    <div class="strong-point-text">
+                      <h4>Bebidas Calientes</h4>
+                      <p>Tés e infusiones especiales</p>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- MOBILE LAYOUT: Vertical (textos arriba, imagen abajo) -->
+                <div class="mobile-layout">
+                  <div class="strong-points-grid">
+                    <div class="strong-point">
+                      <div class="strong-point-icon">
+                        <i class="fas fa-cocktail"></i>
+                      </div>
+                      <div class="strong-point-text">
+                        <h4>Mixología Artesanal</h4>
+                        <p>Cócteles creativos preparados por expertos</p>
+                      </div>
+                    </div>
+                    <div class="strong-point">
+                      <div class="strong-point-icon">
+                        <i class="fas fa-lemon"></i>
+                      </div>
+                      <div class="strong-point-text">
+                        <h4>Frutas Frescas</h4>
+                        <p>Jugos naturales exprimidos al momento</p>
+                      </div>
+                    </div>
+                    <div class="strong-point">
+                      <div class="strong-point-icon">
+                        <i class="fas fa-glass-whiskey"></i>
+                      </div>
+                      <div class="strong-point-text">
+                        <h4>Licores Premium</h4>
+                        <p>Selección de las mejores marcas del mundo</p>
+                      </div>
+                    </div>
+                    <div class="strong-point">
+                      <div class="strong-point-icon">
+                        <i class="fas fa-ice-cream"></i>
+                      </div>
+                      <div class="strong-point-text">
+                        <h4>Smoothies Deliciosos</h4>
+                        <p>Batidos cremosos y refrescantes</p>
+                      </div>
+                    </div>
+                    <div class="strong-point">
+                      <div class="strong-point-icon">
+                        <i class="fas fa-wine-glass"></i>
+                      </div>
+                      <div class="strong-point-text">
+                        <h4>Vinos Selectos</h4>
+                        <p>Carta de vinos cuidadosamente curada</p>
+                      </div>
+                    </div>
+                    <div class="strong-point">
+                      <div class="strong-point-icon">
+                        <i class="fas fa-mug-hot"></i>
+                      </div>
+                      <div class="strong-point-text">
+                        <h4>Bebidas Calientes</h4>
+                        <p>Tés e infusiones especiales</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="product-image-container">
+                    <img
+                      th:src="${landingImages != null and landingImages.containsKey('OFFERS_2')} ? ${landingImages['OFFERS_2']} : @{/images/platillo2.jpg}"
+                      src="images/platillo2.jpg"
+                      alt="Bebidas"
+                      class="product-image"
+                    />
+                  </div>
+                </div>
+              </div>
+              <!-- Cervezas -->
+              <div class="offer-content" data-category="cervezas">
+                <!-- DESKTOP LAYOUT: Imagen central con puntos alrededor -->
+                <div class="desktop-layout">
+                  <div class="center-dish">
+                    <img
+                      th:src="${landingImages != null and landingImages.containsKey('OFFERS_3')} ? ${landingImages['OFFERS_3']} : @{/images/platillo3.jpg}"
+                      src="images/platillo3.jpg"
+                      alt="Cervezas"
+                    />
+                  </div>
+
+                  <div class="strong-point point-1">
+                    <div class="strong-point-icon">
+                      <i class="fas fa-beer"></i>
+                    </div>
+                    <div class="strong-point-text">
+                      <h4>Artesanales Locales</h4>
+                      <p>Apoyamos a cerveceros independientes</p>
+                    </div>
+                  </div>
+                  <div class="strong-point point-2">
+                    <div class="strong-point-icon">
+                      <i class="fas fa-globe-americas"></i>
+                    </div>
+                    <div class="strong-point-text">
+                      <h4>Importadas</h4>
+                      <p>Las mejores cervezas del mundo</p>
+                    </div>
+                  </div>
+                  <div class="strong-point point-3">
+                    <div class="strong-point-icon">
+                      <i class="fas fa-temperature-low"></i>
+                    </div>
+                    <div class="strong-point-text">
+                      <h4>Siempre Frías</h4>
+                      <p>Temperatura perfecta garantizada</p>
+                    </div>
+                  </div>
+                  <div class="strong-point point-4">
+                    <div class="strong-point-icon">
+                      <i class="fas fa-star"></i>
+                    </div>
+                    <div class="strong-point-text">
+                      <h4>Ediciones Limitadas</h4>
+                      <p>Variedades exclusivas y temporales</p>
+                    </div>
+                  </div>
+                  <div class="strong-point point-5">
+                    <div class="strong-point-icon">
+                      <i class="fas fa-hand-holding-heart"></i>
+                    </div>
+                    <div class="strong-point-text">
+                      <h4>Maridaje Perfecto</h4>
+                      <p>Recomendaciones para cada platillo</p>
+                    </div>
+                  </div>
+                  <div class="strong-point point-6">
+                    <div class="strong-point-icon">
+                      <i class="fas fa-glass-cheers"></i>
+                    </div>
+                    <div class="strong-point-text">
+                      <h4>Happy Hour</h4>
+                      <p>Promociones especiales diarias</p>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- MOBILE LAYOUT: Vertical (textos arriba, imagen abajo) -->
+                <div class="mobile-layout">
+                  <div class="strong-points-grid">
+                    <div class="strong-point">
+                      <div class="strong-point-icon">
+                        <i class="fas fa-beer"></i>
+                      </div>
+                      <div class="strong-point-text">
+                        <h4>Artesanales Locales</h4>
+                        <p>Apoyamos a cerveceros independientes</p>
+                      </div>
+                    </div>
+                    <div class="strong-point">
+                      <div class="strong-point-icon">
+                        <i class="fas fa-globe-americas"></i>
+                      </div>
+                      <div class="strong-point-text">
+                        <h4>Importadas</h4>
+                        <p>Las mejores cervezas del mundo</p>
+                      </div>
+                    </div>
+                    <div class="strong-point">
+                      <div class="strong-point-icon">
+                        <i class="fas fa-temperature-low"></i>
+                      </div>
+                      <div class="strong-point-text">
+                        <h4>Siempre Frías</h4>
+                        <p>Temperatura perfecta garantizada</p>
+                      </div>
+                    </div>
+                    <div class="strong-point">
+                      <div class="strong-point-icon">
+                        <i class="fas fa-star"></i>
+                      </div>
+                      <div class="strong-point-text">
+                        <h4>Ediciones Limitadas</h4>
+                        <p>Variedades exclusivas y temporales</p>
+                      </div>
+                    </div>
+                    <div class="strong-point">
+                      <div class="strong-point-icon">
+                        <i class="fas fa-hand-holding-heart"></i>
+                      </div>
+                      <div class="strong-point-text">
+                        <h4>Maridaje Perfecto</h4>
+                        <p>Recomendaciones para cada platillo</p>
+                      </div>
+                    </div>
+                    <div class="strong-point">
+                      <div class="strong-point-icon">
+                        <i class="fas fa-glass-cheers"></i>
+                      </div>
+                      <div class="strong-point-text">
+                        <h4>Happy Hour</h4>
+                        <p>Promociones especiales diarias</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="product-image-container">
+                    <img
+                      th:src="${landingImages != null and landingImages.containsKey('OFFERS_3')} ? ${landingImages['OFFERS_3']} : @{/images/platillo3.jpg}"
+                      src="images/platillo3.jpg"
+                      alt="Cervezas"
+                      class="product-image"
+                    />
+                  </div>
+                </div>
+              </div>
+              <!-- Postres -->
+              <div class="offer-content" data-category="postres">
+                <!-- DESKTOP LAYOUT: Imagen central con puntos alrededor -->
+                <div class="desktop-layout">
+                  <div class="center-dish">
+                    <img
+                      th:src="${landingImages != null and landingImages.containsKey('OFFERS_4')} ? ${landingImages['OFFERS_4']} : @{/images/platillo4.jpg}"
+                      src="images/platillo4.jpg"
+                      alt="Postres"
+                    />
+                  </div>
+
+                  <div class="strong-point point-1">
+                    <div class="strong-point-icon">
+                      <i class="fas fa-birthday-cake"></i>
+                    </div>
+                    <div class="strong-point-text">
+                      <h4>Repostería Artesanal</h4>
+                      <p>Elaborados diariamente en nuestro obrador</p>
+                    </div>
+                  </div>
+                  <div class="strong-point point-2">
+                    <div class="strong-point-icon">
+                      <i class="fas fa-candy-cane"></i>
+                    </div>
+                    <div class="strong-point-text">
+                      <h4>Dulces Tentaciones</h4>
+                      <p>Variedad irresistible de sabores</p>
+                    </div>
+                  </div>
+                  <div class="strong-point point-3">
+                    <div class="strong-point-icon">
+                      <i class="fas fa-cookie"></i>
+                    </div>
+                    <div class="strong-point-text">
+                      <h4>Sin Azúcar</h4>
+                      <p>Opciones para dietas especiales</p>
+                    </div>
+                  </div>
+                  <div class="strong-point point-4">
+                    <div class="strong-point-icon">
+                      <i class="fas fa-ice-cream"></i>
+                    </div>
+                    <div class="strong-point-text">
+                      <h4>Helados Caseros</h4>
+                      <p>Cremosos y con sabores únicos</p>
+                    </div>
+                  </div>
+                  <div class="strong-point point-5">
+                    <div class="strong-point-icon">
+                      <i class="fas fa-heart"></i>
+                    </div>
+                    <div class="strong-point-text">
+                      <h4>Recetas de Familia</h4>
+                      <p>Tradición que pasa de generación</p>
+                    </div>
+                  </div>
+                  <div class="strong-point point-6">
+                    <div class="strong-point-icon">
+                      <i class="fas fa-seedling"></i>
+                    </div>
+                    <div class="strong-point-text">
+                      <h4>Ingredientes Naturales</h4>
+                      <p>Sin conservantes ni colorantes artificiales</p>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- MOBILE LAYOUT: Vertical (textos arriba, imagen abajo) -->
+                <div class="mobile-layout">
+                  <div class="strong-points-grid">
+                    <div class="strong-point">
+                      <div class="strong-point-icon">
+                        <i class="fas fa-birthday-cake"></i>
+                      </div>
+                      <div class="strong-point-text">
+                        <h4>Repostería Artesanal</h4>
+                        <p>Elaborados diariamente en nuestro obrador</p>
+                      </div>
+                    </div>
+                    <div class="strong-point">
+                      <div class="strong-point-icon">
+                        <i class="fas fa-candy-cane"></i>
+                      </div>
+                      <div class="strong-point-text">
+                        <h4>Dulces Tentaciones</h4>
+                        <p>Variedad irresistible de sabores</p>
+                      </div>
+                    </div>
+                    <div class="strong-point">
+                      <div class="strong-point-icon">
+                        <i class="fas fa-cookie"></i>
+                      </div>
+                      <div class="strong-point-text">
+                        <h4>Sin Azúcar</h4>
+                        <p>Opciones para dietas especiales</p>
+                      </div>
+                    </div>
+                    <div class="strong-point">
+                      <div class="strong-point-icon">
+                        <i class="fas fa-ice-cream"></i>
+                      </div>
+                      <div class="strong-point-text">
+                        <h4>Helados Caseros</h4>
+                        <p>Cremosos y con sabores únicos</p>
+                      </div>
+                    </div>
+                    <div class="strong-point">
+                      <div class="strong-point-icon">
+                        <i class="fas fa-heart"></i>
+                      </div>
+                      <div class="strong-point-text">
+                        <h4>Recetas de Familia</h4>
+                        <p>Tradición que pasa de generación</p>
+                      </div>
+                    </div>
+                    <div class="strong-point">
+                      <div class="strong-point-icon">
+                        <i class="fas fa-seedling"></i>
+                      </div>
+                      <div class="strong-point-text">
+                        <h4>Ingredientes Naturales</h4>
+                        <p>Sin conservantes ni colorantes artificiales</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="product-image-container">
+                    <img
+                      th:src="${landingImages != null and landingImages.containsKey('OFFERS_4')} ? ${landingImages['OFFERS_4']} : @{/images/platillo4.jpg}"
+                      src="images/platillo4.jpg"
+                      alt="Postres"
+                      class="product-image"
+                    />
+                  </div>
+                </div>
+              </div>
+              <!-- Entradas -->
+              <div class="offer-content" data-category="entradas">
+                <!-- DESKTOP LAYOUT: Imagen central con puntos alrededor -->
+                <div class="desktop-layout">
+                  <div class="center-dish">
+                    <img
+                      th:src="${landingImages != null and landingImages.containsKey('OFFERS_5')} ? ${landingImages['OFFERS_5']} : @{/images/platillo5.jpg}"
+                      src="images/platillo5.jpg"
+                      alt="Entradas"
+                    />
+                  </div>
+
+                  <div class="strong-point point-1">
+                    <div class="strong-point-icon">
+                      <i class="fas fa-pepper-hot"></i>
+                    </div>
+                    <div class="strong-point-text">
+                      <h4>Sabores Intensos</h4>
+                      <p>Combinaciones que despiertan el apetito</p>
+                    </div>
+                  </div>
+                  <div class="strong-point point-2">
+                    <div class="strong-point-icon">
+                      <i class="fas fa-share-alt"></i>
+                    </div>
+                    <div class="strong-point-text">
+                      <h4>Para Compartir</h4>
+                      <p>Porciones ideales para grupos</p>
+                    </div>
+                  </div>
+                  <div class="strong-point point-3">
+                    <div class="strong-point-icon">
+                      <i class="fas fa-mortar-pestle"></i>
+                    </div>
+                    <div class="strong-point-text">
+                      <h4>Salsas Caseras</h4>
+                      <p>Preparadas con recetas secretas</p>
+                    </div>
+                  </div>
+                  <div class="strong-point point-4">
+                    <div class="strong-point-icon">
+                      <i class="fas fa-carrot"></i>
+                    </div>
+                    <div class="strong-point-text">
+                      <h4>Vegetales Frescos</h4>
+                      <p>Directo de la granja a tu mesa</p>
+                    </div>
+                  </div>
+                  <div class="strong-point point-5">
+                    <div class="strong-point-icon">
+                      <i class="fas fa-drumstick-bite"></i>
+                    </div>
+                    <div class="strong-point-text">
+                      <h4>Proteínas de Calidad</h4>
+                      <p>Carnes y mariscos premium</p>
+                    </div>
+                  </div>
+                  <div class="strong-point point-6">
+                    <div class="strong-point-icon">
+                      <i class="fas fa-cheese"></i>
+                    </div>
+                    <div class="strong-point-text">
+                      <h4>Quesos Artesanales</h4>
+                      <p>Selección de quesos gourmet</p>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- MOBILE LAYOUT: Vertical (textos arriba, imagen abajo) -->
+                <div class="mobile-layout">
+                  <div class="strong-points-grid">
+                    <div class="strong-point">
+                      <div class="strong-point-icon">
+                        <i class="fas fa-pepper-hot"></i>
+                      </div>
+                      <div class="strong-point-text">
+                        <h4>Sabores Intensos</h4>
+                        <p>Combinaciones que despiertan el apetito</p>
+                      </div>
+                    </div>
+                    <div class="strong-point">
+                      <div class="strong-point-icon">
+                        <i class="fas fa-share-alt"></i>
+                      </div>
+                      <div class="strong-point-text">
+                        <h4>Para Compartir</h4>
+                        <p>Porciones ideales para grupos</p>
+                      </div>
+                    </div>
+                    <div class="strong-point">
+                      <div class="strong-point-icon">
+                        <i class="fas fa-mortar-pestle"></i>
+                      </div>
+                      <div class="strong-point-text">
+                        <h4>Salsas Caseras</h4>
+                        <p>Preparadas con recetas secretas</p>
+                      </div>
+                    </div>
+                    <div class="strong-point">
+                      <div class="strong-point-icon">
+                        <i class="fas fa-carrot"></i>
+                      </div>
+                      <div class="strong-point-text">
+                        <h4>Vegetales Frescos</h4>
+                        <p>Directo de la granja a tu mesa</p>
+                      </div>
+                    </div>
+                    <div class="strong-point">
+                      <div class="strong-point-icon">
+                        <i class="fas fa-drumstick-bite"></i>
+                      </div>
+                      <div class="strong-point-text">
+                        <h4>Proteínas de Calidad</h4>
+                        <p>Carnes y mariscos premium</p>
+                      </div>
+                    </div>
+                    <div class="strong-point">
+                      <div class="strong-point-icon">
+                        <i class="fas fa-cheese"></i>
+                      </div>
+                      <div class="strong-point-text">
+                        <h4>Quesos Artesanales</h4>
+                        <p>Selección de quesos gourmet</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="product-image-container">
+                    <img
+                      th:src="${landingImages != null and landingImages.containsKey('OFFERS_5')} ? ${landingImages['OFFERS_5']} : @{/images/platillo5.jpg}"
+                      src="images/platillo5.jpg"
+                      alt="Entradas"
+                      class="product-image"
+                    />
+                  </div>
+                </div>
+              </div>
+              <!-- Cafés -->
+              <div class="offer-content" data-category="cafes">
+                <!-- DESKTOP LAYOUT: Imagen central con puntos alrededor -->
+                <div class="desktop-layout">
+                  <div class="center-dish">
+                    <img
+                      th:src="${landingImages != null and landingImages.containsKey('OFFERS_6')} ? ${landingImages['OFFERS_6']} : @{/images/platillo6.jpg}"
+                      src="images/platillo6.jpg"
+                      alt="Cafés"
+                    />
+                  </div>
+
+                  <div class="strong-point point-1">
+                    <div class="strong-point-icon">
+                      <i class="fas fa-coffee"></i>
+                    </div>
+                    <div class="strong-point-text">
+                      <h4>Granos Premium</h4>
+                      <p>Café de origen 100% arábica</p>
+                    </div>
+                  </div>
+                  <div class="strong-point point-2">
+                    <div class="strong-point-icon">
+                      <i class="fas fa-leaf"></i>
+                    </div>
+                    <div class="strong-point-text">
+                      <h4>Comercio Justo</h4>
+                      <p>Apoyamos a productores locales</p>
+                    </div>
+                  </div>
+                  <div class="strong-point point-3">
+                    <div class="strong-point-icon">
+                      <i class="fas fa-fire-alt"></i>
+                    </div>
+                    <div class="strong-point-text">
+                      <h4>Tostado Perfecto</h4>
+                      <p>Control artesanal del proceso</p>
+                    </div>
+                  </div>
+                  <div class="strong-point point-4">
+                    <div class="strong-point-icon">
+                      <i class="fas fa-mug-hot"></i>
+                    </div>
+                    <div class="strong-point-text">
+                      <h4>Baristas Expertos</h4>
+                      <p>Arte en cada taza que servimos</p>
+                    </div>
+                  </div>
+                  <div class="strong-point point-5">
+                    <div class="strong-point-icon">
+                      <i class="fas fa-blender"></i>
+                    </div>
+                    <div class="strong-point-text">
+                      <h4>Preparaciones Variadas</h4>
+                      <p>Espresso, capuccino, latte y más</p>
+                    </div>
+                  </div>
+                  <div class="strong-point point-6">
+                    <div class="strong-point-icon">
+                      <i class="fas fa-cookie-bite"></i>
+                    </div>
+                    <div class="strong-point-text">
+                      <h4>Acompañamientos</h4>
+                      <p>Pastelería perfecta para tu café</p>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- MOBILE LAYOUT: Vertical (textos arriba, imagen abajo) -->
+                <div class="mobile-layout">
+                  <div class="strong-points-grid">
+                    <div class="strong-point">
+                      <div class="strong-point-icon">
+                        <i class="fas fa-coffee"></i>
+                      </div>
+                      <div class="strong-point-text">
+                        <h4>Granos Premium</h4>
+                        <p>Café de origen 100% arábica</p>
+                      </div>
+                    </div>
+                    <div class="strong-point">
+                      <div class="strong-point-icon">
+                        <i class="fas fa-leaf"></i>
+                      </div>
+                      <div class="strong-point-text">
+                        <h4>Comercio Justo</h4>
+                        <p>Apoyamos a productores locales</p>
+                      </div>
+                    </div>
+                    <div class="strong-point">
+                      <div class="strong-point-icon">
+                        <i class="fas fa-fire-alt"></i>
+                      </div>
+                      <div class="strong-point-text">
+                        <h4>Tostado Perfecto</h4>
+                        <p>Control artesanal del proceso</p>
+                      </div>
+                    </div>
+                    <div class="strong-point">
+                      <div class="strong-point-icon">
+                        <i class="fas fa-mug-hot"></i>
+                      </div>
+                      <div class="strong-point-text">
+                        <h4>Baristas Expertos</h4>
+                        <p>Arte en cada taza que servimos</p>
+                      </div>
+                    </div>
+                    <div class="strong-point">
+                      <div class="strong-point-icon">
+                        <i class="fas fa-blender"></i>
+                      </div>
+                      <div class="strong-point-text">
+                        <h4>Preparaciones Variadas</h4>
+                        <p>Espresso, capuccino, latte y más</p>
+                      </div>
+                    </div>
+                    <div class="strong-point">
+                      <div class="strong-point-icon">
+                        <i class="fas fa-cookie-bite"></i>
+                      </div>
+                      <div class="strong-point-text">
+                        <h4>Acompañamientos</h4>
+                        <p>Pastelería perfecta para tu café</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="product-image-container">
+                    <img
+                      th:src="${landingImages != null and landingImages.containsKey('OFFERS_6')} ? ${landingImages['OFFERS_6']} : @{/images/platillo6.jpg}"
+                      src="images/platillo6.jpg"
+                      alt="Cafés"
+                      class="product-image"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Sección Promociones -->
+          <div
+            class="promociones-section scroll-animation"
+            th:if="${promoCombo != null or promoPercent != null or promoFixed != null}"
+          >
+            <h2 class="promociones-title">Promociones Especiales</h2>
+            <p class="promociones-subtitle">
+              ¡Aprovecha nuestras ofertas por tiempo limitado!
+            </p>
+
+            <div class="promociones-grid">
+              <!-- Promoción BUY_X_PAY_Y (2x1, 3x2, etc) -->
+              <div class="promo-card scale-up" th:if="${promoCombo != null}">
+                <div class="promo-badge" th:text="${promoCombo.displayLabel}">
+                  2x1
+                </div>
+                <img
+                  th:src="${promoCombo.imageUrl != null and !promoCombo.imageUrl.isEmpty()} ? ${promoCombo.imageUrl} : 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=600&q=80'"
+                  th:alt="${promoCombo.name}"
+                  class="promo-image"
+                />
+                <div class="promo-content">
+                  <h3 class="promo-title" th:text="${promoCombo.name}">
+                    Promoción 2x1
+                  </h3>
+                  <p
+                    class="promo-description"
+                    th:text="${promoCombo.description}"
+                  >
+                    Descripción de la promoción
+                  </p>
+
+                  <!-- Mostrar productos (máximo 4) -->
+                  <div
+                    class="promo-products"
+                    th:if="${promoCombo.items.size() > 0}"
+                  >
+                    <p
+                      style="
+                        font-size: 0.9rem;
+                        color: #666;
+                        margin-bottom: 0.5rem;
+                      "
+                    >
+                      <strong>Productos:</strong>
+                    </p>
+                    <p style="font-size: 0.85rem; color: #888">
+                      <span
+                        th:each="item, iterStat : ${promoCombo.items}"
+                        th:if="${iterStat.index < 3}"
+                      >
+                        <span th:text="${item.name}">Producto</span
+                        ><span th:if="${!iterStat.last and iterStat.index < 2}"
+                          >,
+                        </span>
+                      </span>
+                      <span th:if="${promoCombo.items.size() > 3}">
+                        y
+                        <span th:text="${promoCombo.items.size() - 3}">X</span>
+                        más
+                      </span>
+                    </p>
+                  </div>
+
+                  <div class="promo-price-container" style="margin-top: 1rem">
+                    <span
+                      class="promo-discount"
+                      th:text="${promoCombo.displayLabel}"
+                      >2x1</span
+                    >
+                  </div>
+                  <a href="/login" class="promo-btn">Ver Menú</a>
+                  <div class="promo-timer">
+                    <i class="fas fa-calendar"></i>
+                    Válido hasta
+                    <span
+                      th:text="${#temporals.format(promoCombo.endDate, 'dd/MM/yyyy')}"
+                      >fecha</span
+                    >
+                  </div>
+                </div>
+              </div>
+
+              <!-- Promoción PERCENTAGE_DISCOUNT (30%, 50%, etc) -->
+              <div class="promo-card scale-up" th:if="${promoPercent != null}">
+                <div class="promo-badge" th:text="${promoPercent.displayLabel}">
+                  -30% OFF
+                </div>
+                <img
+                  th:src="${promoPercent.imageUrl != null and !promoPercent.imageUrl.isEmpty()} ? ${promoPercent.imageUrl} : 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&q=80'"
+                  th:alt="${promoPercent.name}"
+                  class="promo-image"
+                />
+                <div class="promo-content">
+                  <h3 class="promo-title" th:text="${promoPercent.name}">
+                    Descuento Especial
+                  </h3>
+                  <p
+                    class="promo-description"
+                    th:text="${promoPercent.description}"
+                  >
+                    Descripción de la promoción
+                  </p>
+
+                  <!-- Mostrar productos (máximo 4) -->
+                  <div
+                    class="promo-products"
+                    th:if="${promoPercent.items.size() > 0}"
+                  >
+                    <p
+                      style="
+                        font-size: 0.9rem;
+                        color: #666;
+                        margin-bottom: 0.5rem;
+                      "
+                    >
+                      <strong>Productos:</strong>
+                    </p>
+                    <p style="font-size: 0.85rem; color: #888">
+                      <span
+                        th:each="item, iterStat : ${promoPercent.items}"
+                        th:if="${iterStat.index < 3}"
+                      >
+                        <span th:text="${item.name}">Producto</span
+                        ><span th:if="${!iterStat.last and iterStat.index < 2}"
+                          >,
+                        </span>
+                      </span>
+                      <span th:if="${promoPercent.items.size() > 3}">
+                        y
+                        <span th:text="${promoPercent.items.size() - 3}"
+                          >X</span
+                        >
+                        más
+                      </span>
+                    </p>
+                  </div>
+
+                  <div class="promo-price-container" style="margin-top: 1rem">
+                    <span
+                      class="promo-discount"
+                      th:text="${promoPercent.displayLabel}"
+                      >-30% OFF</span
+                    >
+                  </div>
+                  <a href="/login" class="promo-btn">Ver Menú</a>
+                  <div class="promo-timer">
+                    <i class="fas fa-calendar"></i>
+                    Válido hasta
+                    <span
+                      th:text="${#temporals.format(promoPercent.endDate, 'dd/MM/yyyy')}"
+                      >fecha</span
+                    >
+                  </div>
+                </div>
+              </div>
+
+              <!-- Promoción FIXED_AMOUNT_DISCOUNT ($20 OFF, etc) -->
+              <div class="promo-card scale-up" th:if="${promoFixed != null}">
+                <div class="promo-badge" th:text="${promoFixed.displayLabel}">
+                  -$20 OFF
+                </div>
+                <img
+                  th:src="${promoFixed.imageUrl != null and !promoFixed.imageUrl.isEmpty()} ? ${promoFixed.imageUrl} : 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=600&q=80'"
+                  th:alt="${promoFixed.name}"
+                  class="promo-image"
+                />
+                <div class="promo-content">
+                  <h3 class="promo-title" th:text="${promoFixed.name}">
+                    Descuento Fijo
+                  </h3>
+                  <p
+                    class="promo-description"
+                    th:text="${promoFixed.description}"
+                  >
+                    Descripción de la promoción
+                  </p>
+
+                  <!-- Mostrar productos (máximo 4) -->
+                  <div
+                    class="promo-products"
+                    th:if="${promoFixed.items.size() > 0}"
+                  >
+                    <p
+                      style="
+                        font-size: 0.9rem;
+                        color: #666;
+                        margin-bottom: 0.5rem;
+                      "
+                    >
+                      <strong>Productos:</strong>
+                    </p>
+                    <p style="font-size: 0.85rem; color: #888">
+                      <span
+                        th:each="item, iterStat : ${promoFixed.items}"
+                        th:if="${iterStat.index < 3}"
+                      >
+                        <span th:text="${item.name}">Producto</span
+                        ><span th:if="${!iterStat.last and iterStat.index < 2}"
+                          >,
+                        </span>
+                      </span>
+                      <span th:if="${promoFixed.items.size() > 3}">
+                        y
+                        <span th:text="${promoFixed.items.size() - 3}">X</span>
+                        más
+                      </span>
+                    </p>
+                  </div>
+
+                  <div class="promo-price-container" style="margin-top: 1rem">
+                    <span
+                      class="promo-discount"
+                      th:text="${promoFixed.displayLabel}"
+                      >-$20 OFF</span
+                    >
+                  </div>
+                  <a href="/login" class="promo-btn">Ver Menú</a>
+                  <div class="promo-timer">
+                    <i class="fas fa-calendar"></i>
+                    Válido hasta
+                    <span
+                      th:text="${#temporals.format(promoFixed.endDate, 'dd/MM/yyyy')}"
+                      >fecha</span
+                    >
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Sección How To Order - Solo si tiene módulo de cliente/ecommerce -->
+          <div th:if="${hasCustomerModule}" class="how-to-order-section">
+            <h2 class="how-to-order-title scroll-animation">
+              ¿Cómo hacer un pedido?
+            </h2>
+
+            <div class="steps-container">
+              <!-- Step 1 -->
+              <div class="step-item scroll-animation">
+                <div class="step-icon">
+                  <i class="fas fa-mobile-alt"></i>
+                </div>
+                <div class="step-text">
+                  <h3>Point No. 1</h3>
+                  <p>Visita nuestro sitio web</p>
+                </div>
+              </div>
+
+              <div class="step-divider">- - - - - - -</div>
+
+              <!-- Step 2 -->
+              <div class="step-item scroll-animation">
+                <div class="step-icon">
+                  <i class="fas fa-motorcycle"></i>
+                </div>
+                <div class="step-text">
+                  <h3>Point No. 2</h3>
+                  <p>Elige tu platillo favorito y realiza tu pedido</p>
+                </div>
+              </div>
+
+              <div class="step-divider">- - - - - - -</div>
+
+              <!-- Step 3 -->
+              <div class="step-item scroll-animation">
+                <div class="step-icon">
+                  <i class="fas fa-pizza-slice"></i>
+                </div>
+                <div class="step-text">
+                  <h3>Point No. 3</h3>
+                  <p>Recibe tu comida caliente en tu puerta</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Sección de Confianza - Solo si NO tiene módulo de cliente/ecommerce -->
+          <div th:unless="${hasCustomerModule}" class="how-to-order-section">
+            <h2 class="how-to-order-title scroll-animation">
+              ¿Tienes hambre? ¡Cuenta con nosotros!
+            </h2>
+
+            <div class="steps-container">
+              <!-- Punto 1 -->
+              <div class="step-item scroll-animation">
+                <div class="step-icon">
+                  <i class="fas fa-utensils"></i>
+                </div>
+                <div class="step-text">
+                  <h3>Platillos Antojables</h3>
+                  <p>
+                    Sabores auténticos que te harán agua la boca desde el primer
+                    bocado
+                  </p>
+                </div>
+              </div>
+
+              <div class="step-divider">- - - - - - -</div>
+
+              <!-- Punto 2 -->
+              <div class="step-item scroll-animation">
+                <div class="step-icon">
+                  <i class="fas fa-book-open"></i>
+                </div>
+                <div class="step-text">
+                  <h3>Menú Muy Amplio</h3>
+                  <p>
+                    Gran variedad de opciones para todos los gustos y antojos
+                  </p>
+                </div>
+              </div>
+
+              <div class="step-divider">- - - - - - -</div>
+
+              <!-- Punto 3 -->
+              <div class="step-item scroll-animation">
+                <div class="step-icon">
+                  <i class="fas fa-heart"></i>
+                </div>
+                <div class="step-text">
+                  <h3>Preparado con Amor</h3>
+                  <p>
+                    Cada platillo hecho con ingredientes frescos y dedicación
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Sección de Valores - Lo Que Nos Define -->
+          <div class="values-section">
+            <div class="container">
+              <h2 class="values-title scroll-animation">Lo Que Nos Define</h2>
+              <p class="values-subtitle scroll-animation">
+                Tres pilares fundamentales que hacen de nosotros tu mejor
+                elección
+              </p>
+
+              <div class="row g-4">
+                <div class="col-md-4 scale-up">
+                  <div class="value-card">
+                    <div
+                      class="value-card-bg"
+                      th:style="'background-image: url(' + (${landingImages != null and landingImages.containsKey('VALUES_1')} ? ${landingImages['VALUES_1']} : @{/images/define1.jpg}) + ')'"
+                      style="
+                        background-image: url(&quot;images/define1.jpg&quot;);
+                      "
+                    ></div>
+                    <div class="value-card-overlay"></div>
+                    <div class="value-card-content">
+                      <div class="value-icon-container">
+                        <i class="fas fa-leaf"></i>
+                      </div>
+                      <h4>Ingredientes Frescos</h4>
+                      <p>
+                        Seleccionamos cuidadosamente los mejores ingredientes
+                        locales y de temporada para garantizar calidad
+                        excepcional en cada platillo.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-4 scale-up">
+                  <div class="value-card">
+                    <div
+                      class="value-card-bg"
+                      th:style="'background-image: url(' + (${landingImages != null and landingImages.containsKey('VALUES_2')} ? ${landingImages['VALUES_2']} : @{/images/define2.jpg}) + ')'"
+                      style="
+                        background-image: url(&quot;images/define2.jpg&quot;);
+                      "
+                    ></div>
+                    <div class="value-card-overlay"></div>
+                    <div class="value-card-content">
+                      <div class="value-icon-container">
+                        <i class="fas fa-heart"></i>
+                      </div>
+                      <h4>Pasión por Servir</h4>
+                      <p>
+                        Cada platillo es preparado con amor y dedicación, porque
+                        tu satisfacción es nuestra mayor recompensa y motivación
+                        diaria.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-4 scale-up">
+                  <div class="value-card">
+                    <div
+                      class="value-card-bg"
+                      th:style="'background-image: url(' + (${landingImages != null and landingImages.containsKey('VALUES_3')} ? ${landingImages['VALUES_3']} : @{/images/define3.jpg}) + ')'"
+                      style="
+                        background-image: url(&quot;images/define3.jpg&quot;);
+                      "
+                    ></div>
+                    <div class="value-card-overlay"></div>
+                    <div class="value-card-content">
+                      <div class="value-icon-container">
+                        <i class="fas fa-users"></i>
+                      </div>
+                      <h4>Ambiente Familiar</h4>
+                      <p>
+                        Creamos un espacio acogedor donde cada cliente es
+                        tratado como parte de nuestra familia y se siente como
+                        en casa.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Sección Tarjeta 3D Interactiva -->
+          <div class="tarjeta-3d-section scroll-animation">
+            <h2 class="tarjeta-3d-title">Nuestra Tarjeta de Presentación</h2>
+
+            <!-- Escena 3D -->
+            <div class="escena-3d" id="escena3d">
+              <div class="tarjeta-3d" id="tarjeta3d">
+                <!-- Cara Frontal -->
+                <div class="cara-tarjeta cara-frente" id="caraFrente">
+                  <img
+                    th:src="${landingImages != null and landingImages.containsKey('CARD_1')} ? ${landingImages['CARD_1']} : @{/images/tarjetafrente.png}"
+                    src="images/tarjetafrente.png"
+                    alt="Tarjeta Frente"
+                  />
+                </div>
+                <!-- Cara Trasera -->
+                <div class="cara-tarjeta cara-atras" id="caraAtras">
+                  <img
+                    th:src="${landingImages != null and landingImages.containsKey('CARD_2')} ? ${landingImages['CARD_2']} : @{/images/tarjetatras.png}"
+                    src="images/tarjetatras.png"
+                    alt="Tarjeta Reverso"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Sección Galería -->
+          <div class="section-header mt-5 scroll-animation">
+            <h2 class="section-title">Galería</h2>
+          </div>
+
+          <div class="row g-3 mb-5">
+            <div class="col-md-4 col-sm-6 scale-up">
+              <img
+                th:src="${landingImages != null and landingImages.containsKey('GALLERY_1')} ? ${landingImages['GALLERY_1']} : @{/images/galeria.jpg}"
+                src="images/galeria.jpg"
+                alt="Plato gourmet"
+                class="img-fluid rounded-3 shadow-sm"
+              />
+            </div>
+            <div class="col-md-4 col-sm-6 scale-up">
+              <img
+                th:src="${landingImages != null and landingImages.containsKey('GALLERY_2')} ? ${landingImages['GALLERY_2']} : @{/images/galeria2.jpg}"
+                src="images/galeria2.jpg"
+                alt="Chef cocinando"
+                class="img-fluid rounded-3 shadow-sm"
+              />
+            </div>
+            <div class="col-md-4 col-sm-6 scale-up">
+              <img
+                th:src="${landingImages != null and landingImages.containsKey('GALLERY_3')} ? ${landingImages['GALLERY_3']} : @{/images/galeria3.jpg}"
+                src="images/galeria3.jpg"
+                alt="Cócteles"
+                class="img-fluid rounded-3 shadow-sm"
+              />
+            </div>
+            <div class="col-md-4 col-sm-6 scale-up">
+              <img
+                th:src="${landingImages != null and landingImages.containsKey('GALLERY_4')} ? ${landingImages['GALLERY_4']} : @{/images/galeria4.jpg}"
+                src="images/galeria4.jpg"
+                alt="Plato principal"
+                class="img-fluid rounded-3 shadow-sm"
+              />
+            </div>
+            <div class="col-md-4 col-sm-6 scale-up">
+              <img
+                th:src="${landingImages != null and landingImages.containsKey('GALLERY_5')} ? ${landingImages['GALLERY_5']} : @{/images/galeria5.jpg}"
+                src="images/galeria5.jpg"
+                alt="Ambiente"
+                class="img-fluid rounded-3 shadow-sm"
+              />
+            </div>
+            <div class="col-md-4 col-sm-6 scale-up">
+              <img
+                th:src="${landingImages != null and landingImages.containsKey('GALLERY_6')} ? ${landingImages['GALLERY_6']} : @{/images/galeria6.jpg}"
+                src="images/galeria6.jpg"
+                alt="Postres"
+                class="img-fluid rounded-3 shadow-sm"
+              />
+            </div>
+          </div>
+
+          <!-- Sección Testimonios - Con módulo ecommerce activo -->
+          <div
+            th:if="${hasCustomerModule}"
+            class="testimonios-section scroll-animation"
+          >
+            <h2 class="testimonios-title">Lo Que Dicen Nuestros Clientes</h2>
+
+            <div class="testimonios-container">
+              <div class="testimonios-wrapper">
+                <div class="testimonios-track" id="testimoniosTrack">
+                  <!-- Dynamic Reviews from Database -->
+                  <div
+                    th:each="review : ${approvedReviews}"
+                    class="testimonio-card"
+                  >
+                    <div class="testimonio-header">
+                      <div class="testimonio-avatar">
+                        <span
+                          th:text="${#strings.substring(review.customer.fullName, 0, 2).toUpperCase()}"
+                          >CL</span
+                        >
+                      </div>
+                      <div class="testimonio-info">
+                        <h4 th:text="${review.customer.fullName}">Cliente</h4>
+                        <div class="testimonio-estrellas">
+                          <!-- Estrellas llenas -->
+                          <i
+                            th:each="i : ${#numbers.sequence(1, review.rating)}"
+                            class="fas fa-star"
+                          ></i>
+                          <!-- Estrellas vacías -->
+                          <th:block th:if="${review.rating < 5}">
+                            <i
+                              th:each="i : ${#numbers.sequence(1, 5 - review.rating)}"
+                              class="far fa-star"
+                            ></i>
+                          </th:block>
+                        </div>
+                      </div>
+                    </div>
+                    <p
+                      class="testimonio-texto"
+                      th:text="'&quot;' + ${review.comment} + '&quot;'"
+                    >
+                      "Comentario del cliente"
+                    </p>
+                  </div>
+
+                  <!-- Mensaje cuando no hay reseñas -->
+                  <div
+                    th:if="${#lists.isEmpty(approvedReviews)}"
+                    class="testimonio-card"
+                    style="text-align: center; padding: 3rem"
+                  >
+                    <p style="color: #666; font-size: 1.1rem">
+                      Aún no hay reseñas aprobadas. ¡Sé el primero en compartir
+                      tu experiencia!
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Navegación -->
+              <div class="testimonio-nav prev" id="prevTestimonio">
+                <i class="fas fa-chevron-left"></i>
+              </div>
+              <div class="testimonio-nav next" id="nextTestimonio">
+                <i class="fas fa-chevron-right"></i>
+              </div>
+
+              <!-- Dots -->
+              <div class="testimonio-dots" id="testimonioDots"></div>
+            </div>
+          </div>
+
+          <!-- Sección Testimonios - Sin módulo ecommerce -->
+          <div
+            th:unless="${hasCustomerModule}"
+            class="testimonios-section scroll-animation"
+          >
+            <h2 class="testimonios-title">
+              ¡Gracias por Confiar en Nosotros! 🙌
+            </h2>
+
+            <div style="text-align: center; padding: 60px 20px">
+              <div style="font-size: 4rem; margin-bottom: 20px">🍽️❤️</div>
+              <h3
+                style="
+                  color: #2d2d2d;
+                  font-size: 1.8rem;
+                  font-weight: 700;
+                  margin-bottom: 15px;
+                "
+              >
+                Tu confianza es nuestro mejor ingrediente
+              </h3>
+              <p
+                style="
+                  color: #555;
+                  font-size: 1.15rem;
+                  max-width: 600px;
+                  margin: 0 auto 20px;
+                  line-height: 1.7;
+                "
+              >
+                Cada día nos esforzamos por ofrecerte lo mejor. Gracias por
+                elegirnos, por cada visita y por compartir momentos especiales
+                en nuestra mesa. Sin ti, nada de esto sería posible.
+              </p>
+              <p style="color: #38e07b; font-size: 1.1rem; font-weight: 600">
+                <i class="fas fa-heart" style="margin-right: 6px"></i>
+                ¡Eres parte de nuestra familia y eso nos llena de orgullo!
+              </p>
+            </div>
+          </div>
+
+          <!-- Sección Logo Loop -->
+          <div class="logo-loop-section scroll-animation">
+            <h2 class="logo-loop-title">Nuestros Patrocinadores</h2>
+            <div class="logo-loop-container">
+              <!-- Primera copia de los logos -->
+              <div class="logo-loop-track">
+                <div class="logo-item">
+                  <img src="images/LogoNombre.png" alt="El Buen Sazón" />
+                </div>
+                <div class="logo-item">
+                  <img
+                    src="https://www.citypng.com/public/uploads/preview/hd-official-coca-cola-company-logo-png-701751694778501cwpnlq6cxs.png"
+                    alt="Coca-Cola"
+                  />
+                </div>
+                <div class="logo-item">
+                  <img
+                    src="https://upload.wikimedia.org/wikipedia/commons/0/0f/Pepsi_logo_2014.svg"
+                    alt="Pepsi"
+                  />
+                </div>
+                <div class="logo-item">
+                  <img
+                    src="https://www.clipartmax.com/png/middle/22-226155_image-result-for-fanta-fanta-logo.png"
+                    alt="Fanta"
+                  />
+                </div>
+                <div class="logo-item">
+                  <img
+                    src="https://usercontent.one/wp/www.allservefoodservice.com/wp-content/uploads/2018/01/herdez-logo.jpg?media=1757382220"
+                    alt="Herdez"
+                  />
+                </div>
+                <div class="logo-item">
+                  <img
+                    src="https://mercalatino.com/files/product_brands/2025/02/23/la-costena-logo-png_seeklogo-507641.png"
+                    alt="La Costeña"
+                  />
+                </div>
+                <div class="logo-item">
+                  <img
+                    src="https://logosenvector.com/logo/img/del-valle-23959.jpg"
+                    alt="Del Valle"
+                  />
+                </div>
+                <div class="logo-item">
+                  <img
+                    src="https://png.pngtree.com/png-clipart/20200727/original/pngtree-red-chilli-food-logo-design-your-company-png-image_5263986.jpg"
+                    alt="Chily"
+                  />
+                </div>
+              </div>
+              <!-- Segunda copia para el loop infinito -->
+              <div class="logo-loop-track">
+                <div class="logo-item">
+                  <img src="images/LogoNombre.png" alt="El Buen Sazón" />
+                </div>
+                <div class="logo-item">
+                  <img
+                    src="https://upload.wikimedia.org/wikipedia/commons/2/25/Coca-Cola_logo.svg"
+                    alt="Coca-Cola"
+                  />
+                </div>
+                <div class="logo-item">
+                  <img
+                    src="https://upload.wikimedia.org/wikipedia/commons/0/0f/Pepsi_logo_2014.svg"
+                    alt="Pepsi"
+                  />
+                </div>
+                <div class="logo-item">
+                  <img
+                    src="https://upload.wikimedia.org/wikipedia/commons/a/a6/Logo_NIKE.svg"
+                    alt="Nike"
+                  />
+                </div>
+                <div class="logo-item">
+                  <img
+                    src="https://upload.wikimedia.org/wikipedia/commons/2/24/Adidas_logo.svg"
+                    alt="Adidas"
+                  />
+                </div>
+                <div class="logo-item">
+                  <img
+                    src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/53/Google_%22G%22_Logo.svg/512px-Google_%22G%22_Logo.svg.png"
+                    alt="Google"
+                  />
+                </div>
+                <div class="logo-item">
+                  <img
+                    src="https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg"
+                    alt="Apple"
+                  />
+                </div>
+                <div class="logo-item">
+                  <img
+                    src="https://upload.wikimedia.org/wikipedia/commons/4/44/Microsoft_logo.svg"
+                    alt="Microsoft"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Fin Contenedor Blanco -->
+
+      <!-- Footer Profesional -->
+      <footer class="footer-section">
+        <!-- Botón Volver al Inicio -->
+        <div class="btn-back-to-top-wrapper">
+          <button
+            class="btn-back-to-top"
+            id="btnBackToTop"
+            title="Volver al inicio"
+          >
+            <i class="fas fa-arrow-up"></i>
+          </button>
+        </div>
+        <div class="footer-content">
+          <div class="row g-4">
+            <!-- Columna 1: Información del Restaurante -->
+            <div class="col-lg-2 col-md-6 col-sm-12">
+              <div class="footer-brand">
+                <h3 th:text="${systemConfig.restaurantName}">Restaurante</h3>
+                <p class="footer-slogan" th:text="${systemConfig.slogan}">
+                  Slogan
+                </p>
+              </div>
+              <p class="footer-description">
+                Desde 2015, ofreciendo los mejores platillos preparados con
+                ingredientes frescos y amor.
+              </p>
+              <div class="footer-social">
+                <a
+                  th:each="social : ${socialNetworks}"
+                  th:href="${social.url}"
+                  target="_blank"
+                  class="social-icon"
+                  th:title="${social.name}"
+                >
+                  <i
+                    th:class="${social.icon != null && !social.icon.isEmpty() ? social.icon : 'fas fa-link'}"
+                  ></i>
+                </a>
+              </div>
+            </div>
+
+            <!-- Columna 2: Enlaces Rápidos -->
+            <div class="col-lg-2 col-md-6 col-sm-6">
+              <h4 class="footer-title">Enlaces</h4>
+              <ul class="footer-links">
+                <li>
+                  <a href="#inicio"
+                    ><i class="fas fa-chevron-right"></i> Inicio</a
+                  >
+                </li>
+                <li>
+                  <a href="#menu"><i class="fas fa-chevron-right"></i> Menú</a>
+                </li>
+                <li>
+                  <a href="#nosotros"
+                    ><i class="fas fa-chevron-right"></i> Nosotros</a
+                  >
+                </li>
+                <li>
+                  <a href="#galeria"
+                    ><i class="fas fa-chevron-right"></i> Galería</a
+                  >
+                </li>
+                <li>
+                  <a href="#contacto"
+                    ><i class="fas fa-chevron-right"></i> Contacto</a
+                  >
+                </li>
+              </ul>
+            </div>
+
+            <!-- Columna 3: Horarios -->
+            <div class="col-lg-2 col-md-6 col-sm-6">
+              <h4 class="footer-title">Horarios</h4>
+              <ul class="footer-schedule">
+                <li th:each="hours : ${businessHours}">
+                  <i
+                    th:class="${hours.isClosed ? 'fas fa-times-circle' : 'far fa-clock'}"
+                  ></i>
+                  <div>
+                    <strong th:text="${hours.dayDisplayName}">Día</strong>
+                    <span
+                      th:if="${!hours.isClosed}"
+                      th:text="${#temporals.format(hours.openTime, 'hh:mm a')} + ' - ' + ${#temporals.format(hours.closeTime, 'hh:mm a')}"
+                    >
+                      Horario
+                    </span>
+                    <span th:if="${hours.isClosed}" class="text-danger"
+                      >Cerrado</span
+                    >
+                  </div>
+                </li>
+              </ul>
+            </div>
+
+            <!-- Columna 4: Contacto -->
+            <div class="col-lg-2 col-md-6 col-sm-12">
+              <h4 class="footer-title">Contacto</h4>
+              <ul class="footer-contact">
+                <li>
+                  <i class="fas fa-map-marker-alt"></i>
+                  <span th:text="${systemConfig.address}">Dirección</span>
+                </li>
+                <li>
+                  <i class="fas fa-phone"></i>
+                  <span th:text="${systemConfig.phone}">Teléfono</span>
+                </li>
+                <li>
+                  <i class="fas fa-envelope"></i>
+                  <span th:text="${systemConfig.email}">Email</span>
+                </li>
+              </ul>
+            </div>
+
+            <!-- Columna 5: Mapa de Google -->
+            <div class="col-lg-4 col-md-12 col-sm-12">
+              <h4 class="footer-title">Nuestra Ubicación</h4>
+              <div class="footer-map">
+                <iframe
+                  th:src="'https://www.google.com/maps?q=' + ${#strings.replace(#strings.replace(systemConfig.address, ' ', '+'), ',', '%2C')} + '&output=embed'"
+                  width="100%"
+                  height="250"
+                  style="border: 0; border-radius: 10px"
+                  allowfullscreen=""
+                  loading="lazy"
+                  referrerpolicy="no-referrer-when-downgrade"
+                >
+                </iframe>
+              </div>
+            </div>
+          </div>
+
+          <!-- Línea separadora -->
+          <div class="footer-divider"></div>
+
+          <!-- Copyright -->
+          <div class="footer-bottom">
+            <p
+              th:text="'© ' + ${#dates.year(#dates.createNow())} + ' ' + ${globalSystemConfig.systemName} + '. Todos los derechos reservados.'"
+            >
+              &copy; 2025 Empresa. Todos los derechos reservados.
+            </p>
+            <div class="footer-bottom-links">
+              <a href="#">Política de Privacidad</a>
+              <span>|</span>
+              <a href="#">Términos y Condiciones</a>
+            </div>
+          </div>
+        </div>
+      </footer>
+      <!-- Fin Footer -->
+    </div>
+    <!-- Fin Contenido Principal -->
+
+    <!-- Modal de Felicitaciones -->
+    <div id="congratulationsModal" class="congratulations-modal">
+      <div class="congratulations-content">
+        <div class="trophy-icon">
+          <i class="fas fa-trophy"></i>
+        </div>
+        <h2>¡Felicidades!</h2>
+        <p>
+          Eres el empleado del mes. Tu dedicación y esfuerzo hacen la
+          diferencia. ¡Sigue así!
+        </p>
+        <button class="congratulations-close" onclick="closeCongratulations()">
+          Cerrar
+        </button>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+      // Funcionalidad mejorada para cambiar entre categorías con animación
+      const categoryButtons = document.querySelectorAll(".category-btn");
+      const offerContents = document.querySelectorAll(".offer-content");
+
+      function showCategory(categoryName) {
+        // Remover clase active de todos los contenidos con fade out
+        offerContents.forEach((content) => {
+          if (content.classList.contains("active")) {
+            content.style.animation = "fadeOutContent 0.3s ease-out";
+            setTimeout(() => {
+              content.classList.remove("active");
+              content.style.animation = "";
+            }, 300);
+          }
+        });
+
+        // Remover active de todos los botones
+        categoryButtons.forEach((btn) => {
+          btn.classList.remove("active");
+        });
+
+        // Mostrar el contenido seleccionado después del fade out
+        setTimeout(() => {
+          const selectedContent = document.querySelector(
+            `.offer-content[data-category="${categoryName}"]`,
+          );
+          if (selectedContent) {
+            selectedContent.classList.add("active");
+          }
+        }, 300);
+
+        // Activar el botón correspondiente
+        const selectedButton = document.querySelector(
+          `.category-btn[data-category="${categoryName}"]`,
+        );
+        if (selectedButton) {
+          selectedButton.classList.add("active");
+        }
+      }
+
+      // Event listeners para los botones de categoría
+      categoryButtons.forEach((button) => {
+        button.addEventListener("click", function () {
+          const category = this.getAttribute("data-category");
+          showCategory(category);
+        });
+      });
+      // Script para el Splash Screen con animación completa
+      window.addEventListener("load", function () {
+        const splashScreen = document.getElementById("splashScreen");
+        const mainContent = document.getElementById("mainContent");
+
+        // Después de 1.5 segundos, comenzar a ocultar splash
+        setTimeout(function () {
+          splashScreen.classList.add("fade-out");
+
+          // Cuando termine el fade-out, mostrar contenido
+          setTimeout(function () {
+            splashScreen.style.display = "none";
+            mainContent.style.display = "block";
+            mainContent.classList.add("fade-in");
+          }, 800); // Tiempo del fade-out
+        }, 1500); // Duración total del splash
+      });
+
+      // ========== ANIMACIONES AL HACER SCROLL ==========
+      const animateOnScroll = () => {
+        const elements = document.querySelectorAll(
+          ".scroll-animation, .fade-in-left, .fade-in-right, .scale-up",
+        );
+
+        const observer = new IntersectionObserver(
+          (entries) => {
+            entries.forEach((entry) => {
+              if (entry.isIntersecting) {
+                entry.target.classList.add("animate");
+                // Opcional: dejar de observar después de animar (solo anima una vez)
+                // observer.unobserve(entry.target);
+              }
+            });
+          },
+          {
+            threshold: 0.1, // Se activa cuando el 10% del elemento es visible
+            rootMargin: "0px 0px -50px 0px", // Se activa un poco antes de que sea totalmente visible
+          },
+        );
+
+        elements.forEach((element) => {
+          observer.observe(element);
+        });
+      };
+
+      // Inicializar animaciones cuando el contenido principal sea visible
+      setTimeout(() => {
+        animateOnScroll();
+      }, 2300); // Después de que termine el splash screen
+
+      // ========== TARJETA 3D INTERACTIVA ==========
+      // Variables globales para la tarjeta 3D
+      let rotacionX = 0;
+      let rotacionY = 0;
+      let arrastrando = false;
+      let posX = 0;
+      let posY = 0;
+      let tarjetaAnimada = false;
+
+      const tarjeta = document.getElementById("tarjeta3d");
+      const escena = document.getElementById("escena3d");
+
+      // Función para actualizar la rotación
+      function actualizarRotacion() {
+        tarjeta.style.transform = `rotateX(${rotacionX}deg) rotateY(${rotacionY}deg)`;
+      }
+
+      // Animación automática cuando la tarjeta entra en vista
+      const observarTarjeta = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting && !tarjetaAnimada) {
+              tarjetaAnimada = true;
+              animarTarjetaAutomatica();
+            }
+          });
+        },
+        {
+          threshold: 0.3,
+        },
+      );
+
+      observarTarjeta.observe(escena);
+
+      // Función para animar la tarjeta automáticamente
+      function animarTarjetaAutomatica() {
+        let paso = 0;
+        const animacion = setInterval(() => {
+          paso++;
+
+          if (paso <= 30) {
+            rotacionY = paso * 6; // Rotar hasta 180 grados
+          } else if (paso <= 60) {
+            rotacionY = 180 + (paso - 30) * 6; // Continuar rotando
+          } else {
+            clearInterval(animacion);
+            // Volver a posición inicial suavemente
+            setTimeout(() => {
+              rotacionX = 0;
+              rotacionY = 0;
+              tarjeta.style.transition = "transform 1s ease";
+              actualizarRotacion();
+              setTimeout(() => {
+                tarjeta.style.transition = "transform 0.1s ease-out";
+              }, 1000);
+            }, 500);
+          }
+
+          actualizarRotacion();
+        }, 30);
+      }
+
+      // Eventos de arrastre del mouse
+      escena.addEventListener("mousedown", (e) => {
+        arrastrando = true;
+        posX = e.clientX;
+        posY = e.clientY;
+        tarjeta.style.cursor = "grabbing";
+      });
+
+      document.addEventListener("mousemove", (e) => {
+        if (!arrastrando) return;
+
+        const deltaX = e.clientX - posX;
+        const deltaY = e.clientY - posY;
+
+        rotacionY += deltaX * 0.5;
+        rotacionX -= deltaY * 0.5;
+
+        // Limitar la rotación en X
+        rotacionX = Math.max(-90, Math.min(90, rotacionX));
+
+        actualizarRotacion();
+
+        posX = e.clientX;
+        posY = e.clientY;
+      });
+
+      document.addEventListener("mouseup", () => {
+        arrastrando = false;
+        tarjeta.style.cursor = "grab";
+      });
+
+      // Soporte táctil para móviles
+      let touchStartX = 0;
+      let touchStartY = 0;
+
+      escena.addEventListener("touchstart", (e) => {
+        arrastrando = true;
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+      });
+
+      escena.addEventListener("touchmove", (e) => {
+        if (!arrastrando) return;
+        e.preventDefault();
+
+        const deltaX = e.touches[0].clientX - touchStartX;
+        const deltaY = e.touches[0].clientY - touchStartY;
+
+        rotacionY += deltaX * 0.5;
+        rotacionX -= deltaY * 0.5;
+
+        rotacionX = Math.max(-90, Math.min(90, rotacionX));
+
+        actualizarRotacion();
+
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+      });
+
+      escena.addEventListener("touchend", () => {
+        arrastrando = false;
+      });
+
+      // Inicializar rotación
+      actualizarRotacion();
+
+      // Observer para las value cards en móvil
+      if (window.innerWidth <= 767) {
+        const valueCardsObserver = new IntersectionObserver(
+          (entries) => {
+            entries.forEach((entry) => {
+              if (entry.isIntersecting) {
+                // Activar la card actual
+                entry.target.classList.add("active");
+              } else {
+                // Desactivar la card cuando sale de la vista
+                entry.target.classList.remove("active");
+              }
+            });
+          },
+          {
+            threshold: 0.5,
+          },
+        );
+
+        const valueCards = document.querySelectorAll(".value-card");
+        valueCards.forEach((card) => {
+          valueCardsObserver.observe(card);
+        });
+      }
+
+      // ========== CARRUSEL DE TESTIMONIOS ==========
+      const track = document.getElementById("testimoniosTrack");
+      const prevBtn = document.getElementById("prevTestimonio");
+      const nextBtn = document.getElementById("nextTestimonio");
+      const dotsContainer = document.getElementById("testimonioDots");
+      const cards = document.querySelectorAll(".testimonio-card");
+
+      if (track && prevBtn && nextBtn && dotsContainer && cards.length > 0) {
+        let currentIndex = 0;
+        let cardsPerView = 3;
+
+        // Detectar cuántas cards mostrar según el ancho de pantalla
+        function updateCardsPerView() {
+          if (window.innerWidth <= 768) {
+            cardsPerView = 1;
+          } else if (window.innerWidth <= 992) {
+            cardsPerView = 2;
+          } else {
+            cardsPerView = 3;
+          }
+          updateCarousel();
+          createDots();
+        }
+
+        // Crear dots de navegación
+        function createDots() {
+          dotsContainer.innerHTML = "";
+          const totalDots = Math.ceil(cards.length / cardsPerView);
+
+          for (let i = 0; i < totalDots; i++) {
+            const dot = document.createElement("div");
+            dot.classList.add("testimonio-dot");
+            if (i === 0) dot.classList.add("active");
+            dot.addEventListener("click", () => goToSlide(i));
+            dotsContainer.appendChild(dot);
+          }
+        }
+
+        // Actualizar posición del carrusel
+        function updateCarousel() {
+          const cardWidth = cards[0].offsetWidth;
+          const gap = 30;
+          const offset = currentIndex * (cardWidth + gap);
+          track.style.transform = `translateX(-${offset}px)`;
+
+          // Actualizar dots
+          const dots = document.querySelectorAll(".testimonio-dot");
+          dots.forEach((dot, index) => {
+            dot.classList.toggle(
+              "active",
+              index === Math.floor(currentIndex / cardsPerView),
+            );
+          });
+        }
+
+        // Ir a un slide específico
+        function goToSlide(index) {
+          currentIndex = index * cardsPerView;
+          updateCarousel();
+        }
+
+        // Navegación siguiente
+        nextBtn.addEventListener("click", () => {
+          currentIndex++;
+          // Verificar si llegamos al final según las cards visibles
+          if (currentIndex > cards.length - cardsPerView) {
+            currentIndex = 0; // Volver al inicio
+          }
+          updateCarousel();
+        });
+
+        // Navegación anterior
+        prevBtn.addEventListener("click", () => {
+          currentIndex--;
+          if (currentIndex < 0) {
+            currentIndex = cards.length - cardsPerView; // Ir al final
+          }
+          updateCarousel();
+        });
+
+        // Inicializar
+        updateCardsPerView();
+        window.addEventListener("resize", updateCardsPerView);
+
+        // Auto-play opcional (cada 5 segundos)
+        setInterval(() => {
+          currentIndex++;
+          // Verificar si llegamos al final según las cards visibles
+          if (currentIndex > cards.length - cardsPerView) {
+            currentIndex = 0; // Volver al inicio
+          }
+          updateCarousel();
+        }, 5000);
+      }
+
+      // ========== HERO TITLE DINÁMICO ==========
+      // Función para aplicar animación de olas a las letras del título
+      document.addEventListener("DOMContentLoaded", function () {
+        const heroTitle = document.getElementById("heroTitle");
+        if (heroTitle) {
+          const restaurantName = heroTitle.getAttribute("data-name");
+          if (restaurantName) {
+            // Limpiar contenido actual
+            heroTitle.innerHTML = "";
+
+            // Dividir el nombre en palabras
+            const words = restaurantName.split(" ");
+
+            let letterIndex = 0;
+            words.forEach((word, wordIndex) => {
+              // Envolver cada palabra en un contenedor nowrap para evitar corte a mitad de palabra
+              const wordWrapper = document.createElement("span");
+              wordWrapper.style.display = "inline-block";
+              wordWrapper.style.whiteSpace = "nowrap";
+
+              // Agregar cada letra de la palabra con span individual
+              for (let i = 0; i < word.length; i++) {
+                const span = document.createElement("span");
+                span.textContent = word[i];
+                span.classList.add("letter");
+                span.style.animationDelay = letterIndex * 0.1 + "s";
+                wordWrapper.appendChild(span);
+                letterIndex++;
+              }
+
+              heroTitle.appendChild(wordWrapper);
+
+              // Agregar espacio entre palabras (excepto después de la última)
+              if (wordIndex < words.length - 1) {
+                const space = document.createElement("span");
+                space.innerHTML = "&nbsp;";
+                heroTitle.appendChild(space);
+              }
+            });
+          }
+        }
+      });
+
+      // ========== MODAL DE FELICITACIONES ==========
+      function showCongratulations() {
+        const modal = document.getElementById("congratulationsModal");
+        modal.classList.add("show");
+      }
+
+      function closeCongratulations() {
+        const modal = document.getElementById("congratulationsModal");
+        modal.classList.remove("show");
+      }
+
+      // Cerrar modal al hacer clic fuera del contenido
+      document.addEventListener("DOMContentLoaded", function () {
+        const modal = document.getElementById("congratulationsModal");
+        if (modal) {
+          modal.addEventListener("click", function (e) {
+            if (e.target === modal) {
+              closeCongratulations();
+            }
+          });
+        }
+      });
+
+      // ========== BOTÓN VOLVER AL INICIO ==========
+      (function () {
+        const btnTop = document.getElementById("btnBackToTop");
+        if (!btnTop) return;
+
+        btnTop.addEventListener("click", function () {
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        });
+      })();
+    </script>
+  </body>
+</html>
