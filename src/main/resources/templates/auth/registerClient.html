@@ -270,6 +270,30 @@
         .register-container::-webkit-scrollbar-thumb:hover {
             background: #2bc866;
         }
+
+        /* Toggle password visibility */
+        .input-wrapper .toggle-password {
+            position: absolute;
+            right: 14px;
+            left: auto;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            color: #9ca3af;
+            font-size: 22px;
+            transition: color 0.3s ease;
+            user-select: none;
+            z-index: 2;
+        }
+
+        .input-wrapper .toggle-password:hover {
+            color: #38e07b;
+        }
+
+        .form-group input[type="password"],
+        .form-group input.has-toggle {
+            padding-right: 44px;
+        }
     </style>
 </head>
 <body>
@@ -391,12 +415,31 @@
                                minlength="6"
                                placeholder="••••••••">
                         <span class="material-symbols-outlined">lock</span>
+                        <span class="material-symbols-outlined toggle-password" onclick="togglePassword('password', this)">visibility_off</span>
                     </div>
                     <p th:if="${#fields.hasErrors('password')}" 
                        th:errors="*{password}" 
                        class="error-text"></p>
                     <p class="help-text">
                         Mínimo 6 caracteres
+                    </p>
+                </div>
+
+                <!-- Confirm Password -->
+                <div class="form-group">
+                    <label for="confirmPassword">Confirmar Contraseña *</label>
+                    <div class="input-wrapper">
+                        <input id="confirmPassword" 
+                               name="confirmPassword" 
+                               type="password" 
+                               required
+                               minlength="6"
+                               placeholder="••••••••">
+                        <span class="material-symbols-outlined">lock</span>
+                        <span class="material-symbols-outlined toggle-password" onclick="togglePassword('confirmPassword', this)">visibility_off</span>
+                    </div>
+                    <p id="confirmPasswordError" class="error-text" style="display: none;">
+                        Las contraseñas no coinciden
                     </p>
                 </div>
             </div>
@@ -426,5 +469,40 @@
             </div>
         </form>
     </div>
+    <script>
+        function togglePassword(inputId, icon) {
+            var input = document.getElementById(inputId);
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.textContent = 'visibility';
+            } else {
+                input.type = 'password';
+                icon.textContent = 'visibility_off';
+            }
+        }
+
+        document.querySelector('form').addEventListener('submit', function(e) {
+            var password = document.getElementById('password').value;
+            var confirmPassword = document.getElementById('confirmPassword').value;
+            var errorMsg = document.getElementById('confirmPasswordError');
+            if (password !== confirmPassword) {
+                e.preventDefault();
+                errorMsg.style.display = 'block';
+                document.getElementById('confirmPassword').focus();
+            } else {
+                errorMsg.style.display = 'none';
+            }
+        });
+
+        document.getElementById('confirmPassword').addEventListener('input', function() {
+            var password = document.getElementById('password').value;
+            var errorMsg = document.getElementById('confirmPasswordError');
+            if (this.value && this.value !== password) {
+                errorMsg.style.display = 'block';
+            } else {
+                errorMsg.style.display = 'none';
+            }
+        });
+    </script>
 </body>
 </html>

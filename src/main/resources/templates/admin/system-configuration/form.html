@@ -18,6 +18,7 @@
       rel="stylesheet"
     />
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <link
       href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@300;400;500;600;700"
       rel="stylesheet"
@@ -232,13 +233,22 @@
                 </div>
 
                 <!-- Agradecimiento Savory Cloud -->
-                <div class="mt-6 p-5 rounded-xl bg-gradient-to-br from-primary/5 to-primary/10 dark:from-primary/10 dark:to-primary/20 border border-primary/20 dark:border-primary/30 text-center">
-                  <span class="material-symbols-outlined text-4xl text-primary mb-2">cloud</span>
-                  <p class="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-1">
-                    Gracias por usar <span class="text-primary">Savory Cloud</span>
+                <div
+                  class="mt-6 p-5 rounded-xl bg-gradient-to-br from-primary/5 to-primary/10 dark:from-primary/10 dark:to-primary/20 border border-primary/20 dark:border-primary/30 text-center"
+                >
+                  <span
+                    class="material-symbols-outlined text-4xl text-primary mb-2"
+                    >cloud</span
+                  >
+                  <p
+                    class="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-1"
+                  >
+                    Gracias por usar
+                    <span class="text-primary">Savory Cloud</span>
                   </p>
                   <p class="text-xs text-gray-500 dark:text-gray-400">
-                    Tu plataforma de gestión restaurantera en la nube. Estamos comprometidos con el éxito de tu negocio.
+                    Tu plataforma de gestión restaurantera en la nube. Estamos
+                    comprometidos con el éxito de tu negocio.
                   </p>
                 </div>
               </div>
@@ -260,7 +270,7 @@
                 </h3>
               </div>
               <div class="p-6">
-                <div class="space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <!-- Package Type -->
                   <div
                     class="flex items-center justify-between p-4 rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 dark:from-primary/20 dark:to-primary/10"
@@ -353,6 +363,37 @@
                           th:text="${#temporals.format(license.expirationDate, 'dd/MM/yyyy')}"
                         >
                           31/12/2026
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Ver Pagos Button -->
+                  <div
+                    class="flex items-center justify-center p-4 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-green-400 dark:hover:border-green-500 transition-colors cursor-pointer"
+                    onclick="
+                      document
+                        .getElementById('financialSummaryModal')
+                        .classList.remove('hidden')
+                    "
+                  >
+                    <div class="flex items-center gap-3">
+                      <div
+                        class="w-12 h-12 rounded-xl bg-gradient-to-br from-green-100 to-green-200 dark:from-green-900 dark:to-green-800 flex items-center justify-center"
+                      >
+                        <span
+                          class="material-symbols-outlined text-2xl text-green-600 dark:text-green-300"
+                          >payments</span
+                        >
+                      </div>
+                      <div>
+                        <p
+                          class="font-semibold text-green-600 dark:text-green-400 text-lg"
+                        >
+                          Ver Pagos
+                        </p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">
+                          Resumen financiero
                         </p>
                       </div>
                     </div>
@@ -473,6 +514,43 @@
                             accept="image/jpeg,image/png,image/gif,image/webp"
                             class="hidden"
                             onchange="
+                              if (
+                                this.files[0] &&
+                                this.files[0].size > 5 * 1024 * 1024
+                              ) {
+                                Swal.fire({
+                                  icon: 'warning',
+                                  title: 'Imagen demasiado pesada',
+                                  html: 'Tu imagen pesa más de <b>5MB</b> <br>Te recomendamos reducir su tamaño o usar un formato más ligero como <b>WEBP</b>.',
+                                  confirmButtonText: 'Entendido',
+                                  confirmButtonColor: '#38e07b',
+                                  background:
+                                    document.documentElement.classList.contains(
+                                      'dark',
+                                    )
+                                      ? '#1f2937'
+                                      : '#ffffff',
+                                  color:
+                                    document.documentElement.classList.contains(
+                                      'dark',
+                                    )
+                                      ? '#f3f4f6'
+                                      : '#1f2937',
+                                  customClass: {
+                                    popup: 'rounded-2xl',
+                                    confirmButton:
+                                      'rounded-xl px-6 py-2.5 font-semibold',
+                                  },
+                                });
+                                this.value = '';
+                                document.getElementById(
+                                  'restaurantLogoLabel',
+                                ).textContent = 'Seleccionar imagen...';
+                                document.getElementById(
+                                  'btnUploadRestaurantLogo',
+                                ).disabled = true;
+                                return;
+                              }
                               document.getElementById(
                                 'restaurantLogoLabel',
                               ).textContent =
@@ -1653,6 +1731,171 @@
         // }
       });
     </script>
+
+    <!-- Financial Summary Modal -->
+    <div
+      id="financialSummaryModal"
+      class="hidden fixed inset-0 z-50 flex items-center justify-center p-4"
+      th:if="${license != null}"
+    >
+      <!-- Backdrop -->
+      <div
+        class="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        onclick="
+          document
+            .getElementById('financialSummaryModal')
+            .classList.add('hidden')
+        "
+      ></div>
+      <!-- Modal Content -->
+      <div
+        class="relative bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800 w-full max-w-2xl max-h-[85vh] overflow-hidden animate-slide-in"
+      >
+        <!-- Header -->
+        <div
+          class="bg-gradient-to-r from-green-500 to-green-600 px-6 py-4 flex items-center justify-between"
+        >
+          <div class="flex items-center gap-3 text-white">
+            <span class="material-symbols-outlined text-2xl">payments</span>
+            <h5 class="text-xl font-bold">Resumen Financiero</h5>
+          </div>
+          <button
+            onclick="
+              document
+                .getElementById('financialSummaryModal')
+                .classList.add('hidden')
+            "
+            class="text-white/80 hover:text-white transition-colors"
+          >
+            <span class="material-symbols-outlined text-2xl">close</span>
+          </button>
+        </div>
+        <!-- Body -->
+        <div class="p-6 overflow-y-auto max-h-[calc(85vh-72px)]">
+          <!-- Total Revenue -->
+          <div
+            class="mb-6 p-4 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl border border-green-200 dark:border-green-800"
+          >
+            <div class="flex items-center gap-3">
+              <span
+                class="material-symbols-outlined text-3xl text-green-600 dark:text-green-400"
+                >account_balance_wallet</span
+              >
+              <div>
+                <p
+                  class="text-sm text-gray-600 dark:text-gray-400 font-semibold mb-1"
+                >
+                  Total Pagado
+                </p>
+                <h3
+                  class="text-3xl font-bold text-green-600 dark:text-green-400"
+                >
+                  $<span
+                    th:text="${totalRevenue != null ? #numbers.formatDecimal(totalRevenue, 1, 2) : '0.00'}"
+                    >0.00</span
+                  >
+                  MXN
+                </h3>
+              </div>
+            </div>
+          </div>
+
+          <!-- No renewals message -->
+          <div
+            th:if="${renewalsWithAmount == null || #lists.isEmpty(renewalsWithAmount)}"
+            class="bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500 text-blue-800 dark:text-blue-300 px-6 py-4 rounded-xl"
+          >
+            <div class="flex items-start gap-3">
+              <span class="material-symbols-outlined text-blue-500 text-2xl"
+                >info</span
+              >
+              <span>No hay renovaciones con monto registrado</span>
+            </div>
+          </div>
+
+          <!-- Renewals table -->
+          <div
+            th:if="${renewalsWithAmount != null && !#lists.isEmpty(renewalsWithAmount)}"
+          >
+            <h6
+              class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2"
+            >
+              <span
+                class="material-symbols-outlined text-gray-600 dark:text-gray-400"
+                >history</span
+              >
+              Historial de Renovaciones
+            </h6>
+            <div class="overflow-x-auto">
+              <table class="w-full">
+                <thead>
+                  <tr class="bg-gray-900 dark:bg-gray-800 text-white">
+                    <th
+                      class="px-4 py-3 text-left text-sm font-semibold rounded-tl-lg"
+                    >
+                      Fecha
+                    </th>
+                    <th class="px-4 py-3 text-left text-sm font-semibold">
+                      Descripción
+                    </th>
+                    <th class="px-4 py-3 text-left text-sm font-semibold">
+                      Meses
+                    </th>
+                    <th
+                      class="px-4 py-3 text-left text-sm font-semibold rounded-tr-lg"
+                    >
+                      Monto
+                    </th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                  <tr
+                    th:each="event : ${renewalsWithAmount}"
+                    class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                  >
+                    <td
+                      class="px-4 py-3 text-sm text-gray-900 dark:text-gray-200"
+                      th:text="${#temporals.format(event.eventDate, 'dd/MM/yyyy HH:mm')}"
+                    ></td>
+                    <td
+                      class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300"
+                      th:text="${event.description}"
+                    ></td>
+                    <td class="px-4 py-3 text-sm">
+                      <span
+                        th:if="${event.months != null && event.months > 0}"
+                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                        th:text="'+' + ${event.months} + ' meses'"
+                      ></span>
+                      <span
+                        th:if="${event.months != null && event.months < 0}"
+                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
+                        th:text="${event.months} + ' meses'"
+                      ></span>
+                      <span
+                        th:if="${event.months == null}"
+                        class="text-gray-500 dark:text-gray-400 text-xs"
+                        >N/A</span
+                      >
+                    </td>
+                    <td
+                      class="px-4 py-3 text-sm font-bold"
+                      th:classappend="${event.amount >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}"
+                    >
+                      <span th:if="${event.amount >= 0}">+</span>$<span
+                        th:text="${#numbers.formatDecimal(event.amount, 1, 2)}"
+                        >0.00</span
+                      >
+                      MXN
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <!-- Script del Sistema de Temas -->
     <div th:replace="~{fragments/theme :: themeScript}"></div>

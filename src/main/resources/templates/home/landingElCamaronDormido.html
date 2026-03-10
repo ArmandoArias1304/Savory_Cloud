@@ -1885,7 +1885,7 @@
         display: flex;
         justify-content: center;
         align-items: center;
-        margin: 0 auto 30px;
+        margin: 0 auto 80px;
         box-shadow: none;
       }
 
@@ -4914,8 +4914,11 @@
             </div>
           </div>
 
-          <!-- Sección Testimonios -->
-          <div class="testimonios-section scroll-animation">
+          <!-- Sección Testimonios - Con módulo ecommerce activo -->
+          <div
+            th:if="${hasCustomerModule}"
+            class="testimonios-section scroll-animation"
+          >
             <h2 class="testimonios-title">Lo Que Dicen Nuestros Clientes</h2>
 
             <div class="testimonios-container">
@@ -4983,6 +4986,47 @@
 
               <!-- Dots -->
               <div class="testimonio-dots" id="testimonioDots"></div>
+            </div>
+          </div>
+
+          <!-- Sección Testimonios - Sin módulo ecommerce -->
+          <div
+            th:unless="${hasCustomerModule}"
+            class="testimonios-section scroll-animation"
+          >
+            <h2 class="testimonios-title">
+              ¡Gracias por Confiar en Nosotros! 🙌
+            </h2>
+
+            <div style="text-align: center; padding: 60px 20px">
+              <div style="font-size: 4rem; margin-bottom: 20px">🍽️❤️</div>
+              <h3
+                style="
+                  color: #2d2d2d;
+                  font-size: 1.8rem;
+                  font-weight: 700;
+                  margin-bottom: 15px;
+                "
+              >
+                Tu confianza es nuestro mejor ingrediente
+              </h3>
+              <p
+                style="
+                  color: #555;
+                  font-size: 1.15rem;
+                  max-width: 600px;
+                  margin: 0 auto 20px;
+                  line-height: 1.7;
+                "
+              >
+                Cada día nos esforzamos por ofrecerte lo mejor. Gracias por
+                elegirnos, por cada visita y por compartir momentos especiales
+                en nuestra mesa. Sin ti, nada de esto sería posible.
+              </p>
+              <p style="color: #38e07b; font-size: 1.1rem; font-weight: 600">
+                <i class="fas fa-heart" style="margin-right: 6px"></i>
+                ¡Eres parte de nuestra familia y eso nos llena de orgullo!
+              </p>
             </div>
           </div>
 
@@ -5522,91 +5566,93 @@
       const dotsContainer = document.getElementById("testimonioDots");
       const cards = document.querySelectorAll(".testimonio-card");
 
-      let currentIndex = 0;
-      let cardsPerView = 3;
+      if (track && prevBtn && nextBtn && dotsContainer && cards.length > 0) {
+        let currentIndex = 0;
+        let cardsPerView = 3;
 
-      // Detectar cuántas cards mostrar según el ancho de pantalla
-      function updateCardsPerView() {
-        if (window.innerWidth <= 768) {
-          cardsPerView = 1;
-        } else if (window.innerWidth <= 992) {
-          cardsPerView = 2;
-        } else {
-          cardsPerView = 3;
+        // Detectar cuántas cards mostrar según el ancho de pantalla
+        function updateCardsPerView() {
+          if (window.innerWidth <= 768) {
+            cardsPerView = 1;
+          } else if (window.innerWidth <= 992) {
+            cardsPerView = 2;
+          } else {
+            cardsPerView = 3;
+          }
+          updateCarousel();
+          createDots();
         }
-        updateCarousel();
-        createDots();
-      }
 
-      // Crear dots de navegación
-      function createDots() {
-        dotsContainer.innerHTML = "";
-        const totalDots = Math.ceil(cards.length / cardsPerView);
+        // Crear dots de navegación
+        function createDots() {
+          dotsContainer.innerHTML = "";
+          const totalDots = Math.ceil(cards.length / cardsPerView);
 
-        for (let i = 0; i < totalDots; i++) {
-          const dot = document.createElement("div");
-          dot.classList.add("testimonio-dot");
-          if (i === 0) dot.classList.add("active");
-          dot.addEventListener("click", () => goToSlide(i));
-          dotsContainer.appendChild(dot);
+          for (let i = 0; i < totalDots; i++) {
+            const dot = document.createElement("div");
+            dot.classList.add("testimonio-dot");
+            if (i === 0) dot.classList.add("active");
+            dot.addEventListener("click", () => goToSlide(i));
+            dotsContainer.appendChild(dot);
+          }
         }
-      }
 
-      // Actualizar posición del carrusel
-      function updateCarousel() {
-        const cardWidth = cards[0].offsetWidth;
-        const gap = 30;
-        const offset = currentIndex * (cardWidth + gap);
-        track.style.transform = `translateX(-${offset}px)`;
+        // Actualizar posición del carrusel
+        function updateCarousel() {
+          const cardWidth = cards[0].offsetWidth;
+          const gap = 30;
+          const offset = currentIndex * (cardWidth + gap);
+          track.style.transform = `translateX(-${offset}px)`;
 
-        // Actualizar dots
-        const dots = document.querySelectorAll(".testimonio-dot");
-        dots.forEach((dot, index) => {
-          dot.classList.toggle(
-            "active",
-            index === Math.floor(currentIndex / cardsPerView),
-          );
+          // Actualizar dots
+          const dots = document.querySelectorAll(".testimonio-dot");
+          dots.forEach((dot, index) => {
+            dot.classList.toggle(
+              "active",
+              index === Math.floor(currentIndex / cardsPerView),
+            );
+          });
+        }
+
+        // Ir a un slide específico
+        function goToSlide(index) {
+          currentIndex = index * cardsPerView;
+          updateCarousel();
+        }
+
+        // Navegación siguiente
+        nextBtn.addEventListener("click", () => {
+          currentIndex++;
+          // Verificar si llegamos al final según las cards visibles
+          if (currentIndex > cards.length - cardsPerView) {
+            currentIndex = 0; // Volver al inicio
+          }
+          updateCarousel();
         });
+
+        // Navegación anterior
+        prevBtn.addEventListener("click", () => {
+          currentIndex--;
+          if (currentIndex < 0) {
+            currentIndex = cards.length - cardsPerView; // Ir al final
+          }
+          updateCarousel();
+        });
+
+        // Inicializar
+        updateCardsPerView();
+        window.addEventListener("resize", updateCardsPerView);
+
+        // Auto-play opcional (cada 5 segundos)
+        setInterval(() => {
+          currentIndex++;
+          // Verificar si llegamos al final según las cards visibles
+          if (currentIndex > cards.length - cardsPerView) {
+            currentIndex = 0; // Volver al inicio
+          }
+          updateCarousel();
+        }, 5000);
       }
-
-      // Ir a un slide específico
-      function goToSlide(index) {
-        currentIndex = index * cardsPerView;
-        updateCarousel();
-      }
-
-      // Navegación siguiente
-      nextBtn.addEventListener("click", () => {
-        currentIndex++;
-        // Verificar si llegamos al final según las cards visibles
-        if (currentIndex > cards.length - cardsPerView) {
-          currentIndex = 0; // Volver al inicio
-        }
-        updateCarousel();
-      });
-
-      // Navegación anterior
-      prevBtn.addEventListener("click", () => {
-        currentIndex--;
-        if (currentIndex < 0) {
-          currentIndex = cards.length - cardsPerView; // Ir al final
-        }
-        updateCarousel();
-      });
-
-      // Inicializar
-      updateCardsPerView();
-      window.addEventListener("resize", updateCardsPerView);
-
-      // Auto-play opcional (cada 5 segundos)
-      setInterval(() => {
-        currentIndex++;
-        // Verificar si llegamos al final según las cards visibles
-        if (currentIndex > cards.length - cardsPerView) {
-          currentIndex = 0; // Volver al inicio
-        }
-        updateCarousel();
-      }, 5000);
 
       // ========== HERO TITLE DINÁMICO ==========
       // Función para aplicar animación de olas a las letras del título
@@ -5623,15 +5669,22 @@
 
             let letterIndex = 0;
             words.forEach((word, wordIndex) => {
+              // Envolver cada palabra en un contenedor nowrap para evitar corte a mitad de palabra
+              const wordWrapper = document.createElement("span");
+              wordWrapper.style.display = "inline-block";
+              wordWrapper.style.whiteSpace = "nowrap";
+
               // Agregar cada letra de la palabra con span individual
               for (let i = 0; i < word.length; i++) {
                 const span = document.createElement("span");
                 span.textContent = word[i];
                 span.classList.add("letter");
                 span.style.animationDelay = letterIndex * 0.1 + "s";
-                heroTitle.appendChild(span);
+                wordWrapper.appendChild(span);
                 letterIndex++;
               }
+
+              heroTitle.appendChild(wordWrapper);
 
               // Agregar espacio entre palabras (excepto después de la última)
               if (wordIndex < words.length - 1) {

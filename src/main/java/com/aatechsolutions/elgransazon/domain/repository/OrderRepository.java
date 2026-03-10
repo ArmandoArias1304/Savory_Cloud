@@ -278,6 +278,11 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     long countByStatusAndCompany(OrderStatus status, Company company);
 
     /**
+     * Count all orders by company
+     */
+    long countByCompany(Company company);
+
+    /**
      * Count today's orders by company
      */
     @Query("SELECT COUNT(o) FROM Order o WHERE o.company = :company AND DATE(o.createdAt) = CURRENT_DATE")

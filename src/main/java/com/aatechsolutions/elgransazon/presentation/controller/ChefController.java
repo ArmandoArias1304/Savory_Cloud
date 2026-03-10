@@ -22,6 +22,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.time.LocalDate;
@@ -200,7 +201,9 @@ public class ChefController {
      * @return my orders view (history)
      */
     @GetMapping("/orders/my-orders")
-    public String myOrders(Authentication authentication, Model model) {
+    public String myOrders(
+            @RequestParam(defaultValue = "1") int page,
+            Authentication authentication, Model model) {
         String username = authentication.getName();
         String roleDisplay = getRoleDisplayName(authentication);
         boolean isBaristaRole = isBarista(authentication);
@@ -269,7 +272,21 @@ public class ChefController {
             .filter(o -> o.getStatus() == OrderStatus.PAID)
             .count();
         
-        model.addAttribute("orders", completedOrders);
+        // Server-side pagination
+        int pageSize = 15;
+        int totalElements = completedOrders.size();
+        int totalPages = (int) Math.ceil((double) totalElements / pageSize);
+        if (totalPages == 0) totalPages = 1;
+        page = Math.max(1, Math.min(page, totalPages));
+        int startIndex = (page - 1) * pageSize;
+        int endIndex = Math.min(startIndex + pageSize, totalElements);
+        List<Order> pagedOrders = totalElements > 0 ? completedOrders.subList(startIndex, endIndex) : completedOrders;
+        
+        model.addAttribute("orders", pagedOrders);
+        model.addAttribute("currentPage", page);
+        model.addAttribute("totalPages", totalPages);
+        model.addAttribute("totalElements", totalElements);
+        model.addAttribute("pageSize", pageSize);
         model.addAttribute("readyCount", readyCount);
         model.addAttribute("deliveredCount", deliveredCount);
         model.addAttribute("paidCount", paidCount);

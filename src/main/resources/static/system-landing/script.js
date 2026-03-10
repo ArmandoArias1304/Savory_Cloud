@@ -117,6 +117,24 @@ document.addEventListener("DOMContentLoaded", () => {
         introHero.removeEventListener("transitionend", onEnd);
         introHero.classList.add("is-hidden");
         window.scrollTo({ top: 0, behavior: "instant" });
+
+        // Trigger green swipe animation
+        const greenSwipe = document.getElementById("greenSwipe");
+        if (greenSwipe) {
+          greenSwipe.classList.add("is-active");
+          // After animation, reveal main content
+          greenSwipe.addEventListener("animationend", function onSwipeEnd() {
+            greenSwipe.classList.remove("is-active");
+            greenSwipe.style.display = "none";
+            greenSwipe.removeEventListener("animationend", onSwipeEnd);
+            // Reveal main content
+            const mainContent = document.getElementById("mainContent");
+            if (mainContent) {
+              mainContent.style.opacity = "1";
+              mainContent.style.pointerEvents = "auto";
+            }
+          });
+        }
       });
     }
 
@@ -743,6 +761,21 @@ document.addEventListener("DOMContentLoaded", () => {
         },
       });
     }
+  }
+
+  /* ─── Features: hide scroll hint on scroll ─── */
+  const featuresRow = document.querySelector(".features .row.g-4");
+  const scrollHint = document.getElementById("featuresScrollHint");
+  if (featuresRow && scrollHint) {
+    featuresRow.addEventListener(
+      "scroll",
+      () => {
+        if (featuresRow.scrollLeft > 30) {
+          scrollHint.classList.add("is-hidden");
+        }
+      },
+      { passive: true },
+    );
   }
 
   /* ─── Data en Vivo: organic equalizer bars (paused off-screen) ─── */

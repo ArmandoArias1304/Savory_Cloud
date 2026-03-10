@@ -47,644 +47,629 @@
     </script>
   </head>
   <body>
+
     <!-- ===================== INTRO HERO ===================== -->
     <section class="intro-hero" id="introHero">
       <h1 class="intro-hero__title" id="introTitle">Savory Cloud</h1>
     </section>
 
-    <!-- ===================== NAVBAR ===================== -->
-    <nav class="navbar" id="navbar">
-      <div class="container">
-        <div class="navbar__inner">
-          <a href="#" class="navbar__brand">
-            <span class="navbar__logo-icon">
-              <img
-                src="/images/savoryCloudLogo.webp"
-                alt="Savory Cloud"
-                class="navbar__logo-img"
-              />
-            </span>
-            <span class="navbar__brand-text"
-              >Savory<span class="text-accent"> Cloud</span></span
-            >
-          </a>
+    <!-- Green swipe overlay (appears after intro animation) -->
+    <div class="green-swipe" id="greenSwipe"></div>
 
-          <!-- Mobile hamburger -->
-          <button class="navbar__toggle" id="navToggle" aria-label="Menú">
-            <span></span><span></span><span></span>
-          </button>
-
-          <ul class="navbar__links" id="navLinks">
-            <li><a href="#features" class="rolling-text">Funciones</a></li>
-            <li><a href="#benefits" class="rolling-text">Beneficios</a></li>
-            <li>
-              <a href="#howItWorks" class="rolling-text">¿Cómo funciona?</a>
-            </li>
-            <li><a href="#pricing" class="rolling-text">Planes</a></li>
-            <li>
-              <a href="#cta-final" class="btn btn--primary btn-cta"
-                >Empezar ahora</a
-              >
-            </li>
-          </ul>
-        </div>
-      </div>
-    </nav>
-
-    <!-- ===================== HERO ===================== -->
-    <header class="hero" id="hero">
-      <div class="hero__bg-glow"></div>
-      <div class="container">
-        <div class="row align-items-center hero__row">
-          <!-- Image (mobile first → appears on top on mobile) -->
-          <div
-            class="col-12 col-lg-6 order-1 order-lg-2 hero__image-col anim-fade-in-up"
-            style="--delay: 0.2s"
-          >
-            <div class="hero__image-wrapper">
-              <div class="hero__image-float">
+    <!-- MAIN CONTENT (hidden until after green swipe) -->
+    <div id="mainContent" style="opacity:0; pointer-events:none; transition:opacity 0.7s cubic-bezier(0.22,1,0.36,1);">
+      <!-- ===================== NAVBAR ===================== -->
+      <nav class="navbar" id="navbar">
+        <div class="container">
+          <div class="navbar__inner">
+            <a href="#" class="navbar__brand">
+              <span class="navbar__logo-icon">
                 <img
-                  class="hero__dashboard"
-                  src="/images/savoryCloudLogo.webp"
-                  alt="Savory Cloud — Sistema de gestión para restaurantes"
+                  src="/images/savoryCloudLogo.png"
+                  alt="Savory Cloud"
+                  class="navbar__logo-img"
                 />
+              </span>
+              <span class="navbar__brand-text"
+                >Savory<span class="text-accent"> Cloud</span></span
+              >
+            </a>
+
+            <!-- Mobile hamburger -->
+            <button class="navbar__toggle" id="navToggle" aria-label="Menú">
+              <span></span><span></span><span></span>
+            </button>
+
+            <ul class="navbar__links" id="navLinks">
+              <li><a href="#features" class="rolling-text">Funciones</a></li>
+              <li><a href="#benefits" class="rolling-text">Beneficios</a></li>
+              <li>
+                <a href="#howItWorks" class="rolling-text">¿Cómo funciona?</a>
+              </li>
+              <li><a href="#pricing" class="rolling-text">Planes</a></li>
+              <li>
+                <a href="#cta-final" class="btn btn--primary btn-cta"
+                  >Empezar ahora</a>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </nav>
+
+      <!-- ===================== HERO ===================== -->
+      <header class="hero" id="hero">
+        <div class="hero__bg-glow"></div>
+        <div class="container">
+          <div class="row align-items-center hero__row">
+            <!-- Image (mobile first → appears on top on mobile) -->
+            <div
+              class="col-12 col-lg-6 order-1 order-lg-2 hero__image-col anim-fade-in-up"
+              style="--delay: 0.2s"
+            >
+              <div class="hero__image-wrapper">
+                <div class="hero__image-float">
+                  <img
+                    class="hero__dashboard"
+                    src="/images/savoryCloudLogo.png"
+                    alt="Savory Cloud — Sistema de gestión para restaurantes"
+                  />
+                </div>
               </div>
             </div>
-          </div>
 
-          <!-- Text content -->
-          <div class="col-12 col-lg-6 order-2 order-lg-1 hero__text-col">
-            <div class="hero__content anim-fade-in-up" style="--delay: 0.4s">
-              <p class="hero__tag">Sistema de gestión para restaurantes</p>
-              <h1 class="hero__title titulo-revelado">
-                Tú pones el <span class="text-accent-serif">sazón,</span><br />
-                nosotros la <span class="hero__highlight">Gestión</span>
-              </h1>
-              <p class="hero__subtitle">
-                Controla ventas, inventario, mesas, reservas, empleados,
-                clientes, ventas en línea, delivery todo desde una sola
-                plataforma en la nube. Más eficiencia, menos estrés.
-              </p>
-              <div class="hero__cta-group">
-                <a href="#cta-final" class="btn btn--primary btn--lg btn--glow">
-                  <span>Contratar ahora</span>
-                  <svg
-                    width="20"
-                    height="20"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  >
-                    <path d="m5 12h14" />
-                    <path d="m12 5 7 7-7 7" />
-                  </svg>
-                </a>
-                <a href="#features" class="btn btn--outline btn--lg">
-                  <span>Ver funciones</span>
-                </a>
-              </div>
-              <div class="hero__trust">
-                <div class="hero__trust-avatars">
-                  <span class="avatar" style="--hue: 160">30+</span>
-                  <span class="avatar" style="--hue: 40">7</span>
-                </div>
-                <p class="hero__trust-text">
-                  +30 herramientas · 7 roles de usuario
+            <!-- Text content -->
+            <div class="col-12 col-lg-6 order-2 order-lg-1 hero__text-col">
+              <div class="hero__content anim-fade-in-up" style="--delay: 0.4s">
+                <p class="hero__tag">Sistema de gestión para restaurantes</p>
+                <h1 class="hero__title titulo-revelado">
+                  Tú pones el <span class="text-accent-serif">sazón,</span><br />
+                  nosotros la <span class="hero__highlight">Gestión</span>
+                </h1>
+                <p class="hero__subtitle">
+                  Controla ventas, inventario, mesas, reservas, empleados,
+                  clientes, ventas en línea, delivery todo desde una sola
+                  plataforma en la nube. Más eficiencia, menos estrés.
                 </p>
+                <div class="hero__cta-group">
+                  <a href="#cta-final" class="btn btn--primary btn--lg btn--glow">
+                    <span>Contratar ahora</span>
+                    <svg
+                      width="20"
+                      height="20"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <path d="m5 12h14" />
+                      <path d="m12 5 7 7-7 7" />
+                    </svg>
+                  </a>
+                  <a href="#features" class="btn btn--outline btn--lg">
+                    <span>Ver funciones</span>
+                  </a>
+                </div>
+                <div class="hero__trust">
+                  <div class="hero__trust-avatars">
+                    <span class="avatar" style="--hue: 160">30+</span>
+                    <span class="avatar" style="--hue: 40">7</span>
+                  </div>
+                  <p class="hero__trust-text">
+                    +30 herramientas · 7 roles de usuario
+                  </p>
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
-    </header>
+      </header>
 
-    <!-- ===================== SOBRE NOSOTROS ===================== -->
-    <section class="section about-us" id="aboutUs">
-      <div class="container">
-        <div class="row align-items-center g-5">
-          <div class="col-12 col-lg-6 anim-fade-in-up" style="--delay: 0.1s">
-            <div class="about-us__visual">
-              <div class="about-us__glow"></div>
-              <div class="about-us__icon-grid">
-                <!-- Innovación → Foco / Lightbulb -->
-                <div class="about-us__icon-item">
-                  <svg viewBox="0 0 48 48" width="48" height="48" fill="none">
-                    <circle
-                      cx="24"
-                      cy="24"
-                      r="20"
-                      stroke="var(--color-primary)"
-                      stroke-width="2"
-                      opacity=".3"
-                    />
-                    <path
-                      d="M24 12a8 8 0 0 0-5 14.3V29a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-2.7A8 8 0 0 0 24 12z"
-                      stroke="var(--color-primary)"
-                      stroke-width="2.5"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                    />
-                    <path
-                      d="M21 33h6"
-                      stroke="var(--color-primary)"
-                      stroke-width="2.5"
-                      stroke-linecap="round"
-                    />
-                    <path
-                      d="M22 36h4"
-                      stroke="var(--color-primary)"
-                      stroke-width="2.5"
-                      stroke-linecap="round"
-                    />
-                  </svg>
-                  <span>Innovación</span>
+      <!-- ===================== SOBRE NOSOTROS ===================== -->
+      <section class="section about-us" id="aboutUs">
+        <div class="container">
+          <div class="row align-items-center g-5">
+            <div class="col-12 col-lg-6 anim-fade-in-up" style="--delay: 0.1s">
+              <div class="about-us__visual">
+                <div class="about-us__glow"></div>
+                <div class="about-us__icon-grid">
+                  <!-- Innovación → Foco / Lightbulb -->
+                  <div class="about-us__icon-item">
+                    <svg viewBox="0 0 48 48" width="48" height="48" fill="none">
+                      <circle
+                        cx="24"
+                        cy="24"
+                        r="20"
+                        stroke="var(--color-primary)"
+                        stroke-width="2"
+                        opacity=".3"
+                      />
+                      <path
+                        d="M24 12a8 8 0 0 0-5 14.3V29a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-2.7A8 8 0 0 0 24 12z"
+                        stroke="var(--color-primary)"
+                        stroke-width="2.5"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                      <path
+                        d="M21 33h6"
+                        stroke="var(--color-primary)"
+                        stroke-width="2.5"
+                        stroke-linecap="round"
+                      />
+                      <path
+                        d="M22 36h4"
+                        stroke="var(--color-primary)"
+                        stroke-width="2.5"
+                        stroke-linecap="round"
+                      />
+                    </svg>
+                    <span>Innovación</span>
+                  </div>
+                  <!-- Confianza → Escudo con check / Shield -->
+                  <div class="about-us__icon-item">
+                    <svg viewBox="0 0 48 48" width="48" height="48" fill="none">
+                      <circle
+                        cx="24"
+                        cy="24"
+                        r="20"
+                        stroke="var(--color-primary)"
+                        stroke-width="2"
+                        opacity=".3"
+                      />
+                      <path
+                        d="M24 10l-10 4.5v6.5c0 7 4.3 13.5 10 15.5 5.7-2 10-8.5 10-15.5v-6.5L24 10z"
+                        stroke="var(--color-primary)"
+                        stroke-width="2.5"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                      <path
+                        d="M19 24l3.5 3.5 7-7"
+                        stroke="var(--color-primary)"
+                        stroke-width="2.5"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                    </svg>
+                    <span>Confianza</span>
+                  </div>
+                  <!-- Pasión → Corazón / Heart -->
+                  <div class="about-us__icon-item">
+                    <svg viewBox="0 0 48 48" width="48" height="48" fill="none">
+                      <circle
+                        cx="24"
+                        cy="24"
+                        r="20"
+                        stroke="var(--color-primary)"
+                        stroke-width="2"
+                        opacity=".3"
+                      />
+                      <path
+                        d="M24 34s-10-5.7-10-13.3c0-3.6 2.9-6.7 6.5-6.7 2 0 3.5 1 3.5 1s1.5-1 3.5-1c3.6 0 6.5 3.1 6.5 6.7C34 28.3 24 34 24 34z"
+                        stroke="var(--color-primary)"
+                        stroke-width="2.5"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                    </svg>
+                    <span>Pasión</span>
+                  </div>
+                  <!-- Cercanía → Dos personas / People together -->
+                  <div class="about-us__icon-item">
+                    <svg viewBox="0 0 48 48" width="48" height="48" fill="none">
+                      <circle
+                        cx="24"
+                        cy="24"
+                        r="20"
+                        stroke="var(--color-primary)"
+                        stroke-width="2"
+                        opacity=".3"
+                      />
+                      <circle
+                        cx="18"
+                        cy="17"
+                        r="3.5"
+                        stroke="var(--color-primary)"
+                        stroke-width="2.5"
+                      />
+                      <path
+                        d="M11 31v-1c0-3.9 3.1-7 7-7s7 3.1 7 7v1"
+                        stroke="var(--color-primary)"
+                        stroke-width="2.5"
+                        stroke-linecap="round"
+                      />
+                      <circle
+                        cx="31"
+                        cy="17"
+                        r="3.5"
+                        stroke="var(--color-primary)"
+                        stroke-width="2.5"
+                      />
+                      <path
+                        d="M27 31v-1c0-3.9 2.2-7 4-7"
+                        stroke="var(--color-primary)"
+                        stroke-width="2.5"
+                        stroke-linecap="round"
+                      />
+                    </svg>
+                    <span>Cercanía</span>
+                  </div>
                 </div>
-                <!-- Confianza → Escudo con check / Shield -->
-                <div class="about-us__icon-item">
-                  <svg viewBox="0 0 48 48" width="48" height="48" fill="none">
-                    <circle
-                      cx="24"
-                      cy="24"
-                      r="20"
-                      stroke="var(--color-primary)"
-                      stroke-width="2"
-                      opacity=".3"
-                    />
-                    <path
-                      d="M24 10l-10 4.5v6.5c0 7 4.3 13.5 10 15.5 5.7-2 10-8.5 10-15.5v-6.5L24 10z"
-                      stroke="var(--color-primary)"
-                      stroke-width="2.5"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                    />
-                    <path
-                      d="M19 24l3.5 3.5 7-7"
-                      stroke="var(--color-primary)"
-                      stroke-width="2.5"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                    />
-                  </svg>
-                  <span>Confianza</span>
+              </div>
+            </div>
+            <div
+              class="col-12 col-lg-6 anim-fade-in-up"
+              style="--delay: 0.3s; text-align: center"
+            >
+              <p class="section__tag">Sobre nosotros</p>
+              <h2 class="section__title titulo-revelado">
+                Tecnología con alma<br /><span class="text-accent-serif"
+                  >restaurantera</span>
+              </h2>
+              <p class="about-us__text">
+                Somos un equipo apasionado por la tecnología y la gastronomía.
+                Creamos Savory Cloud porque creemos que cada restaurante merece
+                herramientas profesionales, accesibles y fáciles de usar para
+                crecer sin límites.
+              </p>
+              <p class="about-us__text">
+                Sabemos que lo tuyo son los platillos increíbles y hacer felices a
+                tus comensales — los números, los reportes y toda la tecnología
+                corren por nuestra cuenta.
+              </p>
+              <div class="about-us__values">
+                <div class="about-us__value">
+                  <span class="about-us__value-number">100%</span>
+                  <span class="about-us__value-label">En la nube</span>
                 </div>
-                <!-- Pasión → Corazón / Heart -->
-                <div class="about-us__icon-item">
-                  <svg viewBox="0 0 48 48" width="48" height="48" fill="none">
-                    <circle
-                      cx="24"
-                      cy="24"
-                      r="20"
-                      stroke="var(--color-primary)"
-                      stroke-width="2"
-                      opacity=".3"
-                    />
-                    <path
-                      d="M24 34s-10-5.7-10-13.3c0-3.6 2.9-6.7 6.5-6.7 2 0 3.5 1 3.5 1s1.5-1 3.5-1c3.6 0 6.5 3.1 6.5 6.7C34 28.3 24 34 24 34z"
-                      stroke="var(--color-primary)"
-                      stroke-width="2.5"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                    />
-                  </svg>
-                  <span>Pasión</span>
+                <div class="about-us__value">
+                  <span class="about-us__value-number">24/7</span>
+                  <span class="about-us__value-label">Disponibilidad</span>
                 </div>
-                <!-- Cercanía → Dos personas / People together -->
-                <div class="about-us__icon-item">
-                  <svg viewBox="0 0 48 48" width="48" height="48" fill="none">
-                    <circle
-                      cx="24"
-                      cy="24"
-                      r="20"
-                      stroke="var(--color-primary)"
-                      stroke-width="2"
-                      opacity=".3"
-                    />
-                    <circle
-                      cx="18"
-                      cy="17"
-                      r="3.5"
-                      stroke="var(--color-primary)"
-                      stroke-width="2.5"
-                    />
-                    <path
-                      d="M11 31v-1c0-3.9 3.1-7 7-7s7 3.1 7 7v1"
-                      stroke="var(--color-primary)"
-                      stroke-width="2.5"
-                      stroke-linecap="round"
-                    />
-                    <circle
-                      cx="31"
-                      cy="17"
-                      r="3.5"
-                      stroke="var(--color-primary)"
-                      stroke-width="2.5"
-                    />
-                    <path
-                      d="M27 31v-1c0-3.9 2.2-7 4-7"
-                      stroke="var(--color-primary)"
-                      stroke-width="2.5"
-                      stroke-linecap="round"
-                    />
-                  </svg>
-                  <span>Cercanía</span>
+                <div class="about-us__value">
+                  <span class="about-us__value-number">MX</span>
+                  <span class="about-us__value-label">Hecho en México</span>
                 </div>
               </div>
             </div>
           </div>
-          <div class="col-12 col-lg-6 anim-fade-in-up" style="--delay: 0.3s">
-            <p class="section__tag">Sobre nosotros</p>
-            <h2 class="section__title text-start titulo-revelado">
-              Tecnología con alma<br /><span class="text-accent-serif"
-                >restaurantera</span
-              >
+        </div>
+      </section>
+
+      <!-- ===================== MODELO 3D ===================== -->
+      <section class="section modelo-3d" id="modelo3d">
+        <div class="container">
+          <div class="section__header anim-fade-in-up">
+            <p class="section__tag">Tu nuevo compañero</p>
+            <h2 class="section__title titulo-revelado">
+              Conoce a
+              <span class="text-accent-serif">Arlex</span>
             </h2>
-            <p class="about-us__text">
-              Somos un equipo apasionado por la tecnología y la gastronomía.
-              Creamos Savory Cloud porque creemos que cada restaurante merece
-              herramientas profesionales, accesibles y fáciles de usar para
-              crecer sin límites.
+            <p class="section__subtitle">
+              Tu asistente favorito en Savory Cloud. Gíralo, arrástralo y descubre
+              al amigo que te guiará paso a paso en cada rincón de tu restaurante.
             </p>
-            <p class="about-us__text">
-              Sabemos que lo tuyo son los platillos increíbles y hacer felices a
-              tus comensales — los números, los reportes y toda la tecnología
-              corren por nuestra cuenta.
-            </p>
-            <div class="about-us__values">
-              <div class="about-us__value">
-                <span class="about-us__value-number">100%</span>
-                <span class="about-us__value-label">En la nube</span>
-              </div>
-              <div class="about-us__value">
-                <span class="about-us__value-number">24/7</span>
-                <span class="about-us__value-label">Disponibilidad</span>
-              </div>
-              <div class="about-us__value">
-                <span class="about-us__value-number">MX</span>
-                <span class="about-us__value-label">Hecho en México</span>
-              </div>
-            </div>
           </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ===================== MODELO 3D ===================== -->
-    <section class="section modelo-3d" id="modelo3d">
-      <div class="container">
-        <div class="section__header anim-fade-in-up">
-          <p class="section__tag">Tu nuevo compañero</p>
-          <h2 class="section__title titulo-revelado">
-            Conoce a
-            <span class="text-accent-serif">Arlex</span>
-          </h2>
-          <p class="section__subtitle">
-            Tu asistente favorito en Savory Cloud. Gíralo, arrástralo y descubre
-            al amigo que te guiará paso a paso en cada rincón de tu restaurante.
-          </p>
-        </div>
-        <div
-          class="m3d__container anim-fade-in-up"
-          style="--delay: 0.2s"
-          id="m3dContainer"
-        >
-          <!-- Loading indicator -->
-          <div class="m3d__loader" id="m3dLoader">
-            <div class="m3d__spinner"></div>
-            <p>Cargando modelo 3D…</p>
-          </div>
-          <canvas id="m3dCanvas"></canvas>
-        </div>
-      </div>
-    </section>
-
-    <!-- ===================== FEATURES ===================== -->
-    <section class="section features" id="features">
-      <div class="container">
-        <div class="section__header anim-fade-in-up">
-          <p class="section__tag">Todo lo que necesitas</p>
-          <h2 class="section__title titulo-revelado">
-            Funciones pensadas para<br /><span class="text-accent-serif"
-              >tu restaurante</span
-            >
-          </h2>
-          <p class="section__subtitle">
-            Herramientas inteligentes que simplifican tu operación diaria.
-          </p>
-        </div>
-        <div class="row g-4 mt-4">
-          <!-- 1. Pedidos en Tiempo Real -->
           <div
-            class="col-12 col-sm-6 col-lg-4 anim-fade-in-up"
-            style="--delay: 0.1s"
-          >
-            <div class="feature-card">
-              <div class="feature-card__spotlight"></div>
-              <div class="feature-card__icon">
-                <svg viewBox="0 0 48 48" width="40" height="40" fill="none">
-                  <rect
-                    x="8"
-                    y="6"
-                    width="32"
-                    height="36"
-                    rx="6"
-                    stroke="var(--color-primary)"
-                    stroke-width="2.5"
-                  />
-                  <path
-                    d="M16 16h16M16 24h10M16 32h14"
-                    stroke="var(--color-primary)"
-                    stroke-width="2.5"
-                    stroke-linecap="round"
-                  />
-                  <circle
-                    cx="36"
-                    cy="36"
-                    r="6"
-                    fill="var(--color-primary)"
-                    opacity=".25"
-                  />
-                  <path
-                    d="M33 36l2 2 4-4"
-                    stroke="var(--color-primary)"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  />
-                </svg>
-              </div>
-              <h3 class="feature-card__title">Pedidos en Tiempo Real</h3>
-              <p class="feature-card__desc">
-                Toma pedidos al momento desde cualquier puesto: caja, mesa o
-                administración. Elige platillos, extras y asigna la mesa — todo
-                se actualiza en pantalla al instante sin recargar nada.
-              </p>
-              <span class="feature-card__highlight"
-                >La cocina y el repartidor reciben cada pedido al instante</span
-              >
-            </div>
-          </div>
-          <!-- 2. Inventario Inteligente -->
-          <div
-            class="col-12 col-sm-6 col-lg-4 anim-fade-in-up"
+            class="m3d__container anim-fade-in-up"
             style="--delay: 0.2s"
+            id="m3dContainer"
           >
-            <div class="feature-card">
-              <div class="feature-card__spotlight"></div>
-              <div class="feature-card__icon">
-                <svg viewBox="0 0 48 48" width="40" height="40" fill="none">
-                  <path
-                    d="M24 6v36M14 14l10-8 10 8M10 28h28M14 38h20"
-                    stroke="var(--color-primary)"
-                    stroke-width="2.5"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  />
-                </svg>
-              </div>
-              <h3 class="feature-card__title">Inventario Inteligente</h3>
-              <p class="feature-card__desc">
-                Controla stock en tiempo real con historial de movimientos.
-                Organiza por categorías de ingredientes y vincula cada platillo
-                con sus insumos automáticamente.
-              </p>
-              <span class="feature-card__highlight"
-                >Historial de stock y descuento automático por venta</span
-              >
+            <!-- Loading indicator -->
+            <div class="m3d__loader" id="m3dLoader">
+              <div class="m3d__spinner"></div>
+              <p>Cargando modelo 3D…</p>
             </div>
-          </div>
-          <!-- 3. Gestión de Mesas -->
-          <div
-            class="col-12 col-sm-6 col-lg-4 anim-fade-in-up"
-            style="--delay: 0.3s"
-          >
-            <div class="feature-card">
-              <div class="feature-card__spotlight"></div>
-              <div class="feature-card__icon">
-                <svg viewBox="0 0 48 48" width="40" height="40" fill="none">
-                  <rect
-                    x="8"
-                    y="8"
-                    width="32"
-                    height="32"
-                    rx="8"
-                    stroke="var(--color-primary)"
-                    stroke-width="2.5"
-                  />
-                  <path
-                    d="M8 18h32M18 18v22M30 18v22"
-                    stroke="var(--color-primary)"
-                    stroke-width="2.5"
-                  />
-                </svg>
-              </div>
-              <h3 class="feature-card__title">Gestión de Mesas</h3>
-              <p class="feature-card__desc">
-                Visualiza el estado de cada mesa al instante: disponible,
-                ocupada o reservada. Asigna pedidos, transfiere cuentas y cierra
-                mesas fácilmente.
-              </p>
-              <span class="feature-card__highlight"
-                >Estados en vivo y asignación directa de pedidos</span
-              >
-            </div>
-          </div>
-          <!-- 4. Cocina en Vivo -->
-          <div
-            class="col-12 col-sm-6 col-lg-4 anim-fade-in-up"
-            style="--delay: 0.4s"
-          >
-            <div class="feature-card">
-              <div class="feature-card__spotlight"></div>
-              <div class="feature-card__icon">
-                <svg viewBox="0 0 48 48" width="40" height="40" fill="none">
-                  <path
-                    d="M14 34h20"
-                    stroke="var(--color-primary)"
-                    stroke-width="2.5"
-                    stroke-linecap="round"
-                  />
-                  <path
-                    d="M10 34v4h28v-4"
-                    stroke="var(--color-primary)"
-                    stroke-width="2.5"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  />
-                  <path
-                    d="M16 34v-8a8 8 0 0 1 16 0v8"
-                    stroke="var(--color-primary)"
-                    stroke-width="2.5"
-                  />
-                  <path
-                    d="M20 14c0-3 1-5 4-5s4 2 4 5"
-                    stroke="var(--color-primary)"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    opacity=".5"
-                  />
-                  <path
-                    d="M18 18c-1-3 0-6 2-7"
-                    stroke="var(--color-primary)"
-                    stroke-width="1.5"
-                    stroke-linecap="round"
-                    opacity=".35"
-                  />
-                  <path
-                    d="M30 18c1-3 0-6-2-7"
-                    stroke="var(--color-primary)"
-                    stroke-width="1.5"
-                    stroke-linecap="round"
-                    opacity=".35"
-                  />
-                </svg>
-              </div>
-              <h3 class="feature-card__title">Cocina en Vivo</h3>
-              <p class="feature-card__desc">
-                Interfaz exclusiva para el chef y barista con la cola de pedidos
-                pendientes. Ve cada orden con sus platillos, complementos y
-                prioridad — todo actualizado en tiempo real.
-              </p>
-              <span class="feature-card__highlight"
-                >Display de cocina con cola de órdenes en tiempo real</span
-              >
-            </div>
-          </div>
-          <!-- 5. Delivery Integrado -->
-          <div
-            class="col-12 col-sm-6 col-lg-4 anim-fade-in-up"
-            style="--delay: 0.5s"
-          >
-            <div class="feature-card">
-              <div class="feature-card__spotlight"></div>
-              <div class="feature-card__icon">
-                <svg viewBox="0 0 48 48" width="40" height="40" fill="none">
-                  <circle
-                    cx="14"
-                    cy="36"
-                    r="4"
-                    stroke="var(--color-primary)"
-                    stroke-width="2.5"
-                  />
-                  <circle
-                    cx="36"
-                    cy="36"
-                    r="4"
-                    stroke="var(--color-primary)"
-                    stroke-width="2.5"
-                  />
-                  <path
-                    d="M18 36h14M10 36H6v-8l4-6h10v14"
-                    stroke="var(--color-primary)"
-                    stroke-width="2.5"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  />
-                  <path
-                    d="M20 22h10l6 6v8h-4"
-                    stroke="var(--color-primary)"
-                    stroke-width="2.5"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  />
-                  <rect
-                    x="8"
-                    y="14"
-                    width="12"
-                    height="4"
-                    rx="1"
-                    stroke="var(--color-primary)"
-                    stroke-width="2"
-                    opacity=".4"
-                  />
-                </svg>
-              </div>
-              <h3 class="feature-card__title">Delivery Integrado</h3>
-              <p class="feature-card__desc">
-                Portal exclusivo para repartidores con pedidos pendientes y
-                completados. Gestión de pagos contra entrega y seguimiento de
-                propinas por repartidor.
-              </p>
-              <span class="feature-card__highlight"
-                >Portal de repartidor con cobro y propinas incluidos</span
-              >
-            </div>
-          </div>
-          <!-- 6. Empleados y Turnos -->
-          <div
-            class="col-12 col-sm-6 col-lg-4 anim-fade-in-up"
-            style="--delay: 0.6s"
-          >
-            <div class="feature-card">
-              <div class="feature-card__spotlight"></div>
-              <div class="feature-card__icon">
-                <svg viewBox="0 0 48 48" width="40" height="40" fill="none">
-                  <circle
-                    cx="24"
-                    cy="14"
-                    r="6"
-                    stroke="var(--color-primary)"
-                    stroke-width="2.5"
-                  />
-                  <path
-                    d="M12 38v-2c0-5.5 5.4-10 12-10s12 4.5 12 10v2"
-                    stroke="var(--color-primary)"
-                    stroke-width="2.5"
-                    stroke-linecap="round"
-                  />
-                  <circle
-                    cx="36"
-                    cy="14"
-                    r="4"
-                    stroke="var(--color-primary)"
-                    stroke-width="2"
-                    opacity=".4"
-                  />
-                  <circle
-                    cx="12"
-                    cy="14"
-                    r="4"
-                    stroke="var(--color-primary)"
-                    stroke-width="2"
-                    opacity=".4"
-                  />
-                </svg>
-              </div>
-              <h3 class="feature-card__title">Empleados y Turnos</h3>
-              <p class="feature-card__desc">
-                Administra tu equipo completo: asigna roles (gerente, cajero,
-                mesero, chef, barista, delivery), programa turnos, revisa
-                historial de turnos y consulta rankings de desempeño.
-              </p>
-              <span class="feature-card__highlight"
-                >Roles personalizados, turnos y ranking de empleados</span
-              >
-            </div>
+            <canvas id="m3dCanvas"></canvas>
           </div>
         </div>
-      </div>
-    </section>
+      </section>
 
-    <!-- ===================== DEVICE CAROUSEL ===================== -->
-    <section class="section device-carousel" id="responsividad">
-      <div class="container">
-        <div class="section__header anim-fade-in-up">
-          <p class="section__tag">Donde quieras, cuando quieras</p>
-          <h2 class="section__title titulo-revelado">
-            Una experiencia perfecta en<br /><span class="text-accent-serif"
-              >cada dispositivo</span
+      <!-- ===================== FEATURES ===================== -->
+      <section class="section features" id="features">
+        <div class="container">
+          <div class="section__header anim-fade-in-up">
+            <p class="section__tag">Todo lo que necesitas</p>
+            <h2 class="section__title titulo-revelado">
+              Funciones pensadas para<br /><span class="text-accent-serif"
+                >tu restaurante</span>
+            </h2>
+            <p class="section__subtitle">
+              Herramientas inteligentes que simplifican tu operación diaria.
+            </p>
+          </div>
+          <div class="row g-4 mt-4">
+            <!-- 1. Pedidos en Tiempo Real -->
+            <div
+              class="col-12 col-sm-6 col-lg-4 anim-fade-in-up"
+              style="--delay: 0.1s"
             >
-          </h2>
-        </div>
+              <div class="feature-card">
+                <div class="feature-card__spotlight"></div>
+                <div class="feature-card__icon">
+                  <svg viewBox="0 0 48 48" width="40" height="40" fill="none">
+                    <rect
+                      x="8"
+                      y="6"
+                      width="32"
+                      height="36"
+                      rx="6"
+                      stroke="var(--color-primary)"
+                      stroke-width="2.5"
+                    />
+                    <path
+                      d="M16 16h16M16 24h10M16 32h14"
+                      stroke="var(--color-primary)"
+                      stroke-width="2.5"
+                      stroke-linecap="round"
+                    />
+                    <circle
+                      cx="36"
+                      cy="36"
+                      r="6"
+                      fill="var(--color-primary)"
+                      opacity=".25"
+                    />
+                    <path
+                      d="M33 36l2 2 4-4"
+                      stroke="var(--color-primary)"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                  </svg>
+                </div>
+                <h3 class="feature-card__title">Pedidos en Tiempo Real</h3>
+                <p class="feature-card__desc">
+                  Toma pedidos al momento desde cualquier puesto: caja, mesa o
+                  administración. Elige platillos, extras y asigna la mesa — todo
+                  se actualiza en pantalla al instante sin recargar nada.
+                </p>
+                <span class="feature-card__highlight"
+                  >La cocina y el repartidor reciben cada pedido al instante</span>
+              </div>
+            </div>
+            <!-- 2. Inventario Inteligente -->
+            <div
+              class="col-12 col-sm-6 col-lg-4 anim-fade-in-up"
+              style="--delay: 0.2s"
+            >
+              <div class="feature-card">
+                <div class="feature-card__spotlight"></div>
+                <div class="feature-card__icon">
+                  <svg viewBox="0 0 48 48" width="40" height="40" fill="none">
+                    <path
+                      d="M24 6v36M14 14l10-8 10 8M10 28h28M14 38h20"
+                      stroke="var(--color-primary)"
+                      stroke-width="2.5"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                  </svg>
+                </div>
+                <h3 class="feature-card__title">Inventario Inteligente</h3>
+                <p class="feature-card__desc">
+                  Controla stock en tiempo real con historial de movimientos.
+                  Organiza por categorías de ingredientes y vincula cada platillo
+                  con sus insumos automáticamente.
+                </p>
+                <span class="feature-card__highlight"
+                  >Historial de stock y descuento automático por venta</span>
+              </div>
+            </div>
+            <!-- 3. Gestión de Mesas -->
+            <div
+              class="col-12 col-sm-6 col-lg-4 anim-fade-in-up"
+              style="--delay: 0.3s"
+            >
+              <div class="feature-card">
+                <div class="feature-card__spotlight"></div>
+                <div class="feature-card__icon">
+                  <svg viewBox="0 0 48 48" width="40" height="40" fill="none">
+                    <rect
+                      x="8"
+                      y="8"
+                      width="32"
+                      height="32"
+                      rx="8"
+                      stroke="var(--color-primary)"
+                      stroke-width="2.5"
+                    />
+                    <path
+                      d="M8 18h32M18 18v22M30 18v22"
+                      stroke="var(--color-primary)"
+                      stroke-width="2.5"
+                    />
+                  </svg>
+                </div>
+                <h3 class="feature-card__title">Gestión de Mesas</h3>
+                <p class="feature-card__desc">
+                  Visualiza el estado de cada mesa al instante: disponible,
+                  ocupada o reservada. Asigna pedidos, transfiere cuentas y cierra
+                  mesas fácilmente.
+                </p>
+                <span class="feature-card__highlight"
+                  >Estados en vivo y asignación directa de pedidos</span>
+              </div>
+            </div>
+            <!-- 4. Cocina en Vivo -->
+            <div
+              class="col-12 col-sm-6 col-lg-4 anim-fade-in-up"
+              style="--delay: 0.4s"
+            >
+              <div class="feature-card">
+                <div class="feature-card__spotlight"></div>
+                <div class="feature-card__icon">
+                  <svg viewBox="0 0 48 48" width="40" height="40" fill="none">
+                    <path
+                      d="M14 34h20"
+                      stroke="var(--color-primary)"
+                      stroke-width="2.5"
+                      stroke-linecap="round"
+                    />
+                    <path
+                      d="M10 34v4h28v-4"
+                      stroke="var(--color-primary)"
+                      stroke-width="2.5"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                    <path
+                      d="M16 34v-8a8 8 0 0 1 16 0v8"
+                      stroke="var(--color-primary)"
+                      stroke-width="2.5"
+                    />
+                    <path
+                      d="M20 14c0-3 1-5 4-5s4 2 4 5"
+                      stroke="var(--color-primary)"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      opacity=".5"
+                    />
+                    <path
+                      d="M18 18c-1-3 0-6 2-7"
+                      stroke="var(--color-primary)"
+                      stroke-width="1.5"
+                      stroke-linecap="round"
+                      opacity=".35"
+                    />
+                    <path
+                      d="M30 18c1-3 0-6-2-7"
+                      stroke="var(--color-primary)"
+                      stroke-width="1.5"
+                      stroke-linecap="round"
+                      opacity=".35"
+                    />
+                  </svg>
+                </div>
+                <h3 class="feature-card__title">Cocina en Vivo</h3>
+                <p class="feature-card__desc">
+                  Interfaz exclusiva para el chef y barista con la cola de pedidos
+                  pendientes. Ve cada orden con sus platillos, complementos y
+                  prioridad — todo actualizado en tiempo real.
+                </p>
+                <span class="feature-card__highlight"
+                  >Display de cocina con cola de órdenes en tiempo real</span>
+              </div>
+            </div>
+            <!-- 5. Delivery Integrado -->
+            <div
+              class="col-12 col-sm-6 col-lg-4 anim-fade-in-up"
+              style="--delay: 0.5s"
+            >
+              <div class="feature-card">
+                <div class="feature-card__spotlight"></div>
+                <div class="feature-card__icon">
+                  <svg viewBox="0 0 48 48" width="40" height="40" fill="none">
+                    <circle
+                      cx="14"
+                      cy="36"
+                      r="4"
+                      stroke="var(--color-primary)"
+                      stroke-width="2.5"
+                    />
+                    <circle
+                      cx="36"
+                      cy="36"
+                      r="4"
+                      stroke="var(--color-primary)"
+                      stroke-width="2.5"
+                    />
+                    <path
+                      d="M18 36h14M10 36H6v-8l4-6h10v14"
+                      stroke="var(--color-primary)"
+                      stroke-width="2.5"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                    <path
+                      d="M20 22h10l6 6v8h-4"
+                      stroke="var(--color-primary)"
+                      stroke-width="2.5"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                    <rect
+                      x="8"
+                      y="14"
+                      width="12"
+                      height="4"
+                      rx="1"
+                      stroke="var(--color-primary)"
+                      stroke-width="2"
+                      opacity=".4"
+                    />
+                  </svg>
+                </div>
+                <h3 class="feature-card__title">Delivery Integrado</h3>
+                <p class="feature-card__desc">
+                  Portal exclusivo para repartidores con pedidos pendientes y
+                  completados. Gestión de pagos contra entrega y seguimiento de
+                  propinas por repartidor.
+                </p>
+                <span class="feature-card__highlight"
+                  >Portal de repartidor con cobro y propinas incluidos</span>
+              </div>
+            </div>
+            <!-- 6. Empleados y Turnos -->
+            <div
+              class="col-12 col-sm-6 col-lg-4 anim-fade-in-up"
+              style="--delay: 0.6s"
+            >
+              <div class="feature-card">
+                <div class="feature-card__spotlight"></div>
+                <div class="feature-card__icon">
+                  <svg viewBox="0 0 48 48" width="40" height="40" fill="none">
+                    <circle
+                      cx="24"
+                      cy="14"
+                      r="6"
+                      stroke="var(--color-primary)"
+                      stroke-width="2.5"
+                    />
+                    <path
+                      d="M12 38v-2c0-5.5 5.4-10 12-10s12 4.5 12 10v2"
+                      stroke="var(--color-primary)"
+                      stroke-width="2.5"
+                      stroke-linecap="round"
+                    />
+                    <circle
+                      cx="36"
+                      cy="14"
+                      r="4"
+                      stroke="var(--color-primary)"
+                      stroke-width="2"
+                      opacity=".4"
+                    />
+                    <circle
+                      cx="12"
+                      cy="14"
+                      r="4"
+                      stroke="var(--color-primary)"
+                      stroke-width="2"
+                      opacity=".4"
+                    />
+                  </svg>
+                </div>
+                <h3 class="feature-card__title">Empleados y Turnos</h3>
+                <p class="feature-card__desc">
+                  Administra tu equipo completo: asigna roles (gerente, cajero,
+                  mesero, chef, barista, delivery), programa turnos, revisa
+                  historial de turnos y consulta rankings de desempeño.
+                </p>
+                <span class="feature-card__highlight"
+                  >Roles personalizados, turnos y ranking de empleados</span>
+              </div>
+            </div>
+          </div>
 
-        <div class="dc__stage anim-fade-in-up" style="--delay: 0.2s">
-          <!-- Left arrow -->
-          <button class="dc__arrow dc__arrow--prev" aria-label="Anterior">
+          <!-- Scroll hint (mobile only) -->
+          <div class="features__scroll-hint" id="featuresScrollHint">
             <svg
-              width="24"
-              height="24"
+              width="20"
+              height="20"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
@@ -692,122 +677,12 @@
               stroke-linecap="round"
               stroke-linejoin="round"
             >
-              <polyline points="15 18 9 12 15 6"></polyline>
+              <path d="m9 18 6-6-6-6" />
             </svg>
-          </button>
-
-          <!-- Slides wrapper -->
-          <div class="dc__viewport">
-            <!-- ── PC ── -->
-            <div class="dc__slide is-active" data-device="pc">
-              <div class="dc__visual">
-                <div class="dc__device dc__device--pc">
-                  <div class="dc__screen">
-                    <div class="dc__mock dc__mock--dashboard">
-                      <div class="dc__mock-sidebar">
-                        <div class="dc__mock-logo"></div>
-                        <div class="dc__mock-nav-item"></div>
-                        <div
-                          class="dc__mock-nav-item dc__mock-nav-item--active"
-                        ></div>
-                        <div class="dc__mock-nav-item"></div>
-                        <div class="dc__mock-nav-item"></div>
-                      </div>
-                      <div class="dc__mock-main">
-                        <div class="dc__mock-topbar"></div>
-                        <div class="dc__mock-cards">
-                          <div class="dc__mock-card"></div>
-                          <div class="dc__mock-card"></div>
-                          <div class="dc__mock-card"></div>
-                        </div>
-                        <div class="dc__mock-chart"></div>
-                      </div>
-                    </div>
-                  </div>
-                  <div class="dc__device-base"></div>
-                  <div class="dc__device-stand"></div>
-                </div>
-              </div>
-              <div class="dc__text">
-                <span class="dc__label">Escritorio</span>
-                <h3 class="dc__title">Gestión total desde tu escritorio</h3>
-                <p class="dc__desc">
-                  El panel administrativo completo para tu negocio. Reportes,
-                  inventario y ventas en una sola vista.
-                </p>
-              </div>
-            </div>
-
-            <!-- ── Tablet ── -->
-            <div class="dc__slide" data-device="tablet">
-              <div class="dc__visual">
-                <div class="dc__device dc__device--tablet">
-                  <div class="dc__screen">
-                    <div class="dc__mock dc__mock--tablet">
-                      <div class="dc__mock-topbar"></div>
-                      <div class="dc__mock-cards">
-                        <div class="dc__mock-card"></div>
-                        <div class="dc__mock-card"></div>
-                      </div>
-                      <div class="dc__mock-list">
-                        <div class="dc__mock-list-row"></div>
-                        <div class="dc__mock-list-row"></div>
-                        <div class="dc__mock-list-row"></div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div class="dc__text">
-                <span class="dc__label">Tablet</span>
-                <h3 class="dc__title">Movilidad y control en el salón</h3>
-                <p class="dc__desc">
-                  Toma pedidos y revisa reportes con total fluidez. Diseñado
-                  para el ritmo de tu restaurante.
-                </p>
-              </div>
-            </div>
-
-            <!-- ── Móvil ── -->
-            <div class="dc__slide" data-device="movil">
-              <div class="dc__visual">
-                <div class="dc__device dc__device--movil">
-                  <div class="dc__screen">
-                    <div class="dc__mock dc__mock--movil">
-                      <div class="dc__mock-topbar dc__mock-topbar--sm"></div>
-                      <div class="dc__mock-stat">
-                        <div class="dc__mock-stat-number"></div>
-                        <div class="dc__mock-stat-bar"></div>
-                      </div>
-                      <div class="dc__mock-notif"></div>
-                      <div class="dc__mock-notif"></div>
-                      <div class="dc__mock-bottom-nav">
-                        <div class="dc__mock-bnav-dot"></div>
-                        <div
-                          class="dc__mock-bnav-dot dc__mock-bnav-dot--active"
-                        ></div>
-                        <div class="dc__mock-bnav-dot"></div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div class="dc__text">
-                <span class="dc__label">Móvil</span>
-                <h3 class="dc__title">Tu restaurante en tu bolsillo</h3>
-                <p class="dc__desc">
-                  Acceso instantáneo a métricas y notificaciones clave. Siempre
-                  conectado, donde estés.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <!-- Right arrow -->
-          <button class="dc__arrow dc__arrow--next" aria-label="Siguiente">
+            <span>Desliza para ver más</span>
             <svg
-              width="24"
-              height="24"
+              width="20"
+              height="20"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
@@ -815,178 +690,26 @@
               stroke-linecap="round"
               stroke-linejoin="round"
             >
-              <polyline points="9 18 15 12 9 6"></polyline>
+              <path d="m9 18 6-6-6-6" />
             </svg>
-          </button>
+          </div>
         </div>
+      </section>
 
-        <!-- Dots -->
-        <div class="dc__dots anim-fade-in-up" style="--delay: 0.3s">
-          <button
-            class="dc__dot is-active"
-            data-index="0"
-            aria-label="PC"
-          ></button>
-          <button class="dc__dot" data-index="1" aria-label="Tablet"></button>
-          <button class="dc__dot" data-index="2" aria-label="Móvil"></button>
-        </div>
-      </div>
-    </section>
+      <!-- ===================== DEVICE CAROUSEL ===================== -->
+      <section class="section device-carousel" id="responsividad">
+        <div class="container">
+          <div class="section__header anim-fade-in-up">
+            <p class="section__tag">Donde quieras, cuando quieras</p>
+            <h2 class="section__title titulo-revelado">
+              Una experiencia perfecta en<br /><span class="text-accent-serif"
+                >cada dispositivo</span>
+            </h2>
+          </div>
 
-    <!-- ===================== GALERÍA DEL SISTEMA ===================== -->
-    <section class="section gallery" id="gallery">
-      <div class="container">
-        <div class="section__header anim-fade-in-up">
-          <p class="section__tag">Capturas del sistema</p>
-          <h2 class="section__title titulo-revelado">
-            Echa un vistazo a la interfaz de<br /><span
-              class="text-accent-serif"
-              >Savory Cloud</span
-            >
-          </h2>
-          <p class="section__subtitle">
-            Explora las pantallas principales del sistema. Gestión clara,
-            moderna y pensada para tu día a día. Además, cada vista se adapta a
-            modo oscuro o claro según tu preferencia.
-          </p>
-        </div>
-
-        <!-- Device Mockup Carousel -->
-        <div class="gallery__carousel anim-fade-in-up" style="--delay: 0.2s">
-          <div class="swiper gallery__swiper">
-            <div class="swiper-wrapper">
-              <!-- Slide 1 — PC -->
-              <div class="swiper-slide">
-                <div class="gallery__mockup gallery__mockup--pc">
-                  <div class="gallery__device-frame">
-                    <!-- Top bar -->
-                    <div class="gallery__frame-bar">
-                      <span class="gallery__frame-dot"></span>
-                      <span class="gallery__frame-dot"></span>
-                      <span class="gallery__frame-dot"></span>
-                    </div>
-                    <!-- Screen -->
-                    <div class="gallery__screen">
-                      <img
-                        src="/system-landing/gallery/screen-1.jpeg"
-                        alt="Dashboard principal — Vista PC"
-                        loading="lazy"
-                      />
-                    </div>
-                  </div>
-                  <!-- Stand -->
-                  <div class="gallery__stand">
-                    <div class="gallery__stand-neck"></div>
-                    <div class="gallery__stand-base"></div>
-                  </div>
-                  <p class="gallery__label">Dashboard principal</p>
-                </div>
-              </div>
-
-              <!-- Slide 2 — PC -->
-              <div class="swiper-slide">
-                <div class="gallery__mockup gallery__mockup--pc">
-                  <div class="gallery__device-frame">
-                    <div class="gallery__frame-bar">
-                      <span class="gallery__frame-dot"></span>
-                      <span class="gallery__frame-dot"></span>
-                      <span class="gallery__frame-dot"></span>
-                    </div>
-                    <div class="gallery__screen">
-                      <img
-                        src="/system-landing/gallery/screen-2.jpeg"
-                        alt="Gestión de inventario — Vista PC"
-                        loading="lazy"
-                      />
-                    </div>
-                  </div>
-                  <div class="gallery__stand">
-                    <div class="gallery__stand-neck"></div>
-                    <div class="gallery__stand-base"></div>
-                  </div>
-                  <p class="gallery__label">Gestión de inventario</p>
-                </div>
-              </div>
-
-              <!-- Slide 3 — Tablet -->
-              <div class="swiper-slide">
-                <div class="gallery__mockup gallery__mockup--tablet">
-                  <div class="gallery__device-frame">
-                    <div class="gallery__frame-bar">
-                      <span class="gallery__frame-dot"></span>
-                      <span class="gallery__frame-dot"></span>
-                      <span class="gallery__frame-dot"></span>
-                    </div>
-                    <div class="gallery__screen">
-                      <img
-                        src="/system-landing/gallery/screen-1.jpeg"
-                        alt="Dashboard principal — Vista Tablet"
-                        loading="lazy"
-                      />
-                    </div>
-                  </div>
-                  <p class="gallery__label">Dashboard — Tablet</p>
-                </div>
-              </div>
-
-              <!-- Slide 4 — Tablet -->
-              <div class="swiper-slide">
-                <div class="gallery__mockup gallery__mockup--tablet">
-                  <div class="gallery__device-frame">
-                    <div class="gallery__frame-bar">
-                      <span class="gallery__frame-dot"></span>
-                      <span class="gallery__frame-dot"></span>
-                      <span class="gallery__frame-dot"></span>
-                    </div>
-                    <div class="gallery__screen">
-                      <img
-                        src="/system-landing/gallery/screen-2.jpeg"
-                        alt="Gestión de inventario — Vista Tablet"
-                        loading="lazy"
-                      />
-                    </div>
-                  </div>
-                  <p class="gallery__label">Inventario — Tablet</p>
-                </div>
-              </div>
-
-              <!-- Slide 5 — Móvil -->
-              <div class="swiper-slide">
-                <div class="gallery__mockup gallery__mockup--mobile">
-                  <div class="gallery__device-frame">
-                    <div class="gallery__mobile-notch"></div>
-                    <div class="gallery__screen">
-                      <img
-                        src="/system-landing/gallery/screen-1.jpeg"
-                        alt="Dashboard principal — Vista Móvil"
-                        loading="lazy"
-                      />
-                    </div>
-                  </div>
-                  <p class="gallery__label">Dashboard — Móvil</p>
-                </div>
-              </div>
-
-              <!-- Slide 6 — Móvil -->
-              <div class="swiper-slide">
-                <div class="gallery__mockup gallery__mockup--mobile">
-                  <div class="gallery__device-frame">
-                    <div class="gallery__mobile-notch"></div>
-                    <div class="gallery__screen">
-                      <img
-                        src="/system-landing/gallery/screen-2.jpeg"
-                        alt="Gestión de inventario — Vista Móvil"
-                        loading="lazy"
-                      />
-                    </div>
-                  </div>
-                  <p class="gallery__label">Inventario — Móvil</p>
-                </div>
-              </div>
-            </div>
-
-            <!-- Navigation arrows -->
-            <div class="gallery__nav-prev">
+          <div class="dc__stage anim-fade-in-up" style="--delay: 0.2s">
+            <!-- Left arrow -->
+            <button class="dc__arrow dc__arrow--prev" aria-label="Anterior">
               <svg
                 width="24"
                 height="24"
@@ -999,8 +722,117 @@
               >
                 <polyline points="15 18 9 12 15 6"></polyline>
               </svg>
+            </button>
+
+            <!-- Slides wrapper -->
+            <div class="dc__viewport">
+              <!-- ── PC ── -->
+              <div class="dc__slide is-active" data-device="pc">
+                <div class="dc__visual">
+                  <div class="dc__device dc__device--pc">
+                    <div class="dc__screen">
+                      <div class="dc__mock dc__mock--dashboard">
+                        <div class="dc__mock-sidebar">
+                          <div class="dc__mock-logo"></div>
+                          <div class="dc__mock-nav-item"></div>
+                          <div
+                            class="dc__mock-nav-item dc__mock-nav-item--active"
+                          ></div>
+                          <div class="dc__mock-nav-item"></div>
+                          <div class="dc__mock-nav-item"></div>
+                        </div>
+                        <div class="dc__mock-main">
+                          <div class="dc__mock-topbar"></div>
+                          <div class="dc__mock-cards">
+                            <div class="dc__mock-card"></div>
+                            <div class="dc__mock-card"></div>
+                            <div class="dc__mock-card"></div>
+                          </div>
+                          <div class="dc__mock-chart"></div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="dc__device-base"></div>
+                    <div class="dc__device-stand"></div>
+                  </div>
+                </div>
+                <div class="dc__text">
+                  <span class="dc__label">Escritorio</span>
+                  <h3 class="dc__title">Gestión total desde tu escritorio</h3>
+                  <p class="dc__desc">
+                    El panel administrativo completo para tu negocio. Reportes,
+                    inventario y ventas en una sola vista.
+                  </p>
+                </div>
+              </div>
+
+              <!-- ── Tablet ── -->
+              <div class="dc__slide" data-device="tablet">
+                <div class="dc__visual">
+                  <div class="dc__device dc__device--tablet">
+                    <div class="dc__screen">
+                      <div class="dc__mock dc__mock--tablet">
+                        <div class="dc__mock-topbar"></div>
+                        <div class="dc__mock-cards">
+                          <div class="dc__mock-card"></div>
+                          <div class="dc__mock-card"></div>
+                        </div>
+                        <div class="dc__mock-list">
+                          <div class="dc__mock-list-row"></div>
+                          <div class="dc__mock-list-row"></div>
+                          <div class="dc__mock-list-row"></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="dc__text">
+                  <span class="dc__label">Tablet</span>
+                  <h3 class="dc__title">Movilidad y control en el salón</h3>
+                  <p class="dc__desc">
+                    Toma pedidos y revisa reportes con total fluidez. Diseñado
+                    para el ritmo de tu restaurante.
+                  </p>
+                </div>
+              </div>
+
+              <!-- ── Móvil ── -->
+              <div class="dc__slide" data-device="movil">
+                <div class="dc__visual">
+                  <div class="dc__device dc__device--movil">
+                    <div class="dc__screen">
+                      <div class="dc__mock dc__mock--movil">
+                        <div class="dc__mock-topbar dc__mock-topbar--sm"></div>
+                        <div class="dc__mock-stat">
+                          <div class="dc__mock-stat-number"></div>
+                          <div class="dc__mock-stat-bar"></div>
+                        </div>
+                        <div class="dc__mock-notif"></div>
+                        <div class="dc__mock-notif"></div>
+                        <div class="dc__mock-bottom-nav">
+                          <div class="dc__mock-bnav-dot"></div>
+                          <div
+                            class="dc__mock-bnav-dot dc__mock-bnav-dot--active"
+                          ></div>
+                          <div class="dc__mock-bnav-dot"></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="dc__text">
+                  <span class="dc__label">Móvil</span>
+                  <h3 class="dc__title">Tu restaurante en tu bolsillo</h3>
+                  <p class="dc__desc">
+                    Acceso instantáneo a métricas y notificaciones clave. Siempre
+                    conectado, donde estés.
+                  </p>
+                </div>
+              </div>
             </div>
-            <div class="gallery__nav-next">
+
+            <!-- Right arrow -->
+            <button class="dc__arrow dc__arrow--next" aria-label="Siguiente">
               <svg
                 width="24"
                 height="24"
@@ -1013,158 +845,354 @@
               >
                 <polyline points="9 18 15 12 9 6"></polyline>
               </svg>
+            </button>
+          </div>
+
+          <!-- Dots -->
+          <div class="dc__dots anim-fade-in-up" style="--delay: 0.3s">
+            <button
+              class="dc__dot is-active"
+              data-index="0"
+              aria-label="PC"
+            ></button>
+            <button class="dc__dot" data-index="1" aria-label="Tablet"></button>
+            <button class="dc__dot" data-index="2" aria-label="Móvil"></button>
+          </div>
+        </div>
+
+      
+
+      <!-- ===================== GALERÍA DEL SISTEMA ===================== -->
+      <section class="section gallery" id="gallery">
+        <div class="container">
+          <div class="section__header anim-fade-in-up">
+            <p class="section__tag">Capturas del sistema</p>
+            <h2 class="section__title titulo-revelado">
+              Echa un vistazo a la interfaz de<br /><span
+                class="text-accent-serif"
+                >Savory Cloud</span>
+            </h2>
+            <p class="section__subtitle">
+              Explora las pantallas principales del sistema. Gestión clara,
+              moderna y pensada para tu día a día. Además, cada vista se adapta a
+              modo oscuro o claro según tu preferencia.
+            </p>
+          </div>
+
+          <!-- Device Mockup Carousel -->
+          <div class="gallery__carousel anim-fade-in-up" style="--delay: 0.2s">
+            <div class="swiper gallery__swiper">
+              <div class="swiper-wrapper">
+                <!-- Slide 1 — PC -->
+                <div class="swiper-slide">
+                  <div class="gallery__mockup gallery__mockup--pc">
+                    <div class="gallery__device-frame">
+                      <!-- Top bar -->
+                      <div class="gallery__frame-bar">
+                        <span class="gallery__frame-dot"></span>
+                        <span class="gallery__frame-dot"></span>
+                        <span class="gallery__frame-dot"></span>
+                      </div>
+                      <!-- Screen -->
+                      <div class="gallery__screen">
+                        <img
+                          src="/system-landing/gallery/screen-1.jpeg"
+                          alt="Dashboard principal — Vista PC"
+                          loading="lazy"
+                        />
+                      </div>
+                    </div>
+                    <!-- Stand -->
+                    <div class="gallery__stand">
+                      <div class="gallery__stand-neck"></div>
+                      <div class="gallery__stand-base"></div>
+                    </div>
+                    <p class="gallery__label">Dashboard principal</p>
+                  </div>
+                </div>
+
+                <!-- Slide 2 — PC -->
+                <div class="swiper-slide">
+                  <div class="gallery__mockup gallery__mockup--pc">
+                    <div class="gallery__device-frame">
+                      <div class="gallery__frame-bar">
+                        <span class="gallery__frame-dot"></span>
+                        <span class="gallery__frame-dot"></span>
+                        <span class="gallery__frame-dot"></span>
+                      </div>
+                      <div class="gallery__screen">
+                        <img
+                          src="/system-landing/gallery/screen-2.jpeg"
+                          alt="Gestión de inventario — Vista PC"
+                          loading="lazy"
+                        />
+                      </div>
+                    </div>
+                    <div class="gallery__stand">
+                      <div class="gallery__stand-neck"></div>
+                      <div class="gallery__stand-base"></div>
+                    </div>
+                    <p class="gallery__label">Gestión de inventario</p>
+                  </div>
+                </div>
+
+                <!-- Slide 3 — Tablet -->
+                <div class="swiper-slide">
+                  <div class="gallery__mockup gallery__mockup--tablet">
+                    <div class="gallery__device-frame">
+                      <div class="gallery__frame-bar">
+                        <span class="gallery__frame-dot"></span>
+                        <span class="gallery__frame-dot"></span>
+                        <span class="gallery__frame-dot"></span>
+                      </div>
+                      <div class="gallery__screen">
+                        <img
+                          src="/system-landing/gallery/screen-1.jpeg"
+                          alt="Dashboard principal — Vista Tablet"
+                          loading="lazy"
+                        />
+                      </div>
+                    </div>
+                    <p class="gallery__label">Dashboard — Tablet</p>
+                  </div>
+                </div>
+
+                <!-- Slide 4 — Tablet -->
+                <div class="swiper-slide">
+                  <div class="gallery__mockup gallery__mockup--tablet">
+                    <div class="gallery__device-frame">
+                      <div class="gallery__frame-bar">
+                        <span class="gallery__frame-dot"></span>
+                        <span class="gallery__frame-dot"></span>
+                        <span class="gallery__frame-dot"></span>
+                      </div>
+                      <div class="gallery__screen">
+                        <img
+                          src="/system-landing/gallery/screen-2.jpeg"
+                          alt="Gestión de inventario — Vista Tablet"
+                          loading="lazy"
+                        />
+                      </div>
+                    </div>
+                    <p class="gallery__label">Inventario — Tablet</p>
+                  </div>
+                </div>
+
+                <!-- Slide 5 — Móvil -->
+                <div class="swiper-slide">
+                  <div class="gallery__mockup gallery__mockup--mobile">
+                    <div class="gallery__device-frame">
+                      <div class="gallery__mobile-notch"></div>
+                      <div class="gallery__screen">
+                        <img
+                          src="/system-landing/gallery/screen-1.jpeg"
+                          alt="Dashboard principal — Vista Móvil"
+                          loading="lazy"
+                        />
+                      </div>
+                    </div>
+                    <p class="gallery__label">Dashboard — Móvil</p>
+                  </div>
+                </div>
+
+                <!-- Slide 6 — Móvil -->
+                <div class="swiper-slide">
+                  <div class="gallery__mockup gallery__mockup--mobile">
+                    <div class="gallery__device-frame">
+                      <div class="gallery__mobile-notch"></div>
+                      <div class="gallery__screen">
+                        <img
+                          src="/system-landing/gallery/screen-2.jpeg"
+                          alt="Gestión de inventario — Vista Móvil"
+                          loading="lazy"
+                        />
+                      </div>
+                    </div>
+                    <p class="gallery__label">Inventario — Móvil</p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Navigation arrows -->
+              <div class="gallery__nav-prev">
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <polyline points="15 18 9 12 15 6"></polyline>
+                </svg>
+              </div>
+              <div class="gallery__nav-next">
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <polyline points="9 18 15 12 9 6"></polyline>
+                </svg>
+              </div>
             </div>
+
+            <!-- Pagination dots -->
+            <div class="gallery__pagination"></div>
           </div>
 
           <!-- Pagination dots -->
           <div class="gallery__pagination"></div>
         </div>
-      </div>
-    </section>
+      </section>
 
-    <!-- ===================== BENEFITS ===================== -->
-    <section class="section benefits" id="benefits">
-      <div class="container">
-        <div class="row align-items-center g-5">
-          <div class="col-12 col-lg-6 anim-fade-in-up" style="--delay: 0.1s">
-            <div class="benefits__visual">
-              <div class="benefits__stat-card benefits__stat-card--1">
-                <span class="benefits__stat-number">+40%</span>
-                <span class="benefits__stat-label">Eficiencia operativa</span>
-              </div>
-              <div class="benefits__stat-card benefits__stat-card--2">
-                <span class="benefits__stat-number">-60%</span>
-                <span class="benefits__stat-label">Tiempo en cierres</span>
-              </div>
-              <div class="benefits__stat-card benefits__stat-card--3">
-                <span class="benefits__stat-number">+25%</span>
-                <span class="benefits__stat-label">Aumento en ventas</span>
+      <!-- ===================== BENEFITS ===================== -->
+      <section class="section benefits" id="benefits">
+        <div class="container">
+          <div class="row align-items-center g-5">
+            <div class="col-12 col-lg-6 anim-fade-in-up" style="--delay: 0.1s">
+              <div class="benefits__visual">
+                <div class="benefits__stat-card benefits__stat-card--1">
+                  <span class="benefits__stat-number">+40%</span>
+                  <span class="benefits__stat-label">Eficiencia operativa</span>
+                </div>
+                <div class="benefits__stat-card benefits__stat-card--2">
+                  <span class="benefits__stat-number">-60%</span>
+                  <span class="benefits__stat-label">Tiempo en cierres</span>
+                </div>
+                <div class="benefits__stat-card benefits__stat-card--3">
+                  <span class="benefits__stat-number">+25%</span>
+                  <span class="benefits__stat-label">Aumento en ventas</span>
+                </div>
               </div>
             </div>
+            <div class="col-12 col-lg-6 anim-fade-in-up" style="--delay: 0.3s">
+              <p class="section__tag">¿Por qué Savory Cloud?</p>
+              <h2 class="section__title text-start titulo-revelado">
+                Resultados que hablan<br /><span class="text-accent-serif"
+                  >por sí solos</span>
+              </h2>
+              <ul class="benefits__list">
+                <li class="benefits__item">
+                  <span class="benefits__check">
+                    <svg
+                      width="22"
+                      height="22"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="var(--color-primary)"
+                      stroke-width="2.5"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <path d="M20 6 9 17l-5-5" />
+                    </svg>
+                  </span>
+                  <div>
+                    <strong>Implementación en 24 horas.</strong> Tu restaurante
+                    operando en la nube sin parar un solo servicio.
+                  </div>
+                </li>
+                <li class="benefits__item">
+                  <span class="benefits__check">
+                    <svg
+                      width="22"
+                      height="22"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="var(--color-primary)"
+                      stroke-width="2.5"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <path d="M20 6 9 17l-5-5" />
+                    </svg>
+                  </span>
+                  <div>
+                    <strong>Soporte técnico</strong>
+                    Asistencia técnica en horarios establecidos brindada por
+                    personal especializado en el funcionamiento y arquitectura del
+                    sistema Savory Cloud.
+                  </div>
+                </li>
+                <li class="benefits__item">
+                  <span class="benefits__check">
+                    <svg
+                      width="22"
+                      height="22"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="var(--color-primary)"
+                      stroke-width="2.5"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <path d="M20 6 9 17l-5-5" />
+                    </svg>
+                  </span>
+                  <div>
+                    <strong>Sin contratos de permanencia.</strong> Si no te
+                    enamoras, cancelas cuando quieras.
+                  </div>
+                </li>
+                <li class="benefits__item">
+                  <span class="benefits__check">
+                    <svg
+                      width="22"
+                      height="22"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="var(--color-primary)"
+                      stroke-width="2.5"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <path d="M20 6 9 17l-5-5" />
+                    </svg>
+                  </span>
+                  <div>
+                    <strong>Actualizaciones automáticas.</strong> Siempre tendrás
+                    la última versión sin costo extra.
+                  </div>
+                </li>
+              </ul>
+            </div>
           </div>
-          <div class="col-12 col-lg-6 anim-fade-in-up" style="--delay: 0.3s">
-            <p class="section__tag">¿Por qué Savory Cloud?</p>
-            <h2 class="section__title text-start titulo-revelado">
-              Resultados que hablan<br /><span class="text-accent-serif"
-                >por sí solos</span
-              >
+        </div>
+      </section>
+
+      <!-- ===================== HOW IT WORKS ===================== -->
+      <section class="section how-it-works" id="howItWorks">
+        <div class="container">
+          <div class="section__header anim-fade-in-up">
+            <p class="section__tag">Así de fácil</p>
+            <h2 class="section__title titulo-revelado">
+              Empieza en 3 simples<br /><span class="text-accent-serif"
+                >pasos</span>
             </h2>
-            <ul class="benefits__list">
-              <li class="benefits__item">
-                <span class="benefits__check">
-                  <svg
-                    width="22"
-                    height="22"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="var(--color-primary)"
-                    stroke-width="2.5"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  >
-                    <path d="M20 6 9 17l-5-5" />
-                  </svg>
-                </span>
-                <div>
-                  <strong>Implementación en 24 horas.</strong> Tu restaurante
-                  operando en la nube sin parar un solo servicio.
-                </div>
-              </li>
-              <li class="benefits__item">
-                <span class="benefits__check">
-                  <svg
-                    width="22"
-                    height="22"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="var(--color-primary)"
-                    stroke-width="2.5"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  >
-                    <path d="M20 6 9 17l-5-5" />
-                  </svg>
-                </span>
-                <div>
-                  <strong>Soporte técnico</strong>
-                  Asistencia técnica en horarios establecidos brindada por
-                  personal especializado en el funcionamiento y arquitectura del
-                  sistema Savory Cloud.
-                </div>
-              </li>
-              <li class="benefits__item">
-                <span class="benefits__check">
-                  <svg
-                    width="22"
-                    height="22"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="var(--color-primary)"
-                    stroke-width="2.5"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  >
-                    <path d="M20 6 9 17l-5-5" />
-                  </svg>
-                </span>
-                <div>
-                  <strong>Sin contratos de permanencia.</strong> Si no te
-                  enamoras, cancelas cuando quieras.
-                </div>
-              </li>
-              <li class="benefits__item">
-                <span class="benefits__check">
-                  <svg
-                    width="22"
-                    height="22"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="var(--color-primary)"
-                    stroke-width="2.5"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  >
-                    <path d="M20 6 9 17l-5-5" />
-                  </svg>
-                </span>
-                <div>
-                  <strong>Actualizaciones automáticas.</strong> Siempre tendrás
-                  la última versión sin costo extra.
-                </div>
-              </li>
-            </ul>
+            <p class="section__subtitle">
+              Sin instalaciones, sin complicaciones. De cero a gestionar tu
+              restaurante en minutos.
+            </p>
           </div>
-        </div>
-      </div>
-    </section>
 
-    <!-- ===================== HOW IT WORKS ===================== -->
-    <section class="section how-it-works" id="howItWorks">
-      <div class="container">
-        <div class="section__header anim-fade-in-up">
-          <p class="section__tag">Así de fácil</p>
-          <h2 class="section__title titulo-revelado">
-            Empieza en 3 simples<br /><span class="text-accent-serif"
-              >pasos</span
-            >
-          </h2>
-          <p class="section__subtitle">
-            Sin instalaciones, sin complicaciones. De cero a gestionar tu
-            restaurante en minutos.
-          </p>
-        </div>
-
-        <div class="hiw__timeline">
-          <!-- Línea conectora -->
-          <div class="hiw__line" aria-hidden="true"></div>
-
-          <div class="row g-4 mt-4">
+          <div class="hiw__steps">
             <!-- Paso 1 -->
-            <div class="col-12 col-md-4 anim-fade-in-up" style="--delay: 0.1s">
-              <div class="hiw-card">
-                <div class="hiw-card__number">1</div>
-                <div class="hiw-card__icon">
-                  <svg viewBox="0 0 48 48" width="44" height="44" fill="none">
+            <div class="hiw-step anim-fade-in-up" style="--delay: 0.1s">
+              <div class="hiw-step__marker">
+                <span class="hiw-step__number">1</span>
+                <div class="hiw-step__line"></div>
+              </div>
+              <div class="hiw-step__content">
+                <div class="hiw-step__icon">
+                  <svg viewBox="0 0 48 48" width="36" height="36" fill="none">
                     <circle
                       cx="24"
                       cy="16"
@@ -1188,20 +1216,23 @@
                     />
                   </svg>
                 </div>
-                <h3 class="hiw-card__title">Configura tu perfil</h3>
-                <p class="hiw-card__desc">
-                  Registra a tus empleados, configura tu perfil y tu
-                  restaurante: nombre, logo, horarios y redes sociales.
+                <h3 class="hiw-step__title">Configura tu perfil</h3>
+                <p class="hiw-step__desc">
+                  Registra a tus empleados, configura tu perfil y tu restaurante:
+                  nombre, logo, horarios y redes sociales.
                 </p>
               </div>
             </div>
 
             <!-- Paso 2 -->
-            <div class="col-12 col-md-4 anim-fade-in-up" style="--delay: 0.25s">
-              <div class="hiw-card">
-                <div class="hiw-card__number">2</div>
-                <div class="hiw-card__icon">
-                  <svg viewBox="0 0 48 48" width="44" height="44" fill="none">
+            <div class="hiw-step anim-fade-in-up" style="--delay: 0.25s">
+              <div class="hiw-step__marker">
+                <span class="hiw-step__number">2</span>
+                <div class="hiw-step__line"></div>
+              </div>
+              <div class="hiw-step__content">
+                <div class="hiw-step__icon">
+                  <svg viewBox="0 0 48 48" width="36" height="36" fill="none">
                     <rect
                       x="6"
                       y="8"
@@ -1225,8 +1256,8 @@
                     />
                   </svg>
                 </div>
-                <h3 class="hiw-card__title">Personaliza todo</h3>
-                <p class="hiw-card__desc">
+                <h3 class="hiw-step__title">Personaliza todo</h3>
+                <p class="hiw-step__desc">
                   Carga tu menú, configura mesas, añade promociones y ajusta
                   métodos de pago y preferencias.
                 </p>
@@ -1234,11 +1265,16 @@
             </div>
 
             <!-- Paso 3 -->
-            <div class="col-12 col-md-4 anim-fade-in-up" style="--delay: 0.4s">
-              <div class="hiw-card">
-                <div class="hiw-card__number">3</div>
-                <div class="hiw-card__icon">
-                  <svg viewBox="0 0 48 48" width="44" height="44" fill="none">
+            <div
+              class="hiw-step hiw-step--last anim-fade-in-up"
+              style="--delay: 0.4s"
+            >
+              <div class="hiw-step__marker">
+                <span class="hiw-step__number">3</span>
+              </div>
+              <div class="hiw-step__content">
+                <div class="hiw-step__icon">
+                  <svg viewBox="0 0 48 48" width="36" height="36" fill="none">
                     <path
                       d="M12 28l6 6 18-18"
                       stroke="var(--color-primary)"
@@ -1256,8 +1292,8 @@
                     />
                   </svg>
                 </div>
-                <h3 class="hiw-card__title">¡Listo para vender!</h3>
-                <p class="hiw-card__desc">
+                <h3 class="hiw-step__title">¡Listo para vender!</h3>
+                <p class="hiw-step__desc">
                   Comienza a gestionar ventas, inventario, reservas y delivery
                   desde cualquier dispositivo.
                 </p>
@@ -1265,356 +1301,280 @@
             </div>
           </div>
         </div>
-      </div>
-    </section>
+      </section>
 
-    <!-- ===================== PRICING ===================== -->
-    <section class="section pricing" id="pricing">
-      <div class="container">
-        <div class="section__header anim-fade-in-up">
-          <p class="section__tag">Planes simples</p>
-          <h2 class="section__title titulo-revelado">
-            Elige el plan perfecto<br /><span class="text-accent-serif"
-              >para tu negocio</span
-            >
-          </h2>
-          <p class="section__subtitle">
-            Sin letras chiquitas. Sin sorpresas. Cancela cuando quieras.
-          </p>
-        </div>
-        <div class="row g-4 mt-4 justify-content-center">
-          <!-- ── BASIC CLOUD ── -->
-          <div
-            class="col-12 col-md-6 col-lg-4 anim-fade-in-up"
-            style="--delay: 0.1s"
-          >
-            <div class="pricing-card">
-              <p class="pricing-card__name">Basic Cloud</p>
-              <p class="pricing-card__price">$999<span>/mes</span></p>
-              <p class="pricing-card__desc">
-                El sistema completo de gestión interna para tu restaurante. Sin
-                landing page ni ecommerce.
-              </p>
-              <ul class="pricing-card__features">
-                <li>Dashboard administrativo</li>
-                <li>Punto de venta (TPV)</li>
-                <li>Inventario e ingredientes</li>
-                <li>Gestión de menú y complementos</li>
-                <li>Control de mesas y reservaciones</li>
-                <li>Módulo de cocina en tiempo real</li>
-                <li>Pedidos, pagos y promociones</li>
-                <li>Empleados, turnos y roles</li>
-                <li>Proveedores y categorías</li>
-                <li>Reportes y analítica</li>
-                <li>Flyers: Crea tus propios anuncios personalizados</li>
-                <li>Roles: Admin, Gerente, Cajero, Mesero, Chef, Barista</li>
-                <li>Soporte técnico</li>
-              </ul>
-              <a
-                href="https://wa.me/529931660294?text=Hola%2C%20requiero%20informaci%C3%B3n%20sobre%20el%20plan%20Basic%20Cloud"
-                target="_blank"
-                rel="noopener"
-                class="btn btn--outline btn--full"
-                >Más información</a
-              >
-            </div>
-          </div>
-          <!-- ── ALL IN ONE ── -->
-          <div
-            class="col-12 col-md-6 col-lg-4 anim-fade-in-up"
-            style="--delay: 0.2s"
-          >
-            <div class="pricing-card pricing-card--popular">
-              <span class="pricing-card__badge">Más completo</span>
-              <p class="pricing-card__name">All in One</p>
-              <p class="pricing-card__price">$1,999<span>/mes</span></p>
-              <p class="pricing-card__desc">
-                La solución completa: sistema + landing page + ecommerce con
-                pedidos y clientes online.
-              </p>
-              <ul class="pricing-card__features">
-                <li>Todo lo de Advanced Cloud</li>
-                <li>Registro y login de clientes</li>
-                <li>Menú y catálogo online</li>
-                <li>Pedidos en línea desde el celular</li>
-                <li>Carrito de compras y checkout</li>
-                <li>Módulo de delivery integrado</li>
-                <li>Perfil e historial del cliente</li>
-                <li>Reseñas y valoraciones de clientes online</li>
-                <li>Gestión de clientes desde admin</li>
-                <li>Recuperación de contraseña</li>
-                <li>Verificación de email</li>
-              </ul>
-              <a
-                href="https://wa.me/529931660294?text=Hola%2C%20quiero%20contratar%20el%20plan%20All%20in%20One"
-                target="_blank"
-                rel="noopener"
-                class="btn btn--primary btn--full btn--glow"
-                >Más información</a
-              >
-            </div>
-          </div>
-          <!-- ── ADVANCED CLOUD ── -->
-          <div
-            class="col-12 col-md-6 col-lg-4 anim-fade-in-up"
-            style="--delay: 0.3s"
-          >
-            <div class="pricing-card">
-              <p class="pricing-card__name">Advanced Cloud</p>
-              <p class="pricing-card__price">$1,499<span>/mes</span></p>
-              <p class="pricing-card__desc">
-                Todo el sistema + una landing page profesional para tu
-                restaurante. Sin ecommerce.
-              </p>
-              <ul class="pricing-card__features">
-                <li>Todo lo de Basic Cloud</li>
-                <li>Landing page personalizada</li>
-                <li>Horarios de negocio públicos</li>
-                <li>Redes sociales integradas</li>
-                <li>Promociones visibles al público</li>
-                <li>Empleados del mes destacados</li>
-                <li>Presencia web profesional 24/7</li>
-              </ul>
-              <a
-                href="https://wa.me/529931660294?text=Hola%2C%20requiero%20informaci%C3%B3n%20sobre%20el%20plan%20Advanced%20Cloud"
-                target="_blank"
-                rel="noopener"
-                class="btn btn--outline btn--full"
-                >Más información</a
-              >
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ===================== DATA EN VIVO ===================== -->
-    <section class="section data-live" id="dataLive">
-      <div class="container">
-        <div class="dl__banner anim-fade-in-up">
-          <!-- Glow top border -->
-          <div class="dl__glow-top"></div>
-
-          <!-- Header row -->
-          <div class="dl__header">
-            <div class="dl__status">
-              <span class="dl__badge-live"
-                ><span class="dl__live-dot"></span>EN VIVO</span
-              >
-              <span class="dl__console">&gt; REGISTRO_01</span>
-            </div>
-            <div class="dl__icon-pulse">
-              <svg
-                width="28"
-                height="28"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="#38e07b"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
-              </svg>
-            </div>
-          </div>
-
-          <!-- Title -->
-          <h2 class="dl__title">Todos tus movimientos en tiempo real</h2>
-          <p class="dl__subtitle">
-            <svg
-              class="dl__bolt"
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="#38e07b"
-              stroke="none"
-            >
-              <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
-            </svg>
-            Seguimiento en Tiempo Real
-          </p>
-
-          <!-- Equalizer -->
-          <div class="dl__equalizer" id="dlEqualizer">
-            <div class="dl__bar" style="--i: 0"></div>
-            <div class="dl__bar" style="--i: 1"></div>
-            <div class="dl__bar" style="--i: 2"></div>
-            <div class="dl__bar" style="--i: 3"></div>
-            <div class="dl__bar" style="--i: 4"></div>
-            <div class="dl__bar" style="--i: 5"></div>
-            <div class="dl__bar" style="--i: 6"></div>
-            <div class="dl__bar" style="--i: 7"></div>
-            <div class="dl__bar" style="--i: 8"></div>
-            <div class="dl__bar" style="--i: 9"></div>
-            <div class="dl__bar" style="--i: 10"></div>
-            <div class="dl__bar" style="--i: 11"></div>
-            <div class="dl__bar" style="--i: 12"></div>
-            <div class="dl__bar" style="--i: 13"></div>
-            <div class="dl__bar" style="--i: 14"></div>
-            <div class="dl__bar" style="--i: 15"></div>
-            <div class="dl__bar" style="--i: 16"></div>
-            <div class="dl__bar" style="--i: 17"></div>
-            <div class="dl__bar" style="--i: 18"></div>
-            <div class="dl__bar" style="--i: 19"></div>
-            <div class="dl__bar" style="--i: 20"></div>
-            <div class="dl__bar" style="--i: 21"></div>
-            <div class="dl__bar" style="--i: 22"></div>
-            <div class="dl__bar" style="--i: 23"></div>
-            <div class="dl__bar" style="--i: 24"></div>
-          </div>
-
-          <!-- Real-time description -->
-          <p class="dl__realtime-text">
-            Cada venta, cada pedido, cada movimiento de inventario — procesado y
-            visible al instante en tu sistema Savory Cloud.
-          </p>
-        </div>
-      </div>
-    </section>
-
-    <!-- ===================== SCROLL PINNED MESSAGES ===================== -->
-    <section class="pinned-section" id="pinnedMessages">
-      <div class="pinned-section__content">
-        <p class="pinned-section__text pinned-section__text--first">
-          Tu restaurante merece<br /><span class="text-accent-serif"
-            >tecnología de primer nivel</span
-          >
-        </p>
-        <p class="pinned-section__text pinned-section__text--second">
-          Savory Cloud lo hace<br /><span class="text-accent-serif"
-            >simple y poderoso</span
-          >
-        </p>
-        <p class="pinned-section__text pinned-section__text--third">
-          <span class="ft-word brand-highlight">Empieza</span>
-          <span class="ft-word">hoy</span>
-          <span class="ft-word brand-highlight">mismo</span>
-          <span class="ft-word">y</span>
-          <span class="ft-word brand-highlight">cambia</span>
-          <span class="ft-word">tu</span>
-          <span class="ft-word brand-highlight">negocio</span>
-          <span class="ft-word">para</span>
-          <span class="ft-word brand-highlight">siempre</span>
-        </p>
-      </div>
-    </section>
-
-    <!-- ===================== HORIZONTAL SCROLL ===================== -->
-    <section class="horizontal-scroll-section" id="horizontalScroll">
-      <div class="sticky-wrapper">
-        <div class="text-track">
-          <div class="text-track__item" data-anim="drop">
-            Gestión que se adapta a
-            <span class="text-accent-serif">tu ritmo</span>
-          </div>
-          <div class="text-track__item" data-anim="scale">
-            De la cocina a la
-            <span class="text-accent-serif">nube</span>
-          </div>
-          <div class="text-track__item" data-anim="flip">
-            <span class="text-accent-serif">Inventario,</span> ventas y reservas
-            en un solo lugar
-          </div>
-          <div class="text-track__item" data-anim="build">
-            Decisiones basadas en
-            <span class="text-accent-serif">datos reales</span>
-          </div>
-          <div class="text-track__item" data-anim="wave">
-            Tu restaurante,
-            <span class="text-accent-serif">sin límites</span>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ===================== CTA FINAL ===================== -->
-    <section class="section cta-final" id="cta-final">
-      <div class="container">
-        <div class="cta-final__card anim-fade-in-up">
-          <h2 class="cta-final__title titulo-revelado">
-            ¿Listo para transformar<br /><span class="text-accent-serif"
-              >tu restaurante?</span
-            >
-          </h2>
-          <p class="cta-final__text">
-            Empieza hoy mismo. Sin plazos forzosos. Sin complicaciones.
-          </p>
-          <div class="cta-final__actions">
-            <a
-              href="https://wa.me/529931660294?text=Hola%2C%20quiero%20contratar%20Savory%20Cloud"
-              target="_blank"
-              rel="noopener"
-              class="btn btn--primary btn--lg btn--glow"
-            >
-              <span>Contrata Ahora</span>
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <path d="m5 12h14" />
-                <path d="m12 5 7 7-7 7" />
-              </svg>
-            </a>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ===================== FOOTER ===================== -->
-    <footer class="footer">
-      <!-- Decorative top glow -->
-      <div class="footer__glow-top"></div>
-      <div class="container">
-        <div class="row g-4 g-lg-5">
-          <!-- Brand + slogan -->
-          <div class="col-12 col-lg-4">
-            <a href="#" class="navbar__brand footer__brand">
-              <span class="navbar__logo-icon">
-                <img
-                  src="/images/savoryCloudLogo.webp"
-                  alt="Savory Cloud"
-                  class="footer__logo-img"
-                />
-              </span>
-              <span class="navbar__brand-text"
-                >Savory<span class="text-accent"> Cloud</span></span
-              >
-            </a>
-            <p class="footer__desc">
-              El sistema SaaS que entiende la cocina de tu negocio.
+      <!-- ===================== PRICING ===================== -->
+      <section class="section pricing" id="pricing">
+        <div class="container">
+          <div class="section__header anim-fade-in-up">
+            <p class="section__tag">Planes simples</p>
+            <h2 class="section__title titulo-revelado">
+              Elige el plan perfecto<br /><span class="text-accent-serif"
+                >para tu negocio</span>
+            </h2>
+            <p class="section__subtitle">
+              Sin letras chiquitas. Sin sorpresas. Cancela cuando quieras.
             </p>
-            <!-- Social icons -->
-            <div class="footer__socials">
+          </div>
+          <div class="row g-4 mt-4 justify-content-center">
+            <!-- ── BASIC CLOUD ── -->
+            <div
+              class="col-12 col-md-6 col-lg-4 anim-fade-in-up"
+              style="--delay: 0.1s"
+            >
+              <div class="pricing-card">
+                <p class="pricing-card__name">Basic Cloud</p>
+                <p class="pricing-card__price">$999<span>/mes</span></p>
+                <p class="pricing-card__desc">
+                  El sistema completo de gestión interna para tu restaurante. Sin
+                  landing page ni ecommerce.
+                </p>
+                <ul class="pricing-card__features">
+                  <li>Dashboard administrativo</li>
+                  <li>Punto de venta (TPV)</li>
+                  <li>Inventario e ingredientes</li>
+                  <li>Gestión de menú y complementos</li>
+                  <li>Control de mesas y reservaciones</li>
+                  <li>Módulo de cocina en tiempo real</li>
+                  <li>Pedidos, pagos y promociones</li>
+                  <li>Empleados, turnos y roles</li>
+                  <li>Proveedores y categorías</li>
+                  <li>Reportes y analítica</li>
+                  <li>Flyers: Crea tus propios anuncios personalizados</li>
+                  <li>Roles: Admin, Gerente, Cajero, Mesero, Chef, Barista</li>
+                  <li>Soporte técnico</li>
+                </ul>
+                <a
+                  href="https://wa.me/529931660294?text=Hola%2C%20requiero%20informaci%C3%B3n%20sobre%20el%20plan%20Basic%20Cloud"
+                  target="_blank"
+                  rel="noopener"
+                  class="btn btn--outline btn--full"
+                  >Más información</a>
+              </div>
+            </div>
+            <!-- ── ALL IN ONE ── -->
+            <div
+              class="col-12 col-md-6 col-lg-4 anim-fade-in-up"
+              style="--delay: 0.2s"
+            >
+              <div class="pricing-card pricing-card--popular">
+                <span class="pricing-card__badge">Más completo</span>
+                <p class="pricing-card__name">All in One</p>
+                <p class="pricing-card__price">$1,999<span>/mes</span></p>
+                <p class="pricing-card__desc">
+                  La solución completa: sistema + landing page + ecommerce con
+                  pedidos y clientes online.
+                </p>
+                <ul class="pricing-card__features">
+                  <li>Todo lo de Advanced Cloud</li>
+                  <li>Registro y login de clientes</li>
+                  <li>Menú y catálogo online</li>
+                  <li>Pedidos en línea desde cualquier dispositivo</li>
+                  <li>Carrito de compras y checkout</li>
+                  <li>Módulo de delivery integrado</li>
+                  <li>Perfil e historial del cliente</li>
+                  <li>Reseñas y valoraciones de clientes online</li>
+                  <li>Gestión de clientes desde admin</li>
+                  <li>Recuperación de contraseña</li>
+                  <li>Verificación de email</li>
+                </ul>
+                <a
+                  href="https://wa.me/529931660294?text=Hola%2C%20quiero%20contratar%20el%20plan%20All%20in%20One"
+                  target="_blank"
+                  rel="noopener"
+                  class="btn btn--primary btn--full btn--glow"
+                  >Más información</a>
+              </div>
+            </div>
+            <!-- ── ADVANCED CLOUD ── -->
+            <div
+              class="col-12 col-md-6 col-lg-4 anim-fade-in-up"
+              style="--delay: 0.3s"
+            >
+              <div class="pricing-card">
+                <p class="pricing-card__name">Advanced Cloud</p>
+                <p class="pricing-card__price">$1,499<span>/mes</span></p>
+                <p class="pricing-card__desc">
+                  Todo el sistema + una landing page profesional para tu
+                  restaurante. Sin ecommerce.
+                </p>
+                <ul class="pricing-card__features">
+                  <li>Todo lo de Basic Cloud</li>
+                  <li>Landing page personalizada</li>
+                  <li>Horarios de negocio públicos</li>
+                  <li>Redes sociales integradas</li>
+                  <li>Promociones visibles al público</li>
+                  <li>Empleados del mes destacados</li>
+                  <li>Presencia web profesional 24/7</li>
+                </ul>
+                <a
+                  href="https://wa.me/529931660294?text=Hola%2C%20requiero%20informaci%C3%B3n%20sobre%20el%20plan%20Advanced%20Cloud"
+                  target="_blank"
+                  rel="noopener"
+                  class="btn btn--outline btn--full"
+                  >Más información</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== DATA EN VIVO ===================== -->
+      <section class="section data-live" id="dataLive">
+        <div class="container">
+          <div class="dl__banner anim-fade-in-up">
+            <!-- Glow top border -->
+            <div class="dl__glow-top"></div>
+
+            <!-- Header row -->
+            <div class="dl__header">
+              <div class="dl__status">
+                <span class="dl__badge-live"
+                  ><span class="dl__live-dot"></span>EN VIVO</span>
+                <span class="dl__console">&gt; REGISTRO_01</span>
+              </div>
+              <div class="dl__icon-pulse">
+                <svg
+                  width="28"
+                  height="28"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#38e07b"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+                </svg>
+              </div>
+            </div>
+
+            <!-- Title -->
+            <h2 class="dl__title">Todos tus movimientos en tiempo real</h2>
+            <p class="dl__subtitle">
+              <svg
+                class="dl__bolt"
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="#38e07b"
+                stroke="none"
+              >
+                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+              </svg>
+              Seguimiento en Tiempo Real
+            </p>
+
+            <!-- Equalizer -->
+            <div class="dl__equalizer" id="dlEqualizer">
+              <div class="dl__bar" style="--i: 0"></div>
+              <div class="dl__bar" style="--i: 1"></div>
+              <div class="dl__bar" style="--i: 2"></div>
+              <div class="dl__bar" style="--i: 3"></div>
+              <div class="dl__bar" style="--i: 4"></div>
+              <div class="dl__bar" style="--i: 5"></div>
+              <div class="dl__bar" style="--i: 6"></div>
+              <div class="dl__bar" style="--i: 7"></div>
+              <div class="dl__bar" style="--i: 8"></div>
+              <div class="dl__bar" style="--i: 9"></div>
+              <div class="dl__bar" style="--i: 10"></div>
+              <div class="dl__bar" style="--i: 11"></div>
+              <div class="dl__bar" style="--i: 12"></div>
+              <div class="dl__bar" style="--i: 13"></div>
+              <div class="dl__bar" style="--i: 14"></div>
+              <div class="dl__bar" style="--i: 15"></div>
+              <div class="dl__bar" style="--i: 16"></div>
+              <div class="dl__bar" style="--i: 17"></div>
+              <div class="dl__bar" style="--i: 18"></div>
+              <div class="dl__bar" style="--i: 19"></div>
+              <div class="dl__bar" style="--i: 20"></div>
+              <div class="dl__bar" style="--i: 21"></div>
+              <div class="dl__bar" style="--i: 22"></div>
+              <div class="dl__bar" style="--i: 23"></div>
+              <div class="dl__bar" style="--i: 24"></div>
+            </div>
+
+            <!-- Real-time description -->
+            <p class="dl__realtime-text">
+              Cada venta, cada pedido, cada movimiento de inventario — procesado y
+              visible al instante en tu sistema Savory Cloud.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== SCROLL PINNED MESSAGES ===================== -->
+      <section class="pinned-section" id="pinnedMessages">
+        <div class="pinned-section__content">
+          <p class="pinned-section__text pinned-section__text--first">
+            Tu restaurante merece<br /><span class="text-accent-serif"
+              >tecnología de primer nivel</span>
+          </p>
+          <p class="pinned-section__text pinned-section__text--second">
+            Savory Cloud lo hace<br /><span class="text-accent-serif"
+              >simple y poderoso</span>
+          </p>
+          <p class="pinned-section__text pinned-section__text--third">
+            <span class="ft-word brand-highlight">Empieza</span>
+            <span class="ft-word">hoy</span>
+            <span class="ft-word brand-highlight">mismo</span>
+            <span class="ft-word">y</span>
+            <span class="ft-word brand-highlight">cambia</span>
+            <span class="ft-word">tu</span>
+            <span class="ft-word brand-highlight">negocio</span>
+            <span class="ft-word">para</span>
+            <span class="ft-word brand-highlight">siempre</span>
+          </p>
+        </div>
+      </section>
+
+      <!-- ===================== HORIZONTAL SCROLL ===================== -->
+      <section class="horizontal-scroll-section" id="horizontalScroll">
+        <div class="sticky-wrapper">
+          <div class="text-track">
+            <div class="text-track__item" data-anim="drop">
+              Gestión que se adapta a
+              <span class="text-accent-serif">tu ritmo</span>
+            </div>
+            <div class="text-track__item" data-anim="scale">
+              De la cocina a la
+              <span class="text-accent-serif">nube</span>
+            </div>
+            <div class="text-track__item" data-anim="flip">
+              <span class="text-accent-serif">Inventario,</span> ventas y reservas
+              en un solo lugar
+            </div>
+            <div class="text-track__item" data-anim="build">
+              Decisiones basadas en
+              <span class="text-accent-serif">datos reales</span>
+            </div>
+            <div class="text-track__item" data-anim="wave">
+              Tu restaurante,
+              <span class="text-accent-serif">sin límites</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== CTA FINAL ===================== -->
+      <section class="section cta-final" id="cta-final">
+        <div class="container">
+          <div class="cta-final__card anim-fade-in-up">
+            <h2 class="cta-final__title titulo-revelado">
+              ¿Listo para transformar<br /><span class="text-accent-serif"
+                >tu restaurante?</span>
+            </h2>
+            <p class="cta-final__text">
+              Empieza hoy mismo. Sin plazos forzosos. Sin complicaciones.
+            </p>
+            <div class="cta-final__actions">
               <a
-                href="https://wa.me/529931660294"
+                href="https://wa.me/529931660294?text=Hola%2C%20quiero%20contratar%20Savory%20Cloud"
                 target="_blank"
                 rel="noopener"
-                aria-label="WhatsApp"
-                class="footer__social-link"
+                class="btn btn--primary btn--lg btn--glow"
               >
-                <svg
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="currentColor"
-                >
-                  <path
-                    d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"
-                  />
-                </svg>
-              </a>
-              <a
-                href="mailto:contacto@savorycloud.com"
-                aria-label="Email"
-                class="footer__social-link"
-              >
+                <span>Contrata Ahora</span>
                 <svg
                   width="20"
                   height="20"
@@ -1625,113 +1585,178 @@
                   stroke-linecap="round"
                   stroke-linejoin="round"
                 >
-                  <rect x="2" y="4" width="20" height="16" rx="2" />
-                  <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+                  <path d="m5 12h14" />
+                  <path d="m12 5 7 7-7 7" />
                 </svg>
               </a>
             </div>
           </div>
-          <!-- Navegación -->
-          <div class="col-6 col-lg-2">
-            <h4 class="footer__heading">Navegación</h4>
-            <ul class="footer__links">
-              <li><a href="#features">Funciones</a></li>
-              <li><a href="#benefits">Beneficios</a></li>
-              <li><a href="#howItWorks">¿Cómo funciona?</a></li>
-              <li><a href="#pricing">Planes</a></li>
-            </ul>
-          </div>
-          <!-- Secciones -->
-          <div class="col-6 col-lg-2">
-            <h4 class="footer__heading">Descubre</h4>
-            <ul class="footer__links">
-              <li><a href="#aboutUs">Sobre nosotros</a></li>
-              <li><a href="#modelo3d">Conoce a Arlex</a></li>
-              <li><a href="#gallery">Galería</a></li>
-              <li><a href="#dataLive">Data en vivo</a></li>
-            </ul>
-          </div>
-          <!-- Slogan -->
-          <div class="col-12 col-lg-4">
-            <div class="footer__slogan-card">
-              <p class="footer__slogan">
-                Tú pones el <span class="text-accent-serif">sazón</span>,<br />
-                nosotros la
-                <span class="footer__slogan-highlight">gestión</span>.
+        </div>
+      </section>
+
+      <!-- ===================== FOOTER ===================== -->
+      <footer class="footer">
+        <!-- Decorative top glow -->
+        <div class="footer__glow-top"></div>
+        <div class="container">
+          <div class="row g-4 g-lg-5">
+            <!-- Brand + slogan -->
+            <div class="col-12 col-lg-4">
+              <a href="#" class="navbar__brand footer__brand">
+                <span class="navbar__logo-icon">
+                  <img
+                    src="/images/savoryCloudLogo.png"
+                    alt="Savory Cloud"
+                    class="footer__logo-img"
+                  />
+                </span>
+                <span class="navbar__brand-text"
+                  >Savory<span class="text-accent"> Cloud</span></span>
+              </a>
+              <p class="footer__desc">
+                El sistema SaaS que entiende la cocina de tu negocio.
               </p>
-              <a
-                href="https://wa.me/529931660294?text=Hola%2C%20quiero%20conocer%20m%C3%A1s%20sobre%20Savory%20Cloud"
-                target="_blank"
-                rel="noopener"
-                class="btn btn--primary btn--sm footer__cta-btn"
-                >Contáctanos</a
-              >
+              <!-- Social icons -->
+              <div class="footer__socials">
+                <a
+                  href="https://wa.me/529931660294"
+                  target="_blank"
+                  rel="noopener"
+                  aria-label="WhatsApp"
+                  class="footer__social-link"
+                >
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                  >
+                    <path
+                      d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"
+                    />
+                  </svg>
+                </a>
+                <a
+                  href="mailto:contacto@savorycloud.com"
+                  aria-label="Email"
+                  class="footer__social-link"
+                >
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <rect x="2" y="4" width="20" height="16" rx="2" />
+                    <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+                  </svg>
+                </a>
+              </div>
+            </div>
+            <!-- Navegación -->
+            <div class="col-6 col-lg-2">
+              <h4 class="footer__heading">Navegación</h4>
+              <ul class="footer__links">
+                <li><a href="#features">Funciones</a></li>
+                <li><a href="#benefits">Beneficios</a></li>
+                <li><a href="#howItWorks">¿Cómo funciona?</a></li>
+                <li><a href="#pricing">Planes</a></li>
+              </ul>
+            </div>
+            <!-- Secciones -->
+            <div class="col-6 col-lg-2">
+              <h4 class="footer__heading">Descubre</h4>
+              <ul class="footer__links">
+                <li><a href="#aboutUs">Sobre nosotros</a></li>
+                <li><a href="#modelo3d">Conoce a Arlex</a></li>
+                <li><a href="#gallery">Galería</a></li>
+                <li><a href="#dataLive">Data en vivo</a></li>
+              </ul>
+            </div>
+            <!-- Slogan -->
+            <div class="col-12 col-lg-4">
+              <div class="footer__slogan-card">
+                <p class="footer__slogan">
+                  Tú pones el <span class="text-accent-serif">sazón</span>,<br />
+                  nosotros la
+                  <span class="footer__slogan-highlight">gestión</span>.
+                </p>
+                <a
+                  href="https://wa.me/529931660294?text=Hola%2C%20quiero%20conocer%20m%C3%A1s%20sobre%20Savory%20Cloud"
+                  target="_blank"
+                  rel="noopener"
+                  class="btn btn--primary btn--sm footer__cta-btn"
+                  >Contáctanos</a>
+              </div>
             </div>
           </div>
+          <div class="footer__bottom">
+            <p>© 2026 Savory Cloud. Todos los derechos reservados.</p>
+            <p class="footer__made-with">
+              Hecho con
+              <span class="footer__heart" style="color: #38e07b">&#10084;</span>
+              en México
+            </p>
+          </div>
         </div>
-        <div class="footer__bottom">
-          <p>© 2026 Savory Cloud. Todos los derechos reservados.</p>
-          <p class="footer__made-with">
-            Hecho con
-            <span class="footer__heart" style="color: #38e07b">&#10084;</span>
-            en México
-          </p>
-        </div>
-      </div>
-    </footer>
+      </footer>
 
-    <!-- ===================== DARK/LIGHT TOGGLE ===================== -->
-    <button
-      class="theme-toggle"
-      id="themeToggle"
-      aria-label="Cambiar modo de color"
-    >
-      <span class="theme-toggle__icon theme-toggle__icon--sun">
-        <svg
-          width="22"
-          height="22"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <circle cx="12" cy="12" r="5" />
-          <line x1="12" y1="1" x2="12" y2="3" />
-          <line x1="12" y1="21" x2="12" y2="23" />
-          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
-          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
-          <line x1="1" y1="12" x2="3" y2="12" />
-          <line x1="21" y1="12" x2="23" y2="12" />
-          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
-          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
-        </svg>
-      </span>
-      <span class="theme-toggle__icon theme-toggle__icon--moon">
-        <svg
-          width="20"
-          height="20"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-        </svg>
-      </span>
-    </button>
+      <!-- ===================== DARK/LIGHT TOGGLE ===================== -->
+      <button
+        class="theme-toggle"
+        id="themeToggle"
+        aria-label="Cambiar modo de color"
+      >
+        <span class="theme-toggle__icon theme-toggle__icon--sun">
+          <svg
+            width="22"
+            height="22"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <circle cx="12" cy="12" r="5" />
+            <line x1="12" y1="1" x2="12" y2="3" />
+            <line x1="12" y1="21" x2="12" y2="23" />
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+            <line x1="1" y1="12" x2="3" y2="12" />
+            <line x1="21" y1="12" x2="23" y2="12" />
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+          </svg>
+        </span>
+        <span class="theme-toggle__icon theme-toggle__icon--moon">
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+          </svg>
+        </span>
+      </button>
 
-    <!-- Swiper.js -->
-    <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+      <!-- Swiper.js -->
+      <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
 
-    <!-- GSAP & ScrollTrigger -->
-    <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
+      <!-- GSAP & ScrollTrigger -->
+      <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+      <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
 
-    <script src="/system-landing/script.js"></script>
-    <script type="module" src="/system-landing/modelo3d.js"></script>
-  </body>
-</html>
+      <script src="/system-landing/script.js"></script>
+      <script type="module" src="/system-landing/modelo3d.js"></script>
+    </body>
+  </html>

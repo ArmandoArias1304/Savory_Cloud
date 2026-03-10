@@ -211,4 +211,9 @@ public interface ItemMenuRepository extends JpaRepository<ItemMenu, Long> {
      * Count items without company (for data migration)
      */
     long countByCompanyIsNull();
+
+    /**
+     * Count all menu items by company
+     */
+    long countByCompany(Company company);
 }

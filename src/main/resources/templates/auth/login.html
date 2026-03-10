@@ -3,7 +3,9 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title th:text="${globalSystemConfig != null and globalSystemConfig.systemName != null ? globalSystemConfig.systemName + ' - Iniciar Sesión' : 'Iniciar Sesión'}">
+    <title
+      th:text="${globalSystemConfig != null and globalSystemConfig.systemName != null ? globalSystemConfig.systemName + ' - Iniciar Sesión' : 'Iniciar Sesión'}"
+    >
       Iniciar Sesión
     </title>
     <link
@@ -618,6 +620,30 @@
           align-items: flex-start;
         }
       }
+
+      /* Toggle password visibility */
+      .input-wrapper .toggle-password {
+        position: absolute;
+        right: 14px;
+        left: auto;
+        top: 50%;
+        transform: translateY(-50%);
+        cursor: pointer;
+        color: #9ca3af;
+        font-size: 22px;
+        transition: color 0.3s ease;
+        user-select: none;
+        z-index: 2;
+      }
+
+      .input-wrapper .toggle-password:hover {
+        color: #38e07b;
+      }
+
+      .form-group input[type="password"],
+      .form-group input.has-toggle {
+        padding-right: 44px;
+      }
     </style>
   </head>
   <body>
@@ -748,6 +774,11 @@
                 required
               />
               <span class="material-symbols-outlined">lock</span>
+              <span
+                class="material-symbols-outlined toggle-password"
+                onclick="togglePassword('password', this)"
+                >visibility_off</span
+              >
             </div>
           </div>
 
@@ -809,5 +840,17 @@
         </div>
       </div>
     </div>
+    <script>
+      function togglePassword(inputId, icon) {
+        var input = document.getElementById(inputId);
+        if (input.type === "password") {
+          input.type = "text";
+          icon.textContent = "visibility";
+        } else {
+          input.type = "password";
+          icon.textContent = "visibility_off";
+        }
+      }
+    </script>
   </body>
 </html>

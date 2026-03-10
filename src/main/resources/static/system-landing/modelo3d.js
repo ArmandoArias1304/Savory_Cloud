@@ -93,18 +93,22 @@ console.log(
   });
 
   // Mouse move → accumulate rotation while dragging
-  window.addEventListener("mousemove", (e) => {
-    if (!isDragging) return;
-    const dx = e.clientX - prevMouseX;
-    const dy = e.clientY - prevMouseY;
-    dragRotY += dx * SENSITIVITY;
-    dragRotX += dy * SENSITIVITY;
-    dragRotX = Math.max(-Math.PI / 2.5, Math.min(Math.PI / 2.5, dragRotX));
-    velocityX = dy * SENSITIVITY;
-    velocityY = dx * SENSITIVITY;
-    prevMouseX = e.clientX;
-    prevMouseY = e.clientY;
-  }, { passive: true });
+  window.addEventListener(
+    "mousemove",
+    (e) => {
+      if (!isDragging) return;
+      const dx = e.clientX - prevMouseX;
+      const dy = e.clientY - prevMouseY;
+      dragRotY += dx * SENSITIVITY;
+      dragRotX += dy * SENSITIVITY;
+      dragRotX = Math.max(-Math.PI / 2.5, Math.min(Math.PI / 2.5, dragRotX));
+      velocityX = dy * SENSITIVITY;
+      velocityY = dx * SENSITIVITY;
+      prevMouseX = e.clientX;
+      prevMouseY = e.clientY;
+    },
+    { passive: true },
+  );
 
   // Mouse up → stop drag, keep inertia
   window.addEventListener("mouseup", () => {
@@ -120,14 +124,16 @@ console.log(
       prevMouseY = e.touches[0].clientY;
       velocityX = 0;
       velocityY = 0;
+      e.preventDefault();
     },
-    { passive: true },
+    { passive: false },
   );
 
   window.addEventListener(
     "touchmove",
     (e) => {
       if (!isDragging) return;
+      e.preventDefault();
       const dx = e.touches[0].clientX - prevMouseX;
       const dy = e.touches[0].clientY - prevMouseY;
       dragRotY += dx * SENSITIVITY;
@@ -138,7 +144,7 @@ console.log(
       prevMouseX = e.touches[0].clientX;
       prevMouseY = e.touches[0].clientY;
     },
-    { passive: true },
+    { passive: false },
   );
 
   window.addEventListener("touchend", () => {
@@ -152,7 +158,9 @@ console.log(
 
   /* ─── Load GLB Model (Draco-compressed) ─── */
   const dracoLoader = new DRACOLoader();
-  dracoLoader.setDecoderPath("https://www.gstatic.com/draco/versioned/decoders/1.5.6/");
+  dracoLoader.setDecoderPath(
+    "https://www.gstatic.com/draco/versioned/decoders/1.5.6/",
+  );
   dracoLoader.setDecoderConfig({ type: "js" });
 
   const gltfLoader = new GLTFLoader();
@@ -166,7 +174,9 @@ console.log(
     modelPath,
     (gltf) => {
       const loadEndTime = performance.now();
-      console.log(`[M3D-PERF] ⏱ GLB load time: ${(loadEndTime - loadStartTime).toFixed(1)} ms`);
+      console.log(
+        `[M3D-PERF] ⏱ GLB load time: ${(loadEndTime - loadStartTime).toFixed(1)} ms`,
+      );
 
       model = gltf.scene;
 

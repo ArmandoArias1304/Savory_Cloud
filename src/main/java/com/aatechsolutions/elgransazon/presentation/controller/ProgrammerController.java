@@ -6,15 +6,13 @@ import com.aatechsolutions.elgransazon.application.service.EmployeeService;
 import com.aatechsolutions.elgransazon.application.service.GlobalSystemConfigService;
 import com.aatechsolutions.elgransazon.application.service.ImageStorageService;
 import com.aatechsolutions.elgransazon.application.service.LicenseService;
-import com.aatechsolutions.elgransazon.domain.entity.Company;
-import com.aatechsolutions.elgransazon.domain.entity.GlobalSystemConfig;
-import com.aatechsolutions.elgransazon.domain.entity.LicenseEvent;
-import com.aatechsolutions.elgransazon.domain.entity.SystemError;
-import com.aatechsolutions.elgransazon.domain.entity.SystemLicense;
 import com.aatechsolutions.elgransazon.domain.repository.CustomerRepository;
 import com.aatechsolutions.elgransazon.domain.repository.ItemMenuRepository;
 import com.aatechsolutions.elgransazon.domain.repository.OrderRepository;
-import com.aatechsolutions.elgransazon.domain.repository.SystemErrorRepository;
+import com.aatechsolutions.elgransazon.domain.entity.Company;
+import com.aatechsolutions.elgransazon.domain.entity.GlobalSystemConfig;
+import com.aatechsolutions.elgransazon.domain.entity.LicenseEvent;
+import com.aatechsolutions.elgransazon.domain.entity.SystemLicense;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -25,7 +23,6 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -41,14 +38,13 @@ public class ProgrammerController {
 
     private final LicenseService licenseService;
     private final BackupService backupService;
-    private final SystemErrorRepository errorRepository;
-    private final EmployeeService employeeService;
     private final CompanyService companyService;
+    private final GlobalSystemConfigService globalSystemConfigService;
+    private final ImageStorageService imageStorageService;
+    private final EmployeeService employeeService;
     private final ItemMenuRepository itemMenuRepository;
     private final OrderRepository orderRepository;
     private final CustomerRepository customerRepository;
-    private final GlobalSystemConfigService globalSystemConfigService;
-    private final ImageStorageService imageStorageService;
 
     /**
      * Programmer dashboard
@@ -112,33 +108,6 @@ public class ProgrammerController {
         model.addAttribute("isExpired", license.isExpired());
         model.addAttribute("needsWarning", license.daysUntilExpiration() <= 5);
 
-        // System statistics (PROGRAMMER excluded from employee count via countAll())
-        // NOTE: These statistics are for the selected company only
-        long totalEmployees = employeeService.countAll();  // Already excludes PROGRAMMER
-        long totalMenuItems = itemMenuRepository.count();
-        long totalOrders = orderRepository.count();
-        long totalCustomers = customerRepository.count();
-
-        model.addAttribute("totalEmployees", totalEmployees);
-        model.addAttribute("totalMenuItems", totalMenuItems);
-        model.addAttribute("totalOrders", totalOrders);
-        model.addAttribute("totalCustomers", totalCustomers);
-
-        // Recent errors (last 7 days)
-        LocalDateTime sevenDaysAgo = LocalDateTime.now().minusDays(7);
-        List<SystemError> recentErrors = errorRepository.findByOccurredAtBetweenOrderByOccurredAtDesc(
-            sevenDaysAgo, LocalDateTime.now()
-        );
-        
-        long unresolvedCount = recentErrors.stream().filter(e -> !e.getResolved()).count();
-        long criticalCount = recentErrors.stream()
-            .filter(e -> e.getSeverity() == SystemError.Severity.CRITICAL && !e.getResolved())
-            .count();
-
-        model.addAttribute("recentErrors", recentErrors);
-        model.addAttribute("unresolvedErrorCount", unresolvedCount);
-        model.addAttribute("criticalErrorCount", criticalCount);
-
         // License events for the selected license
         List<LicenseEvent> events = licenseService.getLicenseEventsById(license.getId());
         // Limit to 10 most recent
@@ -150,6 +119,16 @@ public class ProgrammerController {
         List<LicenseEvent> renewalsWithAmount = licenseService.getRenewalEventsWithAmountById(license.getId());
         model.addAttribute("totalRevenue", totalRevenue);
         model.addAttribute("renewalsWithAmount", renewalsWithAmount);
+
+        // System statistics for the selected company
+        long totalEmployees = employeeService.countEnabledByCompany(selectedCompany);
+        long totalMenuItems = itemMenuRepository.countByCompany(selectedCompany);
+        long totalOrders = orderRepository.countByCompany(selectedCompany);
+        long totalCustomers = customerRepository.countByCompany(selectedCompany);
+        model.addAttribute("totalEmployees", totalEmployees);
+        model.addAttribute("totalMenuItems", totalMenuItems);
+        model.addAttribute("totalOrders", totalOrders);
+        model.addAttribute("totalCustomers", totalCustomers);
 
         return "programmer/dashboard";
     }
@@ -181,7 +160,8 @@ public class ProgrammerController {
                 "Error al renovar la licencia: " + e.getMessage());
         }
 
-        return "redirect:/programmer/dashboard";
+        Long companyId = getCompanyIdFromLicense(licenseId);
+        return "redirect:/programmer/dashboard" + (companyId != null ? "?companyId=" + companyId : "");
     }
 
     /**
@@ -206,30 +186,33 @@ public class ProgrammerController {
                 "Error al suspender la licencia: " + e.getMessage());
         }
 
-        return "redirect:/programmer/dashboard";
+        Long companyId = getCompanyIdFromLicense(licenseId);
+        return "redirect:/programmer/dashboard" + (companyId != null ? "?companyId=" + companyId : "");
     }
 
     /**
      * Reactivate license
      */
     @PostMapping("/reactivate")
-    public String reactivateLicense(Authentication authentication,
+    public String reactivateLicense(@RequestParam Long licenseId,
+                                   Authentication authentication,
                                    RedirectAttributes redirectAttributes) {
         try {
             String username = authentication.getName();
-            licenseService.reactivateLicense(username);
+            licenseService.reactivateLicenseById(licenseId, username);
             
             redirectAttributes.addFlashAttribute("successMessage", 
                 "Licencia reactivada exitosamente");
             
-            log.info("License reactivated by {}", username);
+            log.info("License {} reactivated by {}", licenseId, username);
         } catch (Exception e) {
             log.error("Error reactivating license", e);
             redirectAttributes.addFlashAttribute("errorMessage", 
                 "Error al reactivar la licencia: " + e.getMessage());
         }
 
-        return "redirect:/programmer/dashboard";
+        Long companyId = getCompanyIdFromLicense(licenseId);
+        return "redirect:/programmer/dashboard" + (companyId != null ? "?companyId=" + companyId : "");
     }
 
     /**
@@ -258,31 +241,8 @@ public class ProgrammerController {
                 "Error al cambiar el paquete: " + e.getMessage());
         }
 
-        return "redirect:/programmer/dashboard";
-    }
-
-    /**
-     * Update license notes
-     */
-    @PostMapping("/update-notes")
-    public String updateNotes(@RequestParam String notes,
-                             Authentication authentication,
-                             RedirectAttributes redirectAttributes) {
-        try {
-            String username = authentication.getName();
-            licenseService.updateNotes(notes, username);
-            
-            redirectAttributes.addFlashAttribute("successMessage", 
-                "Notas actualizadas exitosamente");
-            
-            log.info("License notes updated by {}", username);
-        } catch (Exception e) {
-            log.error("Error updating notes", e);
-            redirectAttributes.addFlashAttribute("errorMessage", 
-                "Error al actualizar las notas: " + e.getMessage());
-        }
-
-        return "redirect:/programmer/dashboard";
+        Long companyId = getCompanyIdFromLicense(licenseId);
+        return "redirect:/programmer/dashboard" + (companyId != null ? "?companyId=" + companyId : "");
     }
 
     /**
@@ -323,48 +283,8 @@ public class ProgrammerController {
                 "Error al actualizar la información: " + e.getMessage());
         }
 
-        return "redirect:/programmer/dashboard";
-    }
-
-    /**
-     * View error details
-     */
-    @GetMapping("/errors/{id}")
-    public String viewError(@PathVariable Long id, Model model) {
-        SystemError error = errorRepository.findById(id).orElse(null);
-        
-        if (error == null) {
-            return "redirect:/programmer/dashboard";
-        }
-
-        model.addAttribute("error", error);
-        return "programmer/error-detail";
-    }
-
-    /**
-     * Mark error as resolved
-     */
-    @PostMapping("/errors/{id}/resolve")
-    public String resolveError(@PathVariable Long id,
-                              Authentication authentication,
-                              RedirectAttributes redirectAttributes) {
-        try {
-            SystemError error = errorRepository.findById(id).orElse(null);
-            
-            if (error != null) {
-                error.markAsResolved(authentication.getName());
-                errorRepository.save(error);
-                
-                redirectAttributes.addFlashAttribute("successMessage", 
-                    "Error marcado como resuelto");
-            }
-        } catch (Exception e) {
-            log.error("Error resolving error", e);
-            redirectAttributes.addFlashAttribute("errorMessage", 
-                "Error al marcar como resuelto: " + e.getMessage());
-        }
-
-        return "redirect:/programmer/dashboard";
+        Long companyId = getCompanyIdFromLicense(licenseId);
+        return "redirect:/programmer/dashboard" + (companyId != null ? "?companyId=" + companyId : "");
     }
 
     /**
@@ -489,5 +409,15 @@ public class ProgrammerController {
         }
 
         return "redirect:/programmer/dashboard";
+    }
+
+    /**
+     * Helper to get company ID from a license ID for redirect purposes
+     */
+    private Long getCompanyIdFromLicense(Long licenseId) {
+        if (licenseId == null) return null;
+        return licenseService.getLicenseById(licenseId)
+            .map(license -> license.getCompany().getIdCompany())
+            .orElse(null);
     }
 }

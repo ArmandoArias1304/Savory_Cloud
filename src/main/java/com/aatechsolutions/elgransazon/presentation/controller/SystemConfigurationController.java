@@ -66,6 +66,9 @@ public class SystemConfigurationController {
         model.addAttribute("license", license);
         if (license != null) {
             model.addAttribute("daysRemaining", licenseService.getDaysUntilExpiration());
+            // Financial summary for the company in context
+            model.addAttribute("totalRevenue", licenseService.getTotalRevenue());
+            model.addAttribute("renewalsWithAmount", licenseService.getRenewalEventsWithAmount());
         }
         
         return "admin/system-configuration/form";

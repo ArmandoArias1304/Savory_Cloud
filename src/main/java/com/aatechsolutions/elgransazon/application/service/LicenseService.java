@@ -773,6 +773,22 @@ public class LicenseService {
     }
 
     /**
+     * Reactivate license by ID (for PROGRAMMER managing multiple companies)
+     */
+    @Transactional
+    public void reactivateLicenseById(Long licenseId, String performedBy) {
+        SystemLicense license = licenseRepository.findById(licenseId)
+            .orElseThrow(() -> new RuntimeException("License not found: " + licenseId));
+
+        license.setStatus(LicenseStatus.ACTIVE);
+        licenseRepository.save(license);
+        invalidateLicenseCacheForCompany(license.getCompany().getIdCompany());
+
+        createLicenseEvent(licenseId, LicenseEvent.EventType.REACTIVATED, "Licencia reactivada", performedBy, null, null);
+        log.info("License {} reactivated by {}", licenseId, performedBy);
+    }
+
+    /**
      * Change package type by ID (for PROGRAMMER managing multiple companies)
      */
     @Transactional

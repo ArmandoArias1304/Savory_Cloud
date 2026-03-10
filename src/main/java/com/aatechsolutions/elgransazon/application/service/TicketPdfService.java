@@ -16,7 +16,6 @@ import com.itextpdf.layout.properties.TextAlignment;
 import com.itextpdf.layout.properties.UnitValue;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayOutputStream;
@@ -69,13 +68,15 @@ public class TicketPdfService {
         PdfFont boldFont = PdfFontFactory.createFont(StandardFonts.HELVETICA_BOLD);
         PdfFont normalFont = PdfFontFactory.createFont(StandardFonts.HELVETICA);
 
-        // Add logo (centered)
+        // Add logo from company's restaurantLogoUrl (centered)
         try {
-            ClassPathResource imgResource = new ClassPathResource("static/images/LogoVariante.png");
-            Image logo = new Image(ImageDataFactory.create(imgResource.getURL()));
-            logo.setWidth(60);
-            logo.setHorizontalAlignment(com.itextpdf.layout.properties.HorizontalAlignment.CENTER);
-            document.add(logo);
+            String logoUrl = config.getRestaurantLogoUrl();
+            if (logoUrl != null && !logoUrl.isBlank()) {
+                Image logo = new Image(ImageDataFactory.create(new java.net.URL(logoUrl)));
+                logo.setWidth(60);
+                logo.setHorizontalAlignment(com.itextpdf.layout.properties.HorizontalAlignment.CENTER);
+                document.add(logo);
+            }
         } catch (Exception e) {
             log.warn("Could not load logo image: {}", e.getMessage());
         }

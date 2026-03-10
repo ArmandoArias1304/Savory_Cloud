@@ -61,7 +61,9 @@ public class LicenseInterceptor extends OncePerRequestFilter {
         String path = request.getRequestURI();
         
         // Don't filter these paths
-        return path.startsWith("/login") ||
+        return path.equals("/") ||             // System landing page (no company)
+               path.startsWith("/home") ||     // System landing page alternative
+               path.startsWith("/login") ||
                path.startsWith("/client/login") ||
                path.startsWith("/programmer/") ||  // Allow programmer access
                path.startsWith("/license-expired") ||

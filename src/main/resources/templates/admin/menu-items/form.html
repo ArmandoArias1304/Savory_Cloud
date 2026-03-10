@@ -2053,10 +2053,8 @@
                     const name = this.dataset.name;
                     const unit = this.dataset.unit;
 
-
                     // Verificar si el ingrediente ya está agregado
                     const existingRow = isIngredientDuplicated(id);
-
 
                     if (existingRow) {
                       // Mostrar SweetAlert pidiendo confirmar actualización de cantidad
@@ -2066,7 +2064,6 @@
                       const existingUnit = existingRow.querySelector(
                         'input[name="units"]',
                       ).value;
-
 
                       Swal.fire({
                         icon: "warning",
@@ -2436,7 +2433,23 @@
           // Validar tamaño
           const maxSize = 5 * 1024 * 1024; // 5MB
           if (file.size > maxSize) {
-            alert("La imagen es demasiado grande. El tamaño máximo es 5MB.");
+            Swal.fire({
+              icon: "warning",
+              title: "Imagen demasiado pesada",
+              html: "Tu imagen pesa más de <b>5MB</b><br>Te recomendamos reducir su tamaño o usar un formato más ligero como <b>WEBP</b>.",
+              confirmButtonText: "Entendido",
+              confirmButtonColor: "#38e07b",
+              background: document.documentElement.classList.contains("dark")
+                ? "#1f2937"
+                : "#ffffff",
+              color: document.documentElement.classList.contains("dark")
+                ? "#f3f4f6"
+                : "#1f2937",
+              customClass: {
+                popup: "rounded-2xl",
+                confirmButton: "rounded-xl px-6 py-2.5 font-semibold",
+              },
+            });
             clearImagePreview();
             return;
           }
@@ -2449,9 +2462,23 @@
             "image/webp",
           ];
           if (!validTypes.includes(file.type)) {
-            alert(
-              "Tipo de archivo no válido. Solo se permiten JPG, PNG, GIF o WEBP.",
-            );
+            Swal.fire({
+              icon: "error",
+              title: "Formato no válido",
+              html: "El archivo seleccionado no es una imagen compatible.<br>Solo se permiten <b>JPG, PNG, GIF o WEBP</b>.",
+              confirmButtonText: "Entendido",
+              confirmButtonColor: "#38e07b",
+              background: document.documentElement.classList.contains("dark")
+                ? "#1f2937"
+                : "#ffffff",
+              color: document.documentElement.classList.contains("dark")
+                ? "#f3f4f6"
+                : "#1f2937",
+              customClass: {
+                popup: "rounded-2xl",
+                confirmButton: "rounded-xl px-6 py-2.5 font-semibold",
+              },
+            });
             clearImagePreview();
             return;
           }
