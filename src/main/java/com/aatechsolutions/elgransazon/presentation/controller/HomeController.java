@@ -1,6 +1,7 @@
 package com.aatechsolutions.elgransazon.presentation.controller;
 
 import com.aatechsolutions.elgransazon.application.service.BusinessHoursService;
+import com.aatechsolutions.elgransazon.application.service.DateTimeService;
 import com.aatechsolutions.elgransazon.application.service.CategoryService;
 import com.aatechsolutions.elgransazon.application.service.EmployeeMonthlyStatsService;
 import com.aatechsolutions.elgransazon.application.service.ItemMenuService;
@@ -56,6 +57,7 @@ public class HomeController {
     private final SystemConfigurationService systemConfigurationService;
     private final LandingImageService landingImageService;
     private final ResourceLoader resourceLoader;
+    private final DateTimeService dateTimeService;
 
     /**
      * Display home/landing page with system configuration data
@@ -102,7 +104,7 @@ public class HomeController {
         businessHours.sort((h1, h2) -> h1.getDayOfWeek().compareTo(h2.getDayOfWeek()));
         
         // Check if restaurant is currently open
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = dateTimeService.nowLocal();
         java.time.DayOfWeek javaDayOfWeek = now.getDayOfWeek();
         DayOfWeek currentDay = DayOfWeek.valueOf(javaDayOfWeek.name());
         LocalTime currentTime = now.toLocalTime();

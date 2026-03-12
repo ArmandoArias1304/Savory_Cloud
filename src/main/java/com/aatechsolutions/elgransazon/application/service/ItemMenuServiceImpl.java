@@ -37,6 +37,7 @@ public class ItemMenuServiceImpl implements ItemMenuService {
     private final BusinessHoursService businessHoursService;
     private final ItemMenuComboItemRepository itemMenuComboItemRepository;
     private final OrderDetailRepository orderDetailRepository;
+    private final DateTimeService dateTimeService;
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -675,7 +676,7 @@ public class ItemMenuServiceImpl implements ItemMenuService {
     @Override
     @Transactional(readOnly = true)
     public boolean isItemAvailableNow(Long itemMenuId) {
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = dateTimeService.nowLocal();
         java.time.DayOfWeek javaDayOfWeek = now.getDayOfWeek();
         DayOfWeek customDay = DayOfWeek.valueOf(javaDayOfWeek.name());
         LocalTime currentTime = now.toLocalTime();
@@ -827,7 +828,7 @@ public class ItemMenuServiceImpl implements ItemMenuService {
     @Override
     @Transactional(readOnly = true)
     public List<ItemMenu> findCurrentlyAvailableItems() {
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = dateTimeService.nowLocal();
         java.time.DayOfWeek javaDayOfWeek = now.getDayOfWeek();
         DayOfWeek customDay = DayOfWeek.valueOf(javaDayOfWeek.name());
         LocalTime currentTime = now.toLocalTime();

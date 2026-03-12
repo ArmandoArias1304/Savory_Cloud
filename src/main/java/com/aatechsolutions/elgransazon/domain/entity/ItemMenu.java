@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import lombok.*;
 
+import com.aatechsolutions.elgransazon.infrastructure.util.CompanyLocalTime;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -500,7 +501,7 @@ public class ItemMenu implements Serializable {
         if (hasCustomSchedule == null || !hasCustomSchedule) {
             return true;
         }
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = CompanyLocalTime.now();
         java.time.DayOfWeek javaDayOfWeek = now.getDayOfWeek();
         DayOfWeek customDay = DayOfWeek.valueOf(javaDayOfWeek.name());
         LocalTime currentTime = now.toLocalTime();
@@ -589,7 +590,7 @@ public class ItemMenu implements Serializable {
             return "available";
         }
         
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = CompanyLocalTime.now();
         java.time.DayOfWeek javaDow = now.getDayOfWeek();
         DayOfWeek todayDay = DayOfWeek.valueOf(javaDow.name());
         LocalTime currentTime = now.toLocalTime();
@@ -636,7 +637,7 @@ public class ItemMenu implements Serializable {
             return "";
         }
         
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = CompanyLocalTime.now();
         java.time.DayOfWeek javaDow = now.getDayOfWeek();
         DayOfWeek todayDay = DayOfWeek.valueOf(javaDow.name());
         String todayName = todayDay.getDisplayName();

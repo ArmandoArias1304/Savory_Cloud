@@ -2,6 +2,7 @@ package com.aatechsolutions.elgransazon.presentation.controller;
 
 import com.aatechsolutions.elgransazon.application.service.BusinessHoursService;
 import com.aatechsolutions.elgransazon.application.service.CategoryService;
+import com.aatechsolutions.elgransazon.application.service.DateTimeService;
 import com.aatechsolutions.elgransazon.application.service.EmployeeService;
 import com.aatechsolutions.elgransazon.application.service.ItemMenuService;
 import com.aatechsolutions.elgransazon.application.service.SystemConfigurationService;
@@ -47,6 +48,7 @@ public class WaiterController {
     private final CategoryService categoryService;
     private final SystemConfigurationService configurationService;
     private final BusinessHoursService businessHoursService;
+    private final DateTimeService dateTimeService;
 
     /**
      * Display waiter dashboard
@@ -131,8 +133,8 @@ public class WaiterController {
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
             
             // Get today's paid orders
-            LocalDateTime startOfDay = LocalDate.now().atStartOfDay();
-            LocalDateTime endOfDay = LocalDate.now().atTime(LocalTime.MAX);
+            LocalDateTime startOfDay = dateTimeService.startOfDayUtc(dateTimeService.todayLocal());
+            LocalDateTime endOfDay = dateTimeService.endOfDayUtc(dateTimeService.todayLocal());
             
             List<Order> todaysPaidOrders = allPaidOrders.stream()
                     .filter(order -> {
@@ -204,9 +206,9 @@ public class WaiterController {
                     .toList();
             
             // Get today's date
-            LocalDate today = LocalDate.now();
-            LocalDateTime startOfDay = today.atStartOfDay();
-            LocalDateTime endOfDay = today.atTime(LocalTime.MAX);
+            LocalDate today = dateTimeService.todayLocal();
+            LocalDateTime startOfDay = dateTimeService.startOfDayUtc(today);
+            LocalDateTime endOfDay = dateTimeService.endOfDayUtc(today);
             
             // Today's orders
             List<Order> todaysOrders = allOrders.stream()
@@ -263,8 +265,8 @@ public class WaiterController {
             
             for (int i = 6; i >= 0; i--) {
                 LocalDate date = today.minusDays(i);
-                LocalDateTime dayStart = date.atStartOfDay();
-                LocalDateTime dayEnd = date.atTime(LocalTime.MAX);
+                LocalDateTime dayStart = dateTimeService.startOfDayUtc(date);
+                LocalDateTime dayEnd = dateTimeService.endOfDayUtc(date);
                 
                 String dateKey = date.format(formatter);
                 
@@ -403,7 +405,7 @@ public class WaiterController {
             SystemConfiguration config = configurationService.getConfiguration();
             
             // Get today's date range
-            LocalDate today = LocalDate.now();
+            LocalDate today = dateTimeService.todayLocal();
             LocalDateTime startOfDay = today.atStartOfDay();
             LocalDateTime endOfDay = today.atTime(LocalTime.MAX);
             

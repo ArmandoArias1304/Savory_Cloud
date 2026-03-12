@@ -5,6 +5,7 @@ import com.aatechsolutions.elgransazon.application.service.IngredientService;
 import com.aatechsolutions.elgransazon.application.service.OrderService;
 import com.aatechsolutions.elgransazon.application.service.ReportPdfService;
 import com.aatechsolutions.elgransazon.application.service.CategoryService;
+import com.aatechsolutions.elgransazon.application.service.DateTimeService;
 import com.aatechsolutions.elgransazon.domain.repository.CustomerRepository;
 import com.aatechsolutions.elgransazon.domain.entity.*;
 import lombok.extern.slf4j.Slf4j;
@@ -41,6 +42,7 @@ public class ReportsController {
     private final IngredientCategoryService ingredientCategoryService;
     private final CategoryService categoryService;
     private final CustomerRepository customerRepository;
+    private final DateTimeService dateTimeService;
 
     // Constructor manual para inyectar adminOrderService específicamente
     public ReportsController(
@@ -49,13 +51,15 @@ public class ReportsController {
             IngredientService ingredientService,
             IngredientCategoryService ingredientCategoryService,
             CategoryService categoryService,
-            CustomerRepository customerRepository) {
+            CustomerRepository customerRepository,
+            DateTimeService dateTimeService) {
         this.orderService = orderService;
         this.reportPdfService = reportPdfService;
         this.ingredientService = ingredientService;
         this.ingredientCategoryService = ingredientCategoryService;
         this.categoryService = categoryService;
         this.customerRepository = customerRepository;
+        this.dateTimeService = dateTimeService;
     }
 
     /**
@@ -134,15 +138,15 @@ public class ReportsController {
 
         try {
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-            
+
             if (startDate != null && !startDate.isEmpty()) {
-                startDateTime = LocalDate.parse(startDate, formatter).atStartOfDay();
+                startDateTime = dateTimeService.startOfDayUtc(LocalDate.parse(startDate, formatter));
             }
-            
+
             if (endDate != null && !endDate.isEmpty()) {
-                endDateTime = LocalDate.parse(endDate, formatter).atTime(23, 59, 59);
+                endDateTime = dateTimeService.endOfDayUtc(LocalDate.parse(endDate, formatter));
             } else if (startDateTime != null) {
-                endDateTime = startDateTime.toLocalDate().atTime(23, 59, 59);
+                endDateTime = dateTimeService.endOfDayUtc(LocalDate.parse(startDate, formatter));
             }
         } catch (Exception e) {
             log.error("Error parsing date range: {} - {}", startDate, endDate, e);
@@ -617,7 +621,7 @@ public class ReportsController {
      */
     private String getCurrentDateForFilename() {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss");
-        return LocalDateTime.now().format(formatter);
+        return dateTimeService.nowLocal().format(formatter);
     }
 
     /**

@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" lang="es">
 <head>
     <meta charset="UTF-8">
@@ -485,7 +485,7 @@
                             </thead>
                             <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
                                 <tr th:each="event : ${renewalsWithAmount}" class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-                                    <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-200" th:text="${#temporals.format(event.eventDate, 'dd/MM/yyyy HH:mm')}"></td>
+                                    <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-200" th:text="${#tz.format(event.eventDate, 'dd/MM/yyyy HH:mm')}"></td>
                                     <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300" th:text="${event.description}"></td>
                                     <td class="px-4 py-3 text-sm">
                                         <span th:if="${event.months != null && event.months > 0}" 
@@ -527,7 +527,7 @@
                     <div th:each="event : ${licenseEvents}" class="border border-gray-200 dark:border-gray-700 rounded-xl p-4 hover:shadow-md transition-shadow bg-gradient-to-r from-gray-50 to-white dark:from-gray-800 dark:to-gray-900">
                         <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-2">
                             <h6 class="text-base font-semibold text-gray-900 dark:text-white" th:text="${event.eventTypeDisplayName}"></h6>
-                            <span class="text-xs text-gray-500 dark:text-gray-400" th:text="${#temporals.format(event.eventDate, 'dd/MM/yyyy HH:mm')}"></span>
+                            <span class="text-xs text-gray-500 dark:text-gray-400" th:text="${#tz.format(event.eventDate, 'dd/MM/yyyy HH:mm')}"></span>
                         </div>
                         <p class="text-sm text-gray-700 dark:text-gray-300 mb-2" th:text="${event.description}"></p>
                         <div class="flex items-center gap-2">

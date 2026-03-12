@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html
   lang="es"
   xmlns:th="http://www.thymeleaf.org"
@@ -492,7 +492,7 @@
                 </p>
                 <p
                   class="text-base font-semibold text-gray-900 dark:text-white"
-                  th:text="${employee.formattedLastAccess}"
+                  th:text="${employee.lastAccess != null ? #tz.format(employee.lastAccess, 'dd/MM/yyyy HH:mm') : 'Nunca'}"
                 >
                   24/10/2024 14:35
                 </p>
@@ -514,7 +514,7 @@
                 </p>
                 <p
                   class="text-base font-semibold text-gray-900 dark:text-white"
-                  th:text="${#temporals.format(employee.createdAt, 'dd/MM/yyyy HH:mm')}"
+                  th:text="${#tz.format(employee.createdAt, 'dd/MM/yyyy HH:mm')}"
                 >
                   01/01/2024 09:00
                 </p>

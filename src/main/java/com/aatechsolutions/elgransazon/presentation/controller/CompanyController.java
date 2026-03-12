@@ -179,6 +179,7 @@ public class CompanyController {
             @RequestParam(required = false) String contactPhone,
             @RequestParam(required = false) String address,
             @RequestParam(required = false) String rfc,
+            @RequestParam(defaultValue = "America/Mexico_City") String timezone,
             RedirectAttributes redirectAttributes,
             Authentication authentication) {
         
@@ -218,6 +219,9 @@ public class CompanyController {
             company.setContactPhone(contactPhone);
             company.setAddress(address);
             company.setRfc(rfc);
+            if (timezone != null && !timezone.isBlank()) {
+                company.setTimezone(timezone);
+            }
             
             companyRepository.save(company);
             

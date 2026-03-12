@@ -332,20 +332,8 @@
                         <div
                           class="w-12 h-12 rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800 flex-shrink-0"
                         >
-                          <img
-                            th:if="${complement.imageUrl != null && !complement.imageUrl.isEmpty()}"
-                            th:src="${complement.imageUrl}"
-                            th:alt="${complement.name}"
-                            class="w-full h-full object-cover"
-                          />
-                          <div
-                            th:if="${complement.imageUrl == null || complement.imageUrl.isEmpty()}"
-                            class="w-full h-full flex items-center justify-center"
-                          >
-                            <span
-                              class="material-symbols-outlined text-gray-400"
-                              >local_dining</span
-                            >
+                          <div class="w-full h-full flex items-center justify-center">
+                            <span class="material-symbols-outlined text-gray-400">local_dining</span>
                           </div>
                         </div>
                         <div>

@@ -53,6 +53,7 @@ public class OrderServiceImpl implements OrderService {
     private final OrderDetailComplementRepository orderDetailComplementRepository;
     private final ComplementRepository complementRepository;
     private final ReservationService reservationService;
+    private final DateTimeService dateTimeService;
 
     // Constructor with @Lazy for ReservationService to break circular dependency
     public OrderServiceImpl(
@@ -70,7 +71,8 @@ public class OrderServiceImpl implements OrderService {
             DailyOrderCounterRepository dailyOrderCounterRepository,
             OrderDetailComplementRepository orderDetailComplementRepository,
             ComplementRepository complementRepository,
-            @Lazy ReservationService reservationService) {
+            @Lazy ReservationService reservationService,
+            DateTimeService dateTimeService) {
         this.orderRepository = orderRepository;
         this.orderDetailRepository = orderDetailRepository;
         this.restaurantTableRepository = restaurantTableRepository;
@@ -86,6 +88,7 @@ public class OrderServiceImpl implements OrderService {
         this.orderDetailComplementRepository = orderDetailComplementRepository;
         this.complementRepository = complementRepository;
         this.reservationService = reservationService;
+        this.dateTimeService = dateTimeService;
     }
 
     @Override
@@ -1121,9 +1124,7 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public String generateOrderNumber() {
-        LocalDate today = LocalDate.now();
-        
-        // Get current company for multi-tenant order number generation
+        LocalDate today = dateTimeService.todayLocal();
         Company company = CompanyContext.requireCurrentCompany();
         
         String datePrefix = String.format("ORD-%04d%02d%02d-", 
@@ -1683,7 +1684,7 @@ public class OrderServiceImpl implements OrderService {
             
             if (!itemMenuService.isItemAvailableNow(itemId)) {
                 // Build a message showing only today's schedule
-                java.time.DayOfWeek javaDow = java.time.LocalDate.now().getDayOfWeek();
+                java.time.DayOfWeek javaDow = dateTimeService.todayLocal().getDayOfWeek();
                 DayOfWeek todayDay = DayOfWeek.valueOf(javaDow.name());
                 String todayName = todayDay.getDisplayName();
                 

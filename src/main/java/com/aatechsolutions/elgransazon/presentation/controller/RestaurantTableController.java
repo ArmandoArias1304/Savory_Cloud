@@ -1,5 +1,6 @@
 package com.aatechsolutions.elgransazon.presentation.controller;
 
+import com.aatechsolutions.elgransazon.application.service.DateTimeService;
 import com.aatechsolutions.elgransazon.application.service.RestaurantTableService;
 import com.aatechsolutions.elgransazon.domain.entity.RestaurantTable;
 import com.aatechsolutions.elgransazon.domain.entity.TableStatus;
@@ -28,6 +29,7 @@ import java.util.*;
 public class RestaurantTableController {
 
     private final RestaurantTableService tableService;
+    private final DateTimeService dateTimeService;
 
     /**
      * Show list of all tables
@@ -255,8 +257,8 @@ public class RestaurantTableController {
             tableData.put("comments", table.getComments() != null ? table.getComments() : "Sin comentarios");
             tableData.put("createdBy", table.getCreatedBy() != null ? table.getCreatedBy() : "Desconocido");
             tableData.put("updatedBy", table.getUpdatedBy() != null ? table.getUpdatedBy() : "Desconocido");
-            tableData.put("createdAt", table.getFormattedCreatedAt());
-            tableData.put("updatedAt", table.getFormattedUpdatedAt());
+            tableData.put("createdAt", dateTimeService.formatToCompanyTime(table.getCreatedAt(), "dd/MM/yyyy HH:mm"));
+            tableData.put("updatedAt", table.getUpdatedAt() != null ? dateTimeService.formatToCompanyTime(table.getUpdatedAt(), "dd/MM/yyyy HH:mm") : "Nunca");
 
             response.put("success", true);
             response.put("table", tableData);

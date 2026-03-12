@@ -26,6 +26,7 @@ import java.util.Optional;
 public class PromotionServiceImpl implements PromotionService {
 
     private final PromotionRepository promotionRepository;
+    private final DateTimeService dateTimeService;
 
     @Override
     public List<Promotion> findAll() {
@@ -96,7 +97,7 @@ public class PromotionServiceImpl implements PromotionService {
     @Override
     public List<Promotion> findActivePromotions() {
         log.debug("Finding active promotions for today");
-        LocalDate today = LocalDate.now();
+        LocalDate today = dateTimeService.todayLocal();
         Company currentCompany = CompanyContext.requireCurrentCompany();
         
         // Get promotions that are within date range, active, and filtered by company at SQL level
@@ -142,7 +143,7 @@ public class PromotionServiceImpl implements PromotionService {
     @Override
     public List<Promotion> findActivePromotionsByItemId(Long itemId) {
         log.debug("Finding active promotions for item ID: {}", itemId);
-        LocalDate today = LocalDate.now();
+        LocalDate today = dateTimeService.todayLocal();
         Company currentCompany = CompanyContext.requireCurrentCompany();
         
         // Get promotions for item that are within date range and active
@@ -265,7 +266,7 @@ public class PromotionServiceImpl implements PromotionService {
     public List<Promotion> findPromotionsEndingSoon(int days) {
         log.debug("Finding promotions ending in next {} days", days);
         
-        LocalDate today = LocalDate.now();
+        LocalDate today = dateTimeService.todayLocal();
         LocalDate endDate = today.plusDays(days);
         Company currentCompany = CompanyContext.requireCurrentCompany();
         
@@ -278,7 +279,7 @@ public class PromotionServiceImpl implements PromotionService {
     @Override
     public long countActivePromotions() {
         Company currentCompany = CompanyContext.requireCurrentCompany();
-        return promotionRepository.countActivePromotionsByCompany(currentCompany, LocalDate.now());
+        return promotionRepository.countActivePromotionsByCompany(currentCompany, dateTimeService.todayLocal());
     }
 
     @Override

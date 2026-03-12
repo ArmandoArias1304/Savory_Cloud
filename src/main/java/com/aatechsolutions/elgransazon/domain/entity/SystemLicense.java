@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.io.Serializable;
+import com.aatechsolutions.elgransazon.infrastructure.util.CompanyLocalTime;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 
@@ -117,7 +118,7 @@ public class SystemLicense implements Serializable {
      * Returns true if expiration date has passed OR is today
      */
     public boolean isExpired() {
-        return !expirationDate.isAfter(LocalDate.now());
+        return !expirationDate.isAfter(CompanyLocalTime.today());
     }
 
     /**
@@ -125,14 +126,14 @@ public class SystemLicense implements Serializable {
      * Returns negative number if already expired
      */
     public long daysUntilExpiration() {
-        return ChronoUnit.DAYS.between(LocalDate.now(), expirationDate);
+        return ChronoUnit.DAYS.between(CompanyLocalTime.today(), expirationDate);
     }
 
     /**
      * Get days since installation
      */
     public long daysActive() {
-        return ChronoUnit.DAYS.between(installationDate, LocalDate.now());
+        return ChronoUnit.DAYS.between(installationDate, CompanyLocalTime.today());
     }
 
     /**
@@ -140,7 +141,7 @@ public class SystemLicense implements Serializable {
      */
     public boolean needsNotification() {
         long daysLeft = daysUntilExpiration();
-        LocalDate today = LocalDate.now();
+        LocalDate today = CompanyLocalTime.today();
 
         // Don't notify if already notified today
         if (lastNotificationSent != null && lastNotificationSent.equals(today)) {

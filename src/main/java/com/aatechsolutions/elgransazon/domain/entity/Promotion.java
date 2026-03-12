@@ -7,6 +7,7 @@ import lombok.*;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import com.aatechsolutions.elgransazon.infrastructure.util.CompanyLocalTime;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -225,7 +226,7 @@ public class Promotion implements Serializable {
      * Check if promotion is currently valid (date and active status)
      */
     public boolean isValidNow() {
-        LocalDate today = LocalDate.now();
+        LocalDate today = CompanyLocalTime.today();
         return Boolean.TRUE.equals(active) 
             && !today.isBefore(startDate) 
             && !today.isAfter(endDate)

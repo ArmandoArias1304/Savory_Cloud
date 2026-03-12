@@ -42,6 +42,7 @@ public class CashierController {
     private final PromotionService promotionService;
     private final BusinessHoursService businessHoursService;
     private final WebSocketNotificationService wsNotificationService;
+    private final DateTimeService dateTimeService;
 
     public CashierController(
             @Qualifier("cashierOrderService") CashierOrderServiceImpl cashierOrderService,
@@ -54,7 +55,8 @@ public class CashierController {
             com.aatechsolutions.elgransazon.domain.repository.OrderRepository orderRepository,
             PromotionService promotionService,
             BusinessHoursService businessHoursService,
-            WebSocketNotificationService wsNotificationService) {
+            WebSocketNotificationService wsNotificationService,
+            DateTimeService dateTimeService) {
         this.cashierOrderService = cashierOrderService;
         this.adminOrderService = adminOrderService;
         this.restaurantTableService = restaurantTableService;
@@ -66,6 +68,7 @@ public class CashierController {
         this.promotionService = promotionService;
         this.businessHoursService = businessHoursService;
         this.wsNotificationService = wsNotificationService;
+        this.dateTimeService = dateTimeService;
     }
 
     /**
@@ -119,8 +122,8 @@ public class CashierController {
 
         // Apply filters to myOrders
         if (date != null && !date.isEmpty()) {
-            LocalDateTime startDate = LocalDateTime.parse(date + "T00:00:00");
-            LocalDateTime endDate = LocalDateTime.parse(date + "T23:59:59");
+            LocalDateTime startDate = dateTimeService.startOfDayUtc(LocalDate.parse(date));
+            LocalDateTime endDate = dateTimeService.endOfDayUtc(LocalDate.parse(date));
             myOrders = myOrders.stream()
                 .filter(order -> order.getCreatedAt().isAfter(startDate) && order.getCreatedAt().isBefore(endDate))
                 .collect(Collectors.toList());
@@ -182,8 +185,8 @@ public class CashierController {
 
         // Apply filters to unpaidOrders (Global filters)
         if (globalDate != null && !globalDate.isEmpty()) {
-            LocalDateTime startDate = LocalDateTime.parse(globalDate + "T00:00:00");
-            LocalDateTime endDate = LocalDateTime.parse(globalDate + "T23:59:59");
+            LocalDateTime startDate = dateTimeService.startOfDayUtc(LocalDate.parse(globalDate));
+            LocalDateTime endDate = dateTimeService.endOfDayUtc(LocalDate.parse(globalDate));
             unpaidOrders = unpaidOrders.stream()
                 .filter(order -> order.getCreatedAt().isAfter(startDate) && order.getCreatedAt().isBefore(endDate))
                 .collect(Collectors.toList());
@@ -213,11 +216,11 @@ public class CashierController {
         LocalDateTime statsStartDate;
         LocalDateTime statsEndDate;
         if (date != null && !date.isEmpty()) {
-            statsStartDate = LocalDateTime.parse(date + "T00:00:00");
-            statsEndDate = LocalDateTime.parse(date + "T23:59:59");
+            statsStartDate = dateTimeService.startOfDayUtc(LocalDate.parse(date));
+            statsEndDate = dateTimeService.endOfDayUtc(LocalDate.parse(date));
         } else {
-            statsStartDate = java.time.LocalDate.now().atStartOfDay();
-            statsEndDate = java.time.LocalDate.now().atTime(23, 59, 59);
+            statsStartDate = dateTimeService.startOfDayUtc(dateTimeService.todayLocal());
+            statsEndDate = dateTimeService.endOfDayUtc(dateTimeService.todayLocal());
         }
 
         // ========== Calculate statistics (dynamic based on date filter) ==========
@@ -1207,9 +1210,9 @@ public class CashierController {
                     .toList();
             
             // Get today's date
-            java.time.LocalDate today = java.time.LocalDate.now();
-            java.time.LocalDateTime startOfDay = today.atStartOfDay();
-            java.time.LocalDateTime endOfDay = today.atTime(java.time.LocalTime.MAX);
+            java.time.LocalDate today = dateTimeService.todayLocal();
+            java.time.LocalDateTime startOfDay = dateTimeService.startOfDayUtc(today);
+            java.time.LocalDateTime endOfDay = dateTimeService.endOfDayUtc(today);
             
             // Today's collected orders
             List<Order> todaysCollectedOrders = collectedOrders.stream()
@@ -1271,8 +1274,8 @@ public class CashierController {
             
             for (int i = 6; i >= 0; i--) {
                 java.time.LocalDate date = today.minusDays(i);
-                java.time.LocalDateTime dayStart = date.atStartOfDay();
-                java.time.LocalDateTime dayEnd = date.atTime(java.time.LocalTime.MAX);
+                java.time.LocalDateTime dayStart = dateTimeService.startOfDayUtc(date);
+                java.time.LocalDateTime dayEnd = dateTimeService.endOfDayUtc(date);
                 
                 List<Order> dayOrders = collectedOrders.stream()
                         .filter(order -> {
@@ -1682,9 +1685,9 @@ public class CashierController {
             SystemConfiguration config = systemConfigurationService.getConfiguration();
             
             // Get today's date range
-            LocalDate today = LocalDate.now();
-            LocalDateTime startOfDay = today.atStartOfDay();
-            LocalDateTime endOfDay = today.atTime(LocalTime.MAX);
+            LocalDate today = dateTimeService.todayLocal();
+            LocalDateTime startOfDay = dateTimeService.startOfDayUtc(today);
+            LocalDateTime endOfDay = dateTimeService.endOfDayUtc(today);
             
             // Get all employees with CASHIER role
             List<Employee> allCashiers = employeeService.findAll().stream()

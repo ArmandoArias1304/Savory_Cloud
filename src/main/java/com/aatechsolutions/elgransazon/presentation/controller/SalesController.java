@@ -1,5 +1,6 @@
 package com.aatechsolutions.elgransazon.presentation.controller;
 
+import com.aatechsolutions.elgransazon.application.service.DateTimeService;
 import com.aatechsolutions.elgransazon.application.service.OrderService;
 import com.aatechsolutions.elgransazon.application.service.EmployeeService;
 import com.aatechsolutions.elgransazon.domain.entity.*;
@@ -30,13 +31,16 @@ public class SalesController {
 
     private final OrderService orderService;
     private final EmployeeService employeeService;
+    private final DateTimeService dateTimeService;
 
     // Constructor manual para inyectar adminOrderService específicamente
     public SalesController(
             @Qualifier("adminOrderService") OrderService orderService,
-            EmployeeService employeeService) {
+            EmployeeService employeeService,
+            DateTimeService dateTimeService) {
         this.orderService = orderService;
         this.employeeService = employeeService;
+        this.dateTimeService = dateTimeService;
     }
 
     /**
@@ -141,16 +145,31 @@ public class SalesController {
 
         try {
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-            
+            java.time.ZoneId companyZone = dateTimeService.getCompanyZone();
+            java.time.ZoneId utcZone = java.time.ZoneId.of("UTC");
+
             if (startDate != null && !startDate.isEmpty()) {
-                startDateTime = LocalDate.parse(startDate, formatter).atStartOfDay();
+                // Convertir inicio de día en TZ de empresa → UTC para comparar con valores almacenados
+                startDateTime = LocalDate.parse(startDate, formatter)
+                    .atStartOfDay(companyZone)
+                    .withZoneSameInstant(utcZone)
+                    .toLocalDateTime();
             }
-            
+
             if (endDate != null && !endDate.isEmpty()) {
-                endDateTime = LocalDate.parse(endDate, formatter).atTime(23, 59, 59);
-            } else if (startDateTime != null) {
+                // Convertir fin de día en TZ de empresa → UTC
+                endDateTime = LocalDate.parse(endDate, formatter)
+                    .atTime(23, 59, 59)
+                    .atZone(companyZone)
+                    .withZoneSameInstant(utcZone)
+                    .toLocalDateTime();
+            } else if (startDate != null && !startDate.isEmpty()) {
                 // Si solo hay fecha de inicio, usar la misma como fin del día
-                endDateTime = startDateTime.toLocalDate().atTime(23, 59, 59);
+                endDateTime = LocalDate.parse(startDate, formatter)
+                    .atTime(23, 59, 59)
+                    .atZone(companyZone)
+                    .withZoneSameInstant(utcZone)
+                    .toLocalDateTime();
             }
         } catch (Exception e) {
             log.error("Error parsing date range: {} - {}", startDate, endDate, e);

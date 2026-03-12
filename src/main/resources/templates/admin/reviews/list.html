@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="es" xmlns:th="http://www.thymeleaf.org">
   <head>
     <meta charset="utf-8" />
@@ -188,7 +188,7 @@
                       </div>
                       <p
                         class="text-sm text-gray-500 dark:text-gray-400 mt-1"
-                        th:text="${#temporals.format(review.createdAt, 'dd/MM/yyyy HH:mm')}"
+                        th:text="${#tz.format(review.createdAt, 'dd/MM/yyyy HH:mm')}"
                       >
                         01/01/2024 10:00
                       </p>
@@ -243,7 +243,7 @@
                   class="text-sm text-gray-500 dark:text-gray-400 mb-4"
                 >
                   <span
-                    th:text="${review.status.name() == 'APPROVED' ? 'Aprobada' : 'Rechazada'} + ' por ' + ${review.approvedBy.fullName} + ' el ' + ${#temporals.format(review.approvedAt, 'dd/MM/yyyy HH:mm')}"
+                    th:text="${review.status.name() == 'APPROVED' ? 'Aprobada' : 'Rechazada'} + ' por ' + ${review.approvedBy.fullName} + ' el ' + ${#tz.format(review.approvedAt, 'dd/MM/yyyy HH:mm')}"
                   >
                     Aprobada por Admin el 01/01/2024
                   </span>

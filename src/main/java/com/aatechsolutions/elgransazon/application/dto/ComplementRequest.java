@@ -28,9 +28,6 @@ public class ComplementRequest {
     @DecimalMin(value = "0.0", message = "El precio extra no puede ser negativo")
     private BigDecimal extraPrice;
     
-    @Size(max = 500, message = "La URL de imagen no puede exceder 500 caracteres")
-    private String imageUrl;
-    
     private Boolean active;
     
     /**

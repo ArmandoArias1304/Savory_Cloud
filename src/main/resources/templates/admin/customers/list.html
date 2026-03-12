@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html
   lang="es"
   xmlns:th="http://www.thymeleaf.org"
@@ -616,7 +616,7 @@
                     <td class="py-4 px-6">
                       <span
                         class="text-gray-500 dark:text-gray-400 text-xs"
-                        th:text="${customer.createdAt != null ? #temporals.format(customer.createdAt, 'dd/MM/yyyy HH:mm') : 'N/A'}"
+                        th:text="${customer.createdAt != null ? #tz.format(customer.createdAt, 'dd/MM/yyyy HH:mm') : 'N/A'}"
                       >
                         01/01/2024
                       </span>
@@ -627,7 +627,7 @@
                       <span
                         th:if="${customer.lastAccess != null}"
                         class="text-gray-500 dark:text-gray-400 text-xs"
-                        th:text="${#temporals.format(customer.lastAccess, 'dd/MM/yyyy HH:mm')}"
+                        th:text="${#tz.format(customer.lastAccess, 'dd/MM/yyyy HH:mm')}"
                       >
                         01/01/2024
                       </span>
@@ -807,7 +807,7 @@
                     >
                     <span
                       class="text-xs text-gray-500 dark:text-gray-400"
-                      th:text="${customer.createdAt != null ? #temporals.format(customer.createdAt, 'dd/MM/yyyy HH:mm') : 'N/A'}"
+                      th:text="${customer.createdAt != null ? #tz.format(customer.createdAt, 'dd/MM/yyyy HH:mm') : 'N/A'}"
                       >Registro</span
                     >
                   </div>
@@ -819,7 +819,7 @@
                     <span
                       th:if="${customer.lastAccess != null}"
                       class="text-xs text-gray-500 dark:text-gray-400"
-                      th:text="${#temporals.format(customer.lastAccess, 'dd/MM/yyyy HH:mm')}"
+                      th:text="${#tz.format(customer.lastAccess, 'dd/MM/yyyy HH:mm')}"
                     >
                       Último acceso
                     </span>

@@ -1,6 +1,7 @@
 package com.aatechsolutions.elgransazon.presentation.controller;
 
 import com.aatechsolutions.elgransazon.application.service.CategoryService;
+import com.aatechsolutions.elgransazon.application.service.DateTimeService;
 import com.aatechsolutions.elgransazon.application.service.EmployeeService;
 import com.aatechsolutions.elgransazon.application.service.ItemMenuService;
 import com.aatechsolutions.elgransazon.application.service.OrderService;
@@ -55,6 +56,7 @@ public class ChefController {
     private final ItemMenuService itemMenuService;
     private final CategoryService categoryService;
     private final SystemConfigurationService configurationService;
+    private final DateTimeService dateTimeService;
 
     /**
      * Detect if current user is a Barista
@@ -358,9 +360,9 @@ public class ChefController {
                     .toList();
             
             // Get today's date
-            LocalDate today = LocalDate.now();
-            LocalDateTime startOfDay = today.atStartOfDay();
-            LocalDateTime endOfDay = today.atTime(LocalTime.MAX);
+            LocalDate today = dateTimeService.todayLocal();
+            LocalDateTime startOfDay = dateTimeService.startOfDayUtc(today);
+            LocalDateTime endOfDay = dateTimeService.endOfDayUtc(today);
             
             // Today's orders prepared by this chef/barista
             List<Order> todaysOrders = allOrders.stream()
@@ -396,8 +398,8 @@ public class ChefController {
             
             for (int i = 6; i >= 0; i--) {
                 LocalDate date = today.minusDays(i);
-                LocalDateTime dayStart = date.atStartOfDay();
-                LocalDateTime dayEnd = date.atTime(LocalTime.MAX);
+                LocalDateTime dayStart = dateTimeService.startOfDayUtc(date);
+                LocalDateTime dayEnd = dateTimeService.endOfDayUtc(date);
                 
                 long dayOrders = allOrders.stream()
                         .filter(order -> {
@@ -508,9 +510,9 @@ public class ChefController {
             // Get system configuration
             SystemConfiguration config = configurationService.getConfiguration();
             
-            LocalDate today = LocalDate.now();
-            LocalDateTime startOfDay = today.atStartOfDay();
-            LocalDateTime endOfDay = today.atTime(LocalTime.MAX);
+            LocalDate today = dateTimeService.todayLocal();
+            LocalDateTime startOfDay = dateTimeService.startOfDayUtc(today);
+            LocalDateTime endOfDay = dateTimeService.endOfDayUtc(today);
             
             // Get all chefs or baristas based on role
             String targetRole = isBaristaRole ? "ROLE_BARISTA" : "ROLE_CHEF";

@@ -74,7 +74,6 @@ public class ComplementService {
         existing.setName(updated.getName());
         existing.setDescription(updated.getDescription());
         existing.setExtraPrice(updated.getExtraPrice());
-        existing.setImageUrl(updated.getImageUrl());
         existing.setActive(updated.getActive());
         existing.setIsSauce(updated.getIsSauce() != null ? updated.getIsSauce() : false);
         

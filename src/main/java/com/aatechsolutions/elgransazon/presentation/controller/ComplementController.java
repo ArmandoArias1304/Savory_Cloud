@@ -85,7 +85,6 @@ public class ComplementController {
                     .name(request.getName())
                     .description(request.getDescription())
                     .extraPrice(request.getExtraPrice())
-                    .imageUrl(request.getImageUrl())
                     .active(request.getActive() != null ? request.getActive() : true)
                     .available(true)
                     .build();
@@ -115,7 +114,6 @@ public class ComplementController {
                     .name(request.getName())
                     .description(request.getDescription())
                     .extraPrice(request.getExtraPrice())
-                    .imageUrl(request.getImageUrl())
                     .active(request.getActive())
                     .build();
             
@@ -428,7 +426,6 @@ public class ComplementController {
                 .name(complement.getName())
                 .description(complement.getDescription())
                 .extraPrice(complement.getExtraPrice())
-                .imageUrl(complement.getImageUrl())
                 .active(complement.getActive())
                 .available(complement.getAvailable())
                 .maxPortions(complement.calculateMaxPortions())
@@ -474,7 +471,6 @@ public class ComplementController {
                 .complementId(complement.getIdComplement())
                 .complementName(complement.getName())
                 .complementExtraPrice(complement.getExtraPrice())
-                .complementImageUrl(complement.getImageUrl())
                 .maxQuantity(imc.getMaxQuantity())
                 .displayOrder(imc.getDisplayOrder())
                 .active(imc.getActive())

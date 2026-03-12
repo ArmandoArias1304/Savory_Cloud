@@ -346,7 +346,7 @@
                     </p>
                     <p
                       class="text-xs text-gray-600 dark:text-gray-400"
-                      th:text="${order.formattedCreatedAt}"
+                      th:text="${#tz.format(order.createdAt, 'dd/MM/yyyy HH:mm')}"
                     >
                       Fecha
                     </p>

@@ -34,6 +34,7 @@ public class CustomerOrderServiceImpl implements OrderService {
     private final OrderServiceImpl adminOrderService; // Delegate to admin service for actual operations
     private final com.aatechsolutions.elgransazon.domain.repository.OrderRepository orderRepository;
     private final com.aatechsolutions.elgransazon.domain.repository.CustomerRepository customerRepository;
+    private final DateTimeService dateTimeService;
 
     /**
      * Get current authenticated customer email
@@ -421,7 +422,7 @@ public class CustomerOrderServiceImpl implements OrderService {
     @Transactional(readOnly = true)
     public List<Order> findTodaysOrders() {
         return findAll().stream()
-                .filter(order -> order.getCreatedAt().toLocalDate().equals(java.time.LocalDate.now()))
+                .filter(order -> order.getCreatedAt().toLocalDate().equals(dateTimeService.todayLocal()))
                 .collect(Collectors.toList());
     }
 

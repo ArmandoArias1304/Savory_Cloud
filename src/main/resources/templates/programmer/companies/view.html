@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" lang="es">
 <head>
     <meta charset="UTF-8">
@@ -120,11 +120,11 @@
                 <dl class="space-y-4">
                     <div>
                         <dt class="text-sm text-gray-500 dark:text-gray-400">Creada</dt>
-                        <dd class="mt-1 text-gray-900 dark:text-white" th:text="${#temporals.format(company.createdAt, 'dd/MM/yyyy HH:mm')}">01/01/2024 12:00</dd>
+                        <dd class="mt-1 text-gray-900 dark:text-white" th:text="${#tz.format(company.createdAt, 'dd/MM/yyyy HH:mm')}">01/01/2024 12:00</dd>
                     </div>
                     <div th:if="${company.updatedAt}">
                         <dt class="text-sm text-gray-500 dark:text-gray-400">Última actualización</dt>
-                        <dd class="mt-1 text-gray-900 dark:text-white" th:text="${#temporals.format(company.updatedAt, 'dd/MM/yyyy HH:mm')}">01/01/2024 12:00</dd>
+                        <dd class="mt-1 text-gray-900 dark:text-white" th:text="${#tz.format(company.updatedAt, 'dd/MM/yyyy HH:mm')}">01/01/2024 12:00</dd>
                     </div>
                 </dl>
             </div>

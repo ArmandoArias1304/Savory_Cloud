@@ -34,6 +34,7 @@ public class ReservationService {
     private final ReservationRepository reservationRepository;
     private final RestaurantTableService tableService;
     private final SystemConfigurationService systemConfigurationService;
+    private final DateTimeService dateTimeService;
 
     /**
      * Find all reservations ordered by date and time (descending)
@@ -76,7 +77,7 @@ public class ReservationService {
     public List<Reservation> findUpcomingReservations() {
         log.debug("Finding upcoming reservations");
         Company company = CompanyContext.requireCurrentCompany();
-        return reservationRepository.findUpcomingReservationsByCompany(company, LocalDate.now());
+        return reservationRepository.findUpcomingReservationsByCompany(company, dateTimeService.todayLocal());
     }
 
     /**
@@ -85,7 +86,7 @@ public class ReservationService {
     public List<Reservation> findTodayReservations() {
         log.debug("Finding today's reservations");
         Company company = CompanyContext.requireCurrentCompany();
-        return reservationRepository.findTodayReservationsByCompany(company, LocalDate.now());
+        return reservationRepository.findTodayReservationsByCompany(company, dateTimeService.todayLocal());
     }
 
     /**
@@ -130,8 +131,8 @@ public class ReservationService {
      */
     public Optional<Reservation> findNextReservationForTable(Long tableId) {
         log.debug("Finding next PENDING reservation for table: {}", tableId);
-        LocalDate today = LocalDate.now();
-        LocalTime now = LocalTime.now();
+        LocalDate today = dateTimeService.todayLocal();
+        LocalTime now = dateTimeService.nowLocal().toLocalTime();
         return reservationRepository.findNextReservationForTable(tableId, today, now);
     }
 
@@ -141,8 +142,8 @@ public class ReservationService {
      */
     public Optional<Reservation> findFirstActivePendingReservationForTable(Long tableId) {
         log.debug("Finding first active PENDING reservation for table: {}", tableId);
-        LocalDate today = LocalDate.now();
-        LocalTime now = LocalTime.now();
+        LocalDate today = dateTimeService.todayLocal();
+        LocalTime now = dateTimeService.nowLocal().toLocalTime();
         return reservationRepository.findFirstActivePendingReservationForTable(tableId, today, now);
     }
 
@@ -151,7 +152,7 @@ public class ReservationService {
      */
     public List<Reservation> findPendingReservationsForTable(Long tableId) {
         log.debug("Finding all PENDING reservations for table: {}", tableId);
-        return reservationRepository.findPendingReservationsForTable(tableId, LocalDate.now());
+        return reservationRepository.findPendingReservationsForTable(tableId, dateTimeService.todayLocal());
     }
 
     /**
@@ -183,7 +184,7 @@ public class ReservationService {
      */
     public long countTodayReservations() {
         Company company = CompanyContext.requireCurrentCompany();
-        return reservationRepository.countTodayReservationsByCompany(company, LocalDate.now());
+        return reservationRepository.countTodayReservationsByCompany(company, dateTimeService.todayLocal());
     }
 
     /**
@@ -191,7 +192,7 @@ public class ReservationService {
      */
     public long countTodayActiveReservations() {
         Company company = CompanyContext.requireCurrentCompany();
-        return reservationRepository.countTodayActiveReservationsByCompany(company, LocalDate.now());
+        return reservationRepository.countTodayActiveReservationsByCompany(company, dateTimeService.todayLocal());
     }
 
     /**
@@ -363,7 +364,7 @@ public class ReservationService {
      * Validate reservation date (must be today or future)
      */
     private void validateReservationDate(LocalDate reservationDate) {
-        LocalDate today = LocalDate.now();
+        LocalDate today = dateTimeService.todayLocal();
         if (reservationDate.isBefore(today)) {
             throw new IllegalArgumentException("La fecha de reservación debe ser hoy o una fecha futura");
         }
@@ -376,9 +377,9 @@ public class ReservationService {
         SystemConfiguration config = systemConfigurationService.getConfiguration();
 
         // 0. If reservation is for today, check that time is not in the past
-        LocalDate today = LocalDate.now();
+        LocalDate today = dateTimeService.todayLocal();
         if (reservationDate.equals(today)) {
-            LocalTime currentTime = LocalTime.now();
+            LocalTime currentTime = dateTimeService.nowLocal().toLocalTime();
             if (reservationTime.isBefore(currentTime) || reservationTime.equals(currentTime)) {
                 DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss");
                 throw new IllegalArgumentException(

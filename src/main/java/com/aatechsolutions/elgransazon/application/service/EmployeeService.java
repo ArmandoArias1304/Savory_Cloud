@@ -395,6 +395,25 @@ public class EmployeeService {
     }
 
     /**
+     * Update last access using an explicitly supplied company (safe for async threads
+     * where CompanyContext ThreadLocal is not available).
+     */
+    @Transactional
+    public void updateLastAccess(String username, Company company) {
+        Optional<Employee> employeeOpt;
+        if (company != null) {
+            employeeOpt = employeeRepository.findByUsernameAndCompany(username, company);
+        } else {
+            employeeOpt = employeeRepository.findByUsernameAndCompanyIsNull(username);
+        }
+        if (employeeOpt.isPresent()) {
+            employeeRepository.updateLastAccessByUsername(username, java.time.LocalDateTime.now());
+            log.debug("Last access updated for user: {} (company: {})", username,
+                    company != null ? company.getIdCompany() : "null (PROGRAMMER)");
+        }
+    }
+
+    /**
      * Find all enabled employees
      * When company context exists, filters by company
      * 

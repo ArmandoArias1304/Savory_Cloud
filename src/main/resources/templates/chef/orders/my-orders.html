@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="es" xmlns:th="http://www.thymeleaf.org">
   <head>
     <meta charset="utf-8" />
@@ -400,14 +400,14 @@
                   <span class="font-medium">Creado:</span>
                   <span
                     class="font-semibold text-gray-900 dark:text-white"
-                    th:text="${#temporals.format(order.createdAt, 'HH:mm')}"
+                    th:text="${#tz.format(order.createdAt, 'HH:mm')}"
                   ></span>
                 </div>
                 <div class="flex justify-between pb-2">
                   <span class="font-medium">Tiempo preparación:</span>
                   <span class="font-semibold text-primary">
                     <span
-                      th:text="${#temporals.format(order.updatedAt, 'HH:mm')} + ' (' + ${T(java.time.Duration).between(order.createdAt, order.updatedAt).toMinutes()} + ' min)'"
+                      th:text="${#tz.format(order.updatedAt, 'HH:mm')} + ' (' + ${T(java.time.Duration).between(order.createdAt, order.updatedAt).toMinutes()} + ' min)'"
                     ></span>
                   </span>
                 </div>

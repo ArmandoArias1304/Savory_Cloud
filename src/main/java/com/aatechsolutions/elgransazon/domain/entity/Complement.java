@@ -62,10 +62,6 @@ public class Complement implements Serializable {
 
     // ========== Image ==========
 
-    @Size(max = 500, message = "La URL de la imagen no puede exceder 500 caracteres")
-    @Column(name = "image_url", length = 500)
-    private String imageUrl;
-
     // ========== Status ==========
 
     @Column(name = "active", nullable = false)

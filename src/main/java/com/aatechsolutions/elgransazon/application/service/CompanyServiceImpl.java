@@ -486,7 +486,9 @@ public class CompanyServiceImpl implements CompanyService {
             // NO systemName, systemSlogan, systemLogoUrl - these are now GLOBAL
             .address("Dirección pendiente de configurar")
             .phone("0000000000")
-            .email(company.getSenderEmail())
+            .email(company.getContactEmail() != null && !company.getContactEmail().isBlank()
+                    ? company.getContactEmail()
+                    : "miempresa@ejemplo.com")
             .taxRate(BigDecimal.valueOf(16.00))
             .averageConsumptionTimeMinutes(120)
             .paymentMethods(paymentMethods)
@@ -511,7 +513,9 @@ public class CompanyServiceImpl implements CompanyService {
             .installationDate(purchaseDate)
             .status(SystemLicense.LicenseStatus.ACTIVE)
             .ownerName(company.getName())
-            .ownerEmail(company.getSenderEmail())
+            .ownerEmail(company.getContactEmail() != null && !company.getContactEmail().isBlank()
+                    ? company.getContactEmail()
+                    : "miempresa@ejemplo.com")
             .restaurantName(company.getName())
             .maxUsers(5) // Default limit for BASIC
             .maxBranches(1)

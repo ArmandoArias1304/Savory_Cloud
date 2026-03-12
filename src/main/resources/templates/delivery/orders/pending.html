@@ -235,7 +235,7 @@
                     Pedido #<span th:text="${order.orderNumber}"></span>
                   </p>
                   <p class="text-xs text-gray-600 dark:text-gray-400">
-                    <span th:text="${order.formattedCreatedAt}"></span>
+                    <span th:text="${#tz.format(order.createdAt, 'dd/MM/yyyy HH:mm')}"></span>
                   </p>
                 </div>
               </div>

@@ -38,6 +38,7 @@ public class ReportPdfService {
 
     private final SystemConfigurationService systemConfigurationService;
     private final EmployeeRepository employeeRepository;
+    private final DateTimeService dateTimeService;
 
     // Color palette - matching your theme
     private static final DeviceRgb PRIMARY_COLOR = new DeviceRgb(56, 224, 123); // #38e07b
@@ -1189,7 +1190,7 @@ public class ReportPdfService {
 
     private void addFooter(Document document, PdfFont font) {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy 'a las' HH:mm:ss");
-        String generatedDate = LocalDateTime.now().format(formatter);
+        String generatedDate = dateTimeService.nowLocal().format(formatter);
         
         // Footer with modern design
         Table footerTable = new Table(1);

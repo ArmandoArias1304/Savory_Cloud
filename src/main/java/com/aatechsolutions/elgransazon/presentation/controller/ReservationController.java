@@ -1,5 +1,6 @@
 package com.aatechsolutions.elgransazon.presentation.controller;
 
+import com.aatechsolutions.elgransazon.application.service.DateTimeService;
 import com.aatechsolutions.elgransazon.application.service.ReservationService;
 import com.aatechsolutions.elgransazon.application.service.RestaurantTableService;
 import com.aatechsolutions.elgransazon.domain.entity.*;
@@ -31,6 +32,7 @@ public class ReservationController {
 
     private final ReservationService reservationService;
     private final RestaurantTableService tableService;
+    private final DateTimeService dateTimeService;
 
     /**
      * Helper method to remove a specific field error from BindingResult
@@ -119,7 +121,7 @@ public class ReservationController {
         log.debug("Displaying new reservation form");
 
         Reservation reservation = new Reservation();
-        reservation.setReservationDate(LocalDate.now());
+        reservation.setReservationDate(dateTimeService.todayLocal());
 
         List<RestaurantTable> tables = tableService.findReservableTables();
 
@@ -375,9 +377,9 @@ public class ReservationController {
             // isOccupied removed - status is now managed through PENDING/COMPLETED/CANCELLED
             response.put("isActive", reservation.isActive());
             response.put("createdBy", reservation.getCreatedBy());
-            response.put("createdAt", reservation.getFormattedCreatedAt());
+            response.put("createdAt", dateTimeService.formatToCompanyTime(reservation.getCreatedAt(), "dd/MM/yyyy HH:mm"));
             response.put("updatedBy", reservation.getUpdatedBy() != null ? reservation.getUpdatedBy() : "N/A");
-            response.put("updatedAt", reservation.getUpdatedAt() != null ? reservation.getFormattedUpdatedAt() : "N/A");
+            response.put("updatedAt", reservation.getUpdatedAt() != null ? dateTimeService.formatToCompanyTime(reservation.getUpdatedAt(), "dd/MM/yyyy HH:mm") : "N/A");
 
             log.debug("Retrieved details for reservation: {}", id);
         } catch (Exception e) {

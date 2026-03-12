@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="es" xmlns:th="http://www.thymeleaf.org">
   <head>
     <meta charset="utf-8" />
@@ -450,11 +450,11 @@
                     <td class="px-6 py-4 whitespace-nowrap">
                       <div
                         class="text-sm text-gray-900 dark:text-white"
-                        th:text="${#temporals.format(order.createdAt, 'dd/MM/yyyy')}"
+                        th:text="${#tz.format(order.createdAt, 'dd/MM/yyyy')}"
                       ></div>
                       <div
                         class="text-xs text-gray-500 dark:text-gray-400"
-                        th:text="${#temporals.format(order.createdAt, 'HH:mm')}"
+                        th:text="${#tz.format(order.createdAt, 'HH:mm')}"
                       ></div>
                     </td>
 

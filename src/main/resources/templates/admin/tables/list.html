@@ -502,7 +502,7 @@
                   <td class="px-6 py-4">
                     <p
                       class="text-sm text-gray-900 dark:text-white"
-                      th:text="${table.formattedUpdatedAt}"
+                      th:text="${table.updatedAt != null ? #tz.format(table.updatedAt, 'dd/MM/yyyy HH:mm') : 'Nunca'}"
                     ></p>
                   </td>
 

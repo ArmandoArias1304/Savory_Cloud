@@ -137,6 +137,42 @@
                                class="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent">
                         <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Dejar vacío para solo usar el subdominio</p>
                     </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Zona Horaria *
+                        </label>
+                        <select name="timezone"
+                                class="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent">
+                            <option value="America/Mexico_City"
+                                    th:selected="${company.timezone == 'America/Mexico_City' || company.timezone == null}">
+                                América/Mexico_City (CST, UTC-6) — CDMX, Jalisco, NL…
+                            </option>
+                            <option value="America/Cancun"
+                                    th:selected="${company.timezone == 'America/Cancun'}">
+                                América/Cancun (EST, UTC-5) — Quintana Roo
+                            </option>
+                            <option value="America/Hermosillo"
+                                    th:selected="${company.timezone == 'America/Hermosillo'}">
+                                América/Hermosillo (MST, UTC-7) — Sonora
+                            </option>
+                            <option value="America/Mazatlan"
+                                    th:selected="${company.timezone == 'America/Mazatlan'}">
+                                América/Mazatlan (MST, UTC-7) — Sinaloa, Nayarit
+                            </option>
+                            <option value="America/Chihuahua"
+                                    th:selected="${company.timezone == 'America/Chihuahua'}">
+                                América/Chihuahua (CST, UTC-6) — Chihuahua
+                            </option>
+                            <option value="America/Tijuana"
+                                    th:selected="${company.timezone == 'America/Tijuana'}">
+                                América/Tijuana (PST, UTC-8) — Baja California
+                            </option>
+                        </select>
+                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                            Las fechas en la BD se guardan en UTC; esta zona se usa solo para mostrarlas correctamente.
+                        </p>
+                    </div>
                 </div>
             </div>
 

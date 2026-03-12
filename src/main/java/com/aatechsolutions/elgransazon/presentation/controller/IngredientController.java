@@ -1,5 +1,6 @@
 package com.aatechsolutions.elgransazon.presentation.controller;
 
+import com.aatechsolutions.elgransazon.application.service.DateTimeService;
 import com.aatechsolutions.elgransazon.application.service.EmployeeService;
 import com.aatechsolutions.elgransazon.application.service.IngredientCategoryService;
 import com.aatechsolutions.elgransazon.application.service.IngredientService;
@@ -74,6 +75,7 @@ public class IngredientController {
     private final SupplierService supplierService;
     private final EmployeeService employeeService;
     private final ItemMenuService itemMenuService;
+    private final DateTimeService dateTimeService;
     private final IngredientStockHistoryRepository stockHistoryRepository;
     private final ComplementIngredientRepository complementIngredientRepository;
     private final com.aatechsolutions.elgransazon.domain.repository.ItemMenuComboItemRepository itemMenuComboItemRepository;
@@ -825,7 +827,7 @@ public class IngredientController {
                             .setFont(boldFont)
                             .setFontSize(10)
                             .setFontColor(darkColor))
-                    .add(new Paragraph(LocalDateTime.now().format(formatter))
+                    .add(new Paragraph(dateTimeService.nowLocal().format(formatter))
                             .setFont(regularFont)
                             .setFontSize(10)
                             .setFontColor(grayColor))
@@ -966,12 +968,8 @@ public class IngredientController {
                     .setMarginBottom(10));
 
             Paragraph footer = new Paragraph()
-                    .add(new Paragraph("El Gran Sazón - Sistema de Gestión de Inventario\n")
-                            .setFont(boldFont)
-                            .setFontSize(8)
-                            .setFontColor(darkColor))
-                    .add(new Paragraph("Generado automáticamente el " + 
-                            LocalDateTime.now().format(formatter))
+                    .add(new Paragraph("Reporte generado el " + 
+                            dateTimeService.nowLocal().format(formatter))
                             .setFont(regularFont)
                             .setFontSize(7)
                             .setFontColor(grayColor))
@@ -985,7 +983,7 @@ public class IngredientController {
             HttpHeaders responseHeaders = new HttpHeaders();
             responseHeaders.setContentType(MediaType.APPLICATION_PDF);
             String filename = "Reporte_Inventario_" + 
-                    LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")) + ".pdf";
+                    dateTimeService.nowLocal().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")) + ".pdf";
             responseHeaders.setContentDispositionFormData("attachment", filename);
 
             return ResponseEntity.ok()

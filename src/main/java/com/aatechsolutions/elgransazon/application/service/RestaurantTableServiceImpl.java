@@ -37,6 +37,7 @@ public class RestaurantTableServiceImpl implements RestaurantTableService {
     private final RestaurantTableRepository tableRepository;
     private final ReservationRepository reservationRepository;
     private final SystemConfigurationService systemConfigurationService;
+    private final DateTimeService dateTimeService;
 
     @Override
     public List<RestaurantTable> findAll() {
@@ -336,8 +337,8 @@ public class RestaurantTableServiceImpl implements RestaurantTableService {
         SystemConfiguration config = systemConfigurationService.getConfiguration();
         Integer avgConsumptionMinutes = config.getAverageConsumptionTimeMinutes();
 
-        LocalDate today = LocalDate.now();
-        LocalTime now = LocalTime.now();
+        LocalDate today = dateTimeService.todayLocal();
+        LocalTime now = dateTimeService.nowLocal().toLocalTime();
 
         // Find the closest PENDING reservation for this table
         Optional<Reservation> closestReservationOpt = reservationRepository
@@ -353,7 +354,7 @@ public class RestaurantTableServiceImpl implements RestaurantTableService {
         LocalDate reservationDate = closestReservation.getReservationDate();
         LocalTime reservationTime = closestReservation.getReservationTime();
         LocalDateTime reservationDateTime = LocalDateTime.of(reservationDate, reservationTime);
-        LocalDateTime currentDateTime = LocalDateTime.now();
+        LocalDateTime currentDateTime = dateTimeService.nowLocal();
 
         // Calculate seconds until reservation (use seconds for precise comparison)
         long secondsUntilReservation = Duration.between(currentDateTime, reservationDateTime).toSeconds();
@@ -396,8 +397,8 @@ public class RestaurantTableServiceImpl implements RestaurantTableService {
             return false;
         }
 
-        LocalDate today = LocalDate.now();
-        LocalTime now = LocalTime.now();
+        LocalDate today = dateTimeService.todayLocal();
+        LocalTime now = dateTimeService.nowLocal().toLocalTime();
 
         // FIRST: Check if there's already an active reservation (time has arrived)
         // If so, the table is simply AVAILABLE for that customer, not "Puede Ocuparse"
@@ -427,7 +428,7 @@ public class RestaurantTableServiceImpl implements RestaurantTableService {
             closestReservation.getReservationDate(), 
             closestReservation.getReservationTime()
         );
-        LocalDateTime currentDateTime = LocalDateTime.now();
+        LocalDateTime currentDateTime = dateTimeService.nowLocal();
 
         // Calculate seconds until reservation
         long secondsUntilReservation = Duration.between(currentDateTime, reservationDateTime).toSeconds();
@@ -462,8 +463,8 @@ public class RestaurantTableServiceImpl implements RestaurantTableService {
             return false;
         }
 
-        LocalDate today = LocalDate.now();
-        LocalTime now = LocalTime.now();
+        LocalDate today = dateTimeService.todayLocal();
+        LocalTime now = dateTimeService.nowLocal().toLocalTime();
 
         // Check if there's a PENDING reservation whose time has arrived or passed
         // We need to find reservations where reservationTime <= now
@@ -491,8 +492,8 @@ public class RestaurantTableServiceImpl implements RestaurantTableService {
             return false;
         }
 
-        LocalDate today = LocalDate.now();
-        LocalTime now = LocalTime.now();
+        LocalDate today = dateTimeService.todayLocal();
+        LocalTime now = dateTimeService.nowLocal().toLocalTime();
 
         // Check if there's a PENDING reservation whose time has arrived or passed
         Optional<Reservation> activeReservationOpt = reservationRepository
@@ -512,8 +513,8 @@ public class RestaurantTableServiceImpl implements RestaurantTableService {
     public Long getMinutesUntilNextReservation(Long tableId) {
         log.debug("Getting minutes until next reservation for table {}", tableId);
 
-        LocalDate today = LocalDate.now();
-        LocalTime now = LocalTime.now();
+        LocalDate today = dateTimeService.todayLocal();
+        LocalTime now = dateTimeService.nowLocal().toLocalTime();
 
         // Find the closest PENDING reservation for this table
         Optional<Reservation> closestReservationOpt = reservationRepository
@@ -528,7 +529,7 @@ public class RestaurantTableServiceImpl implements RestaurantTableService {
             closestReservation.getReservationDate(), 
             closestReservation.getReservationTime()
         );
-        LocalDateTime currentDateTime = LocalDateTime.now();
+        LocalDateTime currentDateTime = dateTimeService.nowLocal();
 
         long secondsUntilReservation = Duration.between(currentDateTime, reservationDateTime).toSeconds();
         
@@ -544,8 +545,8 @@ public class RestaurantTableServiceImpl implements RestaurantTableService {
     public String getActiveReservationCustomerName(Long tableId) {
         log.debug("Getting active reservation customer name for table {}", tableId);
 
-        LocalDate today = LocalDate.now();
-        LocalTime now = LocalTime.now();
+        LocalDate today = dateTimeService.todayLocal();
+        LocalTime now = dateTimeService.nowLocal().toLocalTime();
 
         // Find active pending reservation (time has arrived or passed)
         Optional<Reservation> activeReservationOpt = reservationRepository

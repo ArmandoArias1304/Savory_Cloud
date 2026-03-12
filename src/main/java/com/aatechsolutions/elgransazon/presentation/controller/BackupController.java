@@ -2,6 +2,7 @@ package com.aatechsolutions.elgransazon.presentation.controller;
 
 import com.aatechsolutions.elgransazon.application.service.BackupService;
 import com.aatechsolutions.elgransazon.application.service.BackupService.BackupFileInfo;
+import com.aatechsolutions.elgransazon.application.service.DateTimeService;
 import com.aatechsolutions.elgransazon.domain.entity.BackupConfiguration;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -36,6 +37,7 @@ import java.util.stream.Collectors;
 public class BackupController {
 
     private final BackupService backupService;
+    private final DateTimeService dateTimeService;
     
     // Threshold for low disk space warning (in GB)
     private static final double LOW_DISK_SPACE_THRESHOLD_GB = 5.0;
@@ -326,7 +328,7 @@ public class BackupController {
         
         return ChronoUnit.DAYS.between(
             config.getLastBackupDate().toLocalDate(),
-            LocalDate.now()
+            dateTimeService.todayLocal()
         );
     }
     

@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="es" xmlns:th="http://www.thymeleaf.org">
   <head>
     <meta charset="utf-8" />
@@ -389,7 +389,7 @@
                       class="px-6 py-4 whitespace-nowrap text-gray-600 dark:text-gray-400"
                     >
                       <span
-                        th:text="${sale.updatedAt != null ? #temporals.format(sale.updatedAt, 'dd/MM/yyyy hh:mm a') : sale.formattedCreatedAt}"
+                        th:text="${sale.updatedAt != null ? #tz.format(sale.updatedAt, 'dd/MM/yyyy hh:mm a') : #tz.format(sale.createdAt, 'dd/MM/yyyy hh:mm a')}"
                         >15/07/2024 10:30 AM</span
                       >
                     </td>

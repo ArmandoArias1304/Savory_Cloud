@@ -22,7 +22,6 @@ public class ItemMenuComplementDTO {
     private Long complementId;
     private String complementName;
     private BigDecimal complementExtraPrice;
-    private String complementImageUrl;
     private Integer maxQuantity;
     private Integer displayOrder;
     private Boolean active;

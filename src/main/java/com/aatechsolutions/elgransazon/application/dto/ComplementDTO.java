@@ -21,7 +21,6 @@ public class ComplementDTO {
     private String name;
     private String description;
     private BigDecimal extraPrice;
-    private String imageUrl;
     private Boolean active;
     private Boolean available;
     private Integer maxPortions;

@@ -1249,7 +1249,6 @@ public class ItemMenuController {
                         compData.put("name", complement.getName());
                         compData.put("description", complement.getDescription());
                         compData.put("extraPrice", complement.getExtraPrice());
-                        compData.put("imageUrl", complement.getImageUrl());
                         compData.put("maxQuantity", ic.getMaxQuantity());
                         compData.put("available", complement.getAvailable());
                         return compData;

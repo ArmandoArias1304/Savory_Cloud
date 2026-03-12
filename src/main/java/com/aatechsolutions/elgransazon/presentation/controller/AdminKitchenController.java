@@ -1,5 +1,6 @@
 package com.aatechsolutions.elgransazon.presentation.controller;
 
+import com.aatechsolutions.elgransazon.application.service.DateTimeService;
 import com.aatechsolutions.elgransazon.application.service.EmployeeService;
 import com.aatechsolutions.elgransazon.application.service.OrderService;
 import com.aatechsolutions.elgransazon.application.service.SystemConfigurationService;
@@ -40,6 +41,7 @@ public class AdminKitchenController {
     private final OrderService adminOrderService;
     private final EmployeeService employeeService;
     private final SystemConfigurationService configurationService;
+    private final DateTimeService dateTimeService;
 
     /**
      * Main kitchen view - shows all active orders (PENDING + IN_PREPARATION)
@@ -120,8 +122,8 @@ public class AdminKitchenController {
         SystemConfiguration config = configurationService.getConfiguration();
         
         // Date range filtering (only if dates are provided)
-        LocalDateTime dateTimeStart = startDate != null ? startDate.atStartOfDay() : null;
-        LocalDateTime dateTimeEnd = endDate != null ? endDate.atTime(LocalTime.MAX) : null;
+        LocalDateTime dateTimeStart = startDate != null ? dateTimeService.startOfDayUtc(startDate) : null;
+        LocalDateTime dateTimeEnd = endDate != null ? dateTimeService.endOfDayUtc(endDate) : null;
         
         // Get all orders, filter by date only if dates are provided
         List<Order> filteredOrders = adminOrderService.findAll().stream()

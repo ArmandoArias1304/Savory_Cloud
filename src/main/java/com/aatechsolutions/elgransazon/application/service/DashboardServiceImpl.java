@@ -35,6 +35,7 @@ public class DashboardServiceImpl implements DashboardService {
     private final IngredientRepository ingredientRepository;
     private final RestaurantTableRepository tableRepository;
     private final ReservationRepository reservationRepository;
+    private final DateTimeService dateTimeService;
 
     @Override
     public DashboardStatsDTO getDashboardStats() {
@@ -44,12 +45,14 @@ public class DashboardServiceImpl implements DashboardService {
         Company company = CompanyContext.requireCurrentCompany();
 
         // Get today's date range
-        LocalDateTime todayStart = LocalDate.now().atStartOfDay();
-        LocalDateTime todayEnd = LocalDate.now().atTime(LocalTime.MAX);
+        LocalDate todayDate = dateTimeService.todayLocal();
+        LocalDateTime todayStart = dateTimeService.startOfDayUtc(todayDate);
+        LocalDateTime todayEnd = dateTimeService.endOfDayUtc(todayDate);
         
         // Get yesterday's date range
-        LocalDateTime yesterdayStart = LocalDate.now().minusDays(1).atStartOfDay();
-        LocalDateTime yesterdayEnd = LocalDate.now().minusDays(1).atTime(LocalTime.MAX);
+        LocalDate yesterdayDate = todayDate.minusDays(1);
+        LocalDateTime yesterdayStart = dateTimeService.startOfDayUtc(yesterdayDate);
+        LocalDateTime yesterdayEnd = dateTimeService.endOfDayUtc(yesterdayDate);
 
         // MULTI-TENANT: Get orders filtered by company
         List<Order> todayOrders = orderRepository.findByDateRangeAndCompany(company, todayStart, todayEnd);
@@ -419,7 +422,7 @@ public class DashboardServiceImpl implements DashboardService {
     }
 
     private PendingOrdersDTO getPendingOrders() {
-        LocalDateTime today = LocalDate.now().atStartOfDay();
+        LocalDateTime today = dateTimeService.startOfDayUtc(dateTimeService.todayLocal());
         LocalDateTime now = LocalDateTime.now();
         
         // MULTI-TENANT: Get active orders for today filtered by company
@@ -462,8 +465,8 @@ public class DashboardServiceImpl implements DashboardService {
     }
 
     private List<ReservationDTO> getTodayReservations() {
-        LocalDate today = LocalDate.now();
-        LocalTime now = LocalTime.now();
+        LocalDate today = dateTimeService.todayLocal();
+        LocalTime now = dateTimeService.nowLocal().toLocalTime();
         
         // MULTI-TENANT: Get reservations for today filtered by company
         Company company = CompanyContext.requireCurrentCompany();
@@ -537,18 +540,19 @@ public class DashboardServiceImpl implements DashboardService {
     @Override
     public List<PopularItemDTO> getPopularItemsByPeriod(String period) {
         LocalDateTime startDate;
+        LocalDate todayDate = dateTimeService.todayLocal();
         LocalDateTime endDate = LocalDateTime.now();
         
         switch (period.toLowerCase()) {
             case "week":
-                startDate = LocalDate.now().minusWeeks(1).atStartOfDay();
+                startDate = dateTimeService.startOfDayUtc(todayDate.minusWeeks(1));
                 break;
             case "month":
-                startDate = LocalDate.now().minusMonths(1).atStartOfDay();
+                startDate = dateTimeService.startOfDayUtc(todayDate.minusMonths(1));
                 break;
             case "today":
             default:
-                startDate = LocalDate.now().atStartOfDay();
+                startDate = dateTimeService.startOfDayUtc(todayDate);
                 break;
         }
         

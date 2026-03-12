@@ -54,6 +54,7 @@ public class ClientController {
     private final ComplementRepository complementRepository;
     private final ItemMenuComplementRepository itemMenuComplementRepository;
     private final ItemMenuComboItemRepository itemMenuComboItemRepository;
+    private final DateTimeService dateTimeService;
 
     public ClientController(
             @Qualifier("customerOrderService") OrderService orderService,
@@ -69,7 +70,8 @@ public class ClientController {
             CustomerAddressService customerAddressService,
             ComplementRepository complementRepository,
             ItemMenuComplementRepository itemMenuComplementRepository,
-            ItemMenuComboItemRepository itemMenuComboItemRepository) {
+            ItemMenuComboItemRepository itemMenuComboItemRepository,
+            DateTimeService dateTimeService) {
         this.orderService = orderService;
         this.itemMenuService = itemMenuService;
         this.categoryService = categoryService;
@@ -84,6 +86,7 @@ public class ClientController {
         this.complementRepository = complementRepository;
         this.itemMenuComplementRepository = itemMenuComplementRepository;
         this.itemMenuComboItemRepository = itemMenuComboItemRepository;
+        this.dateTimeService = dateTimeService;
     }
 
     /**
@@ -178,7 +181,7 @@ public class ClientController {
             
         } catch (Exception e) {
             log.error("Error showing view-only menu", e);
-            model.addAttribute("errorMessage", "Error al cargar el menú: " + e.getMessage());
+            model.addAttribute("errorMessage", "Error al cargar el menÃº: " + e.getMessage());
             return "error";
         }
     }
@@ -254,7 +257,7 @@ public class ClientController {
             
         } catch (Exception e) {
             log.error("Error loading menu for customer", e);
-            model.addAttribute("errorMessage", "Error al cargar el menú: " + e.getMessage());
+            model.addAttribute("errorMessage", "Error al cargar el menÃº: " + e.getMessage());
             return "error";
         }
     }
@@ -415,7 +418,7 @@ public class ClientController {
                 if (deliveryAddress == null || deliveryAddress.trim().isEmpty()) {
                     return ResponseEntity.badRequest().body(Map.of(
                         "success", false,
-                        "message", "Para pedidos a domicilio debes seleccionar una dirección guardada"
+                        "message", "Para pedidos a domicilio debes seleccionar una direcciÃ³n guardada"
                     ));
                 }
             }
@@ -453,18 +456,18 @@ public class ClientController {
                 
                 // Validate item is active
                 if (!Boolean.TRUE.equals(itemMenu.getActive())) {
-                    throw new IllegalStateException("El item '" + itemMenu.getName() + "' está desactivado y no puede ser seleccionado.");
+                    throw new IllegalStateException("El item '" + itemMenu.getName() + "' estÃ¡ desactivado y no puede ser seleccionado.");
                 }
                 
                 // Validate item belongs to an active category
                 if (itemMenu.getCategory() != null && !Boolean.TRUE.equals(itemMenu.getCategory().getActive())) {
-                    throw new IllegalStateException("El item '" + itemMenu.getName() + "' pertenece a la categoría '" + 
-                        itemMenu.getCategory().getName() + "' y está desactivada por el momento.");
+                    throw new IllegalStateException("El item '" + itemMenu.getName() + "' pertenece a la categorÃ­a '" + 
+                        itemMenu.getCategory().getName() + "' y estÃ¡ desactivada por el momento.");
                 }
                 
                 // Validate item availability schedule (day and time)
                 if (!itemMenuService.isItemAvailableNow(itemId)) {
-                    java.time.DayOfWeek javaDow = java.time.LocalDate.now().getDayOfWeek();
+                    java.time.DayOfWeek javaDow = dateTimeService.todayLocal().getDayOfWeek();
                     DayOfWeek todayDay = DayOfWeek.valueOf(javaDow.name());
                     String todayName = todayDay.getDisplayName();
                     
@@ -478,13 +481,13 @@ public class ClientController {
                         if (todayAvail != null && todayAvail.getStartTime() != null && todayAvail.getEndTime() != null) {
                             scheduleMsg = "Hoy (" + todayName + ") disponible de " + todayAvail.getStartTime() + " a " + todayAvail.getEndTime() + ".";
                         } else if (todayAvail != null) {
-                            scheduleMsg = "Hoy (" + todayName + ") está disponible pero fuera de horario.";
+                            scheduleMsg = "Hoy (" + todayName + ") estÃ¡ disponible pero fuera de horario.";
                         } else {
                             scheduleMsg = "No disponible hoy (" + todayName + "). Disponible: " + itemMenu.getAvailabilityDescription();
                         }
                     }
                     
-                    throw new IllegalStateException("El item '" + itemMenu.getName() + "' no está disponible en este momento. " + scheduleMsg);
+                    throw new IllegalStateException("El item '" + itemMenu.getName() + "' no estÃ¡ disponible en este momento. " + scheduleMsg);
                 }
                 
                 // ========== COMBO EXPANSION ==========
@@ -609,23 +612,23 @@ public class ClientController {
                         // Validate complement is active and available
                         if (!Boolean.TRUE.equals(complement.getActive())) {
                             throw new IllegalStateException(
-                                "El complemento '" + complement.getName() + "' está desactivado.");
+                                "El complemento '" + complement.getName() + "' estÃ¡ desactivado.");
                         }
                         if (!Boolean.TRUE.equals(complement.getAvailable())) {
                             throw new IllegalStateException(
-                                "El complemento '" + complement.getName() + "' no está disponible (sin stock).");
+                                "El complemento '" + complement.getName() + "' no estÃ¡ disponible (sin stock).");
                         }
                         
                         // CRITICAL VALIDATION: Check maxQuantity from ItemMenuComplement
                         ItemMenuComplement itemMenuComplement = itemMenuComplementRepository
                             .findByItemMenuIdItemMenuAndComplementIdComplement(itemId, complementId)
                             .orElseThrow(() -> new IllegalArgumentException(
-                                "El complemento '" + complement.getName() + "' no está asociado al item '" + itemMenu.getName() + "'."));
+                                "El complemento '" + complement.getName() + "' no estÃ¡ asociado al item '" + itemMenu.getName() + "'."));
                         
                         // Validate complement association is active
                         if (!Boolean.TRUE.equals(itemMenuComplement.getActive())) {
                             throw new IllegalStateException(
-                                "El complemento '" + complement.getName() + "' no está activo para el item '" + itemMenu.getName() + "'.");
+                                "El complemento '" + complement.getName() + "' no estÃ¡ activo para el item '" + itemMenu.getName() + "'.");
                         }
                         
                         // BACKEND VALIDATION: Quantity must be >= 1 and <= maxQuantity
@@ -636,7 +639,7 @@ public class ClientController {
                         if (compQuantity > itemMenuComplement.getMaxQuantity()) {
                             throw new IllegalArgumentException(
                                 "La cantidad del complemento '" + complement.getName() + "' (" + compQuantity + 
-                                ") excede el máximo permitido (" + itemMenuComplement.getMaxQuantity() + 
+                                ") excede el mÃ¡ximo permitido (" + itemMenuComplement.getMaxQuantity() + 
                                 ") para el item '" + itemMenu.getName() + "'.");
                         }
                         
@@ -681,7 +684,7 @@ public class ClientController {
                     if (Boolean.TRUE.equals(detail.getItemMenu().getIsBuffet())) {
                         return ResponseEntity.badRequest().body(Map.of(
                             "success", false,
-                            "message", "El item '" + detail.getItemMenu().getName() + "' es de tipo buffet y solo está disponible para pedidos de tipo 'Para comer aquí'."
+                            "message", "El item '" + detail.getItemMenu().getName() + "' es de tipo buffet y solo estÃ¡ disponible para pedidos de tipo 'Para comer aquÃ­'."
                         ));
                     }
                 }
@@ -696,7 +699,7 @@ public class ClientController {
                 
                 return ResponseEntity.badRequest().body(Map.of(
                     "success", false,
-                    "message", "Stock insuficiente para: " + itemNames + ". ¡Te invitamos a ver otras opciones deliciosas en nuestro menú!",
+                    "message", "Stock insuficiente para: " + itemNames + ". Â¡Te invitamos a ver otras opciones deliciosas en nuestro menÃº!",
                     "errorType", "STOCK_ERROR"
                 ));
             }
@@ -708,7 +711,7 @@ public class ClientController {
                 response.put("success", false);
                 response.put("errorType", "PROMOTION_EXPIRED");
                 response.put("expiredPromotions", promotionValidation.get("expiredPromotions"));
-                response.put("message", "Algunas promociones ya no están disponibles");
+                response.put("message", "Algunas promociones ya no estÃ¡n disponibles");
                 return ResponseEntity.ok(response);
             }
             
@@ -894,18 +897,18 @@ public class ClientController {
 
                 // Validate item is active
                 if (!Boolean.TRUE.equals(itemMenu.getActive())) {
-                    throw new IllegalStateException("El item '" + itemMenu.getName() + "' está desactivado y no puede ser seleccionado.");
+                    throw new IllegalStateException("El item '" + itemMenu.getName() + "' estÃ¡ desactivado y no puede ser seleccionado.");
                 }
                 
                 // Validate item belongs to an active category
                 if (itemMenu.getCategory() != null && !Boolean.TRUE.equals(itemMenu.getCategory().getActive())) {
-                    throw new IllegalStateException("El item '" + itemMenu.getName() + "' pertenece a la categoría '" + 
-                        itemMenu.getCategory().getName() + "' y está desactivada por el momento.");
+                    throw new IllegalStateException("El item '" + itemMenu.getName() + "' pertenece a la categorÃ­a '" + 
+                        itemMenu.getCategory().getName() + "' y estÃ¡ desactivada por el momento.");
                 }
                 
                 // Validate item availability schedule (day and time)
                 if (!itemMenuService.isItemAvailableNow(itemId)) {
-                    java.time.DayOfWeek javaDow = java.time.LocalDate.now().getDayOfWeek();
+                    java.time.DayOfWeek javaDow = dateTimeService.todayLocal().getDayOfWeek();
                     DayOfWeek todayDay = DayOfWeek.valueOf(javaDow.name());
                     String todayName = todayDay.getDisplayName();
                     
@@ -919,13 +922,13 @@ public class ClientController {
                         if (todayAvail != null && todayAvail.getStartTime() != null && todayAvail.getEndTime() != null) {
                             scheduleMsg = "Hoy (" + todayName + ") disponible de " + todayAvail.getStartTime() + " a " + todayAvail.getEndTime() + ".";
                         } else if (todayAvail != null) {
-                            scheduleMsg = "Hoy (" + todayName + ") está disponible pero fuera de horario.";
+                            scheduleMsg = "Hoy (" + todayName + ") estÃ¡ disponible pero fuera de horario.";
                         } else {
                             scheduleMsg = "No disponible hoy (" + todayName + "). Disponible: " + itemMenu.getAvailabilityDescription();
                         }
                     }
                     
-                    throw new IllegalStateException("El item '" + itemMenu.getName() + "' no está disponible en este momento. " + scheduleMsg);
+                    throw new IllegalStateException("El item '" + itemMenu.getName() + "' no estÃ¡ disponible en este momento. " + scheduleMsg);
                 }
                 
                 // ========== COMBO EXPANSION ==========
@@ -1049,23 +1052,23 @@ public class ClientController {
                         // Validate complement is active and available
                         if (!Boolean.TRUE.equals(complement.getActive())) {
                             throw new IllegalStateException(
-                                "El complemento '" + complement.getName() + "' está desactivado.");
+                                "El complemento '" + complement.getName() + "' estÃ¡ desactivado.");
                         }
                         if (!Boolean.TRUE.equals(complement.getAvailable())) {
                             throw new IllegalStateException(
-                                "El complemento '" + complement.getName() + "' no está disponible (sin stock).");
+                                "El complemento '" + complement.getName() + "' no estÃ¡ disponible (sin stock).");
                         }
                         
                         // CRITICAL VALIDATION: Check maxQuantity from ItemMenuComplement
                         ItemMenuComplement itemMenuComplement = itemMenuComplementRepository
                             .findByItemMenuIdItemMenuAndComplementIdComplement(itemId, complementId)
                             .orElseThrow(() -> new IllegalArgumentException(
-                                "El complemento '" + complement.getName() + "' no está asociado al item '" + itemMenu.getName() + "'."));
+                                "El complemento '" + complement.getName() + "' no estÃ¡ asociado al item '" + itemMenu.getName() + "'."));
                         
                         // Validate complement association is active
                         if (!Boolean.TRUE.equals(itemMenuComplement.getActive())) {
                             throw new IllegalStateException(
-                                "El complemento '" + complement.getName() + "' no está activo para el item '" + itemMenu.getName() + "'.");
+                                "El complemento '" + complement.getName() + "' no estÃ¡ activo para el item '" + itemMenu.getName() + "'.");
                         }
                         
                         // BACKEND VALIDATION: Quantity must be >= 1 and <= maxQuantity
@@ -1076,7 +1079,7 @@ public class ClientController {
                         if (compQuantity > itemMenuComplement.getMaxQuantity()) {
                             throw new IllegalArgumentException(
                                 "La cantidad del complemento '" + complement.getName() + "' (" + compQuantity + 
-                                ") excede el máximo permitido (" + itemMenuComplement.getMaxQuantity() + 
+                                ") excede el mÃ¡ximo permitido (" + itemMenuComplement.getMaxQuantity() + 
                                 ") para el item '" + itemMenu.getName() + "'.");
                         }
                         
@@ -1121,7 +1124,7 @@ public class ClientController {
                     if (Boolean.TRUE.equals(detail.getItemMenu().getIsBuffet())) {
                         return ResponseEntity.badRequest().body(Map.of(
                             "success", false,
-                            "message", "El item '" + detail.getItemMenu().getName() + "' es de tipo buffet y solo está disponible para pedidos de tipo 'Para comer aquí'."
+                            "message", "El item '" + detail.getItemMenu().getName() + "' es de tipo buffet y solo estÃ¡ disponible para pedidos de tipo 'Para comer aquÃ­'."
                         ));
                     }
                 }
@@ -1186,7 +1189,7 @@ public class ClientController {
 
             return ResponseEntity.ok(Map.of(
                 "success", true,
-                "message", "Pedido " + cancelledOrder.getOrderNumber() + " cancelado exitosamente. El stock ha sido devuelto automáticamente.",
+                "message", "Pedido " + cancelledOrder.getOrderNumber() + " cancelado exitosamente. El stock ha sido devuelto automÃ¡ticamente.",
                 "orderNumber", cancelledOrder.getOrderNumber()
             ));
 
@@ -1252,7 +1255,7 @@ public class ClientController {
                         "success", true,
                         "isLastItem", true,
                         "orderCancelled", true,
-                        "message", "Era el último item del pedido. El pedido " + cancelledOrder.getOrderNumber() + " ha sido cancelado y el stock fue devuelto.",
+                        "message", "Era el Ãºltimo item del pedido. El pedido " + cancelledOrder.getOrderNumber() + " ha sido cancelado y el stock fue devuelto.",
                         "orderNumber", cancelledOrder.getOrderNumber()
                     ));
                 } catch (Exception cancelError) {
@@ -1353,7 +1356,7 @@ public class ClientController {
             // Validate unique constraints (except for current customer)
             if (!existing.getUsername().equalsIgnoreCase(profileDTO.getUsername()) && 
                 customerService.existsByUsernameAndCompany(profileDTO.getUsername(), CompanyContext.getCurrentCompany())) {
-                bindingResult.rejectValue("username", "error.customer", "El nombre de usuario ya está en uso");
+                bindingResult.rejectValue("username", "error.customer", "El nombre de usuario ya estÃ¡ en uso");
                 model.addAttribute("customer", existing);
                 model.addAttribute("profileDTO", profileDTO);
                 model.addAttribute("passwordDTO", new ChangePasswordDTO());
@@ -1362,7 +1365,7 @@ public class ClientController {
             
             if (!existing.getPhone().equals(profileDTO.getPhone()) && 
                 customerService.existsByPhoneAndCompany(profileDTO.getPhone(), CompanyContext.getCurrentCompany())) {
-                bindingResult.rejectValue("phone", "error.customer", "El teléfono ya está registrado");
+                bindingResult.rejectValue("phone", "error.customer", "El telÃ©fono ya estÃ¡ registrado");
                 model.addAttribute("customer", existing);
                 model.addAttribute("profileDTO", profileDTO);
                 model.addAttribute("passwordDTO", new ChangePasswordDTO());
@@ -1410,7 +1413,7 @@ public class ClientController {
             
             // Validate passwords match
             if (!passwordDTO.passwordsMatch()) {
-                redirectAttributes.addFlashAttribute("errorMessage", "Las contraseñas no coinciden");
+                redirectAttributes.addFlashAttribute("errorMessage", "Las contraseÃ±as no coinciden");
                 return "redirect:/client/profile";
             }
             
@@ -1425,12 +1428,12 @@ public class ClientController {
             customerService.update(existing.getIdCustomer(), existing, currentCompany);
             
             log.info("Customer password changed successfully: {}", existing.getUsername());
-            redirectAttributes.addFlashAttribute("successMessage", "Contraseña actualizada exitosamente");
+            redirectAttributes.addFlashAttribute("successMessage", "ContraseÃ±a actualizada exitosamente");
             return "redirect:/client/profile";
             
         } catch (Exception e) {
             log.error("Error changing customer password", e);
-            redirectAttributes.addFlashAttribute("errorMessage", "Error al cambiar contraseña: " + e.getMessage());
+            redirectAttributes.addFlashAttribute("errorMessage", "Error al cambiar contraseÃ±a: " + e.getMessage());
             return "redirect:/client/profile";
         }
     }
@@ -1526,13 +1529,13 @@ public class ClientController {
             
             if (!hasPaidOrder) {
                 redirectAttributes.addFlashAttribute("errorMessage", 
-                        "Debes realizar al menos una compra antes de dejar una reseña");
+                        "Debes realizar al menos una compra antes de dejar una reseÃ±a");
                 return "redirect:/client/review";
             }
             
             // Validate input
             if (rating == null || rating < 1 || rating > 5) {
-                redirectAttributes.addFlashAttribute("errorMessage", "La calificación debe estar entre 1 y 5 estrellas");
+                redirectAttributes.addFlashAttribute("errorMessage", "La calificaciÃ³n debe estar entre 1 y 5 estrellas");
                 return "redirect:/client/review";
             }
             
@@ -1550,13 +1553,13 @@ public class ClientController {
             reviewService.createOrUpdateReview(customer, rating, comment.trim());
             
             redirectAttributes.addFlashAttribute("successMessage", 
-                    "Su reseña se ha enviado correctamente. ¡Gracias!");
+                    "Su reseÃ±a se ha enviado correctamente. Â¡Gracias!");
             
             return "redirect:/client/review";
             
         } catch (Exception e) {
             log.error("Error submitting review", e);
-            redirectAttributes.addFlashAttribute("errorMessage", "Error al enviar reseña: " + e.getMessage());
+            redirectAttributes.addFlashAttribute("errorMessage", "Error al enviar reseÃ±a: " + e.getMessage());
             return "redirect:/client/review";
         }
     }
@@ -1715,14 +1718,14 @@ public class ClientController {
             
             return ResponseEntity.ok(Map.of(
                     "success", true,
-                    "message", "Dirección guardada exitosamente",
+                    "message", "DirecciÃ³n guardada exitosamente",
                     "addressId", newAddress.getIdAddress()
             ));
         } catch (Exception e) {
             log.error("Error creating address", e);
             return ResponseEntity.badRequest().body(Map.of(
                     "success", false,
-                    "message", "Error al guardar dirección: " + e.getMessage()
+                    "message", "Error al guardar direcciÃ³n: " + e.getMessage()
             ));
         }
     }
@@ -1754,13 +1757,13 @@ public class ClientController {
             
             return ResponseEntity.ok(Map.of(
                     "success", true,
-                    "message", "Dirección actualizada exitosamente"
+                    "message", "DirecciÃ³n actualizada exitosamente"
             ));
         } catch (Exception e) {
             log.error("Error updating address", e);
             return ResponseEntity.badRequest().body(Map.of(
                     "success", false,
-                    "message", "Error al actualizar dirección: " + e.getMessage()
+                    "message", "Error al actualizar direcciÃ³n: " + e.getMessage()
             ));
         }
     }
@@ -1782,19 +1785,19 @@ public class ClientController {
                 log.info("Address {} deleted for customer {}", addressId, customer.getUsername());
                 return ResponseEntity.ok(Map.of(
                         "success", true,
-                        "message", "Dirección eliminada exitosamente"
+                        "message", "DirecciÃ³n eliminada exitosamente"
                 ));
             } else {
                 return ResponseEntity.badRequest().body(Map.of(
                         "success", false,
-                        "message", "No se encontró la dirección"
+                        "message", "No se encontrÃ³ la direcciÃ³n"
                 ));
             }
         } catch (Exception e) {
             log.error("Error deleting address", e);
             return ResponseEntity.badRequest().body(Map.of(
                     "success", false,
-                    "message", "Error al eliminar dirección: " + e.getMessage()
+                    "message", "Error al eliminar direcciÃ³n: " + e.getMessage()
             ));
         }
     }
@@ -1816,7 +1819,7 @@ public class ClientController {
             
             return ResponseEntity.ok(Map.of(
                     "success", true,
-                    "message", "Dirección establecida como predeterminada"
+                    "message", "DirecciÃ³n establecida como predeterminada"
             ));
         } catch (Exception e) {
             log.error("Error setting default address", e);
@@ -1897,11 +1900,11 @@ public class ClientController {
         boolean requiresBarista = Boolean.TRUE.equals(itemDetail.getItemMenu().getRequiresBaristaPreparation());
         
         if (itemStatus == OrderStatus.PENDING) {
-            return "✅ Stock del complemento devuelto automáticamente (item pendiente)";
+            return "âœ… Stock del complemento devuelto automÃ¡ticamente (item pendiente)";
         } else if (!requiresPrep && !requiresBarista && itemStatus == OrderStatus.READY) {
-            return "✅ Stock del complemento devuelto automáticamente (item listo sin preparación)";
+            return "âœ… Stock del complemento devuelto automÃ¡ticamente (item listo sin preparaciÃ³n)";
         } else {
-            return "⚠️ El stock del complemento NO fue devuelto (el item ya está en preparación o listo)";
+            return "âš ï¸ El stock del complemento NO fue devuelto (el item ya estÃ¡ en preparaciÃ³n o listo)";
         }
     }
 
@@ -2022,7 +2025,7 @@ public class ClientController {
                             }
                             if (maxSauces != null && maxSauces > 0 && selectedSaucesCount > maxSauces) {
                                 throw new IllegalArgumentException(
-                                    "El item '" + childItem.getName() + "' permite máximo " + maxSauces +
+                                    "El item '" + childItem.getName() + "' permite mÃ¡ximo " + maxSauces +
                                     " salsa(s), pero se seleccionaron " + selectedSaucesCount + ".");
                             }
                             
@@ -2039,11 +2042,11 @@ public class ClientController {
                                 
                                 if (!Boolean.TRUE.equals(complement.getActive())) {
                                     throw new IllegalStateException(
-                                        "El complemento '" + complement.getName() + "' está desactivado.");
+                                        "El complemento '" + complement.getName() + "' estÃ¡ desactivado.");
                                 }
                                 if (!Boolean.TRUE.equals(complement.getAvailable())) {
                                     throw new IllegalStateException(
-                                        "El complemento '" + complement.getName() + "' no está disponible (sin stock).");
+                                        "El complemento '" + complement.getName() + "' no estÃ¡ disponible (sin stock).");
                                 }
                                 
                                 // Validate complement is associated to the child item
@@ -2051,11 +2054,11 @@ public class ClientController {
                                     .findByItemMenuIdItemMenuAndComplementIdComplement(
                                         childItem.getIdItemMenu(), complementId)
                                     .orElseThrow(() -> new IllegalArgumentException(
-                                        "El complemento '" + complement.getName() + "' no está asociado al item '" + childItem.getName() + "'."));
+                                        "El complemento '" + complement.getName() + "' no estÃ¡ asociado al item '" + childItem.getName() + "'."));
                                 
                                 if (!Boolean.TRUE.equals(itemMenuComplement.getActive())) {
                                     throw new IllegalStateException(
-                                        "El complemento '" + complement.getName() + "' no está activo para el item '" + childItem.getName() + "'.");
+                                        "El complemento '" + complement.getName() + "' no estÃ¡ activo para el item '" + childItem.getName() + "'.");
                                 }
                                 
                                 // Validate quantity bounds
@@ -2066,7 +2069,7 @@ public class ClientController {
                                 if (compQuantity > itemMenuComplement.getMaxQuantity()) {
                                     throw new IllegalArgumentException(
                                         "La cantidad del complemento '" + complement.getName() + "' (" + compQuantity +
-                                        ") excede el máximo permitido (" + itemMenuComplement.getMaxQuantity() +
+                                        ") excede el mÃ¡ximo permitido (" + itemMenuComplement.getMaxQuantity() +
                                         ") para el item '" + childItem.getName() + "'.");
                                 }
                                 
@@ -2149,7 +2152,7 @@ public class ClientController {
                         expiredInfo.put("promotionName", promotion.getName());
                         expiredInfo.put("reason", "expirada");
                     } else {
-                        expiredInfo.put("promotionName", "Promoción");
+                        expiredInfo.put("promotionName", "PromociÃ³n");
                         expiredInfo.put("reason", "eliminada");
                     }
                     

@@ -5,6 +5,7 @@ import jakarta.validation.constraints.*;
 import lombok.*;
 import org.springframework.format.annotation.DateTimeFormat;
 
+import com.aatechsolutions.elgransazon.infrastructure.util.CompanyLocalTime;
 import java.io.Serializable;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -197,7 +198,7 @@ public class Reservation implements Serializable {
      * Check if reservation is for today
      */
     public boolean isToday() {
-        return reservationDate != null && reservationDate.equals(LocalDate.now());
+        return reservationDate != null && reservationDate.equals(CompanyLocalTime.today());
     }
 
     /**
@@ -207,7 +208,7 @@ public class Reservation implements Serializable {
         if (reservationDate == null) {
             return false;
         }
-        LocalDate today = LocalDate.now();
+        LocalDate today = CompanyLocalTime.today();
         return !reservationDate.isBefore(today);
     }
 
@@ -218,7 +219,7 @@ public class Reservation implements Serializable {
         if (reservationDate == null) {
             return false;
         }
-        LocalDate today = LocalDate.now();
+        LocalDate today = CompanyLocalTime.today();
         return reservationDate.isBefore(today);
     }
 

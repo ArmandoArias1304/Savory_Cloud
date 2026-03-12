@@ -132,7 +132,8 @@ public class CustomAuthenticationSuccessHandler implements AuthenticationSuccess
             }
         } else {
             // Update last access asynchronously for employees
-            updateLastAccessAsync(username, false, null);
+            // Capture company context here (on the request thread) before launching async thread
+            updateLastAccessAsync(username, false, CompanyContext.getCurrentCompany());
             
             // Check user limit enforcement for non-customer logins
             boolean isProgrammer = authentication.getAuthorities().stream()
@@ -199,7 +200,7 @@ public class CustomAuthenticationSuccessHandler implements AuthenticationSuccess
                     }
                     log.debug("Updated last access for customer {}", username);
                 } else {
-                    employeeService.updateLastAccess(username);
+                    employeeService.updateLastAccess(username, company);
                     log.debug("Updated last access for employee {}", username);
                 }
             } catch (Exception e) {

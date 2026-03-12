@@ -20,6 +20,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -57,6 +58,7 @@ public class OrderController {
     private final com.aatechsolutions.elgransazon.domain.repository.ItemMenuComboItemRepository itemMenuComboItemRepository;
     private final ObjectMapper objectMapper;
     private final ReservationService reservationService;
+    private final DateTimeService dateTimeService;
 
     /**
      * Constructor with dependency injection
@@ -84,7 +86,8 @@ public class OrderController {
             com.aatechsolutions.elgransazon.domain.repository.ItemMenuComplementRepository itemMenuComplementRepository,
             com.aatechsolutions.elgransazon.domain.repository.ItemMenuComboItemRepository itemMenuComboItemRepository,
             ObjectMapper objectMapper,
-            ReservationService reservationService) {
+            ReservationService reservationService,
+            DateTimeService dateTimeService) {
         
         this.chefOrderService = chefOrderService; // Store direct reference
         this.orderServices = Map.of(
@@ -111,6 +114,7 @@ public class OrderController {
         this.itemMenuComboItemRepository = itemMenuComboItemRepository;
         this.objectMapper = objectMapper;
         this.reservationService = reservationService;
+        this.dateTimeService = dateTimeService;
     }
 
     /**
@@ -176,8 +180,8 @@ public class OrderController {
 
         // Apply filters
         if (date != null && !date.isEmpty()) {
-            LocalDateTime startDate = LocalDateTime.parse(date + "T00:00:00");
-            LocalDateTime endDate = LocalDateTime.parse(date + "T23:59:59");
+            LocalDateTime startDate = dateTimeService.startOfDayUtc(LocalDate.parse(date));
+            LocalDateTime endDate = dateTimeService.endOfDayUtc(LocalDate.parse(date));
             orders = orderService.findByDateRange(startDate, endDate);
         } else {
             orders = orderService.findAll(); // Already filtered by role in service implementation
@@ -214,11 +218,11 @@ public class OrderController {
         LocalDateTime statsStartDate;
         LocalDateTime statsEndDate;
         if (date != null && !date.isEmpty()) {
-            statsStartDate = LocalDateTime.parse(date + "T00:00:00");
-            statsEndDate = LocalDateTime.parse(date + "T23:59:59");
+            statsStartDate = dateTimeService.startOfDayUtc(LocalDate.parse(date));
+            statsEndDate = dateTimeService.endOfDayUtc(LocalDate.parse(date));
         } else {
-            statsStartDate = java.time.LocalDate.now().atStartOfDay();
-            statsEndDate = java.time.LocalDate.now().atTime(23, 59, 59);
+            statsStartDate = dateTimeService.startOfDayUtc(dateTimeService.todayLocal());
+            statsEndDate = dateTimeService.endOfDayUtc(dateTimeService.todayLocal());
         }
 
         // ========== Calculate statistics (dynamic based on date filter) ==========
@@ -3457,8 +3461,8 @@ public class OrderController {
         String currentUsername = authentication.getName();
         
         // For real-time stats, always use today
-        LocalDateTime statsStartDate = java.time.LocalDate.now().atStartOfDay();
-        LocalDateTime statsEndDate = java.time.LocalDate.now().atTime(23, 59, 59);
+        LocalDateTime statsStartDate = dateTimeService.startOfDayUtc(dateTimeService.todayLocal());
+        LocalDateTime statsEndDate = dateTimeService.endOfDayUtc(dateTimeService.todayLocal());
         
         Map<String, Object> stats = new HashMap<>();
         

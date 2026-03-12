@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" lang="es">
 <head>
     <meta charset="UTF-8">
@@ -154,7 +154,7 @@
                             </span>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                            <span th:text="${#temporals.format(company.createdAt, 'dd/MM/yyyy')}">01/01/2024</span>
+                            <span th:text="${#tz.format(company.createdAt, 'dd/MM/yyyy')}">01/01/2024</span>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                             <div class="flex items-center justify-end space-x-2">

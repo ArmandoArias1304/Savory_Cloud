@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html xmlns:th="http://www.thymeleaf.org" lang="es">
   <head>
     <meta charset="UTF-8" />
@@ -774,7 +774,7 @@
                 <p>
                   <span class="font-semibold">Fecha:</span>
                   <span
-                    th:text="${#temporals.format(order.createdAt, 'dd MMM yyyy, HH:mm')}"
+                    th:text="${#tz.format(order.createdAt, 'dd MMM yyyy, HH:mm')}"
                   ></span>
                 </p>
                 <p>

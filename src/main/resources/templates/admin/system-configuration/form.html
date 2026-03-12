@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html
   xmlns:th="http://www.thymeleaf.org"
   xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
@@ -1855,7 +1855,7 @@
                   >
                     <td
                       class="px-4 py-3 text-sm text-gray-900 dark:text-gray-200"
-                      th:text="${#temporals.format(event.eventDate, 'dd/MM/yyyy HH:mm')}"
+                      th:text="${#tz.format(event.eventDate, 'dd/MM/yyyy HH:mm')}"
                     ></td>
                     <td
                       class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300"

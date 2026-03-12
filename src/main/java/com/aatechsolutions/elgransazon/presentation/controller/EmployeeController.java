@@ -1,5 +1,6 @@
 package com.aatechsolutions.elgransazon.presentation.controller;
 
+import com.aatechsolutions.elgransazon.application.service.DateTimeService;
 import com.aatechsolutions.elgransazon.application.service.EmployeeService;
 import com.aatechsolutions.elgransazon.application.service.LicenseService;
 import com.aatechsolutions.elgransazon.application.service.ShiftService;
@@ -40,6 +41,7 @@ public class EmployeeController {
     private final RoleRepository roleRepository;
     private final EmployeeRepository employeeRepository;
     private final LicenseService licenseService;
+    private final DateTimeService dateTimeService;
 
     /**
      * Show list of all employees with filters
@@ -557,7 +559,7 @@ public class EmployeeController {
             employeeData.put("roleName", employee.getRoleDisplayName());
             employeeData.put("supervisorName", employee.getSupervisorName());
             employeeData.put("shiftNames", employee.getShiftNames());
-            employeeData.put("lastAccess", employee.getFormattedLastAccess());
+            employeeData.put("lastAccess", employee.getLastAccess() != null ? dateTimeService.formatToCompanyTime(employee.getLastAccess(), "dd/MM/yyyy HH:mm") : "Nunca");
             employeeData.put("enabled", employee.getEnabled());
             employeeData.put("enabledText", employee.getEnabled() ? "Activo" : "Inactivo");
             

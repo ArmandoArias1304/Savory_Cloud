@@ -109,6 +109,15 @@ public class Company implements Serializable {
     @Builder.Default
     private Boolean active = true;
 
+    /**
+     * Timezone for this company (IANA timezone ID).
+     * Dates stored in DB are UTC; this zone is used for display and business-hours logic.
+     * Defaults to America/Mexico_City (CST, UTC-6).
+     */
+    @Column(name = "timezone", nullable = false, length = 50)
+    @Builder.Default
+    private String timezone = "America/Mexico_City";
+
     // ========== Timestamps ==========
 
     @Column(name = "created_at", nullable = false, updatable = false)

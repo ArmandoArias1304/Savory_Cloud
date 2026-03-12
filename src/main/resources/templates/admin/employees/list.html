@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html
   lang="es"
   xmlns:th="http://www.thymeleaf.org"
@@ -623,7 +623,7 @@
                   <td class="px-6 py-4">
                     <p
                       class="text-sm text-gray-900 dark:text-white"
-                      th:text="${employee.formattedLastAccess}"
+                      th:text="${employee.lastAccess != null ? #tz.format(employee.lastAccess, 'dd/MM/yyyy HH:mm') : 'Nunca'}"
                     ></p>
                   </td>
 

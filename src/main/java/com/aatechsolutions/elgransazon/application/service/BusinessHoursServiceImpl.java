@@ -24,6 +24,7 @@ public class BusinessHoursServiceImpl implements BusinessHoursService {
 
     private final BusinessHoursRepository businessHoursRepository;
     private final SystemConfigurationService configurationService;
+    private final DateTimeService dateTimeService;
 
     @Override
     @Transactional(readOnly = true)
@@ -153,8 +154,8 @@ public class BusinessHoursServiceImpl implements BusinessHoursService {
     public boolean isOpenNow() {
         log.debug("Checking if restaurant is open now");
         
-        // Get current day and time
-        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+        // Get current day and time in company timezone
+        java.time.LocalDateTime now = dateTimeService.nowLocal();
         java.time.DayOfWeek javaDayOfWeek = now.getDayOfWeek();
         LocalTime currentTime = now.toLocalTime();
         

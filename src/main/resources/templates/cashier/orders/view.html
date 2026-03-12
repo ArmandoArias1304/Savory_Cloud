@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="es" xmlns:th="http://www.thymeleaf.org">
   <head>
     <meta charset="utf-8" />
@@ -180,11 +180,11 @@
                 </p>
                 <p class="font-semibold text-gray-900 dark:text-white">
                   <span
-                    th:text="${#temporals.format(order.createdAt, 'dd/MM/yyyy')}"
+                    th:text="${#tz.format(order.createdAt, 'dd/MM/yyyy')}"
                   ></span>
                   <span
                     class="text-sm text-gray-600 dark:text-gray-400 ml-1"
-                    th:text="${#temporals.format(order.createdAt, 'HH:mm')}"
+                    th:text="${#tz.format(order.createdAt, 'HH:mm')}"
                   ></span>
                 </p>
               </div>
@@ -404,7 +404,7 @@
                             >
                             Agregado:
                             <span
-                              th:text="${#temporals.format(detail.addedAt, 'HH:mm')}"
+                              th:text="${#tz.format(detail.addedAt, 'HH:mm')}"
                             ></span>
                           </p>
                         </div>
@@ -586,7 +586,7 @@
                     >Creado:</span
                   >
                   <span
-                    th:text="${#temporals.format(order.createdAt, 'dd/MM/yyyy HH:mm')}"
+                    th:text="${#tz.format(order.createdAt, 'dd/MM/yyyy HH:mm')}"
                   ></span>
                 </p>
                 <p>
@@ -605,7 +605,7 @@
                     >Actualizado:</span
                   >
                   <span
-                    th:text="${#temporals.format(order.updatedAt, 'dd/MM/yyyy HH:mm')}"
+                    th:text="${#tz.format(order.updatedAt, 'dd/MM/yyyy HH:mm')}"
                   ></span>
                 </p>
                 <p th:if="${order.updatedBy != null}">
@@ -622,7 +622,7 @@
                 <p>
                   <span class="font-semibold">Cancelado:</span>
                   <span
-                    th:text="${#temporals.format(order.cancelledAt, 'dd/MM/yyyy HH:mm')}"
+                    th:text="${#tz.format(order.cancelledAt, 'dd/MM/yyyy HH:mm')}"
                   ></span>
                 </p>
               </div>

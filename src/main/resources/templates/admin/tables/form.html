@@ -345,7 +345,7 @@
                       >
                       <span
                         class="ml-2 text-gray-900 dark:text-white font-medium"
-                        th:text="${table.formattedCreatedAt}"
+                        th:text="${#tz.format(table.createdAt, 'dd/MM/yyyy HH:mm')}"
                       ></span>
                     </div>
                     <div>
@@ -363,7 +363,7 @@
                       >
                       <span
                         class="ml-2 text-gray-900 dark:text-white font-medium"
-                        th:text="${table.formattedUpdatedAt}"
+                        th:text="${table.updatedAt != null ? #tz.format(table.updatedAt, 'dd/MM/yyyy HH:mm') : 'Nunca'}"
                       ></span>
                     </div>
                   </div>

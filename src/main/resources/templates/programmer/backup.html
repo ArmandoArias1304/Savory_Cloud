@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html xmlns:th="http://www.thymeleaf.org" lang="es">
   <head>
     <meta charset="UTF-8" />
@@ -418,7 +418,7 @@
                   </div>
                   <p
                     class="text-xs text-gray-500 dark:text-gray-400"
-                    th:text="${#temporals.format(config.lastBackupDate, 'dd/MM/yyyy HH:mm')}"
+                    th:text="${#tz.format(config.lastBackupDate, 'dd/MM/yyyy HH:mm')}"
                   >
                     01/01/2024 14:30
                   </p>
@@ -729,7 +729,7 @@
                         <div
                           class="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400"
                         >
-                          <span th:text="${backup.formattedDate()}"
+                          <span th:text="${#tz.format(backup.createdAt(), 'dd/MM/yyyy HH:mm')}"
                             >01/01/2024 14:00</span
                           >
                           <span>•</span>

@@ -467,7 +467,7 @@
                       <span class="material-symbols-outlined text-base"
                         >schedule</span
                       >
-                      <span th:text="${record.getFormattedActionDate()}"
+                      <span th:text="${#tz.format(record.actionDate, 'dd/MM/yyyy HH:mm')}"
                         >01/01/2024 10:30 AM</span
                       >
                     </div>

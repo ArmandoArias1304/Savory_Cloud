@@ -34,6 +34,7 @@ public class TicketPdfService {
 
     private final SystemConfigurationService systemConfigurationService;
     private final GlobalSystemConfigService globalSystemConfigService;
+    private final DateTimeService dateTimeService;
 
     // Ticket width in points (58mm = 164 points, 80mm = 226 points)
     private static final float TICKET_WIDTH = 226f; // 80mm
@@ -431,8 +432,7 @@ public class TicketPdfService {
                 .setMarginBottom(3));
 
         // Date and time
-        java.time.format.DateTimeFormatter formatter = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
-        Paragraph dateTime = new Paragraph(order.getCreatedAt().format(formatter))
+        Paragraph dateTime = new Paragraph(dateTimeService.formatToCompanyTime(order.getCreatedAt(), "dd/MM/yyyy HH:mm"))
                 .setFont(normalFont)
                 .setFontSize(8)
                 .setTextAlignment(TextAlignment.CENTER)

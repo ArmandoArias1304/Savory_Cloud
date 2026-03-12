@@ -24,6 +24,7 @@ public class EmployeeMonthlyStatsServiceImpl implements EmployeeMonthlyStatsServ
 
     private final EmployeeMonthlyStatsRepository statsRepository;
     private final EmployeeRepository employeeRepository;
+    private final DateTimeService dateTimeService;
 
     @Override
     @Transactional
@@ -47,7 +48,7 @@ public class EmployeeMonthlyStatsServiceImpl implements EmployeeMonthlyStatsServ
     @Override
     @Transactional
     public EmployeeMonthlyStats getOrCreateStatsForCurrentMonth(Employee employee) {
-        LocalDate now = LocalDate.now();
+        LocalDate now = dateTimeService.todayLocal();
         return getOrCreateStats(employee, now.getMonthValue(), now.getYear());
     }
 
@@ -117,7 +118,7 @@ public class EmployeeMonthlyStatsServiceImpl implements EmployeeMonthlyStatsServ
     @Override
     @Transactional(readOnly = true)
     public Optional<EmployeeMonthlyStats> getWaiterOfCurrentMonth() {
-        LocalDate now = LocalDate.now();
+        LocalDate now = dateTimeService.todayLocal();
         return getWaiterOfMonth(now.getMonthValue(), now.getYear());
     }
 
@@ -131,7 +132,7 @@ public class EmployeeMonthlyStatsServiceImpl implements EmployeeMonthlyStatsServ
     @Override
     @Transactional(readOnly = true)
     public Optional<EmployeeMonthlyStats> getChefOfCurrentMonth() {
-        LocalDate now = LocalDate.now();
+        LocalDate now = dateTimeService.todayLocal();
         return getChefOfMonth(now.getMonthValue(), now.getYear());
     }
 
@@ -145,7 +146,7 @@ public class EmployeeMonthlyStatsServiceImpl implements EmployeeMonthlyStatsServ
     @Override
     @Transactional(readOnly = true)
     public Optional<EmployeeMonthlyStats> getBaristaOfCurrentMonth() {
-        LocalDate now = LocalDate.now();
+        LocalDate now = dateTimeService.todayLocal();
         return getBaristaOfMonth(now.getMonthValue(), now.getYear());
     }
 
@@ -159,7 +160,7 @@ public class EmployeeMonthlyStatsServiceImpl implements EmployeeMonthlyStatsServ
     @Override
     @Transactional(readOnly = true)
     public Optional<EmployeeMonthlyStats> getCashierOfCurrentMonth() {
-        LocalDate now = LocalDate.now();
+        LocalDate now = dateTimeService.todayLocal();
         return getCashierOfMonth(now.getMonthValue(), now.getYear());
     }
 
@@ -207,7 +208,7 @@ public class EmployeeMonthlyStatsServiceImpl implements EmployeeMonthlyStatsServ
     @Override
     @Transactional
     public void initializeCurrentMonth() {
-        LocalDate now = LocalDate.now();
+        LocalDate now = dateTimeService.todayLocal();
         Integer currentMonth = now.getMonthValue();
         Integer currentYear = now.getYear();
         

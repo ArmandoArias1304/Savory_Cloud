@@ -3064,6 +3064,8 @@
           return;
         }
 
+        const isDark = document.documentElement.classList.contains("dark");
+
         if (cart.length === 0) {
           Swal.fire({
             icon: "warning",
@@ -3071,6 +3073,8 @@
             text: isAddItemsMode
               ? "Agrega items antes de continuar"
               : "Agrega items antes de crear el pedido",
+            background: isDark ? "#1f2937" : "#ffffff",
+            color: isDark ? "#f3f4f6" : "#1f2937",
           });
           return;
         }
@@ -3085,6 +3089,8 @@
         Swal.fire({
           title: "Procesando pedido...",
           text: "Por favor espere",
+          background: isDark ? "#1f2937" : "#ffffff",
+          color: isDark ? "#f3f4f6" : "#1f2937",
           allowOutsideClick: false,
           didOpen: () => {
             Swal.showLoading();
@@ -3171,6 +3177,8 @@
                 text: data.message,
                 timer: 1500,
                 showConfirmButton: false,
+                background: isDark ? "#1f2937" : "#ffffff",
+                color: isDark ? "#f3f4f6" : "#1f2937",
               }).then(() => {
                 window.location.href = data.redirectUrl;
               });
@@ -3190,6 +3198,8 @@
                   icon: "error",
                   title: "Error",
                   text: data.message || "Ocurrió un error al crear el pedido",
+                  background: isDark ? "#1f2937" : "#ffffff",
+                  color: isDark ? "#f3f4f6" : "#1f2937",
                 });
               }
             }
@@ -3202,6 +3212,8 @@
               icon: "error",
               title: "Error de conexión",
               text: "No se pudo conectar con el servidor. Intente nuevamente.",
+              background: isDark ? "#1f2937" : "#ffffff",
+              color: isDark ? "#f3f4f6" : "#1f2937",
             });
           });
       }

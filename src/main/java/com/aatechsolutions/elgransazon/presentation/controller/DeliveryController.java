@@ -1,5 +1,6 @@
 package com.aatechsolutions.elgransazon.presentation.controller;
 
+import com.aatechsolutions.elgransazon.application.service.DateTimeService;
 import com.aatechsolutions.elgransazon.application.service.EmployeeService;
 import com.aatechsolutions.elgransazon.application.service.OrderService;
 import com.aatechsolutions.elgransazon.application.service.SystemConfigurationService;
@@ -39,6 +40,7 @@ public class DeliveryController {
     private final OrderService deliveryOrderService;
     private final EmployeeService employeeService;
     private final SystemConfigurationService configurationService;
+    private final DateTimeService dateTimeService;
 
     /**
      * Display delivery dashboard
@@ -339,8 +341,8 @@ public class DeliveryController {
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
             
             // Get today's paid orders
-            java.time.LocalDateTime startOfDay = java.time.LocalDate.now().atStartOfDay();
-            java.time.LocalDateTime endOfDay = java.time.LocalDate.now().atTime(java.time.LocalTime.MAX);
+            java.time.LocalDateTime startOfDay = dateTimeService.todayLocal().atStartOfDay();
+            java.time.LocalDateTime endOfDay = dateTimeService.todayLocal().atTime(java.time.LocalTime.MAX);
             
             List<Order> todaysPaidOrders = allPaidOrders.stream()
                     .filter(order -> {
@@ -442,7 +444,7 @@ public class DeliveryController {
                     .collect(Collectors.toList());
             
             // Get today's date
-            java.time.LocalDate today = java.time.LocalDate.now();
+            java.time.LocalDate today = dateTimeService.todayLocal();
             java.time.LocalDateTime startOfDay = today.atStartOfDay();
             java.time.LocalDateTime endOfDay = today.atTime(java.time.LocalTime.MAX);
             
