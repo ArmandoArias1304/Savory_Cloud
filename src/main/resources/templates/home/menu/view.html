@@ -502,6 +502,8 @@
 
       // Open item modal with SweetAlert2 (simplified - visual only)
       function openItemModal(card) {
+        const isDark = document.documentElement.classList.contains("dark");
+
         // Check if item is available
         const isAvailable = card.dataset.itemAvailable === "true";
 
@@ -513,6 +515,8 @@
             text: "Este producto no está disponible por el momento debido a falta de stock.",
             confirmButtonColor: "#38e07b",
             confirmButtonText: "Entendido",
+            background: isDark ? "#1f2937" : "#ffffff",
+            color: isDark ? "#f3f4f6" : "#1f2937",
           });
           return;
         }
@@ -539,24 +543,19 @@
 
         Swal.fire({
           html: `
-            <div class="flex flex-col md:flex-row gap-6 text-left">
-                <!-- Imagen del producto - Izquierda -->
-                <div class="md:w-1/2 img-skeleton rounded-xl">
-                    <img src="${imageUrl}" alt="${itemName}" class="w-full h-64 md:h-80 object-cover rounded-xl img-fade" onload="this.classList.add('loaded');this.parentElement.classList.remove('img-skeleton')" />
+            <div style="display:flex;flex-wrap:wrap;gap:24px;text-align:left;">
+                <div style="flex:1;min-width:200px;" class="img-skeleton rounded-xl">
+                    <img src="${imageUrl}" alt="${itemName}" style="width:100%;height:280px;object-fit:cover;border-radius:12px;" class="img-fade" onload="this.classList.add('loaded');this.parentElement.classList.remove('img-skeleton')" />
                 </div>
-                
-                <!-- Detalles del producto - Derecha -->
-                <div class="md:w-1/2 flex flex-col">
-                    <h2 class="text-3xl font-black text-gray-900 mb-2">${itemName}</h2>
-                    <p class="text-5xl font-black text-primary mb-4">$${itemPrice.toFixed(
-                      2,
-                    )}</p>
-                    <p class="text-gray-600 mb-6 flex-grow">${
-                      itemDescription || "Sin descripción disponible"
-                    }</p>
+                <div style="flex:1;min-width:200px;display:flex;flex-direction:column;">
+                    <h2 style="font-size:1.875rem;font-weight:900;color:${isDark ? '#f9fafb' : '#111827'};margin-bottom:8px;">${itemName}</h2>
+                    <p style="font-size:2.5rem;font-weight:900;color:#38e07b;margin-bottom:16px;">$${itemPrice.toFixed(2)}</p>
+                    <p style="color:${isDark ? '#9ca3af' : '#4b5563'};margin-bottom:24px;flex:1;">${itemDescription || "Sin descripción disponible"}</p>
                 </div>
             </div>
-        `,
+          `,
+          background: isDark ? "#1f2937" : "#ffffff",
+          color: isDark ? "#f3f4f6" : "#1f2937",
           confirmButtonColor: "#38e07b",
           confirmButtonText: "Cerrar",
           width: "900px",

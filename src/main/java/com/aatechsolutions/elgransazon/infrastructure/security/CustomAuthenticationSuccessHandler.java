@@ -105,20 +105,24 @@ public class CustomAuthenticationSuccessHandler implements AuthenticationSuccess
                     log.warn("Customer {} attempted to login without verifying email", username);
                     
                     boolean emailSent = false;
+                    boolean emailSendError = false;
                     try {
                         // Try to send verification email (respects the token logic)
                         emailSent = emailVerificationService.createOrReuseToken(customer);
                     } catch (Exception e) {
                         log.error("Error sending verification email to unverified customer {}", username, e);
-                        // Fallo al enviar el correo, pero debemos bloquear el acceso de todas formas
+                        emailSendError = true;
                     }
                     
                     request.getSession().invalidate();
                     
                     if (emailSent) {
                         response.sendRedirect("/client/login?error=emailNotVerified&emailSent=true");
+                    } else if (emailSendError) {
+                        response.sendRedirect("/client/login?error=emailNotVerified&emailError=true");
                     } else {
-                        response.sendRedirect("/client/login?error=emailNotVerified&emailSent=false");
+                        long minutesLeft = emailVerificationService.getTokenMinutesRemaining(customer);
+                        response.sendRedirect("/client/login?error=emailNotVerified&emailSent=false&minutesLeft=" + minutesLeft);
                     }
                     return;
                 }

@@ -118,6 +118,7 @@ public class CompanyController {
                     dto.getContactPhone(),
                     dto.getAddress(),
                     dto.getRfc(),
+                    dto.getTimezone(),
                     dto.getAdminUsername(),
                     dto.getAdminFirstName(),
                     dto.getAdminLastName(),
@@ -130,10 +131,33 @@ public class CompanyController {
             
             log.info("Company {} created successfully by {}", company.getSlug(), authentication.getName());
             
+        } catch (jakarta.validation.ConstraintViolationException e) {
+            log.error("Validation error creating company: {}", e.getMessage());
+            String messages = e.getConstraintViolations().stream()
+                    .map(cv -> cv.getMessage())
+                    .collect(java.util.stream.Collectors.joining("; "));
+            model.addAttribute("error", messages);
+            return "programmer/companies/form";
+        } catch (IllegalArgumentException e) {
+            log.error("Error creating company: {}", e.getMessage());
+            model.addAttribute("error", e.getMessage());
+            return "programmer/companies/form";
         } catch (Exception e) {
             log.error("Error creating company: {}", e.getMessage(), e);
-            redirectAttributes.addFlashAttribute("error", "Error al crear la empresa: " + e.getMessage());
-            return "redirect:/programmer/companies/new";
+            // Try to extract constraint violation messages from nested cause
+            Throwable cause = e.getCause();
+            while (cause != null) {
+                if (cause instanceof jakarta.validation.ConstraintViolationException cve) {
+                    String messages = cve.getConstraintViolations().stream()
+                            .map(cv -> cv.getMessage())
+                            .collect(java.util.stream.Collectors.joining("; "));
+                    model.addAttribute("error", messages);
+                    return "programmer/companies/form";
+                }
+                cause = cause.getCause();
+            }
+            model.addAttribute("error", "Error al crear la empresa: " + e.getMessage());
+            return "programmer/companies/form";
         }
         
         return "redirect:/programmer/companies";

@@ -49,7 +49,7 @@ public class EmailService {
      */
     private String getSenderEmail() {
         Company company = CompanyContext.getCurrentCompany();
-        if (company != null && company.getSenderEmail() != null) {
+        if (company != null && company.getSenderEmail() != null && !company.getSenderEmail().isBlank()) {
             return company.getSenderEmail();
         }
         return defaultFromEmail;
@@ -99,10 +99,11 @@ public class EmailService {
             baseUrl.append(appDomain);
         }
         
-        // Only add port if it's not empty and not the default ports (80 for http, 443 for https)
-        if (appPort != null && !appPort.isEmpty() 
-            && !("http".equals(appProtocol) && "80".equals(appPort))
-            && !("https".equals(appProtocol) && "443".equals(appPort))) {
+        // Only add port for HTTP non-standard port.
+        // For HTTPS, Nginx terminates SSL at 443 externally — do not include internal port.
+        if (appPort != null && !appPort.isEmpty()
+            && !"https".equals(appProtocol)
+            && !("http".equals(appProtocol) && "80".equals(appPort))) {
             baseUrl.append(":").append(appPort);
         }
         
@@ -192,6 +193,10 @@ public class EmailService {
             if (response.getStatusCode() >= 400) {
                 log.error("Error sending email. Status: {}, Body: {}", 
                     response.getStatusCode(), response.getBody());
+                if (response.getStatusCode() == 403) {
+                    log.error("SendGrid 403: The 'from' address '{}' is not a verified Sender Identity. " +
+                              "Verify it at SendGrid > Settings > Sender Authentication.", from.getEmail());
+                }
                 throw new RuntimeException("Error al enviar email. Status: " + response.getStatusCode());
             }
             

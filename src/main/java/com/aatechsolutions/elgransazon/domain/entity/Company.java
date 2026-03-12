@@ -65,12 +65,12 @@ public class Company implements Serializable {
     private String rfc;
 
     /**
-     * Email sender registered in SendGrid for this company
+     * Email sender registered in SendGrid for this company.
+     * Optional — falls back to the platform default (mail.from.email) when not set.
      */
-    @NotBlank(message = "El email de envío es requerido")
     @Email(message = "Formato de email inválido")
     @Size(max = 200, message = "El email no puede exceder 200 caracteres")
-    @Column(name = "sender_email", nullable = false, length = 200)
+    @Column(name = "sender_email", length = 200)
     private String senderEmail;
 
     /**

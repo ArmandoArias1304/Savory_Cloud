@@ -740,15 +740,22 @@
                 th:if="${param.emailSent != null and param.emailSent[0] == 'true'}"
               >
                 Te hemos enviado un nuevo correo de verificación. Por favor
-                revisa tu bandeja de entrada y haz clic en el enlace para
+                revisa tu bandeja de entrada o carpeta de spam y haz clic en el enlace para
                 activar tu cuenta.
               </span>
               <span
                 th:if="${param.emailSent != null and param.emailSent[0] == 'false'}"
               >
                 Ya tienes un correo de verificación pendiente. Por favor revisa
-                tu bandeja de entrada. Si no lo encuentras, espera 15 minutos e
-                intenta iniciar sesión nuevamente para recibir un nuevo correo.
+                tu bandeja de entrada o carpeta de spam. Si no lo encuentras, espera
+                <strong th:text="${param.minutesLeft != null and param.minutesLeft[0] != '0' ? param.minutesLeft[0] : 'menos de 1'}">15</strong>
+                minuto(s) e intenta iniciar sesión nuevamente para recibir un nuevo correo.
+              </span>
+              <span
+                th:if="${param.emailError != null}"
+              >
+                Hubo un problema al enviar el correo de verificación. Por favor
+                intenta iniciar sesión nuevamente en unos momentos.
               </span>
             </span>
           </div>

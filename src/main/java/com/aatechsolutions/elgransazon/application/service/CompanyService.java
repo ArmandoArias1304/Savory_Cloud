@@ -70,7 +70,7 @@ public interface CompanyService {
      */
     Company create(String slug, String name, String customDomain,
                    String senderEmail, String senderName, String contactEmail,
-                   String contactPhone, String address, String rfc,
+                   String contactPhone, String address, String rfc, String timezone,
                    String adminUsername, String adminFirstName, String adminLastName, String adminPassword);
 
     /**

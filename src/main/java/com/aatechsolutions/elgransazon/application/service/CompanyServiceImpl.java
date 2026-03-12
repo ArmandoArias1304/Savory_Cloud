@@ -315,7 +315,7 @@ public class CompanyServiceImpl implements CompanyService {
     @Override
     public Company create(String slug, String name, String customDomain,
                           String senderEmail, String senderName, String contactEmail,
-                          String contactPhone, String address, String rfc,
+                          String contactPhone, String address, String rfc, String timezone,
                           String adminUsername, String adminFirstName, String adminLastName, String adminPassword) {
         log.info("Creating new company with parameters: {}", slug);
 
@@ -330,6 +330,7 @@ public class CompanyServiceImpl implements CompanyService {
                 .contactPhone(contactPhone)
                 .address(address)
                 .rfc(rfc)
+                .timezone(timezone != null && !timezone.isBlank() ? timezone : "America/Mexico_City")
                 .active(true)
                 .build();
 

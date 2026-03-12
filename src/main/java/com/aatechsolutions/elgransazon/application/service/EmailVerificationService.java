@@ -41,7 +41,7 @@ public class EmailVerificationService {
      * @return true si se generó y envió un NUEVO token, false si ya existía uno
      *         vigente y no se reenvió.
      */
-    @Transactional
+    @Transactional(noRollbackFor = Exception.class)
     public boolean createOrReuseToken(Customer customer) {
         log.info("Creating or reusing verification token for customer: {} in company: {}", 
             customer.getEmail(), customer.getCompany().getIdCompany());
@@ -138,6 +138,20 @@ public class EmailVerificationService {
 
         // Consumido: eliminar token
         emailVerificationTokenRepository.delete(evt);
+    }
+
+    /**
+     * Get remaining minutes until the existing verification token expires.
+     * Returns 0 if no token exists.
+     */
+    public long getTokenMinutesRemaining(Customer customer) {
+        Company company = customer.getCompany();
+        if (company == null) return 0;
+        return emailVerificationTokenRepository
+                .findByCustomerAndCompany(customer, company)
+                .map(token -> Math.max(0,
+                        java.time.temporal.ChronoUnit.MINUTES.between(LocalDateTime.now(), token.getExpiration())))
+                .orElse(0L);
     }
 
     private String generateSecureToken() {

@@ -49,6 +49,8 @@ public class CompanyCreateDTO {
     @Size(max = 20, message = "El RFC no puede exceder 20 caracteres")
     private String rfc;
 
+    private String timezone = "America/Mexico_City";
+
     // ========== ADMIN USER FIELDS ==========
     @NotBlank(message = "El nombre del administrador es requerido")
     @Size(min = 2, max = 50, message = "El nombre debe tener entre 2 y 50 caracteres")
