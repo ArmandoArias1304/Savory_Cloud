@@ -1132,15 +1132,13 @@ public class OrderServiceImpl implements OrderService {
                                          today.getMonthValue(), 
                                          today.getDayOfMonth());
 
-        // Use atomic counter with pessimistic lock to prevent duplicates in high concurrency
-        // Counter is scoped by company for multi-tenant isolation
-        DailyOrderCounter counter = dailyOrderCounterRepository.findByIdDateAndCompany(today, company)
-            .orElseGet(() -> new DailyOrderCounter(today, company, 0));
-        
-        // Update sequence
-        int nextSequence = counter.getLastSequence() + 1;
-        counter.setLastSequence(nextSequence);
-        dailyOrderCounterRepository.save(counter);
+        // Atomic UPSERT: avoids the gap-lock deadlock that happens when two concurrent
+        // transactions both do SELECT FOR UPDATE on a non-existent row and then both
+        // attempt INSERT. INSERT ... ON DUPLICATE KEY UPDATE is a single atomic statement
+        // that either inserts a new row (sequence=1) or increments the existing one,
+        // holding an exclusive row lock throughout so no other transaction can race.
+        dailyOrderCounterRepository.upsertCounter(today, company.getIdCompany());
+        int nextSequence = dailyOrderCounterRepository.getLastSequence(today, company.getIdCompany());
         
         return String.format("%s%03d", datePrefix, nextSequence);
     }
@@ -1235,21 +1233,23 @@ public class OrderServiceImpl implements OrderService {
     // ========== PRIVATE HELPER METHODS ==========
 
     /**
-     * Deduct stock for a menu item
+     * Deduct stock for a menu item.
+     * Uses IngredientStockService with REQUIRES_NEW transactions and pessimistic locking
+     * to prevent the @Version optimistic-lock conflict that occurs when multiple concurrent
+     * orders modify the same Ingredient row inside the outer transaction's session.
+     * Mirrors the pattern already used by returnStockForItem.
      */
     private void deductStockForItem(ItemMenu item, Integer quantity) {
         log.debug("Deducting stock for item: {} (quantity: {})", item.getName(), quantity);
 
         for (ItemIngredient itemIngredient : item.getIngredients()) {
-            try {
-                itemIngredient.deductFromStock(quantity);
-                log.debug("Stock deducted for ingredient: {} ({})", 
-                         itemIngredient.getIngredientName(),
-                         itemIngredient.getFormattedQuantity());
-            } catch (IllegalStateException e) {
-                log.error("Error deducting stock: {}", e.getMessage());
-                throw e;
-            }
+            BigDecimal quantityToDeduct = itemIngredient.getQuantity()
+                .multiply(BigDecimal.valueOf(quantity));
+            Long ingredientId = itemIngredient.getIngredient().getIdIngredient();
+
+            // Uses REQUIRES_NEW + SELECT FOR UPDATE — serialises concurrent deductions
+            // without leaving a stale @Version in the outer session.
+            ingredientStockService.deductStockWithRetry(ingredientId, quantityToDeduct, itemIngredient.getUnit());
         }
     }
 
