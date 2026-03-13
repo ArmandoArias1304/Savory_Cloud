@@ -3,6 +3,8 @@ package com.aatechsolutions.elgransazon.application.service;
 import com.aatechsolutions.elgransazon.domain.entity.*;
 import com.aatechsolutions.elgransazon.domain.repository.*;
 import com.aatechsolutions.elgransazon.infrastructure.context.CompanyContext;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
@@ -54,6 +56,11 @@ public class OrderServiceImpl implements OrderService {
     private final ComplementRepository complementRepository;
     private final ReservationService reservationService;
     private final DateTimeService dateTimeService;
+
+    // Injected by Spring after construction — used to refresh stale in-session entities
+    // after REQUIRES_NEW sub-transactions update ingredient stock in isolated transactions.
+    @PersistenceContext
+    private EntityManager entityManager;
 
     // Constructor with @Lazy for ReservationService to break circular dependency
     public OrderServiceImpl(
@@ -198,7 +205,10 @@ public class OrderServiceImpl implements OrderService {
             // Deduct stock for selected complements
             deductStockForComplements(detail);
 
-            // Update item availability
+            // Refresh the item entity so updateAvailability() reads current ingredient
+            // stock from DB rather than stale values from the outer session's 1st-level
+            // cache (which pre-dates the REQUIRES_NEW sub-transactions that just ran).
+            entityManager.refresh(item);
             item.updateAvailability();
             itemMenuRepository.save(item);
 
@@ -1135,10 +1145,11 @@ public class OrderServiceImpl implements OrderService {
         // Atomic UPSERT: avoids the gap-lock deadlock that happens when two concurrent
         // transactions both do SELECT FOR UPDATE on a non-existent row and then both
         // attempt INSERT. INSERT ... ON DUPLICATE KEY UPDATE is a single atomic statement
-        // that either inserts a new row (sequence=1) or increments the existing one,
-        // holding an exclusive row lock throughout so no other transaction can race.
-        dailyOrderCounterRepository.upsertCounter(today, company.getIdCompany());
-        int nextSequence = dailyOrderCounterRepository.getLastSequence(today, company.getIdCompany());
+        // that either inserts (initialised from existing orders to survive counter-table
+        // wipes) or increments, holding an exclusive row lock so no other transaction
+        // can race. LAST_INSERT_ID() captures THIS connection's value atomically.
+        dailyOrderCounterRepository.upsertCounter(today, company.getIdCompany(), datePrefix + "%");
+        long nextSequence = dailyOrderCounterRepository.getLastInsertId();
         
         return String.format("%s%03d", datePrefix, nextSequence);
     }
@@ -1294,7 +1305,9 @@ public class OrderServiceImpl implements OrderService {
                 odc.setStockDeducted(true);
                 // DO NOT save odc here - it will be cascaded from OrderDetail -> Order
                 
-                // Update complement availability
+                // Refresh complement so updateAvailability() reads current ingredient
+                // stock from DB (not stale values from the outer session's 1st-level cache).
+                entityManager.refresh(complement);
                 complement.updateAvailability();
                 complementRepository.save(complement);
                 

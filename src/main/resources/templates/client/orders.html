@@ -614,6 +614,23 @@
 
     <!-- Cancel Order Script -->
     <script>
+      function getSwalDarkModeClasses() {
+        const isDark = document.documentElement.classList.contains("dark");
+        return isDark
+          ? {
+              popup: "rounded-2xl !bg-gray-800 !text-gray-100",
+              title: "!text-gray-100",
+              htmlContainer: "!text-gray-300",
+              confirmButton: "rounded-xl px-6 py-2.5 font-semibold",
+              cancelButton: "rounded-xl px-6 py-2.5 font-semibold",
+            }
+          : {
+              popup: "rounded-2xl",
+              confirmButton: "rounded-xl px-6 py-2.5 font-semibold",
+              cancelButton: "rounded-xl px-6 py-2.5 font-semibold",
+            };
+      }
+
       async function cancelOrder(button) {
         const orderId = button.getAttribute("data-order-id");
         const orderNumber = button.getAttribute("data-order-number");
@@ -628,16 +645,7 @@
           confirmButtonText: "Sí, cancelar",
           cancelButtonText: "No, mantener",
           reverseButtons: true,
-          background: document.documentElement.classList.contains("dark")
-            ? "#1f2937"
-            : "#ffffff",
-          color: document.documentElement.classList.contains("dark")
-            ? "#f3f4f6"
-            : "#1f2937",
-          customClass: {
-            confirmButton: "rounded-xl px-6 py-2.5 font-semibold",
-            cancelButton: "rounded-xl px-6 py-2.5 font-semibold",
-          },
+          customClass: getSwalDarkModeClasses(),
         });
 
         if (result.isConfirmed) {
@@ -660,15 +668,7 @@
                 confirmButtonColor: "#38e07b",
                 confirmButtonText: "Aceptar",
                 allowOutsideClick: false,
-                background: document.documentElement.classList.contains("dark")
-                  ? "#1f2937"
-                  : "#ffffff",
-                color: document.documentElement.classList.contains("dark")
-                  ? "#f3f4f6"
-                  : "#1f2937",
-                customClass: {
-                  confirmButton: "rounded-xl px-6 py-2.5 font-semibold",
-                },
+                customClass: getSwalDarkModeClasses(),
               });
               // Recargar la página para ver los cambios
               window.location.reload();
@@ -679,15 +679,7 @@
                 icon: "error",
                 confirmButtonColor: "#ef4444",
                 confirmButtonText: "Aceptar",
-                background: document.documentElement.classList.contains("dark")
-                  ? "#1f2937"
-                  : "#ffffff",
-                color: document.documentElement.classList.contains("dark")
-                  ? "#f3f4f6"
-                  : "#1f2937",
-                customClass: {
-                  confirmButton: "rounded-xl px-6 py-2.5 font-semibold",
-                },
+                customClass: getSwalDarkModeClasses(),
               });
             }
           } catch (error) {
@@ -698,15 +690,7 @@
               icon: "error",
               confirmButtonColor: "#ef4444",
               confirmButtonText: "Aceptar",
-              background: document.documentElement.classList.contains("dark")
-                ? "#1f2937"
-                : "#ffffff",
-              color: document.documentElement.classList.contains("dark")
-                ? "#f3f4f6"
-                : "#1f2937",
-              customClass: {
-                confirmButton: "rounded-xl px-6 py-2.5 font-semibold",
-              },
+              customClass: getSwalDarkModeClasses(),
             });
           }
         }

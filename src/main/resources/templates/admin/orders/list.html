@@ -807,10 +807,7 @@
               html: message,
               confirmButtonColor: "#38e07b",
               confirmButtonText: "Aceptar",
-              customClass: {
-                popup: "rounded-2xl",
-                confirmButton: "rounded-xl px-6 py-2.5 font-semibold",
-              },
+              customClass: getSwalDarkModeClasses(),
             }).then(() => {
               window.location.reload();
             });

@@ -26,27 +26,33 @@ public interface DailyOrderCounterRepository extends JpaRepository<DailyOrderCou
 
     /**
      * Atomically insert or increment the daily counter for a company.
-     * Uses MySQL's ON DUPLICATE KEY UPDATE to avoid the gap-lock deadlock that
-     * occurs when two concurrent transactions both do SELECT-FOR-UPDATE on a
-     * non-existent row and then both try to INSERT.
+     *
+     * On INSERT (first order of the day): initialises last_sequence to
+     *   MAX(existing order sequences for today) + 1, preventing duplicates
+     *   if the counter table was manually wiped while orders still exist.
+     * On UPDATE (duplicate key): increments last_sequence by 1.
+     *
+     * In both cases MySQL's LAST_INSERT_ID() is set per-connection to the value
+     * written, so getLastInsertId() returns the sequence owned by THIS specific
+     * transaction — not a value another concurrent transaction may have already
+     * incremented.
+     *
+     * @param prefix  LIKE pattern matching today's order numbers, e.g. 'ORD-20260313-%'
      */
     @Modifying(clearAutomatically = true)
     @Query(value =
         "INSERT INTO daily_order_counters (counter_date, company_id, last_sequence) " +
-        "VALUES (:date, :companyId, 1) " +
-        "ON DUPLICATE KEY UPDATE last_sequence = last_sequence + 1",
+        "SELECT :date, :companyId, LAST_INSERT_ID(COALESCE(MAX(CAST(SUBSTRING_INDEX(order_number, '-', -1) AS UNSIGNED)), 0) + 1) " +
+        "FROM orders WHERE company_id = :companyId AND order_number LIKE :prefix " +
+        "ON DUPLICATE KEY UPDATE last_sequence = LAST_INSERT_ID(last_sequence + 1)",
         nativeQuery = true)
-    void upsertCounter(@Param("date") LocalDate date, @Param("companyId") Long companyId);
+    void upsertCounter(@Param("date") LocalDate date, @Param("companyId") Long companyId, @Param("prefix") String prefix);
 
     /**
-     * Read back the sequence value that was just written by upsertCounter.
-     * Safe within the same REQUIRES_NEW transaction because the exclusive row lock
-     * acquired by the UPSERT prevents any other transaction from modifying the row
-     * until this transaction commits.
+     * Returns the sequence number written by THIS connection's last upsertCounter call.
+     * MySQL's LAST_INSERT_ID() is session-scoped, so concurrent transactions each
+     * see only their own assigned value — no race with getLastSequence().
      */
-    @Query(value =
-        "SELECT last_sequence FROM daily_order_counters " +
-        "WHERE counter_date = :date AND company_id = :companyId",
-        nativeQuery = true)
-    Integer getLastSequence(@Param("date") LocalDate date, @Param("companyId") Long companyId);
+    @Query(value = "SELECT LAST_INSERT_ID()", nativeQuery = true)
+    Long getLastInsertId();
 }
