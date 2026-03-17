@@ -16,11 +16,12 @@ import java.util.List;
 
 /**
  * Service for managing complement stock operations with proper transaction handling.
- * Uses PESSIMISTIC_WRITE lock to handle concurrent stock updates.
- * This ensures only one transaction can modify an ingredient at a time.
- * 
- * This mirrors the IngredientStockService pattern but is specifically for
- * complement ingredient deductions and returns.
+ *
+ * <p>Delegates the actual DB work to {@link IngredientStockTxHelper} which runs
+ * each operation in its own {@code REQUIRES_NEW} transaction with a
+ * {@code PESSIMISTIC_WRITE} lock.  This avoids the proxy self-call problem that
+ * would occur if the {@code @Transactional(REQUIRES_NEW)} methods lived in this
+ * same class.</p>
  */
 @Service
 @RequiredArgsConstructor
@@ -28,194 +29,114 @@ import java.util.List;
 public class ComplementStockService {
 
     private final IngredientRepository ingredientRepository;
-    
+    private final IngredientStockTxHelper txHelper;
+
     private static final int MAX_RETRY_ATTEMPTS = 5;
     private static final long BASE_RETRY_DELAY_MS = 100;
 
     /**
      * Deduct stock for a complement's ingredients with retry mechanism.
-     * Uses pessimistic locking to prevent concurrent modification issues.
-     * 
+     *
      * @param complementIngredients List of complement ingredients to deduct from
-     * @param complementQuantity Number of complement portions to deduct
+     * @param complementQuantity    Number of complement portions to deduct
+     * @throws IllegalStateException if any ingredient has insufficient stock
      */
     public void deductStockForComplement(List<ComplementIngredient> complementIngredients, int complementQuantity) {
         for (ComplementIngredient ci : complementIngredients) {
             BigDecimal quantityToDeduct = ci.getQuantity().multiply(BigDecimal.valueOf(complementQuantity));
             Long ingredientId = ci.getIngredient().getIdIngredient();
-            
             deductStockWithRetry(ingredientId, quantityToDeduct, ci.getUnit());
         }
     }
 
     /**
      * Return stock for a complement's ingredients with retry mechanism.
-     * Uses pessimistic locking to prevent concurrent modification issues.
-     * 
+     *
      * @param complementIngredients List of complement ingredients to return to
-     * @param complementQuantity Number of complement portions to return
+     * @param complementQuantity    Number of complement portions to return
      */
     public void returnStockForComplement(List<ComplementIngredient> complementIngredients, int complementQuantity) {
         for (ComplementIngredient ci : complementIngredients) {
             BigDecimal quantityToReturn = ci.getQuantity().multiply(BigDecimal.valueOf(complementQuantity));
             Long ingredientId = ci.getIngredient().getIdIngredient();
-            
             returnStockWithRetry(ingredientId, quantityToReturn, ci.getUnit());
         }
     }
 
     /**
-     * Deduct stock from an ingredient with retry mechanism.
-     * 
-     * @param ingredientId The ID of the ingredient to update
-     * @param quantityToDeduct The quantity to subtract from stock
-     * @param unit The unit of measure (for logging)
+     * Deduct stock from an ingredient with retry on lock conflicts.
+     * Delegates to {@link IngredientStockTxHelper#deduct} (REQUIRES_NEW + SELECT FOR UPDATE).
+     *
+     * @throws IllegalStateException if stock is insufficient (propagates immediately, no retry)
      */
     public void deductStockWithRetry(Long ingredientId, BigDecimal quantityToDeduct, String unit) {
-        int attempts = 0;
-        Exception lastException = null;
-        
-        while (attempts < MAX_RETRY_ATTEMPTS) {
-            try {
-                deductStockInNewTransaction(ingredientId, quantityToDeduct, unit);
-                return; // Success
-                
-            } catch (ObjectOptimisticLockingFailureException | PessimisticLockingFailureException e) {
-                attempts++;
-                lastException = e;
-                log.warn("Lock conflict for complement ingredient {} during deduction, attempt {}/{}. Retrying...", 
-                        ingredientId, attempts, MAX_RETRY_ATTEMPTS);
-                
-                if (attempts >= MAX_RETRY_ATTEMPTS) {
-                    log.error("Failed to deduct complement ingredient {} after {} attempts", ingredientId, MAX_RETRY_ATTEMPTS);
-                    break;
-                }
-                
-                try {
-                    long delay = BASE_RETRY_DELAY_MS * attempts + (long)(Math.random() * 100);
-                    log.debug("Waiting {}ms before retry...", delay);
-                    Thread.sleep(delay);
-                } catch (InterruptedException ie) {
-                    Thread.currentThread().interrupt();
-                    throw new IllegalStateException("Operación interrumpida", ie);
-                }
-            }
-        }
-        
-        throw new IllegalStateException(
-            "Error de concurrencia al descontar stock para complemento. Por favor intente de nuevo.", 
-            lastException);
+        retry(() -> txHelper.deduct(ingredientId, quantityToDeduct, unit),
+              "deduct complement stock for ingredient " + ingredientId,
+              "Error de concurrencia al descontar stock para complemento. Por favor intente de nuevo.");
     }
 
     /**
-     * Return stock to an ingredient with retry mechanism.
-     * 
-     * @param ingredientId The ID of the ingredient to update
-     * @param quantityToReturn The quantity to add back to stock
-     * @param unit The unit of measure (for logging)
+     * Return stock to an ingredient with retry on lock conflicts.
+     * Delegates to {@link IngredientStockTxHelper#returnStock} (REQUIRES_NEW + SELECT FOR UPDATE).
      */
     public void returnStockWithRetry(Long ingredientId, BigDecimal quantityToReturn, String unit) {
-        int attempts = 0;
+        retry(() -> txHelper.returnStock(ingredientId, quantityToReturn, unit),
+              "return complement stock for ingredient " + ingredientId,
+              "Error de concurrencia al devolver stock de complemento. Por favor intente de nuevo.");
+    }
+
+    // -----------------------------------------------------------------------
+    // Deprecated delegating wrappers (kept for backward compatibility)
+    // -----------------------------------------------------------------------
+
+    /** @deprecated Delegate to {@link #deductStockWithRetry} instead. */
+    @Deprecated
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void deductStockInNewTransaction(Long ingredientId, BigDecimal quantityToDeduct, String unit) {
+        txHelper.deduct(ingredientId, quantityToDeduct, unit);
+    }
+
+    /** @deprecated Delegate to {@link #returnStockWithRetry} instead. */
+    @Deprecated
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void returnStockInNewTransaction(Long ingredientId, BigDecimal quantityToReturn, String unit) {
+        txHelper.returnStock(ingredientId, quantityToReturn, unit);
+    }
+
+    // -----------------------------------------------------------------------
+    // Private helpers
+    // -----------------------------------------------------------------------
+
+    /**
+     * Retry {@code action} up to {@link #MAX_RETRY_ATTEMPTS} times when a lock
+     * conflict occurs.  Business-logic {@link IllegalStateException}s propagate
+     * immediately without retry.
+     */
+    private void retry(Runnable action, String description, String concurrencyMessage) {
         Exception lastException = null;
-        
-        while (attempts < MAX_RETRY_ATTEMPTS) {
+
+        for (int attempt = 1; attempt <= MAX_RETRY_ATTEMPTS; attempt++) {
             try {
-                returnStockInNewTransaction(ingredientId, quantityToReturn, unit);
-                return; // Success
-                
+                action.run();
+                return; // success
             } catch (ObjectOptimisticLockingFailureException | PessimisticLockingFailureException e) {
-                attempts++;
                 lastException = e;
-                log.warn("Lock conflict for complement ingredient {}, attempt {}/{}. Retrying...",
-                        ingredientId, attempts, MAX_RETRY_ATTEMPTS);
-                
-                if (attempts >= MAX_RETRY_ATTEMPTS) {
-                    log.error("Failed to update complement ingredient {} after {} attempts", ingredientId, MAX_RETRY_ATTEMPTS);
-                    break;
-                }
-                
+                log.warn("Lock conflict on {}, attempt {}/{}", description, attempt, MAX_RETRY_ATTEMPTS);
+
+                if (attempt == MAX_RETRY_ATTEMPTS) break;
+
                 try {
-                    long delay = BASE_RETRY_DELAY_MS * attempts + (long)(Math.random() * 100);
-                    log.debug("Waiting {}ms before retry...", delay);
+                    long delay = BASE_RETRY_DELAY_MS * attempt + (long) (Math.random() * 50);
                     Thread.sleep(delay);
                 } catch (InterruptedException ie) {
                     Thread.currentThread().interrupt();
                     throw new IllegalStateException("Operación interrumpida", ie);
                 }
             }
-        }
-        
-        throw new IllegalStateException(
-            "Error de concurrencia al devolver stock de complemento. Por favor intente de nuevo.", 
-            lastException);
-    }
-
-    /**
-     * Perform the actual stock deduction in a new transaction with pessimistic lock.
-     */
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void deductStockInNewTransaction(Long ingredientId, BigDecimal quantityToDeduct, String unit) {
-        // Fetch ingredient with pessimistic lock (SELECT FOR UPDATE)
-        Ingredient ingredient = ingredientRepository.findByIdWithLock(ingredientId)
-            .orElseThrow(() -> new IllegalArgumentException(
-                "Ingrediente no encontrado con ID: " + ingredientId));
-        
-        BigDecimal currentStock = ingredient.getCurrentStock() != null 
-            ? ingredient.getCurrentStock() 
-            : BigDecimal.ZERO;
-
-        if (currentStock.compareTo(quantityToDeduct) < 0) {
-            throw new IllegalStateException(
-                String.format("Stock insuficiente de '%s' para complemento. Requerido: %s %s, Disponible: %s %s",
-                              ingredient.getName(),
-                              quantityToDeduct.stripTrailingZeros().toPlainString(), unit,
-                              currentStock.stripTrailingZeros().toPlainString(), unit));
+            // IllegalStateException (e.g. "stock insuficiente") propagates immediately
         }
 
-        BigDecimal newStock = currentStock.subtract(quantityToDeduct);
-        ingredient.setCurrentStock(newStock);
-        
-        ingredientRepository.save(ingredient);
-
-        log.debug("Stock deducted for complement ingredient: {} ({} {}). New stock: {}", 
-                 ingredient.getName(),
-                 quantityToDeduct.stripTrailingZeros().toPlainString(),
-                 unit,
-                 newStock.stripTrailingZeros().toPlainString());
-    }
-
-    /**
-     * Perform the actual stock return in a new transaction with pessimistic lock.
-     */
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void returnStockInNewTransaction(Long ingredientId, BigDecimal quantityToReturn, String unit) {
-        // Fetch ingredient with pessimistic lock (SELECT FOR UPDATE)
-        Ingredient ingredient = ingredientRepository.findByIdWithLock(ingredientId)
-            .orElseThrow(() -> new IllegalArgumentException(
-                "Ingrediente no encontrado con ID: " + ingredientId));
-        
-        BigDecimal currentStock = ingredient.getCurrentStock() != null 
-            ? ingredient.getCurrentStock() 
-            : BigDecimal.ZERO;
-
-        BigDecimal newStock = currentStock.add(quantityToReturn);
-        
-        // If returned stock would exceed maxStock, update maxStock to match
-        BigDecimal maxStock = ingredient.getMaxStock();
-        if (maxStock != null && newStock.compareTo(maxStock) > 0) {
-            log.info("Complement stock return for ingredient '{}': updating maxStock from {} to {} (returned stock exceeds previous max)", 
-                     ingredient.getName(), maxStock, newStock);
-            ingredient.setMaxStock(newStock);
-        }
-        
-        ingredient.setCurrentStock(newStock);
-        
-        ingredientRepository.save(ingredient);
-
-        log.debug("Stock returned for complement ingredient: {} ({} {}). New stock: {}", 
-                 ingredient.getName(),
-                 quantityToReturn.stripTrailingZeros().toPlainString(),
-                 unit,
-                 newStock.stripTrailingZeros().toPlainString());
+        throw new IllegalStateException(concurrencyMessage, lastException);
     }
 }
+

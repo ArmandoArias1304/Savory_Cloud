@@ -7,6 +7,7 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.dao.CannotAcquireLockException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -52,6 +53,7 @@ public class OrderServiceImpl implements OrderService {
     private final WebSocketNotificationService wsNotificationService;
     private final EmployeeMonthlyStatsService monthlyStatsService;
     private final DailyOrderCounterRepository dailyOrderCounterRepository;
+    private final DailyOrderCounterService dailyOrderCounterService;
     private final OrderDetailComplementRepository orderDetailComplementRepository;
     private final ComplementRepository complementRepository;
     private final ReservationService reservationService;
@@ -76,6 +78,7 @@ public class OrderServiceImpl implements OrderService {
             WebSocketNotificationService wsNotificationService,
             EmployeeMonthlyStatsService monthlyStatsService,
             DailyOrderCounterRepository dailyOrderCounterRepository,
+            DailyOrderCounterService dailyOrderCounterService,
             OrderDetailComplementRepository orderDetailComplementRepository,
             ComplementRepository complementRepository,
             @Lazy ReservationService reservationService,
@@ -92,6 +95,7 @@ public class OrderServiceImpl implements OrderService {
         this.wsNotificationService = wsNotificationService;
         this.monthlyStatsService = monthlyStatsService;
         this.dailyOrderCounterRepository = dailyOrderCounterRepository;
+        this.dailyOrderCounterService = dailyOrderCounterService;
         this.orderDetailComplementRepository = orderDetailComplementRepository;
         this.complementRepository = complementRepository;
         this.reservationService = reservationService;
@@ -134,7 +138,11 @@ public class OrderServiceImpl implements OrderService {
         // 5. Validate items are active
         validateItemsActive(orderDetails);
 
-        // 6. Validate stock availability for all items (FIRST PRIORITY - material constraint)
+        // 6. Validate stock availability for all items (optimistic pre-check, no lock).
+        // This catches obvious stock shortfalls cheaply before we generate an order number
+        // or acquire any locks.  Under concurrency a race may allow this check to pass for
+        // two threads at the same time; the authoritative check happens inside the
+        // REQUIRES_NEW+PESSIMISTIC_WRITE lock in deductStockForItem / deductStockForComplements.
         Map<Long, String> stockErrors = validateStock(orderDetails);
         if (!stockErrors.isEmpty()) {
             throw new IllegalStateException(
@@ -199,8 +207,19 @@ public class OrderServiceImpl implements OrderService {
                     requiresBaristaPreparation ? "barista" : "chef");
             }
 
-            // Deduct stock from ingredients
-            deductStockForItem(item, detail.getQuantity());
+            // Deduct stock from ingredients (authoritative: runs under PESSIMISTIC_WRITE lock in REQUIRES_NEW)
+            try {
+                deductStockForItem(item, detail.getQuantity());
+            } catch (IllegalStateException ex) {
+                // Stock ran out between the pre-check and the lock; surface as user-friendly message
+                if (ex.getMessage() != null && ex.getMessage().startsWith("Stock insuficiente")) {
+                    throw new IllegalStateException(
+                        "¡Lo sentimos! No tenemos suficiente stock de los siguientes items: " +
+                        item.getName() +
+                        ". ¡Te invitamos a seguir descubriendo las deliciosas opciones de nuestro menú!", ex);
+                }
+                throw ex;
+            }
             
             // Deduct stock for selected complements
             deductStockForComplements(detail);
@@ -1142,16 +1161,46 @@ public class OrderServiceImpl implements OrderService {
                                          today.getMonthValue(), 
                                          today.getDayOfMonth());
 
-        // Atomic UPSERT: avoids the gap-lock deadlock that happens when two concurrent
-        // transactions both do SELECT FOR UPDATE on a non-existent row and then both
-        // attempt INSERT. INSERT ... ON DUPLICATE KEY UPDATE is a single atomic statement
-        // that either inserts (initialised from existing orders to survive counter-table
-        // wipes) or increments, holding an exclusive row lock so no other transaction
-        // can race. LAST_INSERT_ID() captures THIS connection's value atomically.
-        dailyOrderCounterRepository.upsertCounter(today, company.getIdCompany(), datePrefix + "%");
-        long nextSequence = dailyOrderCounterRepository.getLastInsertId();
-        
+        // Two-step anti-deadlock counter update:
+        //
+        // Step 1 – INSERT IGNORE (no-op when row exists).
+        //   Initialises last_sequence from MAX(existing sequences) to survive
+        //   manual counter-table wipes. INSERT IGNORE never upgrades to an
+        //   exclusive lock on a duplicate key, avoiding the S→X deadlock that
+        //   INSERT … ON DUPLICATE KEY UPDATE causes under high concurrency.
+        //
+        // Step 2 – Atomic row-level UPDATE.
+        //   LAST_INSERT_ID(last_sequence + 1) both writes the new value and
+        //   captures it in this session's LAST_INSERT_ID(), which is then read
+        //   by getLastInsertId() — strictly per-connection, so concurrent
+        //   transactions each see only their own assigned sequence.
+        // Phase 1: ensure the row exists in its own committed transaction.
+        // Fast path (row present): returns immediately. Slow path: reads MAX from
+        // orders (read-only, no INSERT pressure) then does INSERT IGNORE VALUES
+        // (no cross-table SELECT → no gap-lock contention with other inserts).
+        // Phase 2: atomic increment in the same REQUIRES_NEW transaction.
+        // Combining both phases into one sub-transaction reduces connection pool
+        // pressure: 2 connections per thread (outer + sub-tx) instead of 3.
+        long nextSequence = ensureAndIncrementWithRetry(today, company.getIdCompany(), datePrefix + "%");
+
         return String.format("%s%03d", datePrefix, nextSequence);
+    }
+
+    /** Retries ensureAndIncrement up to 5 times on transient deadlock. */
+    private long ensureAndIncrementWithRetry(LocalDate date, Long companyId, String prefix) {
+        CannotAcquireLockException last = null;
+        for (int attempt = 1; attempt <= 5; attempt++) {
+            try {
+                return dailyOrderCounterService.ensureAndIncrement(date, companyId, prefix);
+            } catch (CannotAcquireLockException e) {
+                last = e;
+                log.warn("counter deadlock (attempt {}): {}", attempt, e.getMessage());
+                if (attempt < 5) {
+                    try { Thread.sleep(5L * attempt); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+                }
+            }
+        }
+        throw last;
     }
 
     @Override

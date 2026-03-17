@@ -351,9 +351,15 @@ public class ClientController {
         String username = authentication.getName();
         log.info("Customer {} creating new order", username);
         
+        // Use username + companyId as key to avoid cross-company collisions in multi-tenant env.
+        // Two customers from different companies can share the same email — using only username
+        // would incorrectly block one of them when both submit simultaneously.
+        Long companyId = CompanyContext.getCurrentCompanyId();
+        String submissionKey = username + "_" + companyId;
+        
         // Prevent duplicate submissions: if this customer already has an order in progress, reject
-        if (!activeOrderSubmissions.add(username)) {
-            log.warn("Duplicate order submission blocked for customer: {}", username);
+        if (!activeOrderSubmissions.add(submissionKey)) {
+            log.warn("Duplicate order submission blocked for customer: {} (company: {})", username, companyId);
             return ResponseEntity.status(429).body(Map.of(
                 "success", false,
                 "message", "Ya hay un pedido en proceso. Por favor espere."
@@ -735,7 +741,7 @@ public class ClientController {
             ));
         } finally {
             // Always release the submission lock
-            activeOrderSubmissions.remove(username);
+            activeOrderSubmissions.remove(submissionKey);
         }
     }
 
