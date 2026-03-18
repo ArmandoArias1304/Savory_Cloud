@@ -456,6 +456,10 @@ public class BackupServiceImpl implements BackupService {
             if (dbPassword != null && !dbPassword.isEmpty()) {
                 command.add("--password=" + dbPassword);
             }
+            // Disable SSL: the MySQL container uses a self-signed certificate that
+            // the Alpine mysql-client rejects. Both containers are on the same
+            // private Docker network so the connection is already isolated.
+            command.add("--ssl-mode=DISABLED");
             command.add("--single-transaction");
             command.add("--routines");
             command.add("--triggers");
