@@ -295,7 +295,31 @@ public class BackupServiceImpl implements BackupService {
     }
     
     // ===================== Private Methods =====================
-    
+
+    /**
+     * Detects whether the given mysqldump binary is MariaDB or MySQL.
+     * MariaDB client (installed via Alpine apk mysql-client) reports "mariadb"
+     * in its --version output and uses --skip-ssl.
+     * The official MySQL client uses --ssl-mode=DISABLED.
+     */
+    private String detectSslFlag(String mysqldumpPath) {
+        try {
+            Process p = new ProcessBuilder(mysqldumpPath, "--version")
+                    .redirectErrorStream(true)
+                    .start();
+            String version = new String(p.getInputStream().readAllBytes()).toLowerCase();
+            p.waitFor();
+            boolean isMariaDb = version.contains("mariadb");
+            log.debug("mysqldump client: {}, ssl flag: {}",
+                    isMariaDb ? "MariaDB" : "MySQL",
+                    isMariaDb ? "--skip-ssl" : "--ssl-mode=DISABLED");
+            return isMariaDb ? "--skip-ssl" : "--ssl-mode=DISABLED";
+        } catch (Exception e) {
+            log.warn("Could not detect mysqldump client type, defaulting to --ssl-mode=DISABLED");
+            return "--ssl-mode=DISABLED";
+        }
+    }
+
     /**
      * Find mysqldump executable in common installation paths
      */
@@ -456,12 +480,11 @@ public class BackupServiceImpl implements BackupService {
             if (dbPassword != null && !dbPassword.isEmpty()) {
                 command.add("--password=" + dbPassword);
             }
-            // Disable SSL: the MySQL container uses a self-signed certificate that
-            // the Alpine mysql-client (actually MariaDB client) rejects.
-            // MariaDB uses --skip-ssl instead of MySQL's --ssl-mode=DISABLED.
-            // Both containers share the same private Docker network so the
-            // connection is already isolated — no SSL needed.
-            command.add("--skip-ssl");
+            // Disable SSL: both containers share the same private Docker network
+            // so encryption is unnecessary. The flag differs by client:
+            //   MariaDB client (Alpine apk mysql-client) → --skip-ssl
+            //   MySQL client (Windows / official MySQL) → --ssl-mode=DISABLED
+            command.add(detectSslFlag(mysqldumpPath));
             command.add("--single-transaction");
             command.add("--routines");
             command.add("--triggers");

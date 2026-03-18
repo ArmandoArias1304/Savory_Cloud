@@ -47,6 +47,9 @@ services:
   mysqldb:
     image: mysql:8.0.33
     container_name: elgransazon_db
+    # Use mysql_native_password so MariaDB client (Alpine) can authenticate for backups.
+    # caching_sha2_password (MySQL 8 default) is not supported by mariadb-dump.
+    command: --default-authentication-plugin=mysql_native_password
     ports:
       # Acceso externo para tu Workbench/DBeaver en el puerto 3307
       - "3307:${DB_PORT}"
