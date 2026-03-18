@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="es" xmlns:th="http://www.thymeleaf.org">
   <head>
     <meta charset="utf-8" />
@@ -747,11 +747,9 @@
             // Update promotion badges on menu items
             updatePromotionBadges();
           } else {
-            console.warn("Failed to load promotions:", response.status);
             promotionsLoaded = true; // Mark as loaded even if failed to avoid blocking
           }
         } catch (error) {
-          console.error("Error loading promotions:", error);
           promotionsLoaded = true; // Mark as loaded even if failed to avoid blocking
         }
       }
@@ -825,7 +823,6 @@
           }
           return 9999; // Default if error
         } catch (error) {
-          console.error("Error fetching max quantity:", error);
           return 9999;
         }
       }
@@ -870,7 +867,6 @@
         try {
           localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart));
         } catch (e) {
-          console.warn("Could not save cart to localStorage:", e);
         }
       }
 
@@ -883,7 +879,6 @@
             return true;
           }
         } catch (e) {
-          console.warn("Could not load cart from localStorage:", e);
         }
         return false;
       }
@@ -893,7 +888,6 @@
         try {
           localStorage.removeItem(CART_STORAGE_KEY);
         } catch (e) {
-          console.warn("Could not clear cart from localStorage:", e);
         }
       }
 
@@ -1053,7 +1047,6 @@
             totalSaucesAvailable: 0,
           };
         } catch (error) {
-          console.error("Error fetching complements:", error);
           return {
             sauces: [],
             complements: [],
@@ -3367,9 +3360,6 @@
       function submitOrder() {
         // Prevent duplicate submissions
         if (isSubmitting) {
-          console.warn(
-            "Order submission already in progress, ignoring duplicate click",
-          );
           return;
         }
 
@@ -3556,7 +3546,6 @@
             // Reset submission guard on error
             isSubmitting = false;
             if (submitBtn) submitBtn.disabled = false;
-            console.error("Error creating order:", error);
             Swal.fire({
               title: "Error",
               text: "No se pudo crear el pedido. Intenta nuevamente.",

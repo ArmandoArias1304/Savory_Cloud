@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="es" xmlns:th="http://www.thymeleaf.org">
   <head>
     <meta charset="utf-8" />
@@ -621,7 +621,6 @@
             return data.maxQuantity;
           }
         } catch (error) {
-          console.error("Error fetching max quantity:", error);
         }
         return 9999; // Default si hay error
       }
@@ -685,11 +684,9 @@
             // Update promotion badges on menu items
             updatePromotionBadges();
           } else {
-            console.warn("Failed to load promotions:", response.status);
             promotionsLoaded = true; // Mark as loaded even if failed to avoid blocking
           }
         } catch (error) {
-          console.error("Error loading promotions:", error);
           promotionsLoaded = true; // Mark as loaded even if failed to avoid blocking
         }
       }
@@ -897,7 +894,6 @@
             totalSaucesAvailable: 0,
           };
         } catch (error) {
-          console.error("Error fetching complements:", error);
           return {
             sauces: [],
             complements: [],
@@ -3089,9 +3085,6 @@
       function submitOrder() {
         // Prevent duplicate submissions
         if (isSubmitting) {
-          console.warn(
-            "Order submission already in progress, ignoring duplicate click",
-          );
           return;
         }
 
@@ -3254,7 +3247,6 @@
             // Reset submission guard on error
             isSubmitting = false;
             if (submitBtn) submitBtn.disabled = false;
-            console.error("Error:", error);
             Swal.fire({
               icon: "error",
               background: document.documentElement.classList.contains("dark")

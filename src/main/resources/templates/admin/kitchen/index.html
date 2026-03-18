@@ -609,7 +609,6 @@
             });
           },
           function (error) {
-            console.error("WebSocket Error: ", error);
             updateConnectionStatus(false);
             attemptReconnect();
           },
@@ -626,7 +625,6 @@
           reconnectAttempts++;
           setTimeout(connectWebSocket, RECONNECT_DELAY);
         } else {
-          console.error("Max reconnection attempts reached");
           showNotification(
             "Conexión perdida",
             "No se pudo reconectar al servidor. Por favor recarga la página.",

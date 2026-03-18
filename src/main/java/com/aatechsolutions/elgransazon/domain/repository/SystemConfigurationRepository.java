@@ -3,9 +3,11 @@ package com.aatechsolutions.elgransazon.domain.repository;
 import com.aatechsolutions.elgransazon.domain.entity.Company;
 import com.aatechsolutions.elgransazon.domain.entity.SystemConfiguration;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
 
@@ -52,4 +54,13 @@ public interface SystemConfigurationRepository extends JpaRepository<SystemConfi
      */
     @Query("SELECT sc FROM SystemConfiguration sc WHERE sc.company.idCompany = :companyId")
     Optional<SystemConfiguration> findByCompanyId(@Param("companyId") Long companyId);
+
+    /**
+     * Bulk-delete a system configuration by ID using JPQL.
+     * Bypasses entity lifecycle (no cascade/orphan-removal) — call after business hours are deleted.
+     */
+    @Modifying
+    @Transactional
+    @Query("DELETE FROM SystemConfiguration sc WHERE sc.id = :id")
+    void bulkDeleteById(@Param("id") Long id);
 }

@@ -37,6 +37,9 @@ services:
     depends_on:
       mysqldb:
         condition: service_healthy
+    volumes:
+      # Persists database backups across container restarts and deployments
+      - backup_data:/root/savorycloud_backups
     networks:
       - elgransazon-network
 
@@ -64,6 +67,7 @@ services:
 
 volumes:
   mysql_data:
+  backup_data:
 
 networks:
   elgransazon-network:

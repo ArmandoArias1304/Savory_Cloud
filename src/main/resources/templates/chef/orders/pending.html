@@ -936,7 +936,6 @@
             }
           })
           .catch((error) => {
-            console.error("Error:", error);
             showNotification("Error", "Error al cambiar el estado", "error");
             resetSlider(slider);
           });
@@ -976,7 +975,6 @@
             }
           })
           .catch((error) => {
-            console.error("Error:", error);
             showNotification(
               "Error",
               "Error al cambiar el estado del item",
@@ -1038,7 +1036,6 @@
             });
           },
           function (error) {
-            console.error("WebSocket Error: ", error);
             updateConnectionStatus(false);
             attemptReconnect();
           },
@@ -1055,7 +1052,6 @@
           reconnectAttempts++;
           setTimeout(connectWebSocket, RECONNECT_DELAY);
         } else {
-          console.error("Max reconnection attempts reached");
           showNotification(
             "Conexión perdida",
             "No se pudo reconectar al servidor. Por favor recarga la página.",
@@ -1244,15 +1240,12 @@
             .then(() => {
             })
             .catch((error) => {
-              console.warn("⚠️ Sound playback prevented:", error.message);
             });
 
           // Handle audio errors
           audio.onerror = function (e) {
-            console.error("❌ Audio file not found or failed to load:", e);
           };
         } catch (e) {
-          console.error("❌ Error creating audio:", e);
         }
       }
 

@@ -407,7 +407,8 @@
             th:text="${systemConfig != null and systemConfig.restaurantName != null and !systemConfig.restaurantName.isEmpty()} ? ${systemConfig.restaurantName} : ''"
             ></span
           >
-          &copy; 2024
+          &copy; <span id="footerYear">2024</span>
+          <script>document.getElementById('footerYear').textContent = new Date().getFullYear();</script>
         </p>
       </div>
     </div>

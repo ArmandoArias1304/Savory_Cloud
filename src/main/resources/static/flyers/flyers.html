@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
@@ -2614,7 +2614,6 @@ Hamburguesas Artesanales</textarea
     <script>
       // Esperar a que el DOM esté completamente cargado
       document.addEventListener("DOMContentLoaded", function () {
-        console.log("DOM cargado - Inicializando editor de flyers");
 
         // Referencias a elementos
         const btnEdit = document.getElementById("btnEdit");
@@ -2632,13 +2631,6 @@ Hamburguesas Artesanales</textarea
         let subtitleFont = "Montserrat";
         let topRightFont = "Montserrat";
 
-        console.log("Elementos principales encontrados:", {
-          btnEdit: !!btnEdit,
-          btnSave: !!btnSave,
-          btnDownload: !!btnDownload,
-          editMode: !!editMode,
-          flyerCanvas: !!flyerCanvas,
-        });
 
         // CONTROLES DEL TEXTO SUPERIOR DERECHO
         document
@@ -3361,159 +3353,88 @@ Hamburguesas Artesanales</textarea
         // TOGGLE PATRÓN DE ONDAS Y SELECTOR
         let selectedWavePattern = 1;
 
-        console.log("═══════════════════════════════════════");
-        console.log("⚙️ INICIALIZANDO SISTEMA DE PATRONES");
-        console.log("═══════════════════════════════════════");
 
         const checkboxPattern = document.getElementById("showWavyPattern");
-        console.log("📋 Estado inicial del checkbox:");
-        console.log("   - Checkbox encontrado:", !!checkboxPattern);
-        console.log("   - Checked:", checkboxPattern?.checked);
-        console.log("   - Display:", checkboxPattern?.style.display);
 
         if (checkboxPattern) {
           checkboxPattern.addEventListener("change", function (e) {
-            console.log("═══════════════════════════════════════");
-            console.log("☑️ CHECKBOX CAMBIADO");
-            console.log("   - Nuevo estado:", e.target.checked);
-            console.log("   - Patrón actual:", selectedWavePattern);
             applyWavePattern(e.target.checked, selectedWavePattern);
           });
         } else {
-          console.error("❌ ERROR: Checkbox showWavyPattern NO encontrado!");
         }
 
         // SELECTOR DE PATRÓN DE ONDAS
         const patternPreviews = document.querySelectorAll(
           ".wave-pattern-preview",
         );
-        console.log("🔍 Patrones encontrados:", patternPreviews.length);
 
         patternPreviews.forEach((preview, index) => {
           const patternNum = preview.getAttribute("data-pattern");
-          console.log(`   Patrón ${index + 1}: data-pattern="${patternNum}"`);
 
           preview.addEventListener("click", function () {
-            console.log("🖱️ CLICK en patrón!");
-            console.log("   - Elemento clickeado:", this);
-            console.log(
-              "   - data-pattern:",
-              this.getAttribute("data-pattern"),
-            );
 
             // Remover active de todos
             document.querySelectorAll(".wave-pattern-preview").forEach((p) => {
-              console.log("   - Removiendo active de:", p);
               p.classList.remove("active");
             });
 
             // Agregar active al seleccionado
             this.classList.add("active");
-            console.log("   - Active agregado a:", this);
 
             // Obtener el número de patrón
             selectedWavePattern = parseInt(this.getAttribute("data-pattern"));
-            console.log(
-              "   - selectedWavePattern actualizado a:",
-              selectedWavePattern,
-            );
 
             // Si el checkbox está marcado, aplicar el patrón inmediatamente
             const checkbox = document.getElementById("showWavyPattern");
-            console.log("   - Checkbox encontrado:", !!checkbox);
-            console.log("   - Checkbox checked:", checkbox?.checked);
 
             if (checkbox && checkbox.checked) {
-              console.log("   ✅ Checkbox marcado, aplicando patrón...");
               applyWavePattern(true, selectedWavePattern);
             } else {
-              console.log("   ⚠️ Checkbox NO marcado o no encontrado");
             }
           });
         });
 
         function applyWavePattern(show, pattern) {
-          console.log("═══════════════════════════════════════");
-          console.log("🎨 applyWavePattern INICIADO");
-          console.log("   - show:", show);
-          console.log("   - pattern:", pattern);
 
           const patternSvg = document.getElementById("backgroundPatternSvg");
           const patternRect = document.getElementById("patternRect");
 
-          console.log("   - patternSvg encontrado:", !!patternSvg);
-          console.log("   - patternRect encontrado:", !!patternRect);
 
           if (!patternSvg || !patternRect) {
-            console.error("❌ Pattern SVG elements not found");
-            console.log("   patternSvg:", patternSvg);
-            console.log("   patternRect:", patternRect);
             return;
           }
 
           if (!show) {
-            console.log("🚫 Ocultando patrón");
             patternSvg.style.display = "none";
-            console.log("═══════════════════════════════════════");
             return;
           }
 
-          console.log("📝 Estado ANTES del cambio:");
-          console.log("   - display:", patternSvg.style.display);
-          console.log("   - fill actual:", patternRect.getAttribute("fill"));
 
           // Cambiar el patrón
           const newFill = `url(#pattern${pattern})`;
-          console.log("   - fill nuevo:", newFill);
           patternRect.setAttribute("fill", newFill);
 
-          console.log("📝 Estado DESPUÉS del setAttribute:");
-          console.log(
-            "   - fill establecido:",
-            patternRect.getAttribute("fill"),
-          );
 
           // Forzar re-render del SVG completo
-          console.log("🔄 Forzando re-render...");
-          console.log("   - Ocultando SVG...");
           patternSvg.style.display = "none";
 
-          console.log("   - Trigger reflow...");
           const height = patternSvg.offsetHeight;
-          console.log("   - offsetHeight:", height);
 
-          console.log("   - Mostrando SVG...");
           patternSvg.style.display = "block";
 
-          console.log("📝 Estado FINAL:");
-          console.log("   - display:", patternSvg.style.display);
-          console.log("   - fill:", patternRect.getAttribute("fill"));
 
           // Verificar que el patrón existe
           const patternElement = document.getElementById(`pattern${pattern}`);
-          console.log(
-            "   - Patrón #pattern" + pattern + " existe:",
-            !!patternElement,
-          );
 
-          console.log(`✅ Patrón aplicado: pattern${pattern}`);
-          console.log("═══════════════════════════════════════");
         }
 
         // Aplicar patrón inicial cuando el DOM esté listo
         setTimeout(() => {
-          console.log("═══════════════════════════════════════");
-          console.log("🚀 APLICANDO PATRÓN INICIAL");
           const checkbox = document.getElementById("showWavyPattern");
-          console.log("   - Checkbox encontrado:", !!checkbox);
-          console.log("   - Checkbox checked:", checkbox?.checked);
           if (checkbox && checkbox.checked) {
-            console.log("   - Aplicando patrón 1 por defecto...");
             applyWavePattern(true, 1);
           } else {
-            console.log("   - Checkbox no marcado, no se aplica patrón");
           }
-          console.log("═══════════════════════════════════════");
         }, 100);
 
         // TOGGLE DECORACIONES
@@ -3600,7 +3521,6 @@ Hamburguesas Artesanales</textarea
                 btnDownload.disabled = false;
               })
               .catch((error) => {
-                console.error("Error al generar imagen:", error);
                 alert(
                   "Error al generar la imagen. Por favor intenta de nuevo.",
                 );

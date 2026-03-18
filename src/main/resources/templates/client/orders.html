@@ -683,7 +683,6 @@
               });
             }
           } catch (error) {
-            console.error("Error cancelling order:", error);
             await Swal.fire({
               title: "Error",
               text: "Ocurrió un error al cancelar el pedido",
@@ -729,7 +728,6 @@
             );
           },
           function (error) {
-            console.error("❌ WebSocket Error:", error);
             setTimeout(connectClientOrdersWebSocket, 5000);
           },
         );

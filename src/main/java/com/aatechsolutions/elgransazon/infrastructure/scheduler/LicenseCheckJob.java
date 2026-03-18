@@ -1,10 +1,10 @@
 package com.aatechsolutions.elgransazon.infrastructure.scheduler;
 
 import com.aatechsolutions.elgransazon.application.service.LicenseService;
-import com.aatechsolutions.elgransazon.domain.entity.SystemLicense;
+//import com.aatechsolutions.elgransazon.domain.entity.SystemLicense;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.scheduling.annotation.Scheduled;
+//import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 /**
@@ -16,53 +16,55 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class LicenseCheckJob {
 
-    private final LicenseService licenseService;
+    //private final LicenseService licenseService;
 
     /**
      * Check license status daily at 9:00 AM
      * Cron expression: second minute hour day month weekday
+     *
+     * COMMENTED OUT to verify that LicenseValidationFilter alone is sufficient
+     * to block access when a license is expired, without needing this job to
+     * update the DB status. The filter calls license.isExpired() (date comparison)
+     * directly, so the DB status field is NOT required to block routes.
      */
-    @Scheduled(cron = "0 0 9 * * *")
+    // @Scheduled(cron = "0 0 9 * * *")
     public void checkLicenseStatus() {
-        log.info("Starting daily license check...");
-
-        try {
-            SystemLicense license = licenseService.getLicense();
-
-            if (license == null) {
-                log.warn("No license found in the system!");
-                return;
-            }
-
-            // Update last check date
-            licenseService.updateLastCheck();
-
-            // Check if expired
-            if (license.isExpired() && license.getStatus() == SystemLicense.LicenseStatus.ACTIVE) {
-                log.warn("License has expired! Marking as expired.");
-                licenseService.markAsExpired();
-                
-                // TODO: Send expiration notification email
-                log.info("Expiration notification should be sent to: {}", license.getOwnerEmail());
-            }
-
-            // Check if needs notification
-            if (license.needsNotification()) {
-                long daysLeft = license.daysUntilExpiration();
-                log.info("License needs notification. Days left: {}", daysLeft);
-
-                licenseService.updateLastNotification();
-                
-                // TODO: Send warning notification email
-                log.info("Warning notification should be sent to: {}", license.getOwnerEmail());
-            }
-
-            log.info("License check completed. Status: {}, Days left: {}", 
-                license.getStatus(), license.daysUntilExpiration());
-
-        } catch (Exception e) {
-            log.error("Error during license check", e);
-        }
+        // DISABLED — see comment above
+        //
+        // log.info("Starting daily license check...");
+        //
+        // try {
+        //     SystemLicense license = licenseService.getLicense();
+        //
+        //     if (license == null) {
+        //         log.warn("No license found in the system!");
+        //         return;
+        //     }
+        //
+        //     // Update last check date
+        //     licenseService.updateLastCheck();
+        //
+        //     // Check if expired
+        //     if (license.isExpired() && license.getStatus() == SystemLicense.LicenseStatus.ACTIVE) {
+        //         log.warn("License has expired! Marking as expired.");
+        //         licenseService.markAsExpired();
+        //         log.info("Expiration notification should be sent to: {}", license.getOwnerEmail());
+        //     }
+        //
+        //     // Check if needs notification
+        //     if (license.needsNotification()) {
+        //         long daysLeft = license.daysUntilExpiration();
+        //         log.info("License needs notification. Days left: {}", daysLeft);
+        //         licenseService.updateLastNotification();
+        //         log.info("Warning notification should be sent to: {}", license.getOwnerEmail());
+        //     }
+        //
+        //     log.info("License check completed. Status: {}, Days left: {}",
+        //         license.getStatus(), license.daysUntilExpiration());
+        //
+        // } catch (Exception e) {
+        //     log.error("Error during license check", e);
+        // }
     }
 
     /**

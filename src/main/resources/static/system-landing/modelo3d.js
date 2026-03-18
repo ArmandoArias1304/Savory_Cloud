@@ -1,4 +1,4 @@
-/* ============================================================
+﻿/* ============================================================
    SAVORY CLOUD — Interactive 3D Model Viewer (GitHub-style)
    Three.js + GLTFLoader · Mouse-tracking with Lerp
    ============================================================ */
@@ -6,10 +6,6 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
 
-console.log(
-  "[M3D] ✅ Three.js importado correctamente, versión:",
-  THREE.REVISION,
-);
 
 (function () {
   const canvas = document.getElementById("m3dCanvas");
@@ -45,11 +41,6 @@ console.log(
 
   // WebGL memory audit
   const glInfo = renderer.info;
-  console.log("[M3D-PERF] WebGL Renderer info:", {
-    render: glInfo.render,
-    memory: glInfo.memory,
-    programs: glInfo.programs?.length ?? 0,
-  });
 
   /* ─── Lighting ─── */
   // Soft ambient fill
@@ -168,15 +159,11 @@ console.log(
   const modelPath = "/system-landing/modelo.glb";
   const loadStartTime = performance.now();
 
-  console.log("[M3D] 🔄 Iniciando carga del modelo:", modelPath);
 
   gltfLoader.load(
     modelPath,
     (gltf) => {
       const loadEndTime = performance.now();
-      console.log(
-        `[M3D-PERF] ⏱ GLB load time: ${(loadEndTime - loadStartTime).toFixed(1)} ms`,
-      );
 
       model = gltf.scene;
 
@@ -200,28 +187,16 @@ console.log(
       if (loaderUI) loaderUI.classList.add("is-hidden");
 
       // Log WebGL memory after model load
-      console.log("[M3D-PERF] Post-load WebGL memory:", {
-        geometries: glInfo.memory.geometries,
-        textures: glInfo.memory.textures,
-      });
     },
     (xhr) => {
       if (xhr.lengthComputable) {
         const pct = Math.round((xhr.loaded / xhr.total) * 100);
-        console.log(
-          `[M3D] 📥 Progreso: ${pct}% (${xhr.loaded}/${xhr.total} bytes)`,
-        );
         const pEl = loaderUI?.querySelector("p");
         if (pEl) pEl.textContent = `Cargando modelo… ${pct}%`;
       } else {
-        console.log(
-          `[M3D] 📥 Descargando… ${xhr.loaded} bytes (tamaño total desconocido)`,
-        );
       }
     },
     (error) => {
-      console.error("[M3D] ❌ ERROR al cargar el modelo:", error);
-      console.error("[M3D] Ruta intentada:", modelPath);
       if (loaderUI) {
         loaderUI.innerHTML =
           '<p style="color:#ff6b6b;">Error al cargar el modelo 3D</p>';
@@ -249,11 +224,9 @@ console.log(
         if (isVisible && !animFrameId) {
           clock.getDelta(); // flush stale delta
           animate();
-          console.log("[M3D-PERF] ▶ Render loop resumed (section visible)");
         } else if (!isVisible && animFrameId) {
           cancelAnimationFrame(animFrameId);
           animFrameId = null;
-          console.log("[M3D-PERF] ⏸ Render loop paused (section off-screen)");
         }
       });
     },

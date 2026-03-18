@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="es" xmlns:th="http://www.thymeleaf.org">
   <head>
     <meta charset="utf-8" />
@@ -726,7 +726,6 @@
             selectTable(tableId, tableNumber, null);
           }
         } catch (error) {
-          console.error("Error checking reservation:", error);
           // On error, proceed without reservation
           selectTable(tableId, tableNumber, null);
         }
@@ -900,7 +899,6 @@
             });
           }
         } catch (error) {
-          console.error("Error cancelling reservation:", error);
           Swal.fire({
             icon: "error",
             title: "Error",

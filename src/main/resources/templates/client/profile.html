@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="es" xmlns:th="http://www.thymeleaf.org">
   <head>
     <meta charset="utf-8" />
@@ -809,7 +809,6 @@
             });
           }
         } catch (error) {
-          console.error("Error loading address:", error);
           Swal.fire({
             icon: "error",
             title: "Error",
@@ -829,57 +828,50 @@
         const isEdit = editingAddressId !== null;
         const lat = data.latitude || DEFAULT_LAT;
         const lng = data.longitude || DEFAULT_LNG;
+        const isDark = document.documentElement.classList.contains("dark");
+        const labelStyle = `color: ${isDark ? '#f3f4f6' : '#374151'}`;
+        const inputStyle = `margin: 0; width: 100%; background: ${isDark ? '#374151' : '#fff'}; color: ${isDark ? '#f3f4f6' : '#1f2937'}; border-color: ${isDark ? '#4b5563' : '#d1d5db'};`;
+        const textareaStyle = `margin: 0; width: 100%; height: 60px; background: ${isDark ? '#374151' : '#fff'}; color: ${isDark ? '#f3f4f6' : '#1f2937'}; border-color: ${isDark ? '#4b5563' : '#d1d5db'};`;
+        const searchInputStyle = `margin: 0; width: 100%; padding: 10px 12px; border: 2px solid #38e07b; border-radius: 8px; font-size: 14px; background: ${isDark ? '#1f2937' : '#f0fdf4'}; color: ${isDark ? '#f3f4f6' : '#1f2937'};`;
+        const suggestionsStyle = `display: none; position: absolute; top: 100%; left: 0; right: 0; background: ${isDark ? '#374151' : 'white'}; border: 1px solid ${isDark ? '#4b5563' : '#d1d5db'}; border-top: none; border-radius: 0 0 8px 8px; max-height: 200px; overflow-y: auto; z-index: 1000; box-shadow: 0 4px 6px rgba(0,0,0,0.3);`;
+        const locationBtnStyle = `flex: 1; padding: 8px 12px; background: ${isDark ? '#1e3a5f' : '#dbeafe'}; color: ${isDark ? '#93c5fd' : '#1d4ed8'}; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px;`;
 
         Swal.fire({
           title: title,
-          background: document.documentElement.classList.contains("dark")
-            ? "#1f2937"
-            : "#ffffff",
-          color: document.documentElement.classList.contains("dark")
-            ? "#f3f4f6"
-            : "#1f2937",
+          background: isDark ? "#1f2937" : "#ffffff",
+          color: isDark ? "#f3f4f6" : "#1f2937",
           html: `
             <div class="text-left space-y-4">
               <div>
-                <label class="block text-sm font-bold text-gray-700 mb-1">Nombre de la dirección *</label>
+                <label class="block text-sm font-bold mb-1" style="${labelStyle}">Nombre de la direcci&oacute;n *</label>
                 <input type="text" id="swal-label" class="swal2-input" placeholder="Ej: Casa, Trabajo, Oficina" value="${
                   data.label
-                }" style="margin: 0; width: 100%;">
+                }" style="${inputStyle}">
               </div>
               <div>
-                <label class="block text-sm font-bold text-gray-700 mb-1">Dirección completa *</label>
-                <div style="display: flex; gap: 8px; margin: 0;">
-                  <textarea id="swal-address" class="swal2-textarea" placeholder="Calle, número, colonia, ciudad..." style="margin: 0; flex: 1; height: 60px;">${
+                <label class="block text-sm font-bold mb-1" style="${labelStyle}">Direcci&oacute;n completa *</label>
+                <textarea id="swal-address" class="swal2-textarea" placeholder="Calle, n&uacute;mero, colonia, ciudad..." style="${textareaStyle}">${
                     data.address
                   }</textarea>
-                  <button type="button" onclick="searchAddressOnMap()" 
-                          style="padding: 8px 16px; background: #38e07b; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; height: 60px; display: flex; align-items: center; gap: 4px;"
-                          onmouseover="this.style.background='#2bc866'" 
-                          onmouseout="this.style.background='#38e07b'">
-                    <span class="material-symbols-outlined" style="font-size: 18px;">search</span>
-                    Buscar
-                  </button>
-                </div>
               </div>
               <div>
-                <label class="block text-sm font-bold text-gray-700 mb-1">Referencia (opcional)</label>
-                <input type="text" id="swal-reference" class="swal2-input" placeholder="Ej: Portón azul, frente al parque" value="${
+                <label class="block text-sm font-bold mb-1" style="${labelStyle}">Referencia (opcional)</label>
+                <input type="text" id="swal-reference" class="swal2-input" placeholder="Ej: Port&oacute;n azul, frente al parque" value="${
                   data.reference
-                }" style="margin: 0; width: 100%;">
+                }" style="${inputStyle}">
               </div>
               <div>
-                <label class="block text-sm font-bold text-gray-700 mb-2">📍 Marca tu ubicación en el mapa *</label>
+                <label class="block text-sm font-bold mb-2" style="${labelStyle}">&#128205; Marca tu ubicaci&oacute;n en el mapa *</label>
                 <div style="position: relative; margin-bottom: 8px;">
                   <input type="text" id="map-search" 
-                         style="margin: 0; width: 100%; padding: 10px 12px; border: 2px solid #38e07b; border-radius: 8px; font-size: 14px; background: #f0fdf4;" 
-                         placeholder="🔍 Busca tu colonia o zona para navegar al área..."
+                         style="${searchInputStyle}" 
+                         placeholder="&#128269; Busca tu colonia o zona para navegar al &aacute;rea..."
                          oninput="searchPlacesLive(this.value)"
                          autocomplete="off">
-                  <div id="search-suggestions" 
-                       style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #d1d5db; border-top: none; border-radius: 0 0 8px 8px; max-height: 200px; overflow-y: auto; z-index: 1000; box-shadow: 0 4px 6px rgba(0,0,0,0.1);"></div>
+                  <div id="search-suggestions" style="${suggestionsStyle}"></div>
                 </div>
-                <p class="text-xs text-green-600 font-semibold mb-2">👆 Busca tu zona, luego haz CLIC en el mapa para marcar tu ubicación exacta</p>
-                <div id="swalMap" style="height: 300px; border-radius: 8px; border: 2px solid #e5e7eb;"></div>
+                <p class="text-xs text-green-500 font-semibold mb-2">&#128070; Busca tu zona, luego haz CLIC en el mapa para marcar tu ubicaci&oacute;n exacta</p>
+                <div id="swalMap" style="height: 300px; border-radius: 8px; border: 2px solid ${isDark ? '#4b5563' : '#e5e7eb'};"></div>
                 <input type="hidden" id="swal-lat" value="${lat}">
                 <input type="hidden" id="swal-lng" value="${lng}">
               </div>
@@ -887,12 +879,12 @@
                 <input type="checkbox" id="swal-default" ${
                   data.isDefault ? "checked" : ""
                 } class="w-4 h-4 text-primary rounded">
-                <label for="swal-default" class="text-sm text-gray-600">Establecer como dirección predeterminada</label>
+                <label for="swal-default" class="text-sm" style="${labelStyle}">Establecer como direcci&oacute;n predeterminada</label>
               </div>
               <div id="locationButtons" class="flex gap-2">
-                <button type="button" onclick="useCurrentLocation()" class="flex-1 px-3 py-2 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg text-sm font-semibold flex items-center justify-center gap-1">
-                  <span class="material-symbols-outlined text-lg">my_location</span>
-                  Usar mi ubicación actual
+                <button type="button" onclick="useCurrentLocation()" style="${locationBtnStyle}">
+                  <span class="material-symbols-outlined" style="font-size: 18px;">my_location</span>
+                  Usar mi ubicaci&oacute;n actual
                 </button>
               </div>
             </div>
@@ -906,6 +898,19 @@
           allowOutsideClick: false,
           allowEscapeKey: true,
           didOpen: () => {
+            // Force input/textarea colors (SweetAlert2 CSS overrides inline styles)
+            const fg = isDark ? '#f3f4f6' : '#1f2937';
+            const bg = isDark ? '#374151' : '#ffffff';
+            const border = isDark ? '#4b5563' : '#d1d5db';
+            ['swal-label', 'swal-address', 'swal-reference', 'map-search'].forEach(id => {
+              const el = document.getElementById(id);
+              if (el) {
+                el.style.setProperty('color', fg, 'important');
+                el.style.setProperty('background-color', bg, 'important');
+                el.style.setProperty('border-color', border, 'important');
+              }
+            });
+
             // Initialize modal map
             setTimeout(() => {
               modalMap = L.map("swalMap").setView(
@@ -1013,7 +1018,6 @@
             }
           },
           (error) => {
-            console.error("Geolocation error:", error);
             Swal.fire({
               icon: "warning",
               title: "No se pudo obtener tu ubicación",
@@ -1043,13 +1047,14 @@
             const addressInput = document.getElementById("swal-address");
             if (addressInput) {
               addressInput.value = data.display_name;
-              // Cambiar el borde del textarea para indicar que se llenó
-              addressInput.style.borderColor = "#38e07b";
-              addressInput.style.backgroundColor = "#f0fdf4";
+              // Indicate the field was auto-filled, respecting dark mode
+              const isDarkNow = document.documentElement.classList.contains("dark");
+              addressInput.style.setProperty('border-color', '#38e07b', 'important');
+              addressInput.style.setProperty('background-color', isDarkNow ? '#1a3a2a' : '#f0fdf4', 'important');
+              addressInput.style.setProperty('color', isDarkNow ? '#f3f4f6' : '#1f2937', 'important');
             }
           }
         } catch (error) {
-          console.error("Reverse geocode error:", error);
         }
       }
 
@@ -1107,7 +1112,6 @@
             );
           }
         } catch (error) {
-          console.error("Geocode error:", error);
           Swal.showValidationMessage("Error al buscar la dirección");
         }
       }
@@ -1149,25 +1153,29 @@
               suggestionsDiv.style.display = "block";
             }
           } catch (error) {
-            console.error("Search error:", error);
           }
         }, 500);
       }
 
       function displaySuggestions(results) {
         const suggestionsDiv = document.getElementById("search-suggestions");
+        const isDarkMode = document.documentElement.classList.contains("dark");
+        const itemBg = isDarkMode ? "#374151" : "white";
+        const itemHover = isDarkMode ? "#4b5563" : "#f9fafb";
+        const titleColor = isDarkMode ? "#f3f4f6" : "#1f2937";
+        const dividerColor = isDarkMode ? "#4b5563" : "#f3f4f6";
 
         suggestionsDiv.innerHTML = results
           .map(
             (result, index) => `
           <div onclick="event.stopPropagation(); selectSuggestion(${index})" 
-               style="padding: 10px 12px; cursor: pointer; border-bottom: 1px solid #f3f4f6; font-size: 13px; transition: background 0.2s;"
-               onmouseover="this.style.background='#f9fafb'" 
-               onmouseout="this.style.background='white'">
-            <div style="font-weight: 600; color: #1f2937; margin-bottom: 2px;">
+               style="padding: 10px 12px; cursor: pointer; background: ${itemBg}; border-bottom: 1px solid ${dividerColor}; font-size: 13px; transition: background 0.2s;"
+               onmouseover="this.style.background='${itemHover}'" 
+               onmouseout="this.style.background='${itemBg}'">
+            <div style="font-weight: 600; color: ${titleColor}; margin-bottom: 2px;">
               ${result.display_name.split(",")[0]}
             </div>
-            <div style="color: #6b7280; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+            <div style="color: #9ca3af; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
               ${result.display_name}
             </div>
           </div>
@@ -1257,7 +1265,6 @@
             });
           }
         } catch (error) {
-          console.error("Save address error:", error);
           Swal.fire({
             icon: "error",
             title: "Error",
@@ -1330,7 +1337,6 @@
                 });
               }
             } catch (error) {
-              console.error("Delete error:", error);
               Swal.fire({
                 icon: "error",
                 title: "Error",
@@ -1386,7 +1392,6 @@
             });
           }
         } catch (error) {
-          console.error("Set default error:", error);
           Swal.fire({
             icon: "error",
             title: "Error",

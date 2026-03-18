@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="es" xmlns:th="http://www.thymeleaf.org">
   <head>
     <meta charset="utf-8" />
@@ -564,7 +564,6 @@
                 }
               })
               .catch((error) => {
-                console.error("Error:", error);
                 Swal.fire({
                   title: "Error",
                   text: "No se pudo cambiar el estado del pedido",
@@ -634,15 +633,12 @@
             .then(() => {
             })
             .catch((error) => {
-              console.warn("⚠️ Sound playback prevented:", error.message);
             });
 
           // Handle audio errors
           audio.onerror = function (e) {
-            console.error("❌ Audio file not found or failed to load:", e);
           };
         } catch (e) {
-          console.error("❌ Error creating audio:", e);
         }
       }
 
@@ -666,7 +662,6 @@
 
           },
           function (error) {
-            console.error("❌ WebSocket Error:", error);
             setTimeout(connectDeliveryOrdersWebSocket, 5000);
           },
         );

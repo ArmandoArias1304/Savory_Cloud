@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="es" xmlns:th="http://www.thymeleaf.org">
   <head>
     <meta charset="UTF-8" />
@@ -1503,7 +1503,6 @@
             availableComboItems = items;
           })
           .catch((err) => {
-            console.error("Error loading combo items:", err);
           });
       }
 
@@ -1712,7 +1711,6 @@
             }
           })
           .catch((err) => {
-            console.error("Error loading existing combo items:", err);
           });
       }
 
@@ -2220,11 +2218,9 @@
               unitInput.value = data.unitOfMeasure || "N/A";
             } else {
               unitInput.value = "Error";
-              console.error("Error loading ingredient unit:", data.error);
             }
           })
           .catch((error) => {
-            console.error("Error loading ingredient unit:", error);
             unitInput.value = "Error";
           });
       }

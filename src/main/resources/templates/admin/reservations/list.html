@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="es" xmlns:th="http://www.thymeleaf.org">
   <head>
     <meta charset="utf-8" />
@@ -820,7 +820,6 @@
                 : `/admin/reservations`;
               window.history.pushState({}, "", newUrl);
             } catch (error) {
-              console.error("Error filtering reservations:", error);
               Swal.fire({
                 icon: "error",
                 title: "Error",
@@ -929,7 +928,6 @@
             });
           }
         } catch (error) {
-          console.error("Error:", error);
           Swal.fire({
             title: "Error",
             text: "No se pudieron cargar los detalles",
@@ -1008,7 +1006,6 @@
             });
           }
         } catch (error) {
-          console.error("Error:", error);
           Swal.fire({
             title: "Error",
             text: "Ocurrió un error al procesar la acción",
@@ -1246,7 +1243,6 @@
             throw new Error(data.message || "Error loading reservations");
           }
         } catch (error) {
-          console.error("Error loading day reservations:", error);
           container.innerHTML = `
             <div class="text-center text-red-500 dark:text-red-400 py-8">
               <span class="material-symbols-outlined text-6xl mb-3">error</span>
@@ -1284,7 +1280,6 @@
             renderCalendar();
           }
         } catch (error) {
-          console.error("Error loading month reservations:", error);
           renderCalendar();
         }
       }

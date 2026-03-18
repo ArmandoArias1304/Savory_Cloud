@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="es" xmlns:th="http://www.thymeleaf.org">
   <head>
     <meta charset="utf-8" />
@@ -522,7 +522,6 @@
             detailsTable.classList.remove("hidden");
           })
           .catch((error) => {
-            console.error("Error loading expense details:", error);
             loadingSpinner.classList.add("hidden");
             emptyState.classList.remove("hidden");
           });
@@ -588,7 +587,6 @@
             detailsTable.classList.remove("hidden");
           })
           .catch((error) => {
-            console.error("Error loading income details:", error);
             loadingSpinner.classList.add("hidden");
             emptyState.classList.remove("hidden");
           });
@@ -667,7 +665,6 @@
             detailsTable.classList.remove("hidden");
           })
           .catch((error) => {
-            console.error("Error loading complement details:", error);
             loadingSpinner.classList.add("hidden");
             emptyState.classList.remove("hidden");
           });

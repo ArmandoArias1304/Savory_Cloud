@@ -1001,7 +1001,6 @@
             });
           }
         } catch (error) {
-          console.error("Error loading menu items:", error);
           Swal.fire({
             icon: "error",
             title: "Error",
@@ -1323,7 +1322,6 @@
           }
         } catch (error) {
           Swal.close();
-          console.error("Error adding items:", error);
           Swal.fire({
             icon: "error",
             title: "Error",
@@ -1380,7 +1378,6 @@
 
       function connectAdminOrdersWebSocket() {
         if (reconnectAttempts >= maxReconnectAttempts) {
-          console.warn("⛔ ADMIN Orders: Máximo de intentos alcanzado");
           return;
         }
 
@@ -1406,10 +1403,6 @@
             }
 
             reconnectAttempts++;
-            console.error(
-              `❌ ADMIN Orders: Error (${reconnectAttempts}/${maxReconnectAttempts}):`,
-              error,
-            );
 
             if (reconnectAttempts < maxReconnectAttempts) {
               const delay = Math.min(
@@ -1489,7 +1482,7 @@
           .then((data) => {
             updateOrderStats(data);
           })
-          .catch((error) => console.error("❌ Error updating stats:", error));
+          .catch(() => {});
       }
 
       function updateStatusBadge(badge, status) {

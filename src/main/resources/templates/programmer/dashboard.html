@@ -1462,7 +1462,7 @@
                 });
                 renderLandingGrid();
             })
-            .catch(err => console.error('Error loading landing images:', err));
+            .catch(() => {});
     }
 
     function renderLandingGrid() {
@@ -1578,7 +1578,6 @@
             }
         })
         .catch(err => {
-            console.error('Upload error:', err);
             Swal.fire({ icon: 'error', title: 'Error', text: 'Error de conexión al subir la imagen',
                 background: document.documentElement.classList.contains('dark') ? '#1f2937' : '#ffffff',
                 color: document.documentElement.classList.contains('dark') ? '#f3f4f6' : '#1f2937'
@@ -1633,7 +1632,6 @@
                 }
             })
             .catch(err => {
-                console.error('Delete error:', err);
                 Swal.fire({ icon: 'error', title: 'Error', text: 'Error de conexión',
                     background: isDark ? '#1f2937' : '#ffffff',
                     color: isDark ? '#f3f4f6' : '#1f2937'

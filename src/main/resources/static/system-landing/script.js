@@ -1,4 +1,4 @@
-/* ============================================================
+﻿/* ============================================================
    SAVORY CLOUD — Landing Page Scripts
    ============================================================ */
 
@@ -17,9 +17,6 @@
     if (elapsed >= SAMPLE_INTERVAL) {
       const fps = Math.round((frameCount * 1000) / elapsed);
       if (fps < FPS_WARN_THRESHOLD) {
-        console.warn(
-          `[PERF] ⚠ FPS drop: ${fps} fps (threshold: ${FPS_WARN_THRESHOLD})`,
-        );
       }
       frameCount = 0;
       lastTime = now;
@@ -42,9 +39,6 @@
       if (now - lastReport >= 3000) {
         const rate = Math.round(scrollEvents / ((now - lastReport) / 1000));
         if (rate > 120) {
-          console.warn(
-            `[PERF] ⚠ High scroll event rate: ${rate} events/s — consider throttling`,
-          );
         }
         scrollEvents = 0;
         lastReport = now;
@@ -70,9 +64,6 @@
       const cs = getComputedStyle(el);
       const transform = cs.transform || cs.webkitTransform || "none";
       const willChange = cs.willChange || "auto";
-      console.log(
-        `[GPU-AUDIT] ${sel} → transform: ${transform}, will-change: ${willChange}`,
-      );
     });
   });
 })();

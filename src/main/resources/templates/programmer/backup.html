@@ -1220,7 +1220,6 @@
             },
           });
         } catch (error) {
-          console.error("Error loading chart data:", error);
         }
       }
 
@@ -1241,7 +1240,6 @@
           // Build calendar HTML
           renderCalendar(calendarEl, currentYear, currentMonth, events);
         } catch (error) {
-          console.error("Error loading calendar data:", error);
           calendarEl.innerHTML =
             '<p class="text-center text-gray-500 py-4">Error al cargar el calendario</p>';
         }

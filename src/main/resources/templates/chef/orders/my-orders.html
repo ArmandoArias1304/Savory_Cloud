@@ -549,7 +549,6 @@
             });
           },
           function (error) {
-            console.error("WebSocket Error:", error);
             attemptReconnect();
           },
         );
@@ -564,7 +563,6 @@
           reconnectAttempts++;
           setTimeout(connectWebSocket, RECONNECT_DELAY);
         } else {
-          console.error("Max reconnection attempts reached");
         }
       }
 
@@ -703,20 +701,11 @@
             .play()
             .then(() => {})
             .catch((error) => {
-              console.warn(
-                "⚠️ [MY-ORDERS] Sound playback prevented:",
-                error.message,
-              );
             });
 
           audio.onerror = function (e) {
-            console.error(
-              "❌ [MY-ORDERS] Audio file not found or failed to load:",
-              e,
-            );
           };
         } catch (e) {
-          console.error("❌ [MY-ORDERS] Error creating audio:", e);
         }
       }
 

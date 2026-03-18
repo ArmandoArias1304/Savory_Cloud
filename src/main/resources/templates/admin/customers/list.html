@@ -1143,7 +1143,6 @@
                     try {
                       return JSON.parse(text);
                     } catch (e) {
-                      console.error("Server response:", res.status, text);
                       throw new Error("Error del servidor: " + res.status);
                     }
                   });
@@ -1195,7 +1194,6 @@
                 }
               })
               .catch((err) => {
-                console.error("Error en la solicitud:", err);
                 Swal.fire({
                   icon: "error",
                   title: "Error",

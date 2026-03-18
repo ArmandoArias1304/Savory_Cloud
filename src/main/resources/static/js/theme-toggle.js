@@ -1,4 +1,4 @@
-/**
+﻿/**
  * SISTEMA DE TOGGLE DE TEMA - EL GRAN SAZÓN
  *
  * Este script maneja el cambio entre modo claro y oscuro
@@ -70,7 +70,6 @@
     });
     document.dispatchEvent(event);
 
-    console.log(`✅ Tema cambiado a: ${newTheme}`);
   }
 
   /**
@@ -81,7 +80,6 @@
 
     if (toggleBtn) {
       toggleBtn.addEventListener("click", toggleTheme);
-      console.log("🔘 Botón de toggle configurado");
     }
   }
 
@@ -92,7 +90,6 @@
     // El tema ya se aplicó en el script inline del head
     // Solo necesitamos configurar el botón
     setupToggleButton();
-    console.log("🎨 Sistema de temas listo");
   }
 
   // Esperar a que el DOM esté listo

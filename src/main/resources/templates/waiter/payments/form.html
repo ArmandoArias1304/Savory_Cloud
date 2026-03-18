@@ -919,7 +919,6 @@
 
           // If sound fails to play, still execute callback after short delay
           audio.addEventListener("error", function (e) {
-            console.error("❌ Payment audio file not found:", e);
             setTimeout(() => {
               if (onComplete) onComplete();
             }, 100);
@@ -930,14 +929,12 @@
             .then(() => {
             })
             .catch((error) => {
-              console.warn("⚠️ Payment sound prevented:", error.message);
               // Still execute callback if sound fails
               setTimeout(() => {
                 if (onComplete) onComplete();
               }, 100);
             });
         } catch (e) {
-          console.error("❌ Error creating payment audio:", e);
           // Execute callback even if error occurs
           if (onComplete) onComplete();
         }

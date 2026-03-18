@@ -54,7 +54,12 @@ public class LicenseValidationFilter extends OncePerRequestFilter {
             SystemLicense license = licenseService.getLicense();
             if (license != null && license.isExpired()) {
                 log.warn("License expired. Blocking access for user: {}", auth.getName());
-                
+
+                // Sync DB status if the job hasn't run yet (status still ACTIVE in DB)
+                if (license.getStatus() != SystemLicense.LicenseStatus.EXPIRED) {
+                    licenseService.markAsExpired();
+                }
+
                 // Invalidate session
                 request.getSession().invalidate();
                 SecurityContextHolder.clearContext();

@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html
   lang="es"
   xmlns:th="http://www.thymeleaf.org"
@@ -474,7 +474,6 @@
             });
           },
           function (error) {
-            console.error("WebSocket Error:", error);
             // Retry connection after 5 seconds
             setTimeout(connectWebSocket, 5000);
           },
@@ -552,15 +551,12 @@
             .then(() => {
             })
             .catch((error) => {
-              console.warn("⚠️ Sound playback prevented:", error.message);
             });
 
           // Handle audio errors
           audio.onerror = function (e) {
-            console.error("❌ Audio file not found or failed to load:", e);
           };
         } catch (e) {
-          console.error("❌ Error creating audio:", e);
         }
       }
 

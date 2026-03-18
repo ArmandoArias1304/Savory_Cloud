@@ -912,13 +912,11 @@
                 if (data.isLastItem) {
                   return { isLastItem: true, message: data.message };
                 }
-                console.error("❌ Error en respuesta:", data.message);
                 throw new Error(data.message);
               }
 
               return data;
             } catch (error) {
-              console.error("💥 Error en preConfirm:", error);
               Swal.showValidationMessage(`Error: ${error.message}`);
             }
           },
