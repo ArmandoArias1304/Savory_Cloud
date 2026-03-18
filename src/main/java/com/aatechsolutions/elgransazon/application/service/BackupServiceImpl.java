@@ -457,9 +457,11 @@ public class BackupServiceImpl implements BackupService {
                 command.add("--password=" + dbPassword);
             }
             // Disable SSL: the MySQL container uses a self-signed certificate that
-            // the Alpine mysql-client rejects. Both containers are on the same
-            // private Docker network so the connection is already isolated.
-            command.add("--ssl-mode=DISABLED");
+            // the Alpine mysql-client (actually MariaDB client) rejects.
+            // MariaDB uses --skip-ssl instead of MySQL's --ssl-mode=DISABLED.
+            // Both containers share the same private Docker network so the
+            // connection is already isolated — no SSL needed.
+            command.add("--skip-ssl");
             command.add("--single-transaction");
             command.add("--routines");
             command.add("--triggers");
