@@ -38,8 +38,10 @@ services:
       mysqldb:
         condition: service_healthy
     volumes:
-      # Persists database backups across container restarts and deployments
-      - backup_data:/root/savorycloud_backups
+      # Persists database backups across container restarts and deployments.
+      # Path must match getBackupDirectory() in BackupServiceImpl:
+      # System.getProperty("user.home") + "/elgransazon_backups" = /root/elgransazon_backups
+      - backup_data:/root/elgransazon_backups
     networks:
       - elgransazon-network
 

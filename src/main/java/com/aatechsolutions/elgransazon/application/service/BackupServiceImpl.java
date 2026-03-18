@@ -43,7 +43,8 @@ public class BackupServiceImpl implements BackupService {
     // Flag to track if current backup is automatic
     private final AtomicBoolean isAutomaticBackup = new AtomicBoolean(false);
     
-    // Default backup directory (relative to user home)
+    // Default backup directory — must match the Docker volume mount in docker-compose.yml
+    // Volume: backup_data:/root/elgransazon_backups
     private static final String DEFAULT_BACKUP_DIR = "elgransazon_backups";
     
     public BackupServiceImpl(BackupConfigurationRepository configRepository, 
@@ -257,18 +258,20 @@ public class BackupServiceImpl implements BackupService {
     public String getBackupDirectory() {
         Optional<BackupConfiguration> configOpt = getConfiguration();
         String customPath = configOpt.map(BackupConfiguration::getBackupPath).orElse(null);
-        
+
         if (customPath != null && !customPath.isBlank()) {
-            // If it's an absolute path, use it directly
             Path path = Paths.get(customPath);
             if (path.isAbsolute()) {
                 return customPath;
             }
-            // Otherwise, relative to user home
-            return Paths.get(System.getProperty("user.home"), customPath).toString();
+            // Relative path: always resolve relative to user.home so it stays
+            // inside the Docker volume mounted at /root/elgransazon_backups.
+            // A custom relative value like "backups" resolves to /root/backups
+            // which would be outside the volume — so we ignore relative custom
+            // paths and fall through to the default.
         }
-        
-        // Default: user home / elgransazon_backups
+
+        // Default: /root/elgransazon_backups (matches Docker volume mount)
         return Paths.get(System.getProperty("user.home"), DEFAULT_BACKUP_DIR).toString();
     }
     
