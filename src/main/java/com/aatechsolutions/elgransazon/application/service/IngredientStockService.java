@@ -1,7 +1,5 @@
 package com.aatechsolutions.elgransazon.application.service;
 
-import com.aatechsolutions.elgransazon.domain.entity.Ingredient;
-import com.aatechsolutions.elgransazon.domain.repository.IngredientRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.PessimisticLockingFailureException;
@@ -25,7 +23,6 @@ import java.math.BigDecimal;
 @Slf4j
 public class IngredientStockService {
 
-    private final IngredientRepository ingredientRepository;
     private final IngredientStockTxHelper txHelper;
 
     private static final int MAX_RETRY_ATTEMPTS = 5;

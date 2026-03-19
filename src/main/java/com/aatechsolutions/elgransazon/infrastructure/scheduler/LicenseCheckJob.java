@@ -1,6 +1,6 @@
 package com.aatechsolutions.elgransazon.infrastructure.scheduler;
 
-import com.aatechsolutions.elgransazon.application.service.LicenseService;
+//import com.aatechsolutions.elgransazon.application.service.LicenseService;
 //import com.aatechsolutions.elgransazon.domain.entity.SystemLicense;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

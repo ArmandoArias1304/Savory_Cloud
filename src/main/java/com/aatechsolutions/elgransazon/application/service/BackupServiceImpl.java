@@ -27,6 +27,7 @@ public class BackupServiceImpl implements BackupService {
 
     private final BackupConfigurationRepository configRepository;
     private final BackupNotificationService notificationService;
+    private final DateTimeService dateTimeService;
     
     @Value("${spring.datasource.url}")
     private String datasourceUrl;
@@ -47,10 +48,12 @@ public class BackupServiceImpl implements BackupService {
     // Volume: backup_data:/root/elgransazon_backups
     private static final String DEFAULT_BACKUP_DIR = "elgransazon_backups";
     
-    public BackupServiceImpl(BackupConfigurationRepository configRepository, 
-                            BackupNotificationService notificationService) {
+    public BackupServiceImpl(BackupConfigurationRepository configRepository,
+                            BackupNotificationService notificationService,
+                            DateTimeService dateTimeService) {
         this.configRepository = configRepository;
         this.notificationService = notificationService;
+        this.dateTimeService = dateTimeService;
     }
     
     @Override
@@ -138,8 +141,10 @@ public class BackupServiceImpl implements BackupService {
             return;
         }
         
-        LocalTime now = LocalTime.now();
-        java.time.LocalDate today = java.time.LocalDate.now();
+        // Use dateTimeService so comparison is always in America/Mexico_City,
+        // regardless of JVM timezone (-Duser.timezone=UTC in production).
+        LocalTime now = dateTimeService.nowLocal().toLocalTime();
+        java.time.LocalDate today = dateTimeService.todayLocal();
         LocalTime backupTime = config.getBackupTime();
         
         // Check if it's time to run backup (same hour and minute)

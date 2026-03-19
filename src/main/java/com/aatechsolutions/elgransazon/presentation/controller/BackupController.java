@@ -325,9 +325,14 @@ public class BackupController {
         if (config.getLastBackupDate() == null) {
             return -1; // No backup ever
         }
-        
+
+        // last_backup_date is stored in UTC (JVM timezone).
+        // Convert to local (America/Mexico_City) before comparing with today's local date,
+        // otherwise an evening backup (e.g. 18:49 CDT = 00:49+1d UTC) returns -1
+        // and the UI shows "Nunca se ha realizado un respaldo".
+        LocalDate lastBackupLocalDate = dateTimeService.toCompanyTime(config.getLastBackupDate()).toLocalDate();
         return ChronoUnit.DAYS.between(
-            config.getLastBackupDate().toLocalDate(),
+            lastBackupLocalDate,
             dateTimeService.todayLocal()
         );
     }

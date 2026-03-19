@@ -1,6 +1,6 @@
 package com.aatechsolutions.elgransazon.application.service;
 
-import com.aatechsolutions.elgransazon.domain.entity.BusinessHours;
+//import com.aatechsolutions.elgransazon.domain.entity.BusinessHours;
 import com.aatechsolutions.elgransazon.domain.entity.Company;
 import com.aatechsolutions.elgransazon.domain.entity.DayOfWeek;
 import com.aatechsolutions.elgransazon.domain.entity.PaymentMethodType;
@@ -245,7 +245,7 @@ public class SystemConfigurationServiceImpl implements SystemConfigurationServic
     /**
      * Create a default configuration if none exists
      */
-    private SystemConfiguration createDefaultConfiguration() {
+    /*private SystemConfiguration createDefaultConfiguration() {
         log.info("Creating default system configuration");
         
         // Define default work days (Monday to Saturday)
@@ -297,5 +297,5 @@ public class SystemConfigurationServiceImpl implements SystemConfigurationServic
         log.info("Default business hours created successfully for all 7 days");
         
         return saved;
-    }
+    }*/
 }

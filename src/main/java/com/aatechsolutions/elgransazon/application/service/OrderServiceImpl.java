@@ -52,7 +52,6 @@ public class OrderServiceImpl implements OrderService {
     private final RestaurantTableService restaurantTableService;
     private final WebSocketNotificationService wsNotificationService;
     private final EmployeeMonthlyStatsService monthlyStatsService;
-    private final DailyOrderCounterRepository dailyOrderCounterRepository;
     private final DailyOrderCounterService dailyOrderCounterService;
     private final OrderDetailComplementRepository orderDetailComplementRepository;
     private final ComplementRepository complementRepository;
@@ -94,7 +93,6 @@ public class OrderServiceImpl implements OrderService {
         this.restaurantTableService = restaurantTableService;
         this.wsNotificationService = wsNotificationService;
         this.monthlyStatsService = monthlyStatsService;
-        this.dailyOrderCounterRepository = dailyOrderCounterRepository;
         this.dailyOrderCounterService = dailyOrderCounterService;
         this.orderDetailComplementRepository = orderDetailComplementRepository;
         this.complementRepository = complementRepository;
