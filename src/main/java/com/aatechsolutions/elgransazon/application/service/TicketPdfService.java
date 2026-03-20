@@ -36,6 +36,7 @@ public class TicketPdfService {
     private final SystemConfigurationService systemConfigurationService;
     private final GlobalSystemConfigService globalSystemConfigService;
     private final DateTimeService dateTimeService;
+    private final CloudinaryUrlHelper cloudinaryUrlHelper;
 
     // Ticket width in points (58mm = 164 points, 80mm = 226 points)
     private static final float TICKET_WIDTH = 226f; // 80mm
@@ -71,10 +72,12 @@ public class TicketPdfService {
         PdfFont normalFont = PdfFontFactory.createFont(StandardFonts.HELVETICA);
 
         // Add logo from company's restaurantLogoUrl (centered)
+        // iText does not support WebP, so force PNG conversion via Cloudinary transformation
         try {
             String logoUrl = config.getRestaurantLogoUrl();
             if (logoUrl != null && !logoUrl.isBlank()) {
-                Image logo = new Image(ImageDataFactory.create(new java.net.URL(logoUrl)));
+                String pdfLogoUrl = cloudinaryUrlHelper.transform(logoUrl, "w_200,h_200,c_fit,f_png,q_85");
+                Image logo = new Image(ImageDataFactory.create(new java.net.URL(pdfLogoUrl)));
                 logo.setWidth(60);
                 logo.setHorizontalAlignment(com.itextpdf.layout.properties.HorizontalAlignment.CENTER);
                 document.add(logo);
