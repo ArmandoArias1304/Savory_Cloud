@@ -513,6 +513,7 @@
         successTitle,
         successText,
       ) {
+        const isDark = document.documentElement.classList.contains("dark");
         Swal.fire({
           title: title,
           text: text,
@@ -523,6 +524,8 @@
           confirmButtonText: confirmButtonText,
           cancelButtonText: "Cancelar",
           reverseButtons: true,
+          background: isDark ? "#1f2937" : "#ffffff",
+          color: isDark ? "#f3f4f6" : "#1f2937",
         }).then((result) => {
           if (result.isConfirmed) {
             // Remove visual effect immediately on confirmation
@@ -547,6 +550,8 @@
                     confirmButtonColor: "#38e07b",
                     timer: 1500,
                     showConfirmButton: false,
+                    background: isDark ? "#1f2937" : "#ffffff",
+                    color: isDark ? "#f3f4f6" : "#1f2937",
                   }).then(() => {
                     window.location.reload();
                   });
@@ -558,6 +563,8 @@
                       data.message || "No se pudo cambiar el estado del pedido",
                     icon: "error",
                     confirmButtonColor: "#38e07b",
+                    background: isDark ? "#1f2937" : "#ffffff",
+                    color: isDark ? "#f3f4f6" : "#1f2937",
                   }).then(() => {
                     window.location.reload();
                   });
@@ -569,6 +576,8 @@
                   text: "No se pudo cambiar el estado del pedido",
                   icon: "error",
                   confirmButtonColor: "#38e07b",
+                  background: isDark ? "#1f2937" : "#ffffff",
+                  color: isDark ? "#f3f4f6" : "#1f2937",
                 }).then(() => {
                   window.location.reload();
                 });
@@ -703,6 +712,8 @@
             showConfirmButton: false,
             timer: 4000,
             timerProgressBar: true,
+            background: document.documentElement.classList.contains("dark") ? "#1f2937" : "#ffffff",
+            color: document.documentElement.classList.contains("dark") ? "#f3f4f6" : "#1f2937",
           });
 
           // Play sound
@@ -740,6 +751,8 @@
           showConfirmButton: false,
           timer: 3000,
           timerProgressBar: true,
+          background: document.documentElement.classList.contains("dark") ? "#1f2937" : "#ffffff",
+          color: document.documentElement.classList.contains("dark") ? "#f3f4f6" : "#1f2937",
         });
 
         // Play sound

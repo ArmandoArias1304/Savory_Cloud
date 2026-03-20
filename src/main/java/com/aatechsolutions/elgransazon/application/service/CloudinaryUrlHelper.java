@@ -74,6 +74,14 @@ public class CloudinaryUrlHelper {
     }
 
     /**
+     * Transform URL for landing page hero/splash logos (300-340px containers).
+     * Uses 600px to cover 2× retina displays without blurriness.
+     */
+    public String logoHero(String url) {
+        return transform(url, "w_600,h_600,c_fit,q_90,f_auto");
+    }
+
+    /**
      * Insert Cloudinary transformations into a Cloudinary URL.
      * Only transforms URLs from res.cloudinary.com; returns others unchanged.
      * 

@@ -361,7 +361,7 @@
               th:data-id="${addr.idAddress}"
               th:data-lat="${addr.latitude}"
               th:data-lng="${addr.longitude}"
-              class="address-card flex flex-col sm:flex-row items-start gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl border-2 transition-all cursor-pointer"
+              class="address-card flex flex-col sm:flex-row items-start gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl border-2 transition-all cursor-pointer w-full"
               th:classappend="${addr.isDefault} ? 'border-primary bg-primary/5' : 'border-gray-200 dark:border-gray-700 hover:border-primary/50'"
               th:onclick="|viewAddressOnMap(${addr.idAddress})|"
             >
@@ -391,7 +391,7 @@
                   >
                 </div>
                 <p
-                  class="text-sm text-gray-600 dark:text-gray-400 truncate"
+                  class="text-sm text-gray-600 dark:text-gray-400 break-words line-clamp-2"
                   th:text="${addr.address}"
                 >
                   Dirección completa...
@@ -407,7 +407,7 @@
                 </p>
               </div>
               <div
-                class="flex items-center gap-1 self-end sm:self-start flex-shrink-0"
+                class="flex items-center gap-1 sm:self-start flex-shrink-0 mt-1 sm:mt-0"
               >
                 <button
                   type="button"
@@ -744,8 +744,8 @@
       let editingAddressId = null;
 
       // Default center (Mexico City - adjust to your location)
-      const DEFAULT_LAT = 19.4326;
-      const DEFAULT_LNG = -99.1332;
+      const DEFAULT_LAT = 18.0059; // Cárdenas, Tabasco, México
+      const DEFAULT_LNG = -93.3746; // Cárdenas, Tabasco, México
       const DEFAULT_ZOOM = 13;
 
       // Initialize preview map

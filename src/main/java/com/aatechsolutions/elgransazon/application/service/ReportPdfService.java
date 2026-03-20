@@ -2,6 +2,7 @@ package com.aatechsolutions.elgransazon.application.service;
 
 import com.aatechsolutions.elgransazon.domain.entity.*;
 import com.aatechsolutions.elgransazon.domain.repository.EmployeeRepository;
+import com.aatechsolutions.elgransazon.infrastructure.context.CompanyContext;
 import com.itextpdf.io.font.constants.StandardFonts;
 import com.itextpdf.kernel.colors.DeviceRgb;
 import com.itextpdf.kernel.font.PdfFont;
@@ -457,7 +458,7 @@ public class ReportPdfService {
         document.add(new Paragraph("\n"));
 
         // Note about excluded orders
-        Paragraph note = new Paragraph("📌 Nota: Este reporte excluye pedidos creados por clientes (pedidos web)")
+        Paragraph note = new Paragraph("📌 Nota: Este reporte excluye pedidos creados por clientes (pedidos realizados en línea)")
             .setFont(regularFont)
             .setFontSize(9)
             .setFontColor(GRAY_COLOR)
@@ -467,7 +468,10 @@ public class ReportPdfService {
         document.add(note);
 
         // Get ALL enabled employees (except Programmer) to always show all role sections
-        java.util.List<Employee> allEnabledEmployees = employeeRepository.findByEnabledTrue().stream()
+        Company currentCompany = CompanyContext.getCurrentCompany();
+        java.util.List<Employee> allEnabledEmployees = (currentCompany != null
+            ? employeeRepository.findByEnabledTrueAndCompany(currentCompany)
+            : employeeRepository.findByEnabledTrue()).stream()
             .filter(emp -> !emp.hasRole(Role.PROGRAMMER))
             .collect(Collectors.toList());
 
@@ -498,7 +502,7 @@ public class ReportPdfService {
         long totalEmployees = allEmployees.size();
         addSummaryCell(summaryTable, boldFont, regularFont, "Empleados Activos", 
             String.valueOf(totalEmployees));
-        addSummaryCell(summaryTable, boldFont, regularFont, "Total Ventas (Sin Web)", 
+        addSummaryCell(summaryTable, boldFont, regularFont, "Total Ventas (Sin contar pedidos en línea)", 
             String.format("$%,.2f", totalSales));
         addSummaryCell(summaryTable, boldFont, regularFont, "Promedio por Empleado", 
             totalEmployees > 0 ? String.format("$%,.2f", totalSales.divide(BigDecimal.valueOf(totalEmployees), 2, java.math.RoundingMode.HALF_UP)) : "$0.00");

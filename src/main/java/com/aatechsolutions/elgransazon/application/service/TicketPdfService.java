@@ -4,6 +4,7 @@ import com.aatechsolutions.elgransazon.domain.entity.*;
 import com.itextpdf.io.font.constants.StandardFonts;
 import com.itextpdf.io.image.ImageDataFactory;
 import com.itextpdf.kernel.colors.ColorConstants;
+import com.itextpdf.kernel.colors.DeviceRgb;
 import com.itextpdf.kernel.font.PdfFont;
 import com.itextpdf.kernel.font.PdfFontFactory;
 import com.itextpdf.kernel.geom.PageSize;
@@ -243,7 +244,7 @@ public class TicketPdfService {
                     } else {
                         finalPriceText = "$" + precioFinalConIVA.setScale(2, RoundingMode.HALF_UP).toString();
                     }
-                    textColor = ColorConstants.GREEN;
+                    textColor = new DeviceRgb(22, 163, 74); // green-600 (darker green)
                 } else {
                     finalPriceText = "-";
                     textColor = ColorConstants.BLACK;

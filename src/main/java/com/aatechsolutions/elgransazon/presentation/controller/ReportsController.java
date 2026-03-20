@@ -1,6 +1,7 @@
 package com.aatechsolutions.elgransazon.presentation.controller;
 
 import com.aatechsolutions.elgransazon.application.service.IngredientCategoryService;
+import com.aatechsolutions.elgransazon.infrastructure.context.CompanyContext;
 import com.aatechsolutions.elgransazon.application.service.IngredientService;
 import com.aatechsolutions.elgransazon.application.service.OrderService;
 import com.aatechsolutions.elgransazon.application.service.ReportPdfService;
@@ -585,12 +586,9 @@ public class ReportsController {
                 .filter(o -> o.getCustomer() != null)
                 .collect(Collectors.toList());
 
-            // MULTI-TENANT: Get only customers who placed orders in this company
-            // Instead of loading all global customers, extract unique customers from the filtered orders
-            Set<Long> customerIdsWithOrders = customerOrders.stream()
-                .map(o -> o.getCustomer().getIdCustomer())
-                .collect(Collectors.toSet());
-            List<Customer> relevantCustomers = customerRepository.findAllById(customerIdsWithOrders).stream()
+            // MULTI-TENANT: Get ALL customers registered in this company
+            Company company = CompanyContext.requireCurrentCompany();
+            List<Customer> relevantCustomers = customerRepository.findByCompany(company).stream()
                 .sorted(Comparator.comparing(Customer::getFullName))
                 .collect(Collectors.toList());
 

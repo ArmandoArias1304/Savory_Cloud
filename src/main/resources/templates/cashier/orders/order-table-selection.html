@@ -703,15 +703,63 @@
           customClass: getSwalDarkModeClasses(),
         }).then((result) => {
           if (result.isConfirmed) {
-            // User confirmed it's the reservation - proceed with reservation ID
-            selectTable(tableId, tableNumber, reservationData.reservationId);
+            // Show second confirmation before proceeding
+            Swal.fire({
+              title: "Confirmar Cliente",
+              html: `
+                <div class="text-left">
+                  <p class="mb-3">¿Confirmas que <strong class="text-primary">${reservationData.customerName}</strong> ha llegado y se sentará en la <strong>Mesa ${tableNumber}</strong>?</p>
+                  <div class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3 mt-3">
+                    <p class="text-sm text-green-800 dark:text-green-200">
+                      <strong>✓ Acción:</strong> La reservación se marcará como ocupada y podrás crear el pedido.
+                    </p>
+                  </div>
+                </div>
+              `,
+              icon: "success",
+              showCancelButton: true,
+              confirmButtonText: "Sí, confirmar",
+              cancelButtonText: "Cancelar",
+              confirmButtonColor: "#38e07b",
+              cancelButtonColor: "#6b7280",
+              customClass: getSwalDarkModeClasses(),
+            }).then((confirmResult) => {
+              if (confirmResult.isConfirmed) {
+                // User confirmed - proceed with reservation ID
+                selectTable(tableId, tableNumber, reservationData.reservationId);
+              }
+            });
           } else if (result.isDenied) {
-            // User said it's not - cancel reservation and check for next one
-            cancelReservationAndCheckNext(
-              tableId,
-              tableNumber,
-              reservationData.reservationId,
-            );
+            // Show confirmation before cancelling reservation
+            Swal.fire({
+              title: "Cancelar Reservación",
+              html: `
+                <div class="text-left">
+                  <p class="mb-3">¿Estás seguro de que deseas <strong class="text-red-600 dark:text-red-400">cancelar</strong> la reservación de <strong>${reservationData.customerName}</strong>?</p>
+                  <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3 mt-3">
+                    <p class="text-sm text-red-800 dark:text-red-200">
+                      <strong>⚠️ Advertencia:</strong> Esta acción no se puede deshacer. La reservación será cancelada permanentemente.
+                    </p>
+                  </div>
+                </div>
+              `,
+              icon: "warning",
+              showCancelButton: true,
+              confirmButtonText: "Sí, cancelar reservación",
+              cancelButtonText: "No, volver",
+              confirmButtonColor: "#ef4444",
+              cancelButtonColor: "#6b7280",
+              customClass: getSwalDarkModeClasses(),
+            }).then((cancelResult) => {
+              if (cancelResult.isConfirmed) {
+                // User confirmed cancellation
+                cancelReservationAndCheckNext(
+                  tableId,
+                  tableNumber,
+                  reservationData.reservationId,
+                );
+              }
+            });
           }
           // If cancelled, do nothing (user wants to go back)
         });

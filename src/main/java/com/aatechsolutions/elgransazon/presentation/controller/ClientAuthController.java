@@ -97,6 +97,7 @@ public class ClientAuthController {
         }
         
         model.addAttribute("customer", new Customer());
+        model.addAttribute("config", systemConfigurationService.getConfiguration());
         return "auth/registerClient";
     }
 
@@ -124,6 +125,7 @@ public class ClientAuthController {
         // Validate form
         if (bindingResult.hasErrors()) {
             log.warn("Validation errors in customer registration: {}", bindingResult.getAllErrors());
+            model.addAttribute("config", systemConfigurationService.getConfiguration());
             return "auth/registerClient";
         }
         
@@ -131,24 +133,28 @@ public class ClientAuthController {
             // MULTI-TENANT: Check if username already exists in THIS company's customers
             if (customerService.existsByUsernameAndCompany(customer.getUsername(), currentCompany)) {
                 bindingResult.rejectValue("username", "error.customer", "El nombre de usuario ya está en uso");
+                model.addAttribute("config", systemConfigurationService.getConfiguration());
                 return "auth/registerClient";
             }
             
             // MULTI-TENANT: Check if username exists in employees for THIS company
             if (customerService.usernameExistsInEmployees(customer.getUsername(), currentCompany)) {
                 bindingResult.rejectValue("username", "error.customer", "El nombre de usuario ya está en uso");
+                model.addAttribute("config", systemConfigurationService.getConfiguration());
                 return "auth/registerClient";
             }
             
             // MULTI-TENANT: Check if email already exists in THIS company
             if (customerService.existsByEmailAndCompany(customer.getEmail(), currentCompany)) {
                 bindingResult.rejectValue("email", "error.customer", "El correo electrónico ya está registrado");
+                model.addAttribute("config", systemConfigurationService.getConfiguration());
                 return "auth/registerClient";
             }
             
             // MULTI-TENANT: Check if phone already exists in THIS company
             if (customerService.existsByPhoneAndCompany(customer.getPhone(), currentCompany)) {
                 bindingResult.rejectValue("phone", "error.customer", "El teléfono ya está registrado");
+                model.addAttribute("config", systemConfigurationService.getConfiguration());
                 return "auth/registerClient";
             }
             
@@ -177,6 +183,7 @@ public class ClientAuthController {
             
         } catch (Exception e) {
             log.error("Error registering customer", e);
+            model.addAttribute("config", systemConfigurationService.getConfiguration());
             model.addAttribute("errorMessage", "Error al registrar el cliente: " + e.getMessage());
             return "auth/registerClient";
         }

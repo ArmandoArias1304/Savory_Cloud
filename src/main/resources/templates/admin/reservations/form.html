@@ -1020,7 +1020,24 @@
       }
 
       if (dateInput && timeInput) {
-        dateInput.addEventListener("change", validateDateTime);
+        // On date change: only silently clear the time if it's now in the past
+        // Avoid showing the alert (fixes iOS Safari auto-filling time to 00:00 on date selection)
+        dateInput.addEventListener("change", function () {
+          if (!timeInput.value) return;
+          const selectedDate = dateInput.value;
+          const now = new Date();
+          const year = now.getFullYear();
+          const month = String(now.getMonth() + 1).padStart(2, "0");
+          const day = String(now.getDate()).padStart(2, "0");
+          const todayStr = `${year}-${month}-${day}`;
+          if (selectedDate === todayStr) {
+            const currentTimeStr = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+            if (timeInput.value <= currentTimeStr) {
+              timeInput.value = ""; // Silently clear invalid time, no alert
+            }
+          }
+        });
+        // On time change: show alert if selected time is in the past
         timeInput.addEventListener("change", validateDateTime);
       }
 

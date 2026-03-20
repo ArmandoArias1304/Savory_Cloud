@@ -301,8 +301,9 @@
         <div class="mt-12 text-center text-sm text-gray-500 dark:text-gray-400 animate-fadeInUp"
             style="animation-delay: 0.35s">
             <p>
-                Sistema de Gestión de Delivery &copy; 2024 El Gran Sazón. Todos los
-                derechos reservados.
+                <span th:text="'Sistema de Gestión de Delivery © ' + ${#dates.year(#dates.createNow())} + ' SavoryCloud. Todos los derechos reservados.'">
+                  Sistema de Gestión de Delivery © 2026 SavoryCloud. Todos los derechos reservados.
+                </span>
             </p>
         </div>
     </div>

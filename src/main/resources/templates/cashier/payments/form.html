@@ -152,9 +152,9 @@
       }
 
       .tip-btn.active {
-        background: #38e07b;
-        color: white;
-        border-color: #38e07b;
+        background: #38e07b !important;
+        color: white !important;
+        border-color: #38e07b !important;
       }
 
       .counter-btn {
@@ -509,28 +509,28 @@
                     <div class="grid grid-cols-4 gap-3">
                       <button
                         type="button"
-                        onclick="setTipPercentage(0)"
-                        class="tip-btn rounded-xl bg-gray-100 dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600 py-3 font-bold text-gray-700 dark:text-gray-300 text-sm"
+                        onclick="setTipPercentage(event, 0)"
+                        class="tip-btn active rounded-xl bg-gray-100 dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600 py-3 font-bold text-gray-700 dark:text-gray-300 text-sm"
                       >
                         0%
                       </button>
                       <button
                         type="button"
-                        onclick="setTipPercentage(10)"
+                        onclick="setTipPercentage(event, 10)"
                         class="tip-btn rounded-xl bg-gray-100 dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600 py-3 font-bold text-gray-700 dark:text-gray-300 text-sm"
                       >
                         10%
                       </button>
                       <button
                         type="button"
-                        onclick="setTipPercentage(15)"
+                        onclick="setTipPercentage(event, 15)"
                         class="tip-btn rounded-xl bg-gray-100 dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600 py-3 font-bold text-gray-700 dark:text-gray-300 text-sm"
                       >
                         15%
                       </button>
                       <button
                         type="button"
-                        onclick="setTipPercentage(20)"
+                        onclick="setTipPercentage(event, 20)"
                         class="tip-btn rounded-xl bg-gray-100 dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600 py-3 font-bold text-gray-700 dark:text-gray-300 text-sm"
                       >
                         20%
@@ -907,7 +907,7 @@
       }
 
       // Set tip percentage
-      function setTipPercentage(percentage) {
+      function setTipPercentage(event, percentage) {
         const tipAmount = (orderTotal * percentage) / 100;
         document.getElementById("tip").value = tipAmount.toFixed(2);
 
@@ -915,7 +915,8 @@
         document.querySelectorAll(".tip-btn").forEach((btn) => {
           btn.classList.remove("active");
         });
-        event.target.classList.add("active");
+        const clickedBtn = event.target.closest(".tip-btn");
+        if (clickedBtn) clickedBtn.classList.add("active");
 
         calculateTotalWithTip();
       }

@@ -3221,7 +3221,7 @@
           <div class="logo-circle">
             <img
               th:if="${systemConfig != null and systemConfig.restaurantLogoUrl != null and !systemConfig.restaurantLogoUrl.isEmpty()}"
-              th:src="${@cloudinaryUrl.logoLarge(systemConfig.restaurantLogoUrl)}"
+              th:src="${@cloudinaryUrl.logoHero(systemConfig.restaurantLogoUrl)}"
               th:alt="${systemConfig.restaurantName}"
             />
           </div>
@@ -3272,7 +3272,7 @@
             <div class="hero-logo-circle">
               <img
                 th:if="${systemConfig != null and systemConfig.restaurantLogoUrl != null and !systemConfig.restaurantLogoUrl.isEmpty()}"
-                th:src="${@cloudinaryUrl.logoLarge(systemConfig.restaurantLogoUrl)}"
+                th:src="${@cloudinaryUrl.logoHero(systemConfig.restaurantLogoUrl)}"
                 th:alt="${systemConfig.restaurantName + ' Logo'}"
               />
             </div>

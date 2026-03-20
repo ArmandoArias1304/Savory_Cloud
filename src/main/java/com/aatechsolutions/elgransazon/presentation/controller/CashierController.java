@@ -42,6 +42,7 @@ public class CashierController {
     private final BusinessHoursService businessHoursService;
     private final WebSocketNotificationService wsNotificationService;
     private final DateTimeService dateTimeService;
+    private final ReservationService reservationService;
 
     public CashierController(
             @Qualifier("cashierOrderService") CashierOrderServiceImpl cashierOrderService,
@@ -55,7 +56,8 @@ public class CashierController {
             PromotionService promotionService,
             BusinessHoursService businessHoursService,
             WebSocketNotificationService wsNotificationService,
-            DateTimeService dateTimeService) {
+            DateTimeService dateTimeService,
+            ReservationService reservationService) {
         this.cashierOrderService = cashierOrderService;
         this.adminOrderService = adminOrderService;
         this.restaurantTableService = restaurantTableService;
@@ -68,6 +70,7 @@ public class CashierController {
         this.businessHoursService = businessHoursService;
         this.wsNotificationService = wsNotificationService;
         this.dateTimeService = dateTimeService;
+        this.reservationService = reservationService;
     }
 
     /**
@@ -416,17 +419,19 @@ public class CashierController {
     @GetMapping("/orders/customer-info")
     public String customerInfoForm(
             @RequestParam(required = false) Long tableId,
+            @RequestParam(required = false) Long reservationId,
             @RequestParam String orderType,
             Authentication authentication,
             Model model,
             RedirectAttributes redirectAttributes) {
         
-        log.debug("Displaying customer info form - OrderType: {}, TableId: {}", orderType, tableId);
+        log.debug("Displaying customer info form - OrderType: {}, TableId: {}, ReservationId: {}", orderType, tableId, reservationId);
         
         try {
             OrderType type = OrderType.valueOf(orderType);
             
             // Validate table for DINE_IN orders
+            Reservation linkedReservation = null;
             if (type == OrderType.DINE_IN && tableId != null) {
                 RestaurantTable table = restaurantTableService.findById(tableId)
                     .orElseThrow(() -> new IllegalArgumentException("Mesa no encontrada"));
@@ -437,11 +442,21 @@ public class CashierController {
                     return "redirect:/cashier/orders/select-table";
                 }
                 
-                model.addAttribute("selectedTable", table);  // Cambiar "table" a "selectedTable"
+                model.addAttribute("selectedTable", table);
+
+                // If there's a linked reservation, get its details for pre-filling
+                if (reservationId != null) {
+                    try {
+                        linkedReservation = reservationService.findByIdOrThrow(reservationId);
+                    } catch (Exception e) {
+                        log.warn("Reservation not found: {}", reservationId);
+                    }
+                }
             }
             
             model.addAttribute("orderType", type);
             model.addAttribute("tableId", tableId);
+            model.addAttribute("linkedReservation", linkedReservation);
             model.addAttribute("currentRole", "cashier");
             
             return "cashier/orders/order-customer-info";
