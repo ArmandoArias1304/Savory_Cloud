@@ -225,7 +225,7 @@
         <!-- CARD 1: Gestión de Pedidos -->
         <!-- CARD 1: Gestión de Pedidos -->
         <a
-          th:href="@{/chef/orders/pending}"
+          th:href="@{'/' + ${rolePrefix} + '/orders/pending'}"
           class="dashboard-card block rounded-3xl bg-white dark:bg-gray-900 shadow-lg hover:shadow-2xl border border-gray-200 dark:border-gray-800 p-6 sm:p-8 text-center animate-fadeInUp"
           style="animation-delay: 0.1s"
         >
@@ -249,7 +249,7 @@
 
         <!-- CARD 2: Historial de Pedidos -->
         <a
-          th:href="@{/chef/orders/my-orders}"
+          th:href="@{'/' + ${rolePrefix} + '/orders/my-orders'}"
           class="dashboard-card block rounded-3xl bg-white dark:bg-gray-900 shadow-lg hover:shadow-2xl border border-gray-200 dark:border-gray-800 p-6 sm:p-8 text-center animate-fadeInUp"
           style="animation-delay: 0.15s"
         >
@@ -273,7 +273,7 @@
 
         <!-- CARD 3: Menú -->
         <a
-          th:href="@{/chef/menu/view}"
+          th:href="@{'/' + ${rolePrefix} + '/menu/view'}"
           class="dashboard-card block rounded-3xl bg-white dark:bg-gray-900 shadow-lg hover:shadow-2xl border border-gray-200 dark:border-gray-800 p-6 sm:p-8 text-center animate-fadeInUp"
           style="animation-delay: 0.2s"
         >
@@ -297,7 +297,7 @@
 
         <!-- CARD 4: Ranking -->
         <a
-          href="/chef/ranking/view"
+          th:href="@{'/' + ${rolePrefix} + '/ranking/view'}"
           class="dashboard-card block rounded-3xl bg-white dark:bg-gray-900 shadow-lg hover:shadow-2xl border border-gray-200 dark:border-gray-800 p-6 sm:p-8 text-center animate-fadeInUp"
           style="animation-delay: 0.25s"
         >
@@ -321,7 +321,7 @@
 
         <!-- CARD 5: Reportes -->
         <a
-          href="/chef/reports/view"
+          th:href="@{'/' + ${rolePrefix} + '/reports/view'}"
           class="dashboard-card block rounded-3xl bg-white dark:bg-gray-900 shadow-lg hover:shadow-2xl border border-gray-200 dark:border-gray-800 p-6 sm:p-8 text-center animate-fadeInUp"
           style="animation-delay: 0.3s"
         >
@@ -345,7 +345,7 @@
 
         <!-- CARD 6: Perfil -->
         <a
-          href="/chef/profile"
+          th:href="@{'/' + ${rolePrefix} + '/profile'}"
           class="dashboard-card block rounded-3xl bg-white dark:bg-gray-900 shadow-lg hover:shadow-2xl border border-gray-200 dark:border-gray-800 p-6 sm:p-8 text-center animate-fadeInUp"
           style="animation-delay: 0.35s"
         >

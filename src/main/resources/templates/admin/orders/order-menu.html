@@ -373,7 +373,8 @@
                   </div>
 
                   <div
-                    class="w-full aspect-square overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 img-skeleton"
+                    class="w-full aspect-square overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800"
+                    th:classappend="${item.imageUrl != null && !item.imageUrl.isEmpty()} ? 'img-skeleton' : ''"
                   >
                     <img
                       th:if="${item.imageUrl != null && !item.imageUrl.isEmpty()}"
@@ -671,6 +672,7 @@
 
       // Load promotions from server
       async function loadPromotions() {
+        if (promotionsLoaded) return; // Already loaded, skip
         try {
           const currentRole = /*[[${currentRole}]]*/ "admin";
           const response = await fetch(
@@ -1916,10 +1918,10 @@
             html: `
             <div class="flex flex-col md:flex-row gap-6 text-left">
                 <!-- Imagen del producto - Izquierda -->
-                <div class="md:w-1/2 img-skeleton rounded-xl">
-                    <img src="${imageUrl}" alt="${itemName}" class="w-full h-64 md:h-80 object-cover rounded-xl img-fade ${
+                <div class="md:w-1/2 rounded-xl">
+                    <img src="${imageUrl}" alt="${itemName}" class="w-full h-64 md:h-80 object-cover rounded-xl ${
                       !isUsable ? "grayscale" : ""
-                    }" onload="this.classList.add('loaded');this.parentElement.classList.remove('img-skeleton')" />
+                    }" />
                 </div>
                 
                 <!-- Detalles del producto - Derecha -->
@@ -3009,6 +3011,7 @@
 
       // Remove from cart
       function removeFromCart(index) {
+        const isDark = document.documentElement.classList.contains("dark");
         Swal.fire({
           title: "¿Eliminar del carrito?",
           text: cart[index].name,
@@ -3018,6 +3021,8 @@
           cancelButtonColor: "#6b7280",
           confirmButtonText: "Sí, eliminar",
           cancelButtonText: "Cancelar",
+          background: isDark ? "#1e293b" : "#ffffff",
+          color: isDark ? "#F3F4F6" : "#1F2937",
         }).then((result) => {
           if (result.isConfirmed) {
             cart.splice(index, 1);
@@ -3030,6 +3035,7 @@
       function clearCart() {
         if (cart.length === 0) return;
 
+        const isDark = document.documentElement.classList.contains("dark");
         Swal.fire({
           title: "¿Limpiar carrito?",
           text: "Se eliminarán todos los items",
@@ -3039,6 +3045,8 @@
           cancelButtonColor: "#6b7280",
           confirmButtonText: "Sí, limpiar",
           cancelButtonText: "Cancelar",
+          background: isDark ? "#1e293b" : "#ffffff",
+          color: isDark ? "#F3F4F6" : "#1F2937",
         }).then((result) => {
           if (result.isConfirmed) {
             cart = [];
@@ -4067,6 +4075,9 @@
           card._prefetched = true;
           new Image().src = img;
         }
+
+        // Prefetch stock quantity
+        fetchMaxQuantity(itemId);
 
         if (isCombo) {
           // For combos: fetch children + all their complements

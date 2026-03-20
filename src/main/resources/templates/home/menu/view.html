@@ -290,7 +290,7 @@
                   </div>
 
                   <!-- Item Image -->
-                  <div class="relative h-36 w-full overflow-hidden bg-gray-100 img-skeleton">
+                  <div class="relative h-36 w-full overflow-hidden bg-gray-100" th:classappend="${item.imageUrl != null && !item.imageUrl.isEmpty()} ? 'img-skeleton' : ''">
                     <img
                       th:if="${item.imageUrl != null && !item.imageUrl.isEmpty()}"
                       th:src="${@cloudinaryUrl.card(item.imageUrl)}"
@@ -544,8 +544,8 @@
         Swal.fire({
           html: `
             <div style="display:flex;flex-wrap:wrap;gap:24px;text-align:left;">
-                <div style="flex:1;min-width:200px;" class="img-skeleton rounded-xl">
-                    <img src="${imageUrl}" alt="${itemName}" style="width:100%;height:280px;object-fit:cover;border-radius:12px;" class="img-fade" onload="this.classList.add('loaded');this.parentElement.classList.remove('img-skeleton')" />
+                <div style="flex:1;min-width:200px;" class="rounded-xl">
+                    <img src="${imageUrl}" alt="${itemName}" style="width:100%;height:280px;object-fit:cover;border-radius:12px;" />
                 </div>
                 <div style="flex:1;min-width:200px;display:flex;flex-direction:column;">
                     <h2 style="font-size:1.875rem;font-weight:900;color:${isDark ? '#f9fafb' : '#111827'};margin-bottom:8px;">${itemName}</h2>

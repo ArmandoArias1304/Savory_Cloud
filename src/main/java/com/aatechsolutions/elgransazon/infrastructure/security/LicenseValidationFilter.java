@@ -93,6 +93,7 @@ public class LicenseValidationFilter extends OncePerRequestFilter {
                path.startsWith("/topic/") ||
                path.startsWith("/flyers/") ||  // Flyers editor (public static resource)
                path.startsWith("/home") ||
+               path.equals("/favicon.ico") ||
                path.equals("/");  // Only exact root path, not all paths
     }
 }

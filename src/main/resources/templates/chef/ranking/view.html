@@ -167,7 +167,7 @@
       >
         <!-- Back Button -->
         <a
-          th:href="@{/chef/dashboard}"
+          th:href="@{'/' + ${rolePrefix} + '/dashboard'}"
           class="flex h-10 w-10 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 transition-colors"
         >
           <span class="material-symbols-outlined text-xl">arrow_back</span>

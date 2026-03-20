@@ -133,7 +133,7 @@
       >
         <!-- Back Button -->
         <a
-          th:href="@{/chef/dashboard}"
+          th:href="@{'/' + ${rolePrefix} + '/dashboard'}"
           class="flex h-10 w-10 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 transition-colors"
         >
           <span class="material-symbols-outlined text-xl">arrow_back</span>
@@ -285,7 +285,8 @@
 
                   <!-- Item Image -->
                   <div
-                    class="relative h-36 w-full overflow-hidden bg-gray-100 img-skeleton"
+                    class="relative h-36 w-full overflow-hidden bg-gray-100"
+                    th:classappend="${item.imageUrl != null && !item.imageUrl.isEmpty()} ? 'img-skeleton' : ''"
                   >
                     <img
                       th:if="${item.imageUrl != null && !item.imageUrl.isEmpty()}"
@@ -546,8 +547,8 @@
           html: `
             <div class="flex flex-col md:flex-row gap-6 text-left">
                 <!-- Imagen del producto - Izquierda -->
-                <div class="md:w-1/2 img-skeleton rounded-xl">
-                    <img src="${imageUrl}" alt="${itemName}" class="w-full h-64 md:h-80 object-cover rounded-xl img-fade" onload="this.classList.add('loaded');this.parentElement.classList.remove('img-skeleton')" />
+                <div class="md:w-1/2 rounded-xl">
+                    <img src="${imageUrl}" alt="${itemName}" class="w-full h-64 md:h-80 object-cover rounded-xl" />
                 </div>
                 
                 <!-- Detalles del producto - Derecha -->

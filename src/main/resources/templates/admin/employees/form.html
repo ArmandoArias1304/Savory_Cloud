@@ -289,10 +289,12 @@
                       required
                       minlength="3"
                       maxlength="50"
-                      pattern="[A-Za-z0-9_]{3,50}"
+                      pattern="[a-z0-9_]{3,50}"
                       class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
                       placeholder="Ej: jperez"
-                      title="El usuario debe tener entre 3 y 50 caracteres (letras, números y guiones bajos)"
+                      title="El usuario debe tener entre 3 y 50 caracteres (letras minúsculas, números y guiones bajos)"
+                      oninput="this.value = this.value.toLowerCase()"
+                      style="text-transform: lowercase;"
                     />
                     <p
                       class="mt-2 text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1"
@@ -1510,18 +1512,7 @@
         }
       });
 
-      // Email validation
-      emailInput?.addEventListener("blur", function () {
-        const value = this.value.trim();
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (value && !emailRegex.test(value)) {
-          this.classList.add("border-red-500");
-          this.classList.remove("border-gray-300", "dark:border-gray-600");
-        } else {
-          this.classList.remove("border-red-500");
-          this.classList.add("border-gray-300", "dark:border-gray-600");
-        }
-      });
+     
 
       // Password validation
       passwordInput?.addEventListener("blur", function () {

@@ -47,8 +47,11 @@ public class AdminKitchenController {
      * Admin can see ALL orders from ALL chefs
      */
     @GetMapping
-    public String kitchenDashboard(Model model) {
-        log.info("Admin accessing kitchen dashboard");
+    public String kitchenDashboard(
+            @RequestParam(defaultValue = "all") String filter,
+            @RequestParam(defaultValue = "0") int page,
+            Model model) {
+        log.info("Admin accessing kitchen dashboard, filter={}, page={}", filter, page);
         
         // Get system configuration
         SystemConfiguration config = configurationService.getConfiguration();
@@ -85,17 +88,38 @@ public class AdminKitchenController {
             .distinct()
             .count();
         
+        // Apply filter for pagination
+        List<Order> displayOrders = switch (filter) {
+            case "pending" -> pendingOrders;
+            case "in-preparation" -> inPreparationOrders;
+            default -> allActiveOrders;
+        };
+        
+        // Pagination
+        int pageSize = 15;
+        int totalOrders = displayOrders.size();
+        int totalPages = Math.max(1, (int) Math.ceil((double) totalOrders / pageSize));
+        int currentPage = Math.max(0, Math.min(page, totalPages - 1));
+        int startIndex = currentPage * pageSize;
+        int endIndex = Math.min(startIndex + pageSize, totalOrders);
+        List<Order> paginatedOrders = displayOrders.subList(startIndex, endIndex);
+        
         model.addAttribute("config", config);
-        model.addAttribute("allOrders", allActiveOrders);
+        model.addAttribute("allOrders", paginatedOrders);
+        model.addAttribute("filter", filter);
         model.addAttribute("pendingOrders", pendingOrders);
         model.addAttribute("inPreparationOrders", inPreparationOrders);
         model.addAttribute("pendingCount", pendingOrders.size());
         model.addAttribute("inPreparationCount", inPreparationOrders.size());
         model.addAttribute("activeChefsCount", activeChefsCount);
         model.addAttribute("activeBaristasCount", activeBaristasCount);
+        model.addAttribute("currentPage", currentPage);
+        model.addAttribute("totalPages", totalPages);
+        model.addAttribute("totalOrders", totalOrders);
+        model.addAttribute("pageSize", pageSize);
         
-        log.info("Kitchen dashboard: {} pending, {} in preparation, {} active chefs, {} active baristas",
-                 pendingOrders.size(), inPreparationOrders.size(), activeChefsCount, activeBaristasCount);
+        log.info("Kitchen dashboard: {} pending, {} in preparation, {} active chefs, {} active baristas, page {}/{}",
+                 pendingOrders.size(), inPreparationOrders.size(), activeChefsCount, activeBaristasCount, currentPage + 1, totalPages);
         
         return "admin/kitchen/index";
     }

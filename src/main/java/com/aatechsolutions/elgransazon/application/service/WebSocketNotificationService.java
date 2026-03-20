@@ -98,8 +98,16 @@ public class WebSocketNotificationService {
     public void notifyOrderStatusChange(Order order, String message, String roleWhoChanged) {
         OrderNotificationDTO notification = buildOrderNotification(order, "STATUS_CHANGE", message);
         
+        // Skip chef/barista notifications for DELIVERED and PAID status changes
+        // These transitions are handled by cashier/admin and don't concern kitchen staff
+        boolean skipKitchenNotification = order.getStatus() == com.aatechsolutions.elgransazon.domain.entity.OrderStatus.DELIVERED
+            || order.getStatus() == com.aatechsolutions.elgransazon.domain.entity.OrderStatus.PAID;
+        
         // If roleWhoChanged is specified, only notify the ASSIGNED user of that role
-        if (roleWhoChanged != null) {
+        if (skipKitchenNotification) {
+            log.debug("Skipping chef/barista notification for order {} - status is {}", 
+                order.getOrderNumber(), order.getStatus());
+        } else if (roleWhoChanged != null) {
             if ("chef".equalsIgnoreCase(roleWhoChanged)) {
                 // Only send to the assigned chef, NOT to all chefs
                 if (order.getPreparedBy() != null) {

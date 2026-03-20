@@ -13,6 +13,8 @@ import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+import org.springframework.beans.factory.annotation.Value;
+
 import java.io.IOException;
 import java.util.Optional;
 import java.util.Set;
@@ -31,6 +33,9 @@ import java.util.Set;
 public class CompanyContextFilter extends OncePerRequestFilter {
 
     private final CompanyService companyService;
+
+    @Value("${app.base-domain:localhost}")
+    private String baseDomain;
 
     // Paths that don't require company context (static resources only)
     private static final Set<String> EXCLUDED_PATHS = Set.of(
@@ -77,9 +82,24 @@ public class CompanyContextFilter extends OncePerRequestFilter {
                 Company company = companyOpt.get();
                 CompanyContext.setCurrentCompany(company);
                 log.debug("Company context set: {} (ID: {})", company.getSlug(), company.getIdCompany());
+            } else if (isRootDomain(host)) {
+                // Bare domain (savorycloud.com, localhost) without company context
+                // Allow auth paths so programmer can login
+                if (!isAllowedWithoutCompany(requestPath)) {
+                    log.info("Root domain {} - path {} not allowed without company. Redirecting to /.", host, requestPath);
+                    response.sendRedirect("/");
+                    return;
+                }
+                log.debug("Root domain {} - serving path {} without company context.", host, requestPath);
             } else {
-                // No company found - this might be okay for some public paths
-                log.debug("No company found for host: {}", host);
+                // Invalid subdomain (e.g., pizzam5ax.savorycloud.com) - redirect to system landing
+                // Only allow / and /home so system-landing can render
+                if (!"/".equals(requestPath) && !"/home".equals(requestPath)) {
+                    log.info("Invalid subdomain for host: {} (path: {}). Redirecting to system landing.", host, requestPath);
+                    response.sendRedirect("/");
+                    return;
+                }
+                log.debug("Invalid subdomain for host: {} - serving landing path {}.", host, requestPath);
             }
 
             filterChain.doFilter(request, response);
@@ -110,5 +130,33 @@ public class CompanyContextFilter extends OncePerRequestFilter {
             }
         }
         return false;
+    }
+
+    /**
+     * Paths allowed on the root domain without company context.
+     * Auth paths for programmer, landing pages, etc.
+     */
+    private boolean isAllowedWithoutCompany(String path) {
+        return "/".equals(path) ||
+               "/home".equals(path) ||
+               path.startsWith("/login") ||
+               path.startsWith("/perform_login") ||
+               path.startsWith("/logout") ||
+               path.startsWith("/help") ||
+               path.startsWith("/support") ||
+               path.startsWith("/license-expired") ||
+               path.startsWith("/system-landing");
+    }
+
+    /**
+     * Checks if the host is the root/bare domain (no subdomain).
+     * e.g., "localhost", "127.0.0.1", "savorycloud.com" → true
+     *       "pizzamax.localhost", "pizzamax.savorycloud.com" → false
+     */
+    private boolean isRootDomain(String host) {
+        String cleanHost = host.contains(":") ? host.split(":")[0] : host;
+        return "localhost".equalsIgnoreCase(cleanHost) ||
+               "127.0.0.1".equals(cleanHost) ||
+               cleanHost.equalsIgnoreCase(baseDomain);
     }
 }

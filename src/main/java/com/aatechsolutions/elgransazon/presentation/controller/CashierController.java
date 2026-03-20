@@ -1532,6 +1532,11 @@ public class CashierController {
         int manualItems = 0;
 
         for (OrderDetail detail : order.getOrderDetails()) {
+            // Skip combo parent items - they are grouping entities, not actual stock items
+            if (detail.isComboParent()) {
+                continue;
+            }
+            
             OrderStatus itemStatus = detail.getItemStatus();
             
             // PENDING -> always automatic

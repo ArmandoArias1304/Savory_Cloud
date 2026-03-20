@@ -22,6 +22,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
@@ -41,7 +43,7 @@ import java.util.stream.Collectors;
  * CHEF and BARISTA roles share the same interface with role-specific filtering
  */
 @Controller
-@RequestMapping("/chef")
+@RequestMapping("/{rolePrefix:chef|barista}")
 @RequiredArgsConstructor
 @Slf4j
 public class ChefController {
@@ -80,6 +82,21 @@ public class ChefController {
     }
 
     /**
+     * Get expected URL prefix based on user role
+     */
+    private String getExpectedRolePrefix(Authentication authentication) {
+        return isBarista(authentication) ? "barista" : "chef";
+    }
+
+    /**
+     * Add rolePrefix to model for all handler methods
+     */
+    @ModelAttribute
+    public void addRolePrefix(@PathVariable String rolePrefix, Model model) {
+        model.addAttribute("rolePrefix", rolePrefix);
+    }
+
+    /**
      * Display chef/barista dashboard
      * 
      * @param authentication Spring Security authentication object
@@ -87,7 +104,13 @@ public class ChefController {
      * @return chef dashboard view (shared with barista)
      */
     @GetMapping("/dashboard")
-    public String dashboard(Authentication authentication, Model model) {
+    public String dashboard(@PathVariable String rolePrefix, Authentication authentication, Model model) {
+        // Validate role prefix matches actual role, redirect if mismatch
+        String expected = getExpectedRolePrefix(authentication);
+        if (!rolePrefix.equals(expected)) {
+            return "redirect:/" + expected + "/dashboard";
+        }
+        
         String username = authentication.getName();
         String roleDisplay = getRoleDisplayName(authentication);
         log.info("{} {} accessed dashboard", roleDisplay, username);
@@ -119,7 +142,14 @@ public class ChefController {
      * @return pending orders view
      */
     @GetMapping("/orders/pending")
-    public String pendingOrders(Authentication authentication, Model model) {
+    public String pendingOrders(@PathVariable String rolePrefix,
+            @RequestParam(defaultValue = "1") int page,
+            Authentication authentication, Model model) {
+        String expected = getExpectedRolePrefix(authentication);
+        if (!rolePrefix.equals(expected)) {
+            return "redirect:/" + expected + "/orders/pending";
+        }
+        
         String username = authentication.getName();
         String roleDisplay = getRoleDisplayName(authentication);
         boolean isBaristaRole = isBarista(authentication);
@@ -181,7 +211,21 @@ public class ChefController {
             .filter(o -> o.getStatus() == OrderStatus.IN_PREPARATION)
             .count();
         
-        model.addAttribute("orders", workingOrders);
+        // Server-side pagination
+        int pageSize = 16;
+        int totalElements = workingOrders.size();
+        int totalPages = (int) Math.ceil((double) totalElements / pageSize);
+        if (totalPages == 0) totalPages = 1;
+        page = Math.max(1, Math.min(page, totalPages));
+        int startIndex = (page - 1) * pageSize;
+        int endIndex = Math.min(startIndex + pageSize, totalElements);
+        List<Order> pagedOrders = totalElements > 0 ? workingOrders.subList(startIndex, endIndex) : workingOrders;
+        
+        model.addAttribute("orders", pagedOrders);
+        model.addAttribute("currentPage", page);
+        model.addAttribute("totalPages", totalPages);
+        model.addAttribute("totalElements", totalElements);
+        model.addAttribute("pageSize", pageSize);
         model.addAttribute("pendingCount", pendingCount);
         model.addAttribute("inPreparationCount", inPreparationCount);
         model.addAttribute("username", username);
@@ -203,8 +247,14 @@ public class ChefController {
      */
     @GetMapping("/orders/my-orders")
     public String myOrders(
+            @PathVariable String rolePrefix,
             @RequestParam(defaultValue = "1") int page,
             Authentication authentication, Model model) {
+        String expected = getExpectedRolePrefix(authentication);
+        if (!rolePrefix.equals(expected)) {
+            return "redirect:/" + expected + "/orders/my-orders";
+        }
+        
         String username = authentication.getName();
         String roleDisplay = getRoleDisplayName(authentication);
         boolean isBaristaRole = isBarista(authentication);
@@ -307,7 +357,12 @@ public class ChefController {
      * @return profile view
      */
     @GetMapping("/profile")
-    public String profile(Authentication authentication, Model model, RedirectAttributes redirectAttributes) {
+    public String profile(@PathVariable String rolePrefix, Authentication authentication, Model model, RedirectAttributes redirectAttributes) {
+        String expected = getExpectedRolePrefix(authentication);
+        if (!rolePrefix.equals(expected)) {
+            return "redirect:/" + expected + "/profile";
+        }
+        
         String username = authentication.getName();
         String roleDisplay = getRoleDisplayName(authentication);
         log.info("{} {} accessed profile", roleDisplay, username);
@@ -323,7 +378,7 @@ public class ChefController {
         } catch (Exception e) {
             log.error("Error loading profile for {} {}: {}", roleDisplay, username, e.getMessage());
             redirectAttributes.addFlashAttribute("errorMessage", "Error al cargar el perfil");
-            return "redirect:/chef/dashboard";
+            return "redirect:/" + rolePrefix + "/dashboard";
         }
     }
 
@@ -336,7 +391,12 @@ public class ChefController {
      * @return reports view
      */
     @GetMapping("/reports/view")
-    public String viewReports(Authentication authentication, Model model, RedirectAttributes redirectAttributes) {
+    public String viewReports(@PathVariable String rolePrefix, Authentication authentication, Model model, RedirectAttributes redirectAttributes) {
+        String expected = getExpectedRolePrefix(authentication);
+        if (!rolePrefix.equals(expected)) {
+            return "redirect:/" + expected + "/reports/view";
+        }
+        
         String username = authentication.getName();
         String roleDisplay = getRoleDisplayName(authentication);
         boolean isBaristaRole = isBarista(authentication);
@@ -443,7 +503,7 @@ public class ChefController {
         } catch (Exception e) {
             log.error("Error loading reports for {} {}: {}", roleDisplay, username, e.getMessage());
             redirectAttributes.addFlashAttribute("errorMessage", "Error al cargar los reportes");
-            return "redirect:/chef/dashboard";
+            return "redirect:/" + rolePrefix + "/dashboard";
         }
     }
 
@@ -456,7 +516,12 @@ public class ChefController {
      * @return menu view
      */
     @GetMapping("/menu/view")
-    public String viewMenu(Authentication authentication, Model model, RedirectAttributes redirectAttributes) {
+    public String viewMenu(@PathVariable String rolePrefix, Authentication authentication, Model model, RedirectAttributes redirectAttributes) {
+        String expected = getExpectedRolePrefix(authentication);
+        if (!rolePrefix.equals(expected)) {
+            return "redirect:/" + expected + "/menu/view";
+        }
+        
         String roleDisplay = getRoleDisplayName(authentication);
         log.info("{} accessed visual menu view", roleDisplay);
         
@@ -486,7 +551,7 @@ public class ChefController {
         } catch (Exception e) {
             log.error("Error loading menu: {}", e.getMessage());
             redirectAttributes.addFlashAttribute("errorMessage", "Error al cargar el menú");
-            return "redirect:/chef/dashboard";
+            return "redirect:/" + rolePrefix + "/dashboard";
         }
     }
 
@@ -499,7 +564,12 @@ public class ChefController {
      * @return ranking view
      */
     @GetMapping("/ranking/view")
-    public String viewRanking(Authentication authentication, Model model, RedirectAttributes redirectAttributes) {
+    public String viewRanking(@PathVariable String rolePrefix, Authentication authentication, Model model, RedirectAttributes redirectAttributes) {
+        String expected = getExpectedRolePrefix(authentication);
+        if (!rolePrefix.equals(expected)) {
+            return "redirect:/" + expected + "/ranking/view";
+        }
+        
         String roleDisplay = getRoleDisplayName(authentication);
         boolean isBaristaRole = isBarista(authentication);
         
@@ -583,7 +653,7 @@ public class ChefController {
         } catch (Exception e) {
             log.error("Error loading ranking: {}", e.getMessage());
             redirectAttributes.addFlashAttribute("errorMessage", "Error al cargar el ranking");
-            return "redirect:/chef/dashboard";
+            return "redirect:/" + rolePrefix + "/dashboard";
         }
     }
 

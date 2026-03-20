@@ -250,10 +250,10 @@
             <div
               class="flex flex-wrap gap-2 sm:gap-3 bg-white dark:bg-gray-900 p-2 rounded-xl shadow-md border border-gray-200 dark:border-gray-700"
             >
-              <button
-                onclick="filterOrders('all')"
-                class="filter-btn px-4 py-2 rounded-lg font-semibold text-sm transition-all bg-primary text-white"
-                data-filter="all"
+              <a
+                th:href="@{/admin/kitchen(filter='all')}"
+                th:classappend="${filter == 'all' || filter == null} ? 'bg-primary text-white' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'"
+                class="filter-btn px-4 py-2 rounded-lg font-semibold text-sm transition-all"
               >
                 <span class="material-symbols-outlined text-sm mr-1"
                   >visibility</span
@@ -261,27 +261,27 @@
                 Todos (<span th:text="${pendingCount + inPreparationCount}"
                   >0</span
                 >)
-              </button>
-              <button
-                onclick="filterOrders('pending')"
-                class="filter-btn px-4 py-2 rounded-lg font-semibold text-sm transition-all text-gray-700 dark:text-gray-300 hover:bg-orange-100 dark:hover:bg-orange-900/30"
-                data-filter="pending"
+              </a>
+              <a
+                th:href="@{/admin/kitchen(filter='pending')}"
+                th:classappend="${filter == 'pending'} ? 'bg-primary text-white' : 'text-gray-700 dark:text-gray-300 hover:bg-orange-100 dark:hover:bg-orange-900/30'"
+                class="filter-btn px-4 py-2 rounded-lg font-semibold text-sm transition-all"
               >
                 <span class="material-symbols-outlined text-sm mr-1"
                   >pending_actions</span
                 >
                 Pendientes (<span th:text="${pendingCount}">0</span>)
-              </button>
-              <button
-                onclick="filterOrders('in-preparation')"
-                class="filter-btn px-4 py-2 rounded-lg font-semibold text-sm transition-all text-gray-700 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/30"
-                data-filter="in-preparation"
+              </a>
+              <a
+                th:href="@{/admin/kitchen(filter='in-preparation')}"
+                th:classappend="${filter == 'in-preparation'} ? 'bg-primary text-white' : 'text-gray-700 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/30'"
+                class="filter-btn px-4 py-2 rounded-lg font-semibold text-sm transition-all"
               >
                 <span class="material-symbols-outlined text-sm mr-1"
                   >restaurant</span
                 >
                 En Preparación (<span th:text="${inPreparationCount}">0</span>)
-              </button>
+              </a>
             </div>
           </div>
 
@@ -526,6 +526,75 @@
               aparecerán aquí automáticamente.
             </p>
           </div>
+
+          <!-- Pagination -->
+          <div
+            th:if="${totalPages > 1}"
+            class="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4 bg-white dark:bg-gray-900 p-4 rounded-xl shadow-md border border-gray-200 dark:border-gray-700"
+          >
+            <div class="text-sm text-gray-600 dark:text-gray-400">
+              Mostrando
+              <span th:text="${currentPage * pageSize + 1}">1</span> -
+              <span th:text="${(currentPage + 1) * pageSize > totalOrders ? totalOrders : (currentPage + 1) * pageSize}">15</span>
+              de <span th:text="${totalOrders}">0</span> pedidos activos
+            </div>
+            <div class="flex items-center gap-2">
+              <a
+                th:if="${currentPage > 0}"
+                th:href="@{/admin/kitchen(filter=${filter},page=${currentPage - 1})}"
+                class="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all"
+              >
+                <span class="material-symbols-outlined text-lg">chevron_left</span>
+              </a>
+              <span th:if="${currentPage == 0}" class="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-900 text-gray-400 dark:text-gray-600 cursor-not-allowed">
+                <span class="material-symbols-outlined text-lg">chevron_left</span>
+              </span>
+
+              <!-- Page Numbers -->
+              <div class="flex items-center gap-1">
+                <th:block th:with="startPage=${currentPage > 2 ? currentPage - 2 : 0}, endPage=${currentPage + 2 < totalPages ? currentPage + 2 : totalPages - 1}">
+                  <th:block th:if="${startPage > 0}">
+                    <a th:href="@{/admin/kitchen(filter=${filter},page=0)}"
+                       class="px-3 py-1 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all">
+                      1
+                    </a>
+                    <span th:if="${startPage > 1}" class="px-2 text-gray-500">...</span>
+                  </th:block>
+
+                  <th:block th:each="i : ${#numbers.sequence(startPage, endPage)}">
+                    <a th:if="${i != currentPage}"
+                       th:href="@{/admin/kitchen(filter=${filter},page=${i})}"
+                       th:text="${i + 1}"
+                       class="px-3 py-1 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all">
+                    </a>
+                    <span th:if="${i == currentPage}"
+                          th:text="${i + 1}"
+                          class="px-3 py-1 rounded-lg bg-primary text-white font-semibold">
+                    </span>
+                  </th:block>
+
+                  <th:block th:if="${endPage < totalPages - 1}">
+                    <span th:if="${endPage < totalPages - 2}" class="px-2 text-gray-500">...</span>
+                    <a th:href="@{/admin/kitchen(filter=${filter},page=${totalPages - 1})}"
+                       th:text="${totalPages}"
+                       class="px-3 py-1 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all">
+                    </a>
+                  </th:block>
+                </th:block>
+              </div>
+
+              <a
+                th:if="${currentPage < totalPages - 1}"
+                th:href="@{/admin/kitchen(filter=${filter},page=${currentPage + 1})}"
+                class="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all"
+              >
+                <span class="material-symbols-outlined text-lg">chevron_right</span>
+              </a>
+              <span th:if="${currentPage >= totalPages - 1}" class="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-900 text-gray-400 dark:text-gray-600 cursor-not-allowed">
+                <span class="material-symbols-outlined text-lg">chevron_right</span>
+              </span>
+            </div>
+          </div>
         </div>
       </main>
     </div>
@@ -533,41 +602,7 @@
     <!-- Sidebar Scripts Fragment -->
     <div th:replace="~{fragments/sidebar :: sidebarScripts}"></div>
 
-    <!-- Filter Script -->
-    <script>
-      function filterOrders(status) {
-        const orderCards = document.querySelectorAll("[data-order-status]");
-        const filterBtns = document.querySelectorAll(".filter-btn");
 
-        // Update button styles
-        filterBtns.forEach((btn) => {
-          if (btn.dataset.filter === status) {
-            btn.classList.add("bg-primary", "text-white");
-            btn.classList.remove(
-              "text-gray-700",
-              "dark:text-gray-300",
-              "hover:bg-orange-100",
-              "dark:hover:bg-orange-900/30",
-              "hover:bg-blue-100",
-              "dark:hover:bg-blue-900/30",
-            );
-          } else {
-            btn.classList.remove("bg-primary", "text-white");
-            btn.classList.add("text-gray-700", "dark:text-gray-300");
-          }
-        });
-
-        // Filter orders
-        orderCards.forEach((card) => {
-          if (status === "all") {
-            card.style.display = "";
-          } else {
-            card.style.display =
-              card.dataset.orderStatus === status ? "" : "none";
-          }
-        });
-      }
-    </script>
 
     <!-- WebSocket Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>

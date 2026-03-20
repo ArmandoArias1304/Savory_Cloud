@@ -76,6 +76,8 @@ public class PackageAccessFilter extends OncePerRequestFilter {
                path.equals("/client/register") ||
                path.startsWith("/ws") ||
                path.startsWith("/topic/") ||
+               //excluir favicon
+               path.equals("/favicon.ico") ||
                path.startsWith("/programmer");
     }
 }

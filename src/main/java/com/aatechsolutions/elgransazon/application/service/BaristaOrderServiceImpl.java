@@ -255,8 +255,9 @@ public class BaristaOrderServiceImpl implements OrderService {
     public List<Order> findAll() {
         // Show only orders with items requiring barista preparation
         // MULTI-TENANT: Filter by current company
+        // OPTIMIZED: Use JOIN FETCH query instead of findByCompany + stream filter
         Company company = CompanyContext.requireCurrentCompany();
-        List<Order> orders = orderRepository.findByCompany(company);
+        List<Order> orders = orderRepository.findOrdersWithBaristaItemsByCompany(company);
         return orders.stream()
             .filter(this::hasItemsRequiringBaristaPreparation)
             .collect(Collectors.toList());

@@ -351,16 +351,18 @@
                                required
                                minlength="3"
                                maxlength="50"
-                               pattern="^[a-zA-Z0-9_]+$"
-                               title="Solo letras, números y guión bajo"
-                               placeholder="juan_perez">
+                               pattern="^[a-z0-9_]+$"
+                               title="Solo letras minúsculas, números y guión bajo"
+                               placeholder="juan_perez"
+                               oninput="this.value = this.value.toLowerCase()"
+                               style="text-transform: lowercase;">
                         <span class="material-symbols-outlined">badge</span>
                     </div>
                     <p th:if="${#fields.hasErrors('username')}" 
                        th:errors="*{username}" 
                        class="error-text"></p>
                     <p class="help-text">
-                        Solo letras, números y guión bajo (_). Mínimo 3 caracteres
+                        Solo letras minúsculas, números y guión bajo (_). Mínimo 3 caracteres
                     </p>
                 </div>
 
