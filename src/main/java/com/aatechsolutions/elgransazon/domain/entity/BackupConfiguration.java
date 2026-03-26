@@ -36,21 +36,21 @@ public class BackupConfiguration implements Serializable {
     @Builder.Default
     private Boolean enabled = false;
 
-    @NotNull(message = "Frequency in days is required")
-    @Min(value = 1, message = "Frequency must be at least 1 day")
-    @Max(value = 30, message = "Frequency cannot exceed 30 days")
+    @NotNull(message = "La frecuencia de respaldo es obligatoria")
+    @Min(value = 1, message = "La frecuencia debe ser al menos 1 día")
+    @Max(value = 30, message = "La frecuencia no puede exceder los 30 días")
     @Column(name = "frequency_days", nullable = false)
     @Builder.Default
     private Integer frequencyDays = 7; // Default: weekly
 
-    @NotNull(message = "Backup time is required")
+    @NotNull(message = "La hora de respaldo es obligatoria")
     @Column(name = "backup_time", nullable = false)
     @Builder.Default
     private LocalTime backupTime = LocalTime.of(2, 0); // Default: 2:00 AM
 
-    @NotNull(message = "Retention count is required")
-    @Min(value = 1, message = "Must retain at least 1 backup")
-    @Max(value = 30, message = "Cannot retain more than 30 backups")
+    @NotNull(message = "El número de respaldos a conservar es obligatorio")
+    @Min(value = 1, message = "El número de respaldos a conservar debe ser al menos 1")
+    @Max(value = 30, message = "El número de respaldos a conservar no puede exceder los 30")
     @Column(name = "retention_count", nullable = false)
     @Builder.Default
     private Integer retentionCount = 10; // Default: keep last 10 backups

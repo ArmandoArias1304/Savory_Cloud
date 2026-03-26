@@ -28,18 +28,18 @@ public class SocialNetwork implements Serializable {
     @Column(name = "id")
     private Long id;
 
-    @NotBlank(message = "Social network name is required")
-    @Size(min = 2, max = 50, message = "Name must be between 2 and 50 characters")
+    @NotBlank(message = "El nombre de la red social es obligatorio")
+    @Size(min = 2, max = 50, message = "El nombre de la red social debe tener entre 2 y 50 caracteres")
     @Column(name = "name", nullable = false, length = 50)
     private String name;
 
-    @NotBlank(message = "URL is required")
-    @Pattern(regexp = "^https?://.*", message = "URL must start with http:// or https://")
-    @Size(max = 500, message = "URL cannot exceed 500 characters")
+    @NotBlank(message = "La URL de la red social es obligatoria")
+    @Pattern(regexp = "^https?://.*", message = "La URL debe comenzar con http:// o https://")
+    @Size(max = 500, message = "La URL no puede exceder los 500 caracteres")
     @Column(name = "url", nullable = false, length = 500)
     private String url;
 
-    @Size(max = 100, message = "Icon cannot exceed 100 characters")
+    @Size(max = 100, message = "El icono no puede exceder los 100 caracteres")
     @Column(name = "icon", length = 100)
     private String icon;
 

@@ -127,9 +127,9 @@
                 <!-- Logo/Brand -->
                 <div class="flex items-center gap-3">
                     <!-- Restaurant Logo -->
-                    <div class="w-10 h-10 sm:w-12 sm:h-12 shrink-0 bg-white rounded-xl flex items-center justify-center shadow-lg overflow-hidden">
+                    <div class="w-12 h-12 sm:w-14 sm:h-14 shrink-0 rounded-xl flex items-center justify-center shadow-lg overflow-hidden">
                         <img th:if="${globalSystemConfig.systemLogoUrl != null and !globalSystemConfig.systemLogoUrl.isEmpty()}"
-                            th:src="${@cloudinaryUrl.logoSmall(globalSystemConfig.systemLogoUrl)}"
+                            th:src="${@cloudinaryUrl.logoLarge(globalSystemConfig.systemLogoUrl)}"
                             th:alt="${globalSystemConfig.systemName}"
                             class="w-full h-full object-contain p-1" />
                     </div>
@@ -183,8 +183,30 @@
 
         <!-- DASHBOARD GRID -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 max-w-5xl mx-auto">
-            <!-- CARD 1: Pedidos a Repartir -->
-            <a href="/delivery/orders/pending"
+            <!-- CARD 1: Pedidos a Repartir (BLOCKED when closed) -->
+            <div th:if="${!isRestaurantOpen}"
+                class="dashboard-card block rounded-3xl bg-gray-300 dark:bg-gray-800 shadow-lg border border-gray-400 dark:border-gray-700 p-6 sm:p-8 text-center animate-fadeInUp cursor-not-allowed opacity-60"
+                style="animation-delay: 0.1s"
+                title="Restaurante cerrado - No es posible repartir pedidos fuera del horario laborable">
+                <div class="flex flex-col items-center">
+                    <div class="mb-4">
+                        <span
+                            class="material-symbols-outlined text-7xl sm:text-8xl text-gray-500 dark:text-gray-600">two_wheeler</span>
+                    </div>
+                    <h3 class="text-xl sm:text-2xl font-bold text-gray-700 dark:text-gray-400 mb-2">
+                        Pedidos a Repartir
+                    </h3>
+                    <p class="text-sm sm:text-base text-red-600 dark:text-red-400 font-semibold">
+                        🔒 Restaurante Cerrado
+                    </p>
+                    <p class="text-xs text-gray-600 dark:text-gray-500 mt-1">
+                        Fuera de horario laborable
+                    </p>
+                </div>
+            </div>
+
+            <!-- CARD 1: Pedidos a Repartir (ACTIVE when open) -->
+            <a th:if="${isRestaurantOpen}" href="/delivery/orders/pending"
                 class="dashboard-card block rounded-3xl bg-white dark:bg-gray-900 shadow-lg hover:shadow-2xl border border-gray-200 dark:border-gray-800 p-6 sm:p-8 text-center animate-fadeInUp"
                 style="animation-delay: 0.1s">
                 <div class="flex flex-col items-center">
@@ -277,6 +299,23 @@
             </p>
           </div>
         </a>
+
+            <!-- CARD: Ver Menú -->
+            <a href="/delivery/menu/view"
+                class="dashboard-card block rounded-3xl bg-white dark:bg-gray-900 shadow-lg hover:shadow-2xl border border-gray-200 dark:border-gray-800 p-6 sm:p-8 text-center animate-fadeInUp"
+                style="animation-delay: 0.4s">
+                <div class="flex flex-col items-center">
+                    <div class="mb-4">
+                        <span class="material-symbols-outlined text-7xl sm:text-8xl text-orange-500">restaurant_menu</span>
+                    </div>
+                    <h3 class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                        Menú
+                    </h3>
+                    <p class="text-sm sm:text-base text-gray-500 dark:text-gray-400">
+                        Platillos y precios
+                    </p>
+                </div>
+            </a>
 
             <!-- CARD 5: Reloj en Tiempo Real (NO ES BOTÓN) -->
             <div class="rounded-3xl bg-gradient-to-br from-primary to-primary-dark shadow-lg border-2 border-primary-dark p-6 sm:p-8 text-center animate-fadeInUp sm:col-span-2 lg:col-span-1"

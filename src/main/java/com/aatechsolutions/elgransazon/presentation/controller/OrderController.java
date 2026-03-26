@@ -1535,7 +1535,9 @@ public class OrderController {
 
         } catch (Exception e) {
             log.error("Error updating order", e);
-            model.addAttribute("errorMessage", "Error al actualizar el pedido: " + e.getMessage());
+            String constraintMsg = GlobalExceptionHandler.extractConstraintMessages(e);
+            String errorMsg = constraintMsg != null ? constraintMsg : "Error al actualizar el pedido: " + e.getMessage();
+            model.addAttribute("errorMessage", errorMsg);
             order.setIdOrder(id);
             loadFormData(model, order, username, role);
             loadEditOrderData(model, id, orderService);

@@ -1,10 +1,15 @@
 package com.aatechsolutions.elgransazon.presentation.controller;
 
+import com.aatechsolutions.elgransazon.application.service.BusinessHoursService;
+import com.aatechsolutions.elgransazon.application.service.CategoryService;
 import com.aatechsolutions.elgransazon.application.service.DateTimeService;
 import com.aatechsolutions.elgransazon.application.service.EmployeeService;
+import com.aatechsolutions.elgransazon.application.service.ItemMenuService;
 import com.aatechsolutions.elgransazon.application.service.OrderService;
 import com.aatechsolutions.elgransazon.application.service.SystemConfigurationService;
+import com.aatechsolutions.elgransazon.domain.entity.Category;
 import com.aatechsolutions.elgransazon.domain.entity.Employee;
+import com.aatechsolutions.elgransazon.domain.entity.ItemMenu;
 import com.aatechsolutions.elgransazon.domain.entity.Order;
 import com.aatechsolutions.elgransazon.domain.entity.OrderStatus;
 import com.aatechsolutions.elgransazon.domain.entity.PaymentMethodType;
@@ -24,6 +29,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -41,6 +47,9 @@ public class DeliveryController {
     private final EmployeeService employeeService;
     private final SystemConfigurationService configurationService;
     private final DateTimeService dateTimeService;
+    private final BusinessHoursService businessHoursService;
+    private final CategoryService categoryService;
+    private final ItemMenuService itemMenuService;
 
     /**
      * Display delivery dashboard
@@ -57,9 +66,13 @@ public class DeliveryController {
         // Get system configuration
         SystemConfiguration config = configurationService.getConfiguration();
         
+        // Check business hours
+        boolean isRestaurantOpen = businessHoursService.isOpenNow();
+        
         model.addAttribute("config", config);
         model.addAttribute("username", username);
         model.addAttribute("role", "Delivery");
+        model.addAttribute("isRestaurantOpen", isRestaurantOpen);
         
         return "delivery/dashboard";
     }
@@ -75,7 +88,11 @@ public class DeliveryController {
      * @return pending deliveries view
      */
     @GetMapping("/orders/pending")
-    public String pendingDeliveries(Authentication authentication, Model model) {
+    public String pendingDeliveries(@RequestParam(defaultValue = "1") int page,
+            Authentication authentication, Model model) {
+        if (!businessHoursService.isOpenNow()) {
+            return "redirect:/delivery/dashboard";
+        }
         String username = authentication.getName();
         log.info("Delivery {} viewing pending deliveries", username);
         
@@ -101,10 +118,27 @@ public class DeliveryController {
         readyOrders.addAll(onTheWayOrders);
         readyOrders.addAll(deliveredOrders);
         
+        // Sort oldest first (FIFO) so delivery sees oldest ready orders first
+        readyOrders.sort((o1, o2) -> o1.getCreatedAt().compareTo(o2.getCreatedAt()));
+        
         // Get system configuration for delivery payment methods
         SystemConfiguration config = configurationService.getConfiguration();
         
-        model.addAttribute("orders", readyOrders);
+        // Server-side pagination
+        int pageSize = 16;
+        int totalElements = readyOrders.size();
+        int totalPages = (int) Math.ceil((double) totalElements / pageSize);
+        if (totalPages == 0) totalPages = 1;
+        page = Math.max(1, Math.min(page, totalPages));
+        int startIndex = (page - 1) * pageSize;
+        int endIndex = Math.min(startIndex + pageSize, totalElements);
+        List<Order> pagedOrders = totalElements > 0 ? readyOrders.subList(startIndex, endIndex) : readyOrders;
+        
+        model.addAttribute("orders", pagedOrders);
+        model.addAttribute("currentPage", page);
+        model.addAttribute("totalPages", totalPages);
+        model.addAttribute("totalElements", totalElements);
+        model.addAttribute("pageSize", pageSize);
         model.addAttribute("currentEmployee", currentEmployee);
         model.addAttribute("config", config);
         
@@ -120,7 +154,8 @@ public class DeliveryController {
      * @return completed deliveries view
      */
     @GetMapping("/orders/completed")
-    public String completedDeliveries(Authentication authentication, Model model) {
+    public String completedDeliveries(@RequestParam(defaultValue = "1") int page,
+            Authentication authentication, Model model) {
         String username = authentication.getName();
         log.info("Delivery {} viewing completed deliveries", username);
         
@@ -148,7 +183,21 @@ public class DeliveryController {
         log.info("Found {} completed deliveries (PAID: {}, CANCELLED: {}) for delivery person {}", 
             completedOrders.size(), paidOrders.size(), cancelledOrders.size(), username);
         
-        model.addAttribute("orders", completedOrders);
+        // Server-side pagination
+        int pageSize = 16;
+        int totalElements = completedOrders.size();
+        int totalPages = (int) Math.ceil((double) totalElements / pageSize);
+        if (totalPages == 0) totalPages = 1;
+        page = Math.max(1, Math.min(page, totalPages));
+        int startIndex = (page - 1) * pageSize;
+        int endIndex = Math.min(startIndex + pageSize, totalElements);
+        List<Order> pagedOrders = totalElements > 0 ? completedOrders.subList(startIndex, endIndex) : completedOrders;
+        
+        model.addAttribute("orders", pagedOrders);
+        model.addAttribute("currentPage", page);
+        model.addAttribute("totalPages", totalPages);
+        model.addAttribute("totalElements", totalElements);
+        model.addAttribute("pageSize", pageSize);
         model.addAttribute("currentEmployee", currentEmployee);
         model.addAttribute("username", username);
         model.addAttribute("role", "Delivery");
@@ -583,6 +632,33 @@ public class DeliveryController {
         } catch (Exception e) {
             log.error("Error loading reports for delivery {}: {}", username, e.getMessage(), e);
             redirectAttributes.addFlashAttribute("errorMessage", "Error al cargar los reportes");
+            return "redirect:/delivery/dashboard";
+        }
+    }
+
+    @GetMapping("/menu/view")
+    public String viewMenu(Authentication authentication, Model model, RedirectAttributes redirectAttributes) {
+        log.info("Delivery {} accessed visual menu view", authentication.getName());
+
+        try {
+            SystemConfiguration config = configurationService.getConfiguration();
+            List<ItemMenu> availableItems = itemMenuService.findAvailableItems();
+
+            Map<Long, List<ItemMenu>> itemsByCategory = availableItems.stream()
+                    .collect(Collectors.groupingBy(item -> item.getCategory().getIdCategory()));
+
+            List<Category> categories = categoryService.getAllActiveCategories().stream()
+                    .filter(category -> itemsByCategory.containsKey(category.getIdCategory()))
+                    .collect(Collectors.toList());
+
+            model.addAttribute("config", config);
+            model.addAttribute("categories", categories);
+            model.addAttribute("itemsByCategory", itemsByCategory);
+
+            return "delivery/menu/view";
+        } catch (Exception e) {
+            log.error("Error loading menu: {}", e.getMessage());
+            redirectAttributes.addFlashAttribute("errorMessage", "Error al cargar el menú");
             return "redirect:/delivery/dashboard";
         }
     }

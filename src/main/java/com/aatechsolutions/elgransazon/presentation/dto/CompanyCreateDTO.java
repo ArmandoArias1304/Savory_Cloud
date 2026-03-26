@@ -67,4 +67,17 @@ public class CompanyCreateDTO {
     @NotBlank(message = "La contraseña es requerida")
     @Size(min = 6, max = 100, message = "La contraseña debe tener al menos 6 caracteres")
     private String adminPassword;
+
+    // ========== LICENSE FIELDS ==========
+    private boolean freeTrial = true;
+
+    @NotBlank(message = "El tipo de paquete es requerido")
+    private String packageType = "BASIC";
+
+    @NotBlank(message = "El ciclo de facturación es requerido")
+    private String billingCycle = "MONTHLY";
+
+    private int licenseMonths = 1;
+
+    private Double licenseAmount;
 }

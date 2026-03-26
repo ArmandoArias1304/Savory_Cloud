@@ -60,13 +60,7 @@ public class ClientAuthController {
         model.addAttribute("config", systemConfigurationService.getConfiguration());
         
         if (error != null) {
-            if ("employeeAttempt".equals(error)) {
-                log.warn("Employee attempted to login via client login page");
-                model.addAttribute("errorType", "employeeAttempt");
-                model.addAttribute("error", "Este acceso es solo para clientes");
-            } else {
-                model.addAttribute("error", "Usuario o contraseña incorrectos");
-            }
+            model.addAttribute("error", "Credenciales inválidas");
         }
         
         if (logout != null) {

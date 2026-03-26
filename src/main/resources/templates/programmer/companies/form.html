@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title th:text="${globalSystemConfig.systemName} + ' - Nueva Empresa'">SavoryCloud - Nueva Empresa</title>
+    <link rel="icon" type="image/png" sizes="96x96"
+          th:href="${@cloudinaryUrl.logoSmall(globalSystemConfig.systemLogoUrl)}"
+          th:if="${globalSystemConfig != null and globalSystemConfig.systemLogoUrl != null and !globalSystemConfig.systemLogoUrl.isEmpty()}" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -27,6 +30,10 @@
         },
       };
     </script>
+    <style>
+      /* Hide browser built-in password reveal button (Edge/Chrome) */
+      input::-ms-reveal { display: none; }
+    </style>
 </head>
 <body class="bg-background-light dark:bg-background-dark min-h-screen font-display">
     <!-- Header -->
@@ -220,12 +227,85 @@
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                             Contraseña *
                         </label>
-                        <input type="password" th:field="*{adminPassword}" required
-                               placeholder="••••••••"
-                               minlength="6"
-                               class="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent">
+                        <div class="relative">
+                            <input type="password" th:field="*{adminPassword}" required id="adminPasswordInput"
+                                   placeholder="••••••••"
+                                   minlength="6"
+                                   class="w-full px-4 py-2 pr-12 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent">
+                            <button type="button" id="togglePassword"
+                                    class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                                <span class="material-symbols-outlined" id="togglePasswordIcon">visibility</span>
+                            </button>
+                        </div>
                         <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Mínimo 6 caracteres</p>
                         <p th:if="${#fields.hasErrors('adminPassword')}" th:errors="*{adminPassword}" class="mt-1 text-sm text-red-500"></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- License Configuration Section -->
+            <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6">
+                <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-6 flex items-center">
+                    <span class="material-symbols-outlined mr-2 text-primary">license</span>
+                    Configuración de Licencia
+                </h2>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Free Trial Toggle -->
+                    <div class="md:col-span-2">
+                        <label class="flex items-center cursor-pointer">
+                            <input type="checkbox" th:field="*{freeTrial}" id="freeTrialCheck"
+                                   class="w-5 h-5 text-primary bg-gray-100 border-gray-300 rounded focus:ring-primary dark:bg-slate-700 dark:border-slate-600">
+                            <span class="ml-3 text-sm font-medium text-gray-700 dark:text-gray-300">Prueba Gratis (1 mes, $0)</span>
+                        </label>
+                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400 ml-8">Si se marca, la licencia será gratuita por 1 mes con paquete seleccionado</p>
+                    </div>
+
+                    <!-- Package Type -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Paquete *
+                        </label>
+                        <select th:field="*{packageType}" id="packageTypeSelect"
+                                class="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent">
+                            <option value="BASIC">BASIC — Básico (7 usuarios, 1 sucursal)</option>
+                            <option value="WEB">WEB — Web (7 usuarios, 3 sucursales)</option>
+                            <option value="ECOMMERCE">ECOMMERCE — E-Commerce (7 usuarios, 10 sucursales)</option>
+                        </select>
+                    </div>
+
+                    <!-- Billing Cycle -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Ciclo de Facturación
+                        </label>
+                        <select th:field="*{billingCycle}" id="billingCycleSelect"
+                                class="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent">
+                            <option value="MONTHLY">Mensual</option>
+                            <option value="ANNUAL">Anual</option>
+                        </select>
+                    </div>
+
+                    <!-- License Months (hidden when free trial) -->
+                    <div id="licenseMonthsGroup">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Meses de Licencia *
+                        </label>
+                        <input type="number" th:field="*{licenseMonths}" id="licenseMonthsInput"
+                               min="1" max="36"
+                               class="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent">
+                    </div>
+
+                    <!-- License Amount (hidden when free trial) -->
+                    <div id="licenseAmountGroup">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Monto Cobrado ($)
+                        </label>
+                        <input type="number" th:field="*{licenseAmount}" id="licenseAmountInput"
+                               min="0" step="0.01"
+                               placeholder="0.00"
+                               class="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent">
+                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Monto que pagó el cliente por la licencia</p>
                     </div>
                 </div>
             </div>
@@ -262,5 +342,36 @@
     </main>
 
     <th:block th:replace="~{fragments/theme :: themeScript}"></th:block>
+    <script>
+      document.addEventListener('DOMContentLoaded', function() {
+        // Password toggle
+        const toggleBtn = document.getElementById('togglePassword');
+        const pwdInput = document.getElementById('adminPasswordInput');
+        const toggleIcon = document.getElementById('togglePasswordIcon');
+        toggleBtn.addEventListener('click', function() {
+          const isHidden = pwdInput.type === 'password';
+          pwdInput.type = isHidden ? 'text' : 'password';
+          toggleIcon.textContent = isHidden ? 'visibility_off' : 'visibility';
+        });
+
+        // License fields toggle
+        const freeTrialCheck = document.getElementById('freeTrialCheck');
+        const monthsGroup = document.getElementById('licenseMonthsGroup');
+        const amountGroup = document.getElementById('licenseAmountGroup');
+        const monthsInput = document.getElementById('licenseMonthsInput');
+        const amountInput = document.getElementById('licenseAmountInput');
+
+        function togglePaidFields() {
+          const isFree = freeTrialCheck.checked;
+          amountGroup.style.display = isFree ? 'none' : '';
+          if (isFree) {
+            amountInput.value = '';
+          }
+        }
+
+        freeTrialCheck.addEventListener('change', togglePaidFields);
+        togglePaidFields(); // initial state
+      });
+    </script>
 </body>
 </html>

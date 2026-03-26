@@ -78,7 +78,7 @@ public class CustomAuthenticationSuccessHandler implements AuthenticationSuccess
         if (!isCustomer && (referer != null && referer.contains("/client/login"))) {
             log.warn("Employee {} attempted to login via client login page", username);
             request.getSession().invalidate();
-            response.sendRedirect("/client/login?error=employeeAttempt");
+            response.sendRedirect("/client/login?error=true");
             return;
         }
         

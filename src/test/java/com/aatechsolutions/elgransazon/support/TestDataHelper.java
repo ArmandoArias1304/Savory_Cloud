@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.Set;
@@ -65,8 +66,8 @@ public class TestDataHelper {
                 .licenseKey("TEST-KEY-" + slug + "-" + System.nanoTime())
                 .packageType(SystemLicense.PackageType.ECOMMERCE)
                 .billingCycle(SystemLicense.BillingCycle.ANNUAL)
-                .purchaseDate(LocalDate.now().minusDays(30))
-                .expirationDate(LocalDate.now().plusYears(1))
+                .purchaseDate(LocalDateTime.now().minusDays(30))
+                .expirationDate(LocalDateTime.now().plusYears(1))
                 .installationDate(LocalDate.now().minusDays(30))
                 .status(SystemLicense.LicenseStatus.ACTIVE)
                 .maxUsers(50)
@@ -118,8 +119,8 @@ public class TestDataHelper {
                 .licenseKey("BASIC-KEY-" + slug + "-" + System.nanoTime())
                 .packageType(SystemLicense.PackageType.BASIC)
                 .billingCycle(SystemLicense.BillingCycle.MONTHLY)
-                .purchaseDate(LocalDate.now().minusDays(10))
-                .expirationDate(LocalDate.now().plusMonths(1))
+                .purchaseDate(LocalDateTime.now().minusDays(10))
+                .expirationDate(LocalDateTime.now().plusMonths(1))
                 .installationDate(LocalDate.now().minusDays(10))
                 .status(SystemLicense.LicenseStatus.ACTIVE)
                 .maxUsers(5)
@@ -157,8 +158,8 @@ public class TestDataHelper {
                 .licenseKey("EXPIRED-KEY-" + slug + "-" + System.nanoTime())
                 .packageType(SystemLicense.PackageType.ECOMMERCE)
                 .billingCycle(SystemLicense.BillingCycle.MONTHLY)
-                .purchaseDate(LocalDate.now().minusMonths(2))
-                .expirationDate(LocalDate.now().minusDays(1))   // yesterday → expired
+                .purchaseDate(LocalDateTime.now().minusMonths(2))
+                .expirationDate(LocalDateTime.now().minusDays(1))   // yesterday → expired
                 .installationDate(LocalDate.now().minusMonths(2))
                 .status(SystemLicense.LicenseStatus.EXPIRED)
                 .maxUsers(5)
@@ -196,8 +197,8 @@ public class TestDataHelper {
                 .licenseKey("SUSPENDED-KEY-" + slug + "-" + System.nanoTime())
                 .packageType(SystemLicense.PackageType.ECOMMERCE)
                 .billingCycle(SystemLicense.BillingCycle.MONTHLY)
-                .purchaseDate(LocalDate.now().minusDays(30))
-                .expirationDate(LocalDate.now().plusMonths(1))
+                .purchaseDate(LocalDateTime.now().minusDays(30))
+                .expirationDate(LocalDateTime.now().plusMonths(1))
                 .installationDate(LocalDate.now().minusDays(30))
                 .status(SystemLicense.LicenseStatus.SUSPENDED)
                 .maxUsers(5)
@@ -241,8 +242,8 @@ public class TestDataHelper {
                 .licenseKey("ACTIVE-EXPIRED-KEY-" + slug + "-" + System.nanoTime())
                 .packageType(SystemLicense.PackageType.ECOMMERCE)
                 .billingCycle(SystemLicense.BillingCycle.MONTHLY)
-                .purchaseDate(LocalDate.now().minusMonths(2))
-                .expirationDate(LocalDate.now().minusDays(1))   // ayer → isExpired() == true
+                .purchaseDate(LocalDateTime.now().minusMonths(2))
+                .expirationDate(LocalDateTime.now().minusDays(1))   // ayer → isExpired() == true
                 .installationDate(LocalDate.now().minusMonths(2))
                 .status(SystemLicense.LicenseStatus.ACTIVE)     // ← status sigue siendo ACTIVE en BD
                 .maxUsers(5)
@@ -777,7 +778,7 @@ public class TestDataHelper {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void setLicenseExpired(Long companyId) {
         licenseRepository.findByCompanyId(companyId).ifPresent(lic -> {
-            lic.setExpirationDate(LocalDate.now().minusDays(1));
+            lic.setExpirationDate(LocalDateTime.now().minusDays(1));
             lic.setStatus(SystemLicense.LicenseStatus.EXPIRED);
             licenseRepository.save(lic);
         });
@@ -802,7 +803,7 @@ public class TestDataHelper {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void setLicenseDaysUntilExpiry(Long companyId, int daysFromNow) {
         licenseRepository.findByCompanyId(companyId).ifPresent(lic -> {
-            lic.setExpirationDate(LocalDate.now().plusDays(daysFromNow));
+            lic.setExpirationDate(LocalDateTime.now().plusDays(daysFromNow));
             if (daysFromNow > 0) {
                 lic.setStatus(SystemLicense.LicenseStatus.ACTIVE);
             }

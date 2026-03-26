@@ -151,7 +151,7 @@
 
         <!-- Restaurant Logo -->
         <div
-          class="w-10 h-10 sm:w-12 sm:h-12 shrink-0 bg-white rounded-xl flex items-center justify-center shadow-lg overflow-hidden border border-gray-200 dark:border-gray-700"
+          class="w-10 h-10 sm:w-12 sm:h-12 shrink-0 bg-white rounded-full flex items-center justify-center shadow-lg overflow-hidden"
         >
           <img
             th:if="${config.restaurantLogoUrl != null and !config.restaurantLogoUrl.isEmpty()}"
@@ -331,7 +331,7 @@
 
                   <!-- Item Image -->
                   <div
-                    class="relative h-36 w-full overflow-hidden bg-gray-100"
+                    class="relative h-44 w-full overflow-hidden bg-gray-100"
                     th:classappend="${item.imageUrl != null && !item.imageUrl.isEmpty()} ? 'img-skeleton' : ''"
                   >
                     <img
@@ -548,6 +548,8 @@
 
       // Open item modal with SweetAlert2 (simplified - visual only)
       function openItemModal(card) {
+        const isDark = document.documentElement.classList.contains("dark");
+
         // Check if item is available
         const isAvailable = card.dataset.itemAvailable === "true";
         const scheduleStatus = card.dataset.scheduleStatus || "available";
@@ -562,12 +564,8 @@
             text: "Este producto no está disponible por el momento debido a falta de stock.",
             confirmButtonColor: "#38e07b",
             confirmButtonText: "Entendido",
-            background: document.documentElement.classList.contains("dark")
-              ? "#1f2937"
-              : "#ffffff",
-            color: document.documentElement.classList.contains("dark")
-              ? "#f3f4f6"
-              : "#1f2937",
+            background: isDark ? "#1f2937" : "#ffffff",
+            color: isDark ? "#f3f4f6" : "#1f2937",
           });
           return;
         }
@@ -579,12 +577,8 @@
             html: `<p>Este producto no se ofrece el día de hoy.</p><p class="text-sm text-gray-500 mt-2">${scheduleInfo}</p>`,
             confirmButtonColor: "#38e07b",
             confirmButtonText: "Entendido",
-            background: document.documentElement.classList.contains("dark")
-              ? "#1f2937"
-              : "#ffffff",
-            color: document.documentElement.classList.contains("dark")
-              ? "#f3f4f6"
-              : "#1f2937",
+            background: isDark ? "#1f2937" : "#ffffff",
+            color: isDark ? "#f3f4f6" : "#1f2937",
           });
           return;
         }
@@ -596,12 +590,8 @@
             html: `<p>Este producto no está disponible en este horario.</p><p class="text-sm text-gray-500 mt-2">${scheduleInfo}</p>`,
             confirmButtonColor: "#38e07b",
             confirmButtonText: "Entendido",
-            background: document.documentElement.classList.contains("dark")
-              ? "#1f2937"
-              : "#ffffff",
-            color: document.documentElement.classList.contains("dark")
-              ? "#f3f4f6"
-              : "#1f2937",
+            background: isDark ? "#1f2937" : "#ffffff",
+            color: isDark ? "#f3f4f6" : "#1f2937",
           });
           return;
         }
@@ -628,34 +618,23 @@
 
         Swal.fire({
           html: `
-            <div class="flex flex-col md:flex-row gap-6 text-left">
-                <!-- Imagen del producto - Izquierda -->
-                <div class="md:w-1/2 rounded-xl">
-                    <img src="${imageUrl}" alt="${itemName}" class="w-full h-64 md:h-80 object-cover rounded-xl" />
+            <div style="display:flex;flex-wrap:wrap;gap:24px;text-align:left;">
+                <div style="flex:1;min-width:200px;" class="rounded-xl">
+                    <img src="${imageUrl}" alt="${itemName}" style="width:100%;height:280px;object-fit:cover;border-radius:12px;" />
                 </div>
-                
-                <!-- Detalles del producto - Derecha -->
-                <div class="md:w-1/2 flex flex-col">
-                    <h2 class="text-3xl font-black text-gray-900 mb-2">${itemName}</h2>
-                    <p class="text-5xl font-black text-primary mb-4">$${itemPrice.toFixed(
-                      2,
-                    )}</p>
-                    <p class="text-gray-600 mb-6 flex-grow">${
-                      itemDescription || "Sin descripción disponible"
-                    }</p>
+                <div style="flex:1;min-width:200px;display:flex;flex-direction:column;">
+                    <h2 style="font-size:1.875rem;font-weight:900;color:${isDark ? '#f9fafb' : '#111827'};margin-bottom:8px;">${itemName}</h2>
+                    <p style="font-size:2.5rem;font-weight:900;color:#38e07b;margin-bottom:16px;">$${itemPrice.toFixed(2)}</p>
+                    <p style="color:${isDark ? '#9ca3af' : '#4b5563'};margin-bottom:24px;flex:1;">${itemDescription || "Sin descripción disponible"}</p>
                 </div>
             </div>
-        `,
+          `,
           confirmButtonColor: "#38e07b",
           confirmButtonText: "Cerrar",
           width: "900px",
           showCloseButton: true,
-          background: document.documentElement.classList.contains("dark")
-            ? "#1f2937"
-            : "#ffffff",
-          color: document.documentElement.classList.contains("dark")
-            ? "#f3f4f6"
-            : "#1f2937",
+          background: isDark ? "#1f2937" : "#ffffff",
+          color: isDark ? "#f3f4f6" : "#1f2937",
           customClass: {
             popup: "rounded-2xl",
             htmlContainer: "p-0",

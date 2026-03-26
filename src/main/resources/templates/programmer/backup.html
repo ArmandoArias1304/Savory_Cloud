@@ -6,6 +6,9 @@
     <title th:text="${globalSystemConfig.systemName + ' - Respaldos'}">
       SavoryCloud - Respaldos
     </title>
+    <link rel="icon" type="image/png" sizes="96x96"
+          th:href="${@cloudinaryUrl.logoSmall(globalSystemConfig.systemLogoUrl)}"
+          th:if="${globalSystemConfig != null and globalSystemConfig.systemLogoUrl != null and !globalSystemConfig.systemLogoUrl.isEmpty()}" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link

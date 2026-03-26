@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title th:text="${globalSystemConfig.systemName + ' - Panel del Programador'}">SavoryCloud - Panel del Programador</title>
+    <link rel="icon" type="image/png" sizes="96x96"
+          th:href="${@cloudinaryUrl.logoSmall(globalSystemConfig.systemLogoUrl)}"
+          th:if="${globalSystemConfig != null and globalSystemConfig.systemLogoUrl != null and !globalSystemConfig.systemLogoUrl.isEmpty()}" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -268,8 +271,8 @@
                                 th:data-billing="${company.systemLicense.billingCycleDisplayName}"
                                 th:data-max-users="${company.systemLicense.maxUsersDisplay}"
                                 th:data-max-branches="${company.systemLicense.maxBranches}"
-                                th:data-purchase-date="${#temporals.format(company.systemLicense.purchaseDate, 'dd/MM/yyyy')}"
-                                th:data-expiration-date="${#temporals.format(company.systemLicense.expirationDate, 'dd/MM/yyyy')}"
+                                th:data-purchase-date="${#tz.format(company.systemLicense.purchaseDate, 'dd/MM/yyyy HH:mm')}"
+                                th:data-expiration-date="${#tz.format(company.systemLicense.expirationDate, 'dd/MM/yyyy HH:mm')}"
                                 th:data-days-left="${company.systemLicense.daysUntilExpiration()}"
                                 th:data-days-active="${company.systemLicense.daysActive()}"
                                 th:data-restaurant-name="${company.systemLicense.restaurantName}"
@@ -307,11 +310,11 @@
                     </div>
                     <div>
                         <p class="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-2">Fecha de Compra</p>
-                        <p id="licensePurchaseDate" class="text-base font-medium text-gray-900 dark:text-white" th:text="${#temporals.format(license.purchaseDate, 'dd/MM/yyyy')}"></p>
+                        <p id="licensePurchaseDate" class="text-base font-medium text-gray-900 dark:text-white" th:text="${#tz.format(license.purchaseDate, 'dd/MM/yyyy HH:mm')}"></p>
                     </div>
                     <div>
                         <p class="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-2">Fecha de Expiración</p>
-                        <p id="licenseExpirationDate" class="text-base font-medium text-gray-900 dark:text-white" th:text="${#temporals.format(license.expirationDate, 'dd/MM/yyyy')}"></p>
+                        <p id="licenseExpirationDate" class="text-base font-medium text-gray-900 dark:text-white" th:text="${#tz.format(license.expirationDate, 'dd/MM/yyyy HH:mm')}"></p>
                     </div>
                     <div>
                         <p class="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-2">Días Restantes</p>
@@ -786,11 +789,11 @@
                         <div class="space-y-1 text-sm text-blue-800 dark:text-blue-300">
                             <div class="flex items-center gap-2">
                                 <span class="material-symbols-outlined text-base">calendar_today</span>
-                                <span>Vence: <span class="font-semibold" th:text="${#temporals.format(license.expirationDate, 'dd/MM/yyyy')}"></span></span>
+                                <span>Vence: <span class="font-semibold" th:text="${#tz.format(license.expirationDate, 'dd/MM/yyyy HH:mm')}"></span></span>
                             </div>
                             <div class="flex items-center gap-2">
                                 <span class="material-symbols-outlined text-base">schedule</span>
-                                <span>Días restantes: <span class="font-semibold" th:text="${daysLeft}"></span> días</span>
+                                <span>Días restantes: <span class="font-semibold" th:text="${daysLeft < 0} ? 'Expirada' : ${daysLeft} + ' días'"></span></span>
                             </div>
                         </div>
                     </div>
@@ -1334,30 +1337,57 @@
     });
 
     // Calculate new expiration date when renewing
+    // The server sends UTC — append 'Z' so JS treats it as UTC, then convert to company timezone
     const currentExpiration = /*[[${license != null ? license.expirationDate : null}]]*/ null;
-    const currentExpirationDate = currentExpiration ? new Date(currentExpiration) : new Date();
+    const currentExpirationDate = currentExpiration ? new Date(currentExpiration + 'Z') : new Date();
+    const licenseIsExpired = currentExpirationDate <= new Date();
+    const purchaseDay = /*[[${license != null ? license.purchaseDate.dayOfMonth : 1}]]*/ 1;
+    const displayTZ = /*[[${selectedCompany != null && selectedCompany.timezone != null ? selectedCompany.timezone : 'America/Mexico_City'}]]*/ 'America/Mexico_City';
+    
+    function formatInTZ(date, tz) {
+        const parts = new Intl.DateTimeFormat('es-MX', {
+            timeZone: tz, day:'2-digit', month:'2-digit', year:'numeric',
+            hour:'2-digit', minute:'2-digit', hour12: false
+        }).formatToParts(date);
+        const p = {};
+        parts.forEach(x => p[x.type] = x.value);
+        return `${p.day}/${p.month}/${p.year} ${p.hour}:${p.minute}`;
+    }
     
     function calculateRenewal() {
         const months = parseInt(document.getElementById('renewMonths').value);
         
-        // Calculate new expiration date
-        const newDate = new Date(currentExpirationDate);
-        newDate.setMonth(newDate.getMonth() + months);
+        // If expired and adding time → start from NOW (customer gets full period from today)
+        // If active or subtracting → extend from current expiration
+        const startingFresh = months > 0 && licenseIsExpired;
+        const baseDate = startingFresh ? new Date() : new Date(currentExpirationDate);
         
-        // Format date as DD/MM/YYYY
-        const day = String(newDate.getDate()).padStart(2, '0');
-        const month = String(newDate.getMonth() + 1).padStart(2, '0');
-        const year = newDate.getFullYear();
-        const formattedDate = `${day}/${month}/${year}`;
+        const newDate = new Date(baseDate);
+        newDate.setUTCMonth(newDate.getUTCMonth() + months);
         
-        // Calculate total days from today
-        const today = new Date();
-        const diffTime = newDate - today;
+        // Preserve original purchase day when extending active license (prevents 31→28→28 erosion)
+        if (months > 0 && !startingFresh) {
+            const targetMonth = newDate.getUTCMonth();
+            const targetYear = newDate.getUTCFullYear();
+            const maxDay = new Date(targetYear, targetMonth + 1, 0).getDate();
+            newDate.setUTCDate(Math.min(purchaseDay, maxDay));
+        }
+        
+        // Format in company timezone
+        const formattedDate = formatInTZ(newDate, displayTZ);
+        
+        // Calculate total days from now
+        const now = new Date();
+        const diffTime = newDate - now;
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
         
         // Update display
         document.getElementById('newExpirationDate').textContent = formattedDate;
         document.getElementById('totalDays').textContent = diffDays;
+        
+        // Show indicator if starting fresh
+        const indicator = startingFresh ? ' (desde hoy)' : '';
+        document.getElementById('newExpirationDate').textContent = formattedDate + indicator;
     }
     
     // Update calculations when modal opens or dropdown changes

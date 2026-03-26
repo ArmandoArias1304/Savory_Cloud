@@ -140,11 +140,11 @@
           <div class="flex items-center gap-3">
             <!-- Restaurant Logo -->
             <div
-              class="w-10 h-10 sm:w-12 sm:h-12 shrink-0 bg-white rounded-xl flex items-center justify-center shadow-lg overflow-hidden"
+              class="w-12 h-12 sm:w-14 sm:h-14 shrink-0 rounded-xl flex items-center justify-center shadow-lg overflow-hidden"
             >
               <img
                 th:if="${globalSystemConfig.systemLogoUrl != null and !globalSystemConfig.systemLogoUrl.isEmpty()}"
-                th:src="${@cloudinaryUrl.logoSmall(globalSystemConfig.systemLogoUrl)}"
+                th:src="${@cloudinaryUrl.logoLarge(globalSystemConfig.systemLogoUrl)}"
                 th:alt="${globalSystemConfig.systemName}"
                 class="w-full h-full object-contain p-1"
               />
@@ -222,9 +222,39 @@
       <div
         class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6"
       >
-        <!-- CARD 1: Gestión de Pedidos -->
-        <!-- CARD 1: Gestión de Pedidos -->
+        <!-- CARD 1: Gestión de Pedidos (BLOCKED when closed) -->
+        <div
+          th:if="${!isRestaurantOpen}"
+          class="dashboard-card block rounded-3xl bg-gray-300 dark:bg-gray-800 shadow-lg border border-gray-400 dark:border-gray-700 p-6 sm:p-8 text-center animate-fadeInUp cursor-not-allowed opacity-60"
+          style="animation-delay: 0.1s"
+          title="Restaurante cerrado - No es posible preparar pedidos fuera del horario laborable"
+        >
+          <div class="flex flex-col items-center">
+            <div class="mb-4">
+              <span
+                class="material-symbols-outlined text-6xl sm:text-7xl text-gray-500 dark:text-gray-600"
+                >fastfood</span
+              >
+            </div>
+            <h3
+              class="text-lg sm:text-xl font-bold text-gray-700 dark:text-gray-400 mb-2"
+            >
+              Preparar Pedidos
+            </h3>
+            <p
+              class="text-xs sm:text-sm text-red-600 dark:text-red-400 font-semibold"
+            >
+              🔒 Restaurante Cerrado
+            </p>
+            <p class="text-xs text-gray-600 dark:text-gray-500 mt-1">
+              Fuera de horario laborable
+            </p>
+          </div>
+        </div>
+
+        <!-- CARD 1: Gestión de Pedidos (ACTIVE when open) -->
         <a
+          th:if="${isRestaurantOpen}"
           th:href="@{'/' + ${rolePrefix} + '/orders/pending'}"
           class="dashboard-card block rounded-3xl bg-white dark:bg-gray-900 shadow-lg hover:shadow-2xl border border-gray-200 dark:border-gray-800 p-6 sm:p-8 text-center animate-fadeInUp"
           style="animation-delay: 0.1s"

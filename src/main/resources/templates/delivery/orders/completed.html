@@ -346,7 +346,7 @@
                     </p>
                     <p
                       class="text-xs text-gray-600 dark:text-gray-400"
-                      th:text="${#tz.format(order.createdAt, 'dd/MM/yyyy HH:mm')}"
+                      th:text="${order.deliveredAt != null ? #tz.format(order.deliveredAt, 'dd/MM/yyyy HH:mm') : #tz.format(order.createdAt, 'dd/MM/yyyy HH:mm')}"
                     >
                       Fecha
                     </p>
@@ -420,8 +420,85 @@
             </div>
           </div>
         </div>
+
+        <!-- Pagination Controls -->
+        <div
+          id="paginationControls"
+          th:if="${totalElements > 0}"
+          class="mt-6 px-6 py-4 bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row items-center justify-between gap-4"
+        >
+          <div class="text-sm text-gray-600 dark:text-gray-400">
+            Mostrando
+            <span th:text="${(currentPage - 1) * pageSize + 1}">1</span> -
+            <span
+              th:text="${currentPage * pageSize > totalElements ? totalElements : currentPage * pageSize}"
+              >16</span
+            >
+            de <span th:text="${totalElements}">0</span> pedidos
+          </div>
+          <div class="flex items-center gap-2">
+            <button
+              onclick="changePage(-1)"
+              th:disabled="${currentPage == 1}"
+              class="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            >
+              <span class="material-symbols-outlined text-lg">chevron_left</span>
+            </button>
+            <div id="pageNumbers" class="flex items-center gap-1"></div>
+            <button
+              onclick="changePage(1)"
+              th:disabled="${currentPage >= totalPages}"
+              class="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            >
+              <span class="material-symbols-outlined text-lg">chevron_right</span>
+            </button>
+          </div>
+        </div>
       </main>
     </div>
+
+    <!-- Pagination Scripts -->
+    <script th:inline="javascript">
+      /*<![CDATA[*/
+      const serverCurrentPage = /*[[${currentPage}]]*/ 1;
+      const serverTotalPages = /*[[${totalPages}]]*/ 1;
+
+      function goToPage(page) {
+        const url = new URL(window.location.href);
+        url.searchParams.set("page", page);
+        window.location.href = url.toString();
+      }
+
+      function changePage(delta) {
+        const newPage = serverCurrentPage + delta;
+        if (newPage >= 1 && newPage <= serverTotalPages) {
+          goToPage(newPage);
+        }
+      }
+
+      document.addEventListener("DOMContentLoaded", function () {
+        const pageNumbersDiv = document.getElementById("pageNumbers");
+        if (!pageNumbersDiv || serverTotalPages <= 1) return;
+
+        let startPage = Math.max(1, serverCurrentPage - 2);
+        let endPage = Math.min(serverTotalPages, startPage + 4);
+        if (endPage - startPage < 4) {
+          startPage = Math.max(1, endPage - 4);
+        }
+
+        for (let i = startPage; i <= endPage; i++) {
+          const btn = document.createElement("button");
+          btn.textContent = i;
+          btn.onclick = () => goToPage(i);
+          btn.className =
+            i === serverCurrentPage
+              ? "px-3 py-1 rounded-lg bg-primary text-white font-semibold"
+              : "px-3 py-1 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all";
+          pageNumbersDiv.appendChild(btn);
+        }
+      });
+      /*]]>*/
+    </script>
 
     <!-- Script del Sistema de Temas -->
     <div th:replace="~{fragments/theme :: themeScript}"></div>

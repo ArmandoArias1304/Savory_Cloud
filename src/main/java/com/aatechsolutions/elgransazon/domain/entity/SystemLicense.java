@@ -4,8 +4,9 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.io.Serializable;
-import com.aatechsolutions.elgransazon.infrastructure.util.CompanyLocalTime;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 
 /**
@@ -44,10 +45,10 @@ public class SystemLicense implements Serializable {
     private BillingCycle billingCycle;
 
     @Column(name = "purchase_date", nullable = false)
-    private LocalDate purchaseDate;
+    private LocalDateTime purchaseDate;
 
     @Column(name = "expiration_date", nullable = false)
-    private LocalDate expirationDate;
+    private LocalDateTime expirationDate;
 
     @Column(name = "installation_date", nullable = false)
     private LocalDate installationDate;
@@ -115,25 +116,48 @@ public class SystemLicense implements Serializable {
 
     /**
      * Check if the license is expired
-     * Returns true if expiration date has passed OR is today
+     * Returns true if expiration date/time has passed
+     * Compares UTC-stored expirationDate with current UTC time.
      */
     public boolean isExpired() {
-        return !expirationDate.isAfter(CompanyLocalTime.today());
+        return !expirationDate.isAfter(LocalDateTime.now());
     }
 
     /**
-     * Get days until expiration
-     * Returns negative number if already expired
+     * Get days until expiration (calendar days in the company's local timezone).
+     * Returns negative number if already expired.
+     * Converts both "now" and expirationDate from UTC to the company's local timezone
+     * so the day count matches what the user sees on screen.
      */
     public long daysUntilExpiration() {
-        return ChronoUnit.DAYS.between(CompanyLocalTime.today(), expirationDate);
+        ZoneId zone = resolveCompanyZone();
+        LocalDate todayLocal = LocalDate.now(zone);
+        LocalDate expirationLocal = expirationDate.atZone(ZoneId.of("UTC"))
+                .withZoneSameInstant(zone).toLocalDate();
+        return ChronoUnit.DAYS.between(todayLocal, expirationLocal);
     }
 
     /**
-     * Get days since installation
+     * Resolve the company's timezone. Falls back to America/Mexico_City.
+     */
+    private ZoneId resolveCompanyZone() {
+        if (company != null) {
+            try {
+                Company c = company;
+                if (c.getTimezone() != null && !c.getTimezone().isBlank()) {
+                    return ZoneId.of(c.getTimezone());
+                }
+            } catch (Exception ignored) {}
+        }
+        return ZoneId.of("America/Mexico_City");
+    }
+
+    /**
+     * Get days since purchase (counts full 24-hour periods from purchaseDate).
+     * Both values are UTC so the comparison is consistent.
      */
     public long daysActive() {
-        return ChronoUnit.DAYS.between(installationDate, CompanyLocalTime.today());
+        return ChronoUnit.DAYS.between(purchaseDate, LocalDateTime.now());
     }
 
     /**
@@ -141,7 +165,7 @@ public class SystemLicense implements Serializable {
      */
     public boolean needsNotification() {
         long daysLeft = daysUntilExpiration();
-        LocalDate today = CompanyLocalTime.today();
+        LocalDate today = LocalDate.now();
 
         // Don't notify if already notified today
         if (lastNotificationSent != null && lastNotificationSent.equals(today)) {

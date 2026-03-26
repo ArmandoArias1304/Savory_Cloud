@@ -37,12 +37,12 @@ public class Category implements Serializable {
     @JoinColumn(name = "company_id", nullable = false)
     private Company company;
 
-    @NotBlank(message = "Category name is required")
-    @Size(min = 2, max = 100, message = "Category name must be between 2 and 100 characters")
+    @NotBlank(message = "El nombre de la categoría es obligatorio")
+    @Size(min = 2, max = 100, message = "El nombre de la categoría debe tener entre 2 y 100 caracteres")
     @Column(name = "name", nullable = false, length = 100)
     private String name;
 
-    @Size(max = 500, message = "Description cannot exceed 500 characters")
+    @Size(max = 500, message = "La descripción no puede exceder los 500 caracteres")
     @Column(name = "description", length = 500)
     private String description;
 

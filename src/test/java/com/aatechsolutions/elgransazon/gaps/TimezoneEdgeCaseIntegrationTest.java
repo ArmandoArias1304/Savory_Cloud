@@ -229,7 +229,7 @@ class TimezoneEdgeCaseIntegrationTest {
 
         SystemLicense tokyoLicense = licenseRepository.findByCompanyId(tokyoCompany.getIdCompany())
                 .orElseThrow();
-        tokyoLicense.setExpirationDate(tokyoToday);
+        tokyoLicense.setExpirationDate(tokyoToday.atStartOfDay());
         licenseRepository.save(tokyoLicense);
 
         // Verificar en contexto Tokyo → isExpired = true (expirationDate == today → !today.isAfter(today) = true)
@@ -241,7 +241,7 @@ class TimezoneEdgeCaseIntegrationTest {
         // Poner la MISMA expirationDate en LA
         SystemLicense laLicense = licenseRepository.findByCompanyId(laCompany.getIdCompany())
                 .orElseThrow();
-        laLicense.setExpirationDate(tokyoToday); // misma fecha absoluta
+        laLicense.setExpirationDate(tokyoToday.atStartOfDay()); // misma fecha absoluta
         licenseRepository.save(laLicense);
 
         // Verificar en contexto LA
@@ -262,12 +262,12 @@ class TimezoneEdgeCaseIntegrationTest {
 
         SystemLicense tokyoLicense = licenseRepository.findByCompanyId(tokyoCompany.getIdCompany())
                 .orElseThrow();
-        tokyoLicense.setExpirationDate(futureDate);
+        tokyoLicense.setExpirationDate(futureDate.atStartOfDay());
         licenseRepository.save(tokyoLicense);
 
         SystemLicense laLicense = licenseRepository.findByCompanyId(laCompany.getIdCompany())
                 .orElseThrow();
-        laLicense.setExpirationDate(futureDate);
+        laLicense.setExpirationDate(futureDate.atStartOfDay());
         licenseRepository.save(laLicense);
 
         // Calcular daysUntil en cada contexto
@@ -301,7 +301,7 @@ class TimezoneEdgeCaseIntegrationTest {
         helper.setLicenseDaysUntilExpiry(tokyoCompany.getIdCompany(), 0); // expira hoy → expired
         // Actualizar la fecha de expiración a exactamente hoy-Tokyo
         licenseRepository.findByCompanyId(tokyoCompany.getIdCompany()).ifPresent(lic -> {
-            lic.setExpirationDate(tokyoToday);
+            lic.setExpirationDate(tokyoToday.atStartOfDay());
             lic.setStatus(SystemLicense.LicenseStatus.ACTIVE); // keep active status, let isExpired() decide
             licenseRepository.save(lic);
         });
@@ -328,7 +328,7 @@ class TimezoneEdgeCaseIntegrationTest {
         // Si Tokyo está en un día diferente a LA, este test demuestra la verdadera edge-case
         // Poner expirationDate = tokyoToday para la licencia de LA
         licenseRepository.findByCompanyId(laCompany.getIdCompany()).ifPresent(lic -> {
-            lic.setExpirationDate(tokyoToday);
+            lic.setExpirationDate(tokyoToday.atStartOfDay());
             lic.setStatus(SystemLicense.LicenseStatus.ACTIVE);
             licenseRepository.save(lic);
         });
@@ -360,7 +360,7 @@ class TimezoneEdgeCaseIntegrationTest {
 
         SystemLicense tokyoLicense = licenseRepository.findByCompanyId(tokyoCompany.getIdCompany())
                 .orElseThrow();
-        tokyoLicense.setExpirationDate(expirationDate);
+        tokyoLicense.setExpirationDate(expirationDate.atStartOfDay());
         tokyoLicense.setBillingCycle(SystemLicense.BillingCycle.MONTHLY); // MONTHLY ≤5 → needsNotification
         licenseRepository.save(tokyoLicense);
 
@@ -371,7 +371,7 @@ class TimezoneEdgeCaseIntegrationTest {
         // Poner la misma expirationDate para LA
         SystemLicense laLicense = licenseRepository.findByCompanyId(laCompany.getIdCompany())
                 .orElseThrow();
-        laLicense.setExpirationDate(expirationDate);
+        laLicense.setExpirationDate(expirationDate.atStartOfDay());
         laLicense.setBillingCycle(SystemLicense.BillingCycle.MONTHLY);
         licenseRepository.save(laLicense);
 

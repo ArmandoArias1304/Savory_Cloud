@@ -28,16 +28,16 @@ public class BusinessHours implements Serializable {
     @Column(name = "id")
     private Long id;
 
-    @NotNull(message = "Day of week is required")
+    @NotNull(message = "El día de la semana es obligatorio")
     @Enumerated(EnumType.STRING)
     @Column(name = "day_of_week", nullable = false, length = 20)
     private DayOfWeek dayOfWeek;
 
-    @NotNull(message = "Open time is required")
+    @NotNull(message = "La hora de apertura es obligatoria")
     @Column(name = "open_time", nullable = false)
     private LocalTime openTime;
 
-    @NotNull(message = "Close time is required")
+    @NotNull(message = "La hora de cierre es obligatoria")
     @Column(name = "close_time", nullable = false)
     private LocalTime closeTime;
 

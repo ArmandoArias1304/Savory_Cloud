@@ -3,7 +3,9 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>El Gran Sazón - Menú</title>
+    <title th:text="${globalSystemConfig.systemName + ' - Menú'}">
+      El Gran Sazón - Menú
+    </title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -17,14 +19,6 @@
 
     <!-- Sistema de Temas (Modo Claro/Oscuro) -->
     <div th:replace="~{fragments/theme :: themeResources}"></div>
-    <!-- Favicon del restaurante (override) -->
-    <link
-      rel="icon"
-      type="image/png"
-      sizes="96x96"
-      th:href="${@cloudinaryUrl.logoSmall(systemConfig.restaurantLogoUrl)}"
-      th:if="${systemConfig != null and systemConfig.restaurantLogoUrl != null and !systemConfig.restaurantLogoUrl.isEmpty()}"
-    />
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
@@ -139,7 +133,7 @@
       >
         <!-- Back Button -->
         <a
-          href="/home"
+          href="/delivery/dashboard"
           class="flex h-10 w-10 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 transition-colors"
         >
           <span class="material-symbols-outlined text-xl">arrow_back</span>
@@ -147,12 +141,12 @@
 
         <!-- Restaurant Logo -->
         <div
-          class="w-10 h-10 sm:w-12 sm:h-12 shrink-0 bg-white rounded-xl flex items-center justify-center shadow-lg overflow-hidden border border-gray-200 dark:border-gray-700"
+          class="w-12 h-12 sm:w-14 sm:h-14 shrink-0 rounded-xl flex items-center justify-center shadow-lg overflow-hidden"
         >
           <img
-            th:if="${config.restaurantLogoUrl != null and !config.restaurantLogoUrl.isEmpty()}"
-            th:src="${@cloudinaryUrl.logoSmall(config.restaurantLogoUrl)}"
-            th:alt="${config.restaurantName}"
+            th:if="${globalSystemConfig.systemLogoUrl != null and !globalSystemConfig.systemLogoUrl.isEmpty()}"
+            th:src="${@cloudinaryUrl.logoLarge(globalSystemConfig.systemLogoUrl)}"
+            th:alt="${globalSystemConfig.systemName}"
             class="w-full h-full object-contain p-1"
           />
         </div>
@@ -161,7 +155,7 @@
         <div class="flex-1 min-w-0">
           <h1
             class="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white truncate"
-            th:text="${config.restaurantName != null and !config.restaurantName.isEmpty()} ? ${config.restaurantName} : 'Nuestro Menú'"
+            th:text="${globalSystemConfig.systemName != null and !globalSystemConfig.systemName.isEmpty()} ? ${globalSystemConfig.systemName} : 'Nuestro Menú'"
           >
             Nuestro Menú
           </h1>
@@ -290,18 +284,17 @@
                   </div>
 
                   <!-- Item Image -->
-                  <div class="relative h-44 w-full overflow-hidden bg-gray-100" th:classappend="${item.imageUrl != null && !item.imageUrl.isEmpty()} ? 'img-skeleton' : ''">
+                  <div class="relative h-44 w-full overflow-hidden bg-gray-100">
                     <img
                       th:if="${item.imageUrl != null && !item.imageUrl.isEmpty()}"
                       th:src="${@cloudinaryUrl.card(item.imageUrl)}"
                       th:srcset="${@cloudinaryUrl.cardSrcset(item.imageUrl)}"
                       sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
                       th:alt="${item.name}"
-                      class="h-full w-full object-cover img-fade"
+                      class="h-full w-full object-cover"
                       th:classappend="${!item.available} ? 'grayscale' : ''"
                       loading="lazy"
                       decoding="async"
-                      onload="this.classList.add('loaded');this.parentElement.classList.remove('img-skeleton')"
                     />
                     <div
                       th:unless="${item.imageUrl != null && !item.imageUrl.isEmpty()}"
@@ -355,21 +348,6 @@
                   </div>
                 </div>
               </div>
-
-              <!-- No items message -->
-              <div
-                th:unless="${itemsByCategory.containsKey(category.idCategory)}"
-                class="text-center py-12 text-gray-500 dark:text-gray-400"
-              >
-                <span
-                  class="material-symbols-outlined text-6xl mb-2 opacity-50"
-                >
-                  restaurant_menu
-                </span>
-                <p class="text-lg">
-                  No hay platillos disponibles en esta categoría
-                </p>
-              </div>
             </div>
           </div>
         </div>
@@ -380,7 +358,6 @@
       /*<![CDATA[*/
       let currentItem = null;
 
-      // Search items by name (starting with search term)
       function searchItems(searchTerm) {
         const term = searchTerm.trim().toLowerCase();
         const cards = document.querySelectorAll(".menu-item-card");
@@ -388,10 +365,8 @@
         const clearBtn = document.getElementById("clearSearch");
         const searchResults = document.getElementById("searchResults");
         const resultCount = document.getElementById("resultCount");
-
         let visibleCount = 0;
 
-        // Show/hide clear button
         if (term.length > 0) {
           clearBtn.classList.remove("hidden");
         } else {
@@ -401,8 +376,6 @@
 
         cards.forEach((card) => {
           const itemName = card.dataset.itemName.toLowerCase();
-
-          // Check if name starts with the search term
           if (term === "" || itemName.startsWith(term)) {
             card.style.display = "";
             visibleCount++;
@@ -411,21 +384,14 @@
           }
         });
 
-        // Show/hide category sections based on visible items
         categorySections.forEach((section) => {
           const sectionCards = section.querySelectorAll(".menu-item-card");
           const hasVisibleItems = Array.from(sectionCards).some(
             (card) => card.style.display !== "none",
           );
-
-          if (hasVisibleItems) {
-            section.style.display = "";
-          } else {
-            section.style.display = "none";
-          }
+          section.style.display = hasVisibleItems ? "" : "none";
         });
 
-        // Show results count if searching
         if (term.length > 0) {
           resultCount.textContent = visibleCount;
           searchResults.classList.remove("hidden");
@@ -434,7 +400,6 @@
         }
       }
 
-      // Clear search
       function clearSearch() {
         const searchInput = document.getElementById("searchInput");
         searchInput.value = "";
@@ -442,73 +407,36 @@
         searchInput.focus();
       }
 
-      // Filter by category
       function filterByCategory(button) {
-        // Clear search when clicking category
         const searchInput = document.getElementById("searchInput");
         if (searchInput.value) {
           clearSearch();
         }
 
-        // Update active button
         document.querySelectorAll(".category-btn").forEach((btn) => {
-          btn.classList.remove(
-            "active",
-            "bg-gradient-to-r",
-            "from-primary",
-            "to-primary-dark",
-            "text-white",
-            "shadow-green",
-          );
-          btn.classList.add(
-            "text-text-light-secondary",
-            "hover:bg-primary/10",
-            "hover:text-primary",
-          );
-          // Remove filled from icons
+          btn.classList.remove("active", "bg-gradient-to-r", "from-primary", "to-primary-dark", "text-white", "shadow-green");
+          btn.classList.add("text-text-light-secondary", "hover:bg-primary/10", "hover:text-primary");
           const icon = btn.querySelector(".material-symbols-outlined");
           if (icon) icon.classList.remove("filled");
         });
 
-        button.classList.add(
-          "active",
-          "bg-gradient-to-r",
-          "from-primary",
-          "to-primary-dark",
-          "text-white",
-          "shadow-green",
-        );
-        button.classList.remove(
-          "text-text-light-secondary",
-          "hover:bg-primary/10",
-          "hover:text-primary",
-        );
-        // Add filled to icon
+        button.classList.add("active", "bg-gradient-to-r", "from-primary", "to-primary-dark", "text-white", "shadow-green");
+        button.classList.remove("text-text-light-secondary", "hover:bg-primary/10", "hover:text-primary");
         const icon = button.querySelector(".material-symbols-outlined");
         if (icon) icon.classList.add("filled");
 
-        // Scroll to category
         const categoryId = button.dataset.categoryId;
-        const categorySection = document.getElementById(
-          `category-${categoryId}`,
-        );
+        const categorySection = document.getElementById(`category-${categoryId}`);
         if (categorySection) {
-          categorySection.scrollIntoView({
-            behavior: "smooth",
-            block: "start",
-          });
+          categorySection.scrollIntoView({ behavior: "smooth", block: "start" });
         }
       }
 
-      // Open item modal with SweetAlert2 (simplified - visual only)
       function openItemModal(card) {
         const isDark = document.documentElement.classList.contains("dark");
-
-        // Check if item is available
         const isAvailable = card.dataset.itemAvailable === "true";
 
         if (!isAvailable) {
-          // Show "out of stock" message
           Swal.fire({
             icon: "error",
             title: "Producto Agotado",
@@ -521,21 +449,11 @@
           return;
         }
 
-        const itemId = card.dataset.itemId;
         const itemName = card.dataset.itemName;
         const itemPrice = parseFloat(card.dataset.itemPrice);
         const itemDescription = card.dataset.itemDescription;
         const itemImage = card.dataset.itemImage;
 
-        currentItem = {
-          id: itemId,
-          name: itemName,
-          price: itemPrice,
-          description: itemDescription,
-          image: itemImage,
-        };
-
-        // Default image if not provided
         const imageUrl =
           itemImage && itemImage !== "null" && itemImage !== ""
             ? itemImage
@@ -570,7 +488,6 @@
         });
       }
 
-      // Close modal on escape key
       document.addEventListener("keydown", function (event) {
         if (event.key === "Escape") {
           Swal.close();

@@ -127,13 +127,13 @@
           <!-- Logo -->
           <div class="flex items-center gap-3">
             <div
-              class="w-10 h-10 sm:w-12 sm:h-12 bg-white rounded-xl flex items-center justify-center shadow-lg"
+              class="w-10 h-10 sm:w-12 sm:h-12 bg-white rounded-full flex items-center justify-center shadow-lg overflow-hidden"
             >
               <img
                 th:if="${systemConfig != null and systemConfig.restaurantLogoUrl != null and !systemConfig.restaurantLogoUrl.isEmpty()}"
                 th:src="${@cloudinaryUrl.logoSmall(systemConfig.restaurantLogoUrl)}"
                 th:alt="${systemConfig.restaurantName}"
-                class="w-6 h-6 sm:w-7 sm:h-7 object-contain"
+                class="w-full h-full object-contain p-1"
               />
             </div>
             <div class="hidden sm:block">

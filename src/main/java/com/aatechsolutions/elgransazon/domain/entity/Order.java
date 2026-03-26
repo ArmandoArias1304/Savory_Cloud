@@ -66,7 +66,7 @@ public class Order implements Serializable {
     @Column(name = "customer_name", length = 100)
     private String customerName;
 
-    @Pattern(regexp = "^$|^[+]?[0-9\\-\\s()]{7,20}$", message = "Formato de teléfono inválido")
+    @Pattern(regexp = "^$|^[0-9]{10}$", message = "El teléfono debe tener exactamente 10 dígitos")
     @Column(name = "customer_phone", length = 20)
     private String customerPhone;
 
@@ -187,6 +187,12 @@ public class Order implements Serializable {
 
     @Column(name = "cancelled_at")
     private LocalDateTime cancelledAt;
+
+    @Column(name = "prepared_at")
+    private LocalDateTime preparedAt;
+
+    @Column(name = "delivered_at")
+    private LocalDateTime deliveredAt;
 
     // ========== Reservation Association ==========
     // This field stores the reservation ID associated with this order

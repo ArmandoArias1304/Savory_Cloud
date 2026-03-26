@@ -633,6 +633,16 @@ public class OrderServiceImpl implements OrderService {
         order.setUpdatedBy(updatedBy);
         order.setUpdatedAt(LocalDateTime.now()); // Explicitly set updatedAt
 
+        // Track timestamp when order is marked as READY
+        if (newStatus == OrderStatus.READY) {
+            order.setPreparedAt(LocalDateTime.now());
+        }
+
+        // Track timestamp when order is marked as DELIVERED
+        if (newStatus == OrderStatus.DELIVERED) {
+            order.setDeliveredAt(LocalDateTime.now());
+        }
+
         // NUEVA LÓGICA: Ya NO actualizamos items automáticamente cuando cambia el estado de la orden
         // Los items solo se actualizan mediante changeItemsStatus() por chef/barista
         // El estado de la orden se recalcula automáticamente en changeItemsStatus()
@@ -945,6 +955,11 @@ public class OrderServiceImpl implements OrderService {
         OrderStatus oldOrderStatus = order.getStatus();
         order.updateStatusFromItems();
         OrderStatus newOrderStatus = order.getStatus();
+
+        // Track timestamp when order becomes READY
+        if (oldOrderStatus != OrderStatus.READY && newOrderStatus == OrderStatus.READY) {
+            order.setPreparedAt(LocalDateTime.now());
+        }
 
         // Set audit fields
         order.setUpdatedBy(username);
@@ -1507,6 +1522,7 @@ public class OrderServiceImpl implements OrderService {
             
             // Change order status to READY
             order.setStatus(OrderStatus.READY);
+            order.setPreparedAt(LocalDateTime.now());
             
             // Update all item statuses to READY
             for (OrderDetail detail : order.getOrderDetails()) {

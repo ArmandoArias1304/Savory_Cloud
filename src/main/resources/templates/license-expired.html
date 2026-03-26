@@ -479,7 +479,7 @@
                   >
                   Venció el:
                   <span
-                    th:text="${#temporals.format(expirationDate, 'dd/MM/yyyy')}"
+                    th:text="${#tz.format(expirationDate, 'dd/MM/yyyy HH:mm')}"
                   ></span>
                 </div>
               </div>

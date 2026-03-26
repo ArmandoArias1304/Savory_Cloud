@@ -1,5 +1,6 @@
 package com.aatechsolutions.elgransazon.presentation.controller;
 
+import com.aatechsolutions.elgransazon.application.service.BusinessHoursService;
 import com.aatechsolutions.elgransazon.application.service.CategoryService;
 import com.aatechsolutions.elgransazon.application.service.DateTimeService;
 import com.aatechsolutions.elgransazon.application.service.EmployeeService;
@@ -58,6 +59,7 @@ public class ChefController {
     private final CategoryService categoryService;
     private final SystemConfigurationService configurationService;
     private final DateTimeService dateTimeService;
+    private final BusinessHoursService businessHoursService;
 
     /**
      * Detect if current user is a Barista
@@ -118,10 +120,14 @@ public class ChefController {
         // Get system configuration
         SystemConfiguration config = configurationService.getConfiguration();
         
+        // Check business hours
+        boolean isRestaurantOpen = businessHoursService.isOpenNow();
+        
         model.addAttribute("config", config);
         model.addAttribute("username", username);
         model.addAttribute("role", roleDisplay);
         model.addAttribute("isBarista", isBarista(authentication));
+        model.addAttribute("isRestaurantOpen", isRestaurantOpen);
         
         return "chef/dashboard";
     }
@@ -148,6 +154,10 @@ public class ChefController {
         String expected = getExpectedRolePrefix(authentication);
         if (!rolePrefix.equals(expected)) {
             return "redirect:/" + expected + "/orders/pending";
+        }
+        
+        if (!businessHoursService.isOpenNow()) {
+            return "redirect:/" + rolePrefix + "/dashboard";
         }
         
         String username = authentication.getName();
@@ -192,7 +202,7 @@ public class ChefController {
                 
                 return false;
             })
-            .sorted((o1, o2) -> o2.getCreatedAt().compareTo(o1.getCreatedAt())) // Más reciente primero
+            .sorted((o1, o2) -> o1.getCreatedAt().compareTo(o2.getCreatedAt())) // Más antiguo primero (FIFO)
             .toList();
         
         log.info("{} {} has {} working orders ({} pending, {} in preparation)", 
@@ -324,7 +334,7 @@ public class ChefController {
             .count();
         
         // Server-side pagination
-        int pageSize = 15;
+        int pageSize = 16;
         int totalElements = completedOrders.size();
         int totalPages = (int) Math.ceil((double) totalElements / pageSize);
         if (totalPages == 0) totalPages = 1;

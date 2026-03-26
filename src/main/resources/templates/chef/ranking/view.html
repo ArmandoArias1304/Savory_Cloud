@@ -175,11 +175,11 @@
 
         <!-- Restaurant Logo -->
         <div
-          class="w-10 h-10 sm:w-12 sm:h-12 shrink-0 bg-white rounded-xl flex items-center justify-center shadow-lg overflow-hidden border border-gray-200 dark:border-gray-700"
+          class="w-12 h-12 sm:w-14 sm:h-14 shrink-0 rounded-xl flex items-center justify-center shadow-lg overflow-hidden"
         >
           <img
             th:if="${globalSystemConfig.systemLogoUrl != null and !globalSystemConfig.systemLogoUrl.isEmpty()}"
-            th:src="${@cloudinaryUrl.logoSmall(globalSystemConfig.systemLogoUrl)}"
+            th:src="${@cloudinaryUrl.logoLarge(globalSystemConfig.systemLogoUrl)}"
             th:alt="${globalSystemConfig.systemName}"
             class="w-full h-full object-contain p-1"
           />

@@ -122,7 +122,13 @@ public class CompanyController {
                     dto.getAdminUsername(),
                     dto.getAdminFirstName(),
                     dto.getAdminLastName(),
-                    dto.getAdminPassword()
+                    dto.getAdminPassword(),
+                    dto.isFreeTrial(),
+                    dto.getPackageType(),
+                    dto.getBillingCycle(),
+                    dto.getLicenseMonths(),
+                    dto.getLicenseAmount(),
+                    authentication.getName()
             );
             
             redirectAttributes.addFlashAttribute("success", 

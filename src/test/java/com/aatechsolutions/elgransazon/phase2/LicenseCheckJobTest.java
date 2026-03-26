@@ -13,6 +13,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 import static org.mockito.Mockito.*;
@@ -52,7 +53,7 @@ class LicenseCheckJobTest {
     @Test
     @DisplayName("Licencia ACTIVE y vigente → updateLastCheck es llamado")
     void activeLicense_callsUpdateLastCheck() {
-        SystemLicense license = buildActiveLicense(LocalDate.now().plusMonths(1));
+        SystemLicense license = buildActiveLicense(LocalDateTime.now().plusMonths(1));
 
         when(licenseService.getLicense()).thenReturn(license);
 
@@ -65,7 +66,7 @@ class LicenseCheckJobTest {
     @DisplayName("Licencia ACTIVE pero expirada → estado actualizado a EXPIRED")
     void activeLicenseButExpired_updatesStatusToExpired() {
         // Expired: expirationDate = yesterday
-        SystemLicense license = buildActiveLicense(LocalDate.now().minusDays(1));
+        SystemLicense license = buildActiveLicense(LocalDateTime.now().minusDays(1));
 
         when(licenseService.getLicense()).thenReturn(license);
         doNothing().when(licenseService).updateLastCheck();
@@ -102,12 +103,12 @@ class LicenseCheckJobTest {
 
     // ------------------- helper -------------------
 
-    private SystemLicense buildActiveLicense(LocalDate expirationDate) {
+    private SystemLicense buildActiveLicense(LocalDateTime expirationDate) {
         return SystemLicense.builder()
                 .licenseKey("TEST-KEY-JOB-001")
                 .packageType(SystemLicense.PackageType.ECOMMERCE)
                 .billingCycle(SystemLicense.BillingCycle.MONTHLY)
-                .purchaseDate(LocalDate.now().minusMonths(1))
+                .purchaseDate(LocalDateTime.now().minusMonths(1))
                 .expirationDate(expirationDate)
                 .installationDate(LocalDate.now().minusMonths(1))
                 .status(SystemLicense.LicenseStatus.ACTIVE)

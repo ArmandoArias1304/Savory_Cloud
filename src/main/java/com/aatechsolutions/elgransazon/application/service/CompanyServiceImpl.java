@@ -3,6 +3,7 @@ package com.aatechsolutions.elgransazon.application.service;
 import com.aatechsolutions.elgransazon.domain.entity.*;
 import com.aatechsolutions.elgransazon.domain.repository.CompanyRepository;
 import com.aatechsolutions.elgransazon.domain.repository.EmployeeRepository;
+import com.aatechsolutions.elgransazon.domain.repository.LicenseEventRepository;
 import com.aatechsolutions.elgransazon.domain.repository.RoleRepository;
 import com.aatechsolutions.elgransazon.domain.repository.SystemConfigurationRepository;
 import com.aatechsolutions.elgransazon.domain.repository.SystemLicenseRepository;
@@ -31,6 +32,7 @@ public class CompanyServiceImpl implements CompanyService {
     private final CompanyRepository companyRepository;
     private final SystemConfigurationRepository configRepository;
     private final SystemLicenseRepository licenseRepository;
+    private final LicenseEventRepository licenseEventRepository;
     private final EmployeeRepository employeeRepository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
@@ -316,7 +318,9 @@ public class CompanyServiceImpl implements CompanyService {
     public Company create(String slug, String name, String customDomain,
                           String senderEmail, String senderName, String contactEmail,
                           String contactPhone, String address, String rfc, String timezone,
-                          String adminUsername, String adminFirstName, String adminLastName, String adminPassword) {
+                          String adminUsername, String adminFirstName, String adminLastName, String adminPassword,
+                          boolean freeTrial, String packageType, String billingCycle, int licenseMonths, Double licenseAmount,
+                          String performedBy) {
         log.info("Creating new company with parameters: {}", slug);
 
         // Build company object with all fields
@@ -363,9 +367,9 @@ public class CompanyServiceImpl implements CompanyService {
         createDefaultConfiguration(savedCompany);
         log.info("Default SystemConfiguration created for company: {}", savedCompany.getSlug());
 
-        // Create default SystemLicense
-        createDefaultLicense(savedCompany);
-        log.info("Default SystemLicense created for company: {}", savedCompany.getSlug());
+        // Create configured SystemLicense with financial event
+        createConfiguredLicense(savedCompany, freeTrial, packageType, billingCycle, licenseMonths, licenseAmount, performedBy);
+        log.info("SystemLicense created for company: {} (freeTrial={}, package={}, months={})", savedCompany.getSlug(), freeTrial, packageType, licenseMonths);
 
         // NOTE: BackupConfiguration is GLOBAL, not per-company
         // It's managed by the PROGRAMMER via /programmer/backup
@@ -499,33 +503,84 @@ public class CompanyServiceImpl implements CompanyService {
         return configRepository.save(config);
     }
 
-    private SystemLicense createDefaultLicense(Company company) {
+    private SystemLicense createConfiguredLicense(Company company, boolean freeTrial, String packageType,
+                                                     String billingCycle, int months, Double amount, String performedBy) {
         String licenseKey = generateLicenseKey(company.getSlug());
-        LocalDate purchaseDate = LocalDate.now();
-        LocalDate expirationDate = purchaseDate.plusMonths(1); // 1 month trial
+        LocalDateTime purchaseDate = LocalDateTime.now();
+        int effectiveMonths = months > 0 ? months : 1;
+        LocalDateTime expirationDate = purchaseDate.plusMonths(effectiveMonths);
+
+        SystemLicense.PackageType pkgType;
+        try {
+            pkgType = SystemLicense.PackageType.valueOf(packageType);
+        } catch (Exception e) {
+            pkgType = SystemLicense.PackageType.BASIC;
+        }
+
+        SystemLicense.BillingCycle cycle;
+        try {
+            cycle = SystemLicense.BillingCycle.valueOf(billingCycle);
+        } catch (Exception e) {
+            cycle = SystemLicense.BillingCycle.MONTHLY;
+        }
+
+        int maxUsers = 7;
+
+        int maxBranches = switch (pkgType) {
+            case BASIC -> 1;
+            case WEB -> 3;
+            case ECOMMERCE -> 10;
+        };
+
+        String notes = freeTrial
+                ? String.format("Licencia de prueba gratis creada automáticamente. Válida por %d mes(es).", effectiveMonths)
+                : String.format("Licencia %s creada. Válida por %d mes(es).", pkgType.name(), effectiveMonths);
 
         SystemLicense license = SystemLicense.builder()
             .company(company)
             .licenseKey(licenseKey)
-            .packageType(SystemLicense.PackageType.BASIC)
-            .billingCycle(SystemLicense.BillingCycle.MONTHLY)
+            .packageType(pkgType)
+            .billingCycle(cycle)
             .purchaseDate(purchaseDate)
             .expirationDate(expirationDate)
-            .installationDate(purchaseDate)
+            .installationDate(LocalDate.now())
             .status(SystemLicense.LicenseStatus.ACTIVE)
             .ownerName(company.getName())
             .ownerEmail(company.getContactEmail() != null && !company.getContactEmail().isBlank()
                     ? company.getContactEmail()
                     : "miempresa@ejemplo.com")
             .restaurantName(company.getName())
-            .maxUsers(5) // Default limit for BASIC
-            .maxBranches(1)
+            .maxUsers(maxUsers)
+            .maxBranches(maxBranches)
             .version("1.0.0")
-            .notes("Licencia de prueba creada automáticamente. Válida por 1 mes.")
+            .notes(notes)
             .lastCheckDate(LocalDate.now())
             .build();
 
-        return licenseRepository.save(license);
+        SystemLicense savedLicense = licenseRepository.save(license);
+
+        // Create financial event
+        double eventAmount = freeTrial ? 0.0 : (amount != null ? amount : 0.0);
+        String description = freeTrial
+                ? String.format("Licencia creada - Prueba gratis (%s, %d mes(es))", pkgType.name(), effectiveMonths)
+                : String.format("Licencia creada - %s, %d mes(es), $%.2f", pkgType.name(), effectiveMonths, eventAmount);
+
+        LicenseEvent event = LicenseEvent.builder()
+            .licenseId(savedLicense.getId())
+            .eventType(LicenseEvent.EventType.CREATED)
+            .eventDate(LocalDateTime.now())
+            .description(description)
+            .performedBy(performedBy != null ? performedBy : "SYSTEM")
+            .amount(eventAmount)
+            .months(effectiveMonths)
+            .build();
+        licenseEventRepository.save(event);
+
+        return savedLicense;
+    }
+
+    private SystemLicense createDefaultLicense(Company company) {
+        return createConfiguredLicense(company, true, "BASIC", "MONTHLY", 1, 0.0, "SYSTEM");
     }
 
     private Employee createDefaultAdmin(Company company) {

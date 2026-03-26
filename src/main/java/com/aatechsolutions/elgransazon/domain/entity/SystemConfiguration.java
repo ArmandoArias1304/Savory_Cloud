@@ -34,17 +34,17 @@ public class SystemConfiguration implements Serializable {
     @JoinColumn(name = "company_id", nullable = false, unique = true)
     private Company company;
 
-    @NotBlank(message = "Restaurant name is required")
-    @Size(min = 2, max = 100, message = "Restaurant name must be between 2 and 100 characters")
+    @NotBlank(message = "El nombre del restaurante es obligatorio")
+    @Size(min = 2, max = 100, message = "El nombre del restaurante debe tener entre 2 y 100 caracteres")
     @Column(name = "restaurant_name", nullable = false, length = 100)
     private String restaurantName;
 
-    @Size(max = 255, message = "Slogan cannot exceed 255 characters")
+    @Size(max = 255, message = "El eslogan no puede exceder los 255 caracteres")
     @Column(name = "slogan", length = 255)
     private String slogan;
 
     // Restaurant logo URL (uploaded image, stored in DB)
-    @Size(max = 500, message = "Restaurant logo URL cannot exceed 500 characters")
+    @Size(max = 500, message = "La URL del logo del restaurante no puede exceder los 500 caracteres")
     @Column(name = "restaurant_logo_url", length = 500)
     private String restaurantLogoUrl;
 
@@ -52,31 +52,31 @@ public class SystemConfiguration implements Serializable {
     // GlobalSystemConfig entity for GLOBAL (not per-company) system branding.
     // See GlobalSystemConfig for system-wide branding.
 
-    @NotBlank(message = "Address is required")
-    @Size(max = 500, message = "Address cannot exceed 500 characters")
+    @NotBlank(message = "La dirección es obligatoria")
+    @Size(max = 500, message = "La dirección no puede exceder los 500 caracteres")
     @Column(name = "address", nullable = false, length = 500)
     private String address;
 
-    @NotBlank(message = "Phone is required")
+    @NotBlank(message = "El teléfono es obligatorio")
     @Pattern(regexp = "^[0-9]{10}$", message = "El teléfono debe tener exactamente 10 dígitos")
     @Column(name = "phone", nullable = false, length = 20)
     private String phone;
 
-    @NotBlank(message = "Email is required")
-    @Email(message = "Email format is invalid")
-    @Size(max = 100, message = "Email cannot exceed 100 characters")
+    @NotBlank(message = "El correo electrónico es obligatorio")
+    @Email(message = "El formato del correo electrónico es inválido")
+    @Size(max = 100, message = "El correo electrónico no puede exceder los 100 caracteres")
     @Column(name = "email", nullable = false, length = 100)
     private String email;
 
-    @NotNull(message = "Tax rate is required")
-    @DecimalMin(value = "0.0", message = "Tax rate must be at least 0")
-    @DecimalMax(value = "100.0", message = "Tax rate cannot exceed 100")
+    @NotNull(message = "La tasa de impuestos es obligatoria")
+    @DecimalMin(value = "0.0", message = "La tasa de impuestos debe ser al menos 0")
+    @DecimalMax(value = "100.0", message = "La tasa de impuestos no puede exceder 100")
     @Column(name = "tax_rate", nullable = false, precision = 5, scale = 2)
     private BigDecimal taxRate;
 
-    @NotNull(message = "Average consumption time is required")
-    @Min(value = 30, message = "Average consumption time must be at least 30 minutes")
-    @Max(value = 480, message = "Average consumption time cannot exceed 480 minutes (8 hours)")
+    @NotNull(message = "El tiempo promedio de consumo es obligatorio")
+    @Min(value = 30, message = "El tiempo promedio de consumo debe ser al menos 30 minutos")
+    @Max(value = 480, message = "El tiempo promedio de consumo no puede exceder los 480 minutos (8 horas)")
     @Column(name = "average_consumption_time_minutes", nullable = false)
     @Builder.Default
     private Integer averageConsumptionTimeMinutes = 120; // Default: 2 hours

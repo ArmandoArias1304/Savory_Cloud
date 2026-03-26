@@ -38,20 +38,20 @@ public class Shift implements Serializable {
     @JoinColumn(name = "company_id", nullable = false)
     private Company company;
 
-    @NotBlank(message = "Shift name is required")
-    @Size(min = 2, max = 100, message = "Shift name must be between 2 and 100 characters")
+    @NotBlank(message = "El nombre del turno es obligatorio")
+    @Size(min = 2, max = 100, message = "El nombre del turno debe tener entre 2 y 100 caracteres")
     @Column(name = "name", nullable = false, length = 100)
     private String name;
 
-    @Size(max = 500, message = "Description cannot exceed 500 characters")
+    @Size(max = 500, message = "La descripción no puede exceder los 500 caracteres")
     @Column(name = "description", length = 500)
     private String description;
 
-    @NotNull(message = "Start time is required")
+    @NotNull(message = "La hora de inicio es obligatoria")
     @Column(name = "start_time", nullable = false)
     private LocalTime startTime;
 
-    @NotNull(message = "End time is required")
+    @NotNull(message = "La hora de fin es obligatoria")
     @Column(name = "end_time", nullable = false)
     private LocalTime endTime;
 

@@ -23,6 +23,10 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Service for generating PDF tickets for orders
@@ -182,7 +186,38 @@ public class TicketPdfService {
                     .setBorder(Border.NO_BORDER).setPadding(1));
         }
 
-        for (OrderDetail detail : order.getOrderDetails()) {
+        // Pre-process: Group identical non-combo items without complements
+        // so e.g. 3 separate "Coca Cola" lines become one "Coca Cola x5"
+        List<OrderDetail> rawDetails = order.getOrderDetails();
+        Map<Long, int[]> mergedQty = new LinkedHashMap<>();        // itemMenuId -> [totalQuantity]
+        Map<Long, BigDecimal[]> mergedTotals = new LinkedHashMap<>(); // itemMenuId -> [originalTotal, finalTotal]
+        List<OrderDetail> ticketOrder = new ArrayList<>();
+
+        for (OrderDetail detail : rawDetails) {
+            boolean canMerge = !detail.isComboParent() && !detail.isComboChild()
+                    && (detail.getSelectedComplements() == null || detail.getSelectedComplements().isEmpty());
+            Long itemMenuId = detail.getItemMenu().getIdItemMenu();
+            BigDecimal lineOriginal = detail.getUnitPrice()
+                    .multiply(BigDecimal.valueOf(detail.getQuantity()));
+
+            if (canMerge && mergedQty.containsKey(itemMenuId)) {
+                mergedQty.get(itemMenuId)[0] += detail.getQuantity();
+                mergedTotals.get(itemMenuId)[0] = mergedTotals.get(itemMenuId)[0].add(lineOriginal);
+                mergedTotals.get(itemMenuId)[1] = mergedTotals.get(itemMenuId)[1].add(detail.getSubtotal());
+            } else {
+                if (canMerge) {
+                    mergedQty.put(itemMenuId, new int[]{detail.getQuantity()});
+                    mergedTotals.put(itemMenuId, new BigDecimal[]{lineOriginal, detail.getSubtotal()});
+                }
+                ticketOrder.add(detail);
+            }
+        }
+
+        for (OrderDetail detail : ticketOrder) {
+            boolean isMerged = !detail.isComboParent() && !detail.isComboChild()
+                    && (detail.getSelectedComplements() == null || detail.getSelectedComplements().isEmpty());
+            Long itemMenuId = detail.getItemMenu().getIdItemMenu();
+
             // Item name and quantity - with combo grouping
             String itemName = detail.getItemMenu().getName();
             boolean isComboParent = detail.isComboParent();
@@ -192,17 +227,21 @@ public class TicketPdfService {
             } else if (isComboChild) {
                 itemName = "  \u21B3 " + itemName;
             }
-            Integer quantity = detail.getQuantity();
-            BigDecimal unitPrice = detail.getUnitPrice(); // Original price with IVA
-            BigDecimal promotionAppliedPrice = detail.getPromotionAppliedPrice(); // Discounted price with IVA per unit (or null)
-            
-            // Calculate original price (with IVA) for this line = unitPrice × quantity
-            BigDecimal precioOriginalConIVA = unitPrice.multiply(BigDecimal.valueOf(quantity))
-                    .setScale(2, RoundingMode.HALF_UP);
-            
-            // Calculate discounted price = promotionAppliedPrice × quantity (or same as original if no promo)
-            // This is the subtotal stored in OrderDetail
-            BigDecimal precioFinalConIVA = detail.getSubtotal();
+
+            // Use merged values for grouped items, original values otherwise
+            Integer quantity;
+            BigDecimal precioOriginalConIVA;
+            BigDecimal precioFinalConIVA;
+            if (isMerged && mergedQty.containsKey(itemMenuId)) {
+                quantity = mergedQty.get(itemMenuId)[0];
+                precioOriginalConIVA = mergedTotals.get(itemMenuId)[0].setScale(2, RoundingMode.HALF_UP);
+                precioFinalConIVA = mergedTotals.get(itemMenuId)[1];
+            } else {
+                quantity = detail.getQuantity();
+                precioOriginalConIVA = detail.getUnitPrice().multiply(BigDecimal.valueOf(quantity))
+                        .setScale(2, RoundingMode.HALF_UP);
+                precioFinalConIVA = detail.getSubtotal();
+            }
             
             Cell nameCell = new Cell()
                     .add(new Paragraph(itemName)
@@ -237,7 +276,7 @@ public class TicketPdfService {
             
             // Add discounted price cell if promotions exist
             if (hasPromotions) {
-                boolean hasDiscount = promotionAppliedPrice != null && promotionAppliedPrice.compareTo(unitPrice) < 0;
+                boolean hasDiscount = precioFinalConIVA.compareTo(precioOriginalConIVA) < 0;
                 String finalPriceText;
                 com.itextpdf.kernel.colors.Color textColor;
                 
@@ -436,7 +475,7 @@ public class TicketPdfService {
                 .setMarginBottom(3));
 
         // Date and time
-        Paragraph dateTime = new Paragraph(dateTimeService.formatToCompanyTime(order.getCreatedAt(), "dd/MM/yyyy HH:mm"))
+        Paragraph dateTime = new Paragraph("Pagado: " + dateTimeService.formatToCompanyTime(order.getUpdatedAt(), "dd/MM/yyyy HH:mm"))
                 .setFont(normalFont)
                 .setFontSize(8)
                 .setTextAlignment(TextAlignment.CENTER)

@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title th:text="${globalSystemConfig.systemName} + ' - ' + ${company.name}">SavoryCloud - Detalles de Empresa</title>
+    <link rel="icon" type="image/png" sizes="96x96"
+          th:href="${@cloudinaryUrl.logoSmall(globalSystemConfig.systemLogoUrl)}"
+          th:if="${globalSystemConfig != null and globalSystemConfig.systemLogoUrl != null and !globalSystemConfig.systemLogoUrl.isEmpty()}" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -145,7 +148,7 @@
                     </div>
                     <div>
                         <dt class="text-sm text-gray-500 dark:text-gray-400">Fecha de Expiración</dt>
-                        <dd class="mt-1 text-gray-900 dark:text-white" th:text="${#temporals.format(company.systemLicense.expirationDate, 'dd/MM/yyyy')}">01/01/2025</dd>
+                        <dd class="mt-1 text-gray-900 dark:text-white" th:text="${#tz.format(company.systemLicense.expirationDate, 'dd/MM/yyyy HH:mm')}">01/01/2025</dd>
                     </div>
                     <div>
                         <dt class="text-sm text-gray-500 dark:text-gray-400">Límite de Usuarios</dt>

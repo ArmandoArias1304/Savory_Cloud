@@ -13,6 +13,11 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+
+import com.aatechsolutions.elgransazon.infrastructure.util.CompanyLocalTime;
 
 /**
  * Filter to check license validity on each request
@@ -49,7 +54,12 @@ public class LicenseInterceptor extends OncePerRequestFilter {
         if (daysLeft <= 5 && daysLeft >= 0) {
             request.setAttribute("showLicenseWarning", true);
             request.setAttribute("daysLeft", daysLeft);
-            request.setAttribute("expirationDate", license.getExpirationDate());
+            LocalDateTime localExpiration = license.getExpirationDate()
+                .atZone(ZoneId.of("UTC"))
+                .withZoneSameInstant(CompanyLocalTime.getZone())
+                .toLocalDateTime();
+            request.setAttribute("expirationDate", 
+                localExpiration.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")));
             request.setAttribute("billingCycle", license.getBillingCycle().getDisplayName());
         }
 

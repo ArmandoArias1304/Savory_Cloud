@@ -42,7 +42,7 @@ public class GlobalSystemConfig implements Serializable {
      * Name of the system/platform displayed in UI.
      * Example: "SavoryCloud", "El Gran Sazón"
      */
-    @Size(min = 2, max = 100, message = "System name must be between 2 and 100 characters")
+    @Size(min = 2, max = 100, message = "El nombre del sistema debe tener entre 2 y 100 caracteres")
     @Column(name = "system_name", length = 100, nullable = false)
     @Builder.Default
     private String systemName = "SavoryCloud";
@@ -51,7 +51,7 @@ public class GlobalSystemConfig implements Serializable {
      * Slogan/tagline displayed under the system name.
      * Example: "Sistema de Gestión Restaurantera"
      */
-    @Size(max = 255, message = "System slogan cannot exceed 255 characters")
+    @Size(max = 255, message = "El eslogan del sistema no puede exceder los 255 caracteres")
     @Column(name = "system_slogan", length = 255)
     @Builder.Default
     private String systemSlogan = "Sistema de Gestión Restaurantera";
@@ -60,7 +60,7 @@ public class GlobalSystemConfig implements Serializable {
      * URL to the system logo image stored in Cloudinary.
      * Used for favicon, sidebar logo, login pages, etc.
      */
-    @Size(max = 500, message = "System logo URL cannot exceed 500 characters")
+    @Size(max = 500, message = "La URL del logo del sistema no puede exceder los 500 caracteres")
     @Column(name = "system_logo_url", length = 500)
     private String systemLogoUrl;
 

@@ -184,20 +184,16 @@
           <span class="material-symbols-outlined text-xl">arrow_back</span>
         </a>
 
-        <!-- Restaurant Icon -->
+        <!-- Restaurant Logo -->
         <div
-          class="w-10 h-10 sm:w-12 sm:h-12 shrink-0 bg-gradient-to-br from-primary to-primary-dark rounded-xl flex items-center justify-center shadow-lg shadow-primary/30"
+          class="w-10 h-10 sm:w-12 sm:h-12 shrink-0 bg-white rounded-full flex items-center justify-center shadow-lg overflow-hidden"
         >
-          <svg
-            class="w-6 h-6 sm:w-7 sm:h-7 text-white"
-            fill="currentColor"
-            viewBox="0 0 24 24"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3v8h2.5v8H21V2c-2.76 0-5 2.24-5 5z"
-            ></path>
-          </svg>
+          <img
+            th:if="${systemConfig != null and systemConfig.restaurantLogoUrl != null and !systemConfig.restaurantLogoUrl.isEmpty()}"
+            th:src="${@cloudinaryUrl.logoSmall(systemConfig.restaurantLogoUrl)}"
+            th:alt="${systemConfig.restaurantName}"
+            class="w-full h-full object-contain p-1"
+          />
         </div>
 
         <!-- Title and Badges -->
@@ -3881,7 +3877,7 @@
                       <span class="font-semibold ${isDarkMode ? "text-white" : "text-gray-900"}">${ci.childItemName}</span>
                       <span class="text-xs px-2 py-0.5 rounded-full ${isDarkMode ? "bg-teal-900/40 text-teal-300" : "bg-teal-100 text-teal-700"}">x${ci.quantity}</span>
                     </div>
-                    <span class="text-xs ${isDarkMode ? "text-gray-400" : "text-gray-500"}">${ci.childRequiresPreparation ? "👨‍🍳 Chef" : ci.childRequiresBaristaPreparation ? "☕ Barista" : "📦 Listo"}</span>
+                   <!--<span class="text-xs ${isDarkMode ? "text-gray-400" : "text-gray-500"}">${ci.childRequiresPreparation ? "👨‍🍳 Chef" : ci.childRequiresBaristaPreparation ? "☕ Barista" : "📦 Listo"}</span>-->
                   </div>
                   ${
                     hasSauces || hasComplements

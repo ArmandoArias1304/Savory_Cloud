@@ -761,37 +761,6 @@
           </div>
         </div>
 
-        <!-- Mensaje especial para empleados que intentan entrar aquí -->
-        <div
-          th:if="${errorType == 'employeeAttempt'}"
-          class="alert"
-          style="
-            background-color: #fef3c7;
-            border: 1px solid #f59e0b;
-            color: #92400e;
-            margin-top: 12px;
-          "
-        >
-          <span class="material-symbols-outlined" style="color: #f59e0b"
-            >info</span
-          >
-          <div style="flex: 1">
-            <strong>¡Ups! Este no es tu login.</strong><br />
-            <span style="font-size: 13px"
-              >¿Eres empleado o administrador?
-              <a
-                th:href="@{/login}"
-                style="
-                  color: #2563eb;
-                  font-weight: 600;
-                  text-decoration: underline;
-                "
-                >Haz clic aquí para ir al login de empleados</a
-              >
-            </span>
-          </div>
-        </div>
-
         <!-- Mensaje de éxito (logout o registro) -->
         <div th:if="${message}" class="alert alert-success">
           <span class="material-symbols-outlined">check_circle</span>

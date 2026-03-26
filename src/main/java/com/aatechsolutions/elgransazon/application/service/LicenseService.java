@@ -14,6 +14,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.YearMonth;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -164,7 +167,20 @@ public class LicenseService {
             throw new RuntimeException("No license found to renew");
         }
 
-        LocalDate newExpiration = license.getExpirationDate().plusMonths(months);
+        // Determine base date: if expired and adding time, start from NOW (fair to customer);
+        // otherwise extend from current expiration (preserves pre-paid time)
+        boolean startingFresh = months > 0 && license.isExpired();
+        LocalDateTime base = startingFresh ? LocalDateTime.now() : license.getExpirationDate();
+        LocalDateTime newExpiration = base.plusMonths(months);
+
+        // Preserve original purchase day to prevent day erosion (31→28→28...)
+        // Only when extending an active license (not when starting fresh after expiry)
+        if (months > 0 && !startingFresh) {
+            int originalDay = license.getPurchaseDate().getDayOfMonth();
+            int maxDay = YearMonth.from(newExpiration).lengthOfMonth();
+            newExpiration = newExpiration.withDayOfMonth(Math.min(originalDay, maxDay));
+        }
+
         license.setExpirationDate(newExpiration);
         license.setStatus(LicenseStatus.ACTIVE);
         licenseRepository.save(license);
@@ -172,7 +188,8 @@ public class LicenseService {
 
         // Create event with amount and months
         String action = months > 0 ? "renovada" : "ajustada (tiempo restado)";
-        String description = "Licencia " + action + " por " + Math.abs(months) + " mes(es). Nueva fecha de vencimiento: " + newExpiration;
+        String formattedExp = formatExpirationForCompany(newExpiration, license);
+        String description = "Licencia " + action + " por " + Math.abs(months) + " mes(es). Nueva fecha de vencimiento: " + formattedExp;
         if (amount != null && amount > 0) {
             description += ". Monto: $" + String.format("%.2f", amount) + " MXN";
         }
@@ -186,7 +203,7 @@ public class LicenseService {
             months
         );
 
-        log.info("License renewed/adjusted for {} months by {}. New expiration: {}", months, performedBy, newExpiration);
+        log.info("License renewed/adjusted for {} months by {}. New expiration: {}. Fresh start: {}", months, performedBy, newExpiration, startingFresh);
     }
 
     /**
@@ -408,6 +425,21 @@ public class LicenseService {
     }
 
     /**
+     * Format a UTC expiration date to the company's local timezone for event descriptions.
+     */
+    private String formatExpirationForCompany(LocalDateTime utcExpiration, SystemLicense license) {
+        ZoneId zone = ZoneId.of("America/Mexico_City"); // default
+        try {
+            Company company = license.getCompany();
+            if (company != null && company.getTimezone() != null && !company.getTimezone().isBlank()) {
+                zone = ZoneId.of(company.getTimezone());
+            }
+        } catch (Exception ignored) {}
+        LocalDateTime local = utcExpiration.atZone(ZoneId.of("UTC")).withZoneSameInstant(zone).toLocalDateTime();
+        return local.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
+    }
+
+    /**
      * Create a license event
      */
     @Transactional
@@ -470,7 +502,7 @@ public class LicenseService {
         
         List<LicenseEvent> renewalEvents = eventRepository.findByLicenseIdOrderByEventDateDesc(license.getId())
             .stream()
-            .filter(e -> e.getEventType() == LicenseEvent.EventType.RENEWED && e.getAmount() != null)
+            .filter(e -> (e.getEventType() == LicenseEvent.EventType.RENEWED || e.getEventType() == LicenseEvent.EventType.CREATED) && e.getAmount() != null)
             .toList();
         
         return renewalEvents.stream()
@@ -489,7 +521,7 @@ public class LicenseService {
         
         return eventRepository.findByLicenseIdOrderByEventDateDesc(license.getId())
             .stream()
-            .filter(e -> e.getEventType() == LicenseEvent.EventType.RENEWED && e.getAmount() != null)
+            .filter(e -> (e.getEventType() == LicenseEvent.EventType.RENEWED || e.getEventType() == LicenseEvent.EventType.CREATED) && e.getAmount() != null)
             .toList();
     }
 
@@ -567,8 +599,8 @@ public class LicenseService {
         // Enforce one license per company
         enforceSingletonPerCompany(company);
 
-        LocalDate purchaseDate = LocalDate.now();
-        LocalDate expirationDate = purchaseDate.plusMonths(months);
+        LocalDateTime purchaseDate = LocalDateTime.now();
+        LocalDateTime expirationDate = purchaseDate.plusMonths(months);
 
         SystemLicense license = SystemLicense.builder()
             .company(company)
@@ -735,20 +767,37 @@ public class LicenseService {
         SystemLicense license = licenseRepository.findById(licenseId)
             .orElseThrow(() -> new RuntimeException("License not found: " + licenseId));
 
-        LocalDate newExpiration = license.getExpirationDate().plusMonths(months);
+        // Determine base date: if expired and adding time, start from NOW (fair to customer);
+        // otherwise extend from current expiration (preserves pre-paid time)
+        boolean startingFresh = months > 0 && license.isExpired();
+        LocalDateTime base = startingFresh ? LocalDateTime.now() : license.getExpirationDate();
+        LocalDateTime newExpiration = base.plusMonths(months);
+
+        // Preserve original purchase day to prevent day erosion (31→28→28...)
+        // Only when extending an active license (not when starting fresh after expiry)
+        if (months > 0 && !startingFresh) {
+            int originalDay = license.getPurchaseDate().getDayOfMonth();
+            int maxDay = YearMonth.from(newExpiration).lengthOfMonth();
+            newExpiration = newExpiration.withDayOfMonth(Math.min(originalDay, maxDay));
+        }
+
         license.setExpirationDate(newExpiration);
         license.setStatus(LicenseStatus.ACTIVE);
         licenseRepository.save(license);
         invalidateLicenseCacheForCompany(license.getCompany().getIdCompany());
 
         String action = months > 0 ? "renovada" : "ajustada (tiempo restado)";
-        String description = "Licencia " + action + " por " + Math.abs(months) + " mes(es). Nueva fecha de vencimiento: " + newExpiration;
+        String formattedExp = formatExpirationForCompany(newExpiration, license);
+        String description = "Licencia " + action + " por " + Math.abs(months) + " mes(es). Nueva fecha de vencimiento: " + formattedExp;
+        /*if (startingFresh) {
+            description += " (renovada desde hoy por expiración previa)";
+        }*/
         if (amount != null && amount > 0) {
             description += ". Monto: $" + String.format("%.2f", amount) + " MXN";
         }
         
         createLicenseEvent(licenseId, LicenseEvent.EventType.RENEWED, description, performedBy, amount, months);
-        log.info("License {} renewed/adjusted for {} months by {}", licenseId, months, performedBy);
+        log.info("License {} renewed/adjusted for {} months by {}. Fresh start: {}", licenseId, months, performedBy, startingFresh);
     }
 
     /**
@@ -848,7 +897,7 @@ public class LicenseService {
     public Double getTotalRevenueById(Long licenseId) {
         List<LicenseEvent> renewalEvents = eventRepository.findByLicenseIdOrderByEventDateDesc(licenseId)
                 .stream()
-                .filter(e -> e.getEventType() == LicenseEvent.EventType.RENEWED && e.getAmount() != null)
+                .filter(e -> (e.getEventType() == LicenseEvent.EventType.RENEWED || e.getEventType() == LicenseEvent.EventType.CREATED) && e.getAmount() != null)
                 .toList();
         
         return renewalEvents.stream()
@@ -862,7 +911,7 @@ public class LicenseService {
     public List<LicenseEvent> getRenewalEventsWithAmountById(Long licenseId) {
         return eventRepository.findByLicenseIdOrderByEventDateDesc(licenseId)
                 .stream()
-                .filter(e -> e.getEventType() == LicenseEvent.EventType.RENEWED && e.getAmount() != null)
+                .filter(e -> (e.getEventType() == LicenseEvent.EventType.RENEWED || e.getEventType() == LicenseEvent.EventType.CREATED) && e.getAmount() != null)
                 .toList();
     }
 
