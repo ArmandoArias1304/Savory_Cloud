@@ -145,6 +145,8 @@
                     type="text"
                     th:field="*{name}"
                     required
+                    minlength="3"
+                    maxlength="200"
                     class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                   />
                   <p
@@ -162,6 +164,7 @@
                   <textarea
                     th:field="*{description}"
                     rows="3"
+                    maxlength="1000"
                     class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                   ></textarea>
                 </div>
@@ -355,7 +358,7 @@
                     <input
                       type="number"
                       th:field="*{discountAmount}"
-                      min="0"
+                      min="0.01"
                       step="0.01"
                       class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                     />

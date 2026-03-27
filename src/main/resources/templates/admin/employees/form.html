@@ -402,18 +402,29 @@
                       Contraseña
                       <span class="text-red-500">*</span>
                     </label>
-                    <input
-                      type="password"
-                      name="password"
-                      id="password"
-                      required
-                      minlength="6"
-                      class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
-                      placeholder="••••••••"
-                      title="La contraseña debe tener al menos 6 caracteres"
-                    />
+                    <div class="relative">
+                      <input
+                        type="password"
+                        name="password"
+                        id="password"
+                        required
+                        minlength="6"
+                        maxlength="72"
+                        class="w-full px-4 py-3 pr-12 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
+                        placeholder="••••••••"
+                        title="La contraseña debe tener entre 6 y 72 caracteres"
+                      />
+                      <button
+                        type="button"
+                        onclick="togglePassword('password', this)"
+                        class="absolute inset-y-0 right-0 flex items-center px-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                        tabindex="-1"
+                      >
+                        <span class="material-symbols-outlined text-xl">visibility</span>
+                      </button>
+                    </div>
                     <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                      Mínimo 6 caracteres
+                      Mínimo 6, máximo 72 caracteres
                     </p>
                   </div>
                 </div>
@@ -923,17 +934,28 @@
                     Nueva Contraseña
                     <span class="text-red-500">*</span>
                   </label>
-                  <input
-                    type="password"
-                    name="newPassword"
-                    id="newPassword"
-                    required
-                    minlength="6"
-                    class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
-                    placeholder="••••••••"
-                  />
+                  <div class="relative">
+                    <input
+                      type="password"
+                      name="newPassword"
+                      id="newPassword"
+                      required
+                      minlength="6"
+                      maxlength="72"
+                      class="w-full px-4 py-3 pr-12 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
+                      placeholder="••••••••"
+                    />
+                    <button
+                      type="button"
+                      onclick="togglePassword('newPassword', this)"
+                      class="absolute inset-y-0 right-0 flex items-center px-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                      tabindex="-1"
+                    >
+                      <span class="material-symbols-outlined text-xl">visibility</span>
+                    </button>
+                  </div>
                   <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                    Mínimo 6 caracteres
+                    Mínimo 6, máximo 72 caracteres
                   </p>
                 </div>
 
@@ -950,15 +972,26 @@
                     Confirmar Contraseña
                     <span class="text-red-500">*</span>
                   </label>
-                  <input
-                    type="password"
-                    name="confirmPassword"
-                    id="confirmPassword"
-                    required
-                    minlength="6"
-                    class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
-                    placeholder="••••••••"
-                  />
+                  <div class="relative">
+                    <input
+                      type="password"
+                      name="confirmPassword"
+                      id="confirmPassword"
+                      required
+                      minlength="6"
+                      maxlength="72"
+                      class="w-full px-4 py-3 pr-12 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
+                      placeholder="••••••••"
+                    />
+                    <button
+                      type="button"
+                      onclick="togglePassword('confirmPassword', this)"
+                      class="absolute inset-y-0 right-0 flex items-center px-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                      tabindex="-1"
+                    >
+                      <span class="material-symbols-outlined text-xl">visibility</span>
+                    </button>
+                  </div>
                 </div>
 
                 <!-- Submit Button -->
@@ -1217,6 +1250,19 @@
           });
         }
       });
+
+      // Toggle password visibility
+      function togglePassword(inputId, btn) {
+        const input = document.getElementById(inputId);
+        const icon = btn.querySelector('.material-symbols-outlined');
+        if (input.type === 'password') {
+          input.type = 'text';
+          icon.textContent = 'visibility_off';
+        } else {
+          input.type = 'password';
+          icon.textContent = 'visibility';
+        }
+      }
 
       // Form Validation
       function validateForm(event) {

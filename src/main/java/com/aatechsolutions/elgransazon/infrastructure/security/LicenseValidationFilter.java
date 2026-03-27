@@ -60,12 +60,16 @@ public class LicenseValidationFilter extends OncePerRequestFilter {
                     licenseService.markAsExpired();
                 }
 
+                // Detect client role BEFORE invalidating session
+                boolean isClientRedirect = auth.getAuthorities().stream()
+                    .anyMatch(a -> a.getAuthority().equals("ROLE_CLIENT"));
+
                 // Invalidate session
                 request.getSession().invalidate();
                 SecurityContextHolder.clearContext();
                 
                 // Redirect to license expired page
-                response.sendRedirect("/license-expired");
+                response.sendRedirect("/license-expired" + (isClientRedirect ? "?client=true" : ""));
                 return;
             }
         }
@@ -85,6 +89,9 @@ public class LicenseValidationFilter extends OncePerRequestFilter {
                path.startsWith("/images") ||
                path.startsWith("/system-landing") ||
                path.startsWith("/license-expired") ||
+               path.startsWith("/support") ||
+               path.startsWith("/help") ||
+               path.startsWith("/helpClient") ||
                path.startsWith("/programmer") ||
                path.startsWith("/client/login") ||
                path.startsWith("/client/register") ||

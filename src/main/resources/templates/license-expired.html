@@ -415,22 +415,37 @@
   <body>
     <div class="license-container">
       <div class="content-wrapper">
-        <div class="two-column-layout">
+        <div class="two-column-layout" th:style="${isClientView} ? 'min-height: 420px' : ''">
           <!-- COLUMNA IZQUIERDA: Logo, Nombre, Icono, Título y Mensaje -->
           <div class="left-column">
-            <!-- Logo del restaurante -->
-            <div class="restaurant-logo fade-in">
+            <!-- Logo del restaurante (solo para empleados) -->
+            <div class="restaurant-logo fade-in" th:if="${!isClientView}">
               <img th:if="${globalSystemConfig != null and globalSystemConfig.systemLogoUrl != null and !globalSystemConfig.systemLogoUrl.isEmpty()}"
                    th:src="${@cloudinaryUrl.logoLarge(globalSystemConfig.systemLogoUrl)}" alt="Logo" />
             </div>
 
-            <!-- Nombre del sistema (dinámico desde GlobalSystemConfig) -->
+            <!-- Nombre del sistema: para empleados muestra nombre del sistema global;
+                 para clientes muestra nombre del restaurante -->
             <h2
               class="restaurant-name fade-in fade-in-delay-1"
-              th:text="${globalSystemConfig != null ? globalSystemConfig.systemName : 'SavoryCloud'}"
+              th:text="${isClientView and restaurantConfig != null ? restaurantConfig.restaurantName : (globalSystemConfig != null ? globalSystemConfig.systemName : 'SavoryCloud')}"
             >
               SavoryCloud
             </h2>
+
+            <!-- Mensaje para CLIENTES (no revelar detalles de licencia) -->
+            <div th:if="${isClientView}">
+              <div class="status-icon suspended fade-in fade-in-delay-1">
+                <span class="material-symbols-outlined">wifi_off</span>
+              </div>
+
+              <h1 class="status-title suspended fade-in fade-in-delay-2">
+                Servicio No Disponible
+              </h1>
+            </div>
+
+            <!-- Mensajes para EMPLEADOS (detalles de licencia) -->
+            <div th:if="${!isClientView}">
 
             <!-- LICENCIA SUSPENDIDA -->
             <div th:if="${isSuspended == true}">
@@ -509,10 +524,17 @@
                 licencia.
               </p>
             </div>
+
+            </div><!-- end employee-only -->
+
           </div>
 
           <!-- COLUMNA DERECHA: Información de contacto -->
           <div class="right-column">
+
+            <!-- Vista EMPLEADOS: cajas de contacto del proveedor -->
+            <div th:if="${!isClientView}">
+
             <!-- Mensaje de agradecimiento -->
             <div
               class="contact-box fade-in fade-in-delay-3"
@@ -548,13 +570,13 @@
               </h3>
 
               <div class="contact-item">
-                <span class="material-symbols-outlined">mail</span>
-                <span>Contacta a tu proveedor de servicio</span>
+                <span class="material-symbols-outlined">email</span>
+                <a href="mailto:alexis20029179@gmail.com" style="color: #374151; text-decoration: none;">alexis20029179@gmail.com</a>
               </div>
 
               <div class="contact-item">
-                <span class="material-symbols-outlined">info</span>
-                <span>Revisa tu contrato para información de contacto</span>
+                <span class="material-symbols-outlined">phone</span>
+                <a href="tel:9332360791" style="color: #374151; text-decoration: none;">9332360791</a>
               </div>
             </div>
 
@@ -570,33 +592,24 @@
                 <span class="material-symbols-outlined">schedule</span>
                 Horarios de Atención
               </h3>
-              <p
-                style="
-                  color: #374151;
-                  font-size: 15px;
-                  line-height: 1.7;
-                  margin: 0;
-                "
-              >
-                <strong>Lunes a Viernes:</strong> 8:00 AM - 8:00 PM<br />
-                <strong>Sábados:</strong> 9:00 AM - 2:00 PM<br />
-                <strong>Domingos:</strong> Cerrado
-              </p>
-              <p
-                style="
-                  color: #92400e;
-                  font-size: 13px;
-                  margin-top: 12px;
-                  font-weight: 600;
-                "
-              >
-                <span
-                  class="material-symbols-outlined"
-                  style="font-size: 16px; vertical-align: middle"
-                  >info</span
-                >
-                Respuesta inmediata por WhatsApp
-              </p>
+              <ul style="list-style: none; padding: 0; margin: 0;">
+                <li style="padding: 6px 0; color: #92400e; font-size: 14px; display: flex; align-items: flex-start; gap: 8px;">
+                  <span style="color: #d97706; font-weight: bold; flex-shrink: 0;">&#x2713;</span>
+                  Horario de atención: Lunes a Viernes, 9:00 AM - 6:00 PM
+                </li>
+                <li style="padding: 6px 0; color: #92400e; font-size: 14px; display: flex; align-items: flex-start; gap: 8px;">
+                  <span style="color: #d97706; font-weight: bold; flex-shrink: 0;">&#x2713;</span>
+                  Tiempo de respuesta estimado: 2-4 horas en horario laboral
+                </li>
+                <li style="padding: 6px 0; color: #92400e; font-size: 14px; display: flex; align-items: flex-start; gap: 8px;">
+                  <span style="color: #d97706; font-weight: bold; flex-shrink: 0;">&#x2713;</span>
+                  Incluye capturas de pantalla al reportar errores para una atención más rápida
+                </li>
+                <li style="padding: 6px 0; color: #92400e; font-size: 14px; display: flex; align-items: flex-start; gap: 8px;">
+                  <span style="color: #d97706; font-weight: bold; flex-shrink: 0;">&#x2713;</span>
+                  Todos los correos se responden en un plazo máximo de 24 horas
+                </li>
+              </ul>
             </div>
 
             <!-- Footer -->
@@ -604,10 +617,33 @@
               class="footer-text fade-in fade-in-delay-3"
               style="text-align: center"
             >
-              © 2026
+              © <span th:text="${T(java.time.Year).now().getValue()}">2026</span>
               <span th:text="${globalSystemConfig != null ? globalSystemConfig.systemName : 'Sistema de Gestión'}">Sistema de Gestión</span>
               - Sistema de Gestión para Restaurantes
             </p>
+
+            </div><!-- end employee-only right column -->
+
+            <!-- Vista CLIENTES: mensajes + footer -->
+            <div th:if="${isClientView}">
+              <p class="status-message fade-in fade-in-delay-2" style="margin-bottom: 16px;">
+                El servicio en línea no está disponible en este momento.
+              </p>
+
+              <p class="status-submessage fade-in fade-in-delay-2">
+                Disculpa los inconvenientes. Por favor intenta de nuevo más
+                tarde o contacta directamente al restaurante.
+              </p>
+
+              <p
+                class="footer-text fade-in fade-in-delay-3"
+                style="text-align: center; margin-top: 32px;"
+              >
+                © <span th:text="${T(java.time.Year).now().getValue()}">2026</span>
+                <span th:text="${restaurantConfig != null ? restaurantConfig.restaurantName : 'Restaurante'}">Restaurante</span>
+              </p>
+            </div>
+
           </div>
         </div>
       </div>

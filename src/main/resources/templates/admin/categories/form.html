@@ -103,6 +103,8 @@
               class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
               placeholder="Ej: Entradas, Platos Fuertes, Bebidas..."
               required
+              minlength="2"
+              maxlength="100"
             />
             <p
               th:if="${#fields.hasErrors('name')}"
@@ -123,6 +125,7 @@
               id="description"
               th:field="*{description}"
               rows="3"
+              maxlength="500"
               class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-primary transition-colors resize-none"
               placeholder="Descripción breve de la categoría (opcional)"
             ></textarea>
@@ -168,6 +171,7 @@
                 type="text"
                 id="icon"
                 th:field="*{icon}"
+                maxlength="50"
                 class="flex-1 px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
                 placeholder="Ej: restaurant_menu, soup_kitchen, local_cafe..."
               />

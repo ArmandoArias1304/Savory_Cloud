@@ -333,6 +333,8 @@
                                th:field="*{fullName}" 
                                type="text" 
                                required
+                               minlength="2"
+                               maxlength="200"
                                placeholder="Juan Pérez">
                         <span class="material-symbols-outlined">person</span>
                     </div>
@@ -374,6 +376,7 @@
                                th:field="*{email}" 
                                type="email" 
                                required
+                               maxlength="200"
                                placeholder="juan@ejemplo.com">
                         <span class="material-symbols-outlined">email</span>
                     </div>
@@ -415,6 +418,7 @@
                                type="password" 
                                required
                                minlength="6"
+                               maxlength="72"
                                placeholder="••••••••">
                         <span class="material-symbols-outlined">lock</span>
                         <span class="material-symbols-outlined toggle-password" onclick="togglePassword('password', this)">visibility_off</span>
@@ -423,7 +427,7 @@
                        th:errors="*{password}" 
                        class="error-text"></p>
                     <p class="help-text">
-                        Mínimo 6 caracteres
+                        Mínimo 6, máximo 72 caracteres
                     </p>
                 </div>
 
@@ -436,6 +440,7 @@
                                type="password" 
                                required
                                minlength="6"
+                               maxlength="72"
                                placeholder="••••••••">
                         <span class="material-symbols-outlined">lock</span>
                         <span class="material-symbols-outlined toggle-password" onclick="togglePassword('confirmPassword', this)">visibility_off</span>

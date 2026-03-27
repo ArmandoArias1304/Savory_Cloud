@@ -69,6 +69,8 @@
                             Nombre de la Empresa *
                         </label>
                         <input type="text" th:field="*{name}" required
+                               minlength="2"
+                               maxlength="150"
                                placeholder="Restaurante El Buen Sabor"
                                class="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent">
                         <p th:if="${#fields.hasErrors('name')}" th:errors="*{name}" class="mt-1 text-sm text-red-500"></p>
@@ -82,6 +84,8 @@
                             <input type="text" th:field="*{slug}" required
                                    placeholder="buensabor o 192.168.1.76"
                                    pattern="[a-z0-9.\-]+"
+                                   minlength="3"
+                                   maxlength="50"
                                    class="flex-1 px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-l-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent">
                             <span class="px-4 py-2 bg-gray-100 dark:bg-slate-600 border border-l-0 border-gray-300 dark:border-slate-600 rounded-r-lg text-gray-500 dark:text-gray-400">.tudominio.com</span>
                         </div>
@@ -94,6 +98,7 @@
                             Email de Envío (SendGrid)
                         </label>
                         <input type="email" th:field="*{senderEmail}"
+                               maxlength="200"
                                placeholder="noreply@restaurante.com"
                                class="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent">
                         <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Email registrado en SendGrid para enviar correos (opcional)</p>
@@ -105,6 +110,7 @@
                             Nombre del Remitente (SendGrid)
                         </label>
                         <input type="text" th:field="*{senderName}"
+                               maxlength="100"
                                placeholder="Restaurante El Buen Sabor"
                                class="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent">
                         <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Nombre que aparece en los correos</p>
@@ -116,6 +122,7 @@
                             Email de Contacto
                         </label>
                         <input type="email" th:field="*{contactEmail}"
+                               maxlength="200"
                                placeholder="contacto@restaurante.com"
                                class="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent">
                         <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Email de contacto público</p>
@@ -127,6 +134,7 @@
                             Teléfono de Contacto
                         </label>
                         <input type="tel" th:field="*{contactPhone}"
+                               maxlength="20"
                                placeholder="+52 123 456 7890"
                                class="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent">
                         <p th:if="${#fields.hasErrors('contactPhone')}" th:errors="*{contactPhone}" class="mt-1 text-sm text-red-500"></p>
@@ -148,6 +156,7 @@
                             Dirección
                         </label>
                         <input type="text" th:field="*{address}"
+                               maxlength="500"
                                placeholder="Calle Principal #123, Colonia Centro"
                                class="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent">
                         <p th:if="${#fields.hasErrors('address')}" th:errors="*{address}" class="mt-1 text-sm text-red-500"></p>
@@ -158,6 +167,7 @@
                             Dominio Personalizado
                         </label>
                         <input type="text" th:field="*{customDomain}"
+                               maxlength="200"
                                placeholder="www.restaurantebuensabor.com"
                                class="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent">
                         <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">El cliente podrá acceder con su propio dominio</p>

@@ -438,6 +438,8 @@
                       id="restaurantName"
                       th:field="*{restaurantName}"
                       required
+                      minlength="2"
+                      maxlength="100"
                       class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary focus:outline-none"
                     />
                     <p
@@ -458,6 +460,7 @@
                       type="text"
                       id="slogan"
                       th:field="*{slogan}"
+                      maxlength="255"
                       class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary focus:outline-none"
                     />
                   </div>
@@ -606,6 +609,7 @@
                       id="email"
                       th:field="*{email}"
                       required
+                      maxlength="100"
                       class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary focus:outline-none"
                     />
                     <p
@@ -661,6 +665,7 @@
                     th:field="*{address}"
                     rows="2"
                     required
+                    maxlength="500"
                     class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary focus:outline-none"
                   ></textarea>
                   <p

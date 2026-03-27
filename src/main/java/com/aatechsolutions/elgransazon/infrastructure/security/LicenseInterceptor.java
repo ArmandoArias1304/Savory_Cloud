@@ -9,6 +9,8 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.lang.NonNull;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -42,10 +44,19 @@ public class LicenseInterceptor extends OncePerRequestFilter {
         // If no license exists or is suspended (not checking expired here - LicenseValidationFilter handles that)
         // This filter only blocks for missing or suspended licenses
         if (license == null || license.getStatus() == SystemLicense.LicenseStatus.SUSPENDED) {
-            
+
             String reason = license == null ? "missing" : "suspended";
             log.warn("License is {}. Blocking access to: {}", reason, request.getRequestURI());
-            response.sendRedirect(request.getContextPath() + "/license-expired");
+            // Detect client role BEFORE invalidating session
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            boolean isClient = auth != null && auth.isAuthenticated()
+                    && !"anonymousUser".equals(auth.getPrincipal().toString())
+                    && auth.getAuthorities().stream()
+                            .anyMatch(a -> a.getAuthority().equals("ROLE_CLIENT"));
+            // Invalidate session so the user must log in again after reactivation
+            request.getSession().invalidate();
+            SecurityContextHolder.clearContext();
+            response.sendRedirect(request.getContextPath() + "/license-expired" + (isClient ? "?client=true" : ""));
             return;
         }
 
@@ -77,6 +88,9 @@ public class LicenseInterceptor extends OncePerRequestFilter {
                path.startsWith("/client/login") ||
                path.startsWith("/programmer/") ||  // Allow programmer access
                path.startsWith("/license-expired") ||
+               path.startsWith("/support") ||
+               path.startsWith("/help") ||
+               path.startsWith("/helpClient") ||
                path.startsWith("/css/") ||
                path.startsWith("/js/") ||
                path.startsWith("/images/") ||

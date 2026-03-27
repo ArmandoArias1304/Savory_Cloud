@@ -103,6 +103,8 @@
               class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
               placeholder="Ej: Distribuidora XYZ"
               required
+              minlength="2"
+              maxlength="150"
             />
             <p
               th:if="${#fields.hasErrors('name')}"
@@ -125,6 +127,7 @@
               th:field="*{contactPerson}"
               class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
               placeholder="Ej: Juan Pérez"
+              maxlength="100"
             />
             <p
               th:if="${#fields.hasErrors('contactPerson')}"
@@ -179,6 +182,7 @@
                 type="email"
                 id="email"
                 th:field="*{email}"
+                maxlength="150"
                 class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
                 placeholder="Ej: contacto@proveedor.com"
               />
@@ -204,6 +208,7 @@
               th:field="*{address}"
               class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
               placeholder="Ej: Calle Principal 123, Ciudad"
+              maxlength="300"
             />
             <p
               th:if="${#fields.hasErrors('address')}"
@@ -328,6 +333,7 @@
               id="notes"
               th:field="*{notes}"
               rows="3"
+              maxlength="500"
               class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-primary transition-colors resize-none"
               placeholder="Información adicional sobre el proveedor..."
             ></textarea>
