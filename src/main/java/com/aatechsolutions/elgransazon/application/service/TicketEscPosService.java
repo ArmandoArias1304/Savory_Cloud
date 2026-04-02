@@ -39,12 +39,10 @@ public class TicketEscPosService {
     // ESC/POS commands
     private static final byte[] INIT            = {0x1B, 0x40};                // Initialize printer
     private static final byte[] ALIGN_CENTER    = {0x1B, 0x61, 0x01};         // Center alignment
-    private static final byte[] ALIGN_LEFT      = {0x1B, 0x61, 0x00};         // Left alignment
     private static final byte[] ALIGN_RIGHT     = {0x1B, 0x61, 0x02};         // Right alignment
     private static final byte[] BOLD_ON         = {0x1B, 0x45, 0x01};         // Bold on
     private static final byte[] BOLD_OFF        = {0x1B, 0x45, 0x00};         // Bold off
     private static final byte[] DOUBLE_HEIGHT   = {0x1B, 0x21, 0x10};         // Double height
-    private static final byte[] DOUBLE_WH       = {0x1B, 0x21, 0x30};         // Double width + height
     private static final byte[] NORMAL_SIZE     = {0x1B, 0x21, 0x00};         // Normal size
     private static final byte[] FONT_B          = {0x1B, 0x4D, 0x01};         // Font B (smaller)
     private static final byte[] FONT_A          = {0x1B, 0x4D, 0x00};         // Font A (normal)

@@ -30,7 +30,6 @@ public class PaymentController {
     private final OrderService orderService;
     private final SystemConfigurationService systemConfigurationService;
     private final OrderRepository orderRepository;
-    private final TicketPdfService ticketPdfService;
     private final EmployeeService employeeService;
 
     // Constructor manual para inyectar adminOrderService específicamente
@@ -38,12 +37,10 @@ public class PaymentController {
             @Qualifier("adminOrderService") OrderService orderService,
             SystemConfigurationService systemConfigurationService,
             OrderRepository orderRepository,
-            TicketPdfService ticketPdfService,
             EmployeeService employeeService) {
         this.orderService = orderService;
         this.systemConfigurationService = systemConfigurationService;
         this.orderRepository = orderRepository;
-        this.ticketPdfService = ticketPdfService;
         this.employeeService = employeeService;
     }
 

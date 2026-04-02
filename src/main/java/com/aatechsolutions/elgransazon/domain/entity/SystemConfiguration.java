@@ -92,7 +92,7 @@ public class SystemConfiguration implements Serializable {
     @NotNull(message = "La intensidad del logo del ticket es obligatoria")
     @Min(value = 10, message = "La intensidad mínima es 10%")
     @Max(value = 100, message = "La intensidad máxima es 100%")
-    @Column(name = "ticket_logo_opacity", nullable = false)
+    @Column(name = "ticket_logo_opacity", nullable = false, columnDefinition = "integer not null default 50")
     @Builder.Default
     private Integer ticketLogoOpacity = 50; // Default: 50% (original threshold ~128)
 

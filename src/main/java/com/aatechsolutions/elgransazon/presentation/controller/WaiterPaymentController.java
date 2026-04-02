@@ -30,19 +30,16 @@ public class WaiterPaymentController {
     private final SystemConfigurationService systemConfigurationService;
     private final OrderRepository orderRepository;
     private final EmployeeService employeeService;
-    private final TicketPdfService ticketPdfService;
 
     public WaiterPaymentController(
             @Qualifier("waiterOrderService") WaiterOrderServiceImpl waiterOrderService,
             SystemConfigurationService systemConfigurationService,
             OrderRepository orderRepository,
-            EmployeeService employeeService,
-            TicketPdfService ticketPdfService) {
+            EmployeeService employeeService) {
         this.waiterOrderService = waiterOrderService;
         this.systemConfigurationService = systemConfigurationService;
         this.orderRepository = orderRepository;
         this.employeeService = employeeService;
-        this.ticketPdfService = ticketPdfService;
     }
 
     /**
