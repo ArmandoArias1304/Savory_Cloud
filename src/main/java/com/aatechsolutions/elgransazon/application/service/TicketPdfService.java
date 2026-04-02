@@ -106,6 +106,16 @@ public class TicketPdfService {
                 .setMarginTop(2);
         document.add(address);
 
+        // RFC (centered, below address)
+        if (config.getRfc() != null && !config.getRfc().isBlank()) {
+            Paragraph rfc = new Paragraph("RFC: " + config.getRfc())
+                    .setFont(normalFont)
+                    .setFontSize(8)
+                    .setTextAlignment(TextAlignment.CENTER)
+                    .setMarginTop(2);
+            document.add(rfc);
+        }
+
         // Phone (centered)
         Paragraph phone = new Paragraph("Tel: " + config.getPhone())
                 .setFont(normalFont)
@@ -436,6 +446,15 @@ public class TicketPdfService {
 
                 document.add(totalsTable);
 
+        // Total in words (Mexican format)
+        Paragraph totalEnLetraParagraph = new Paragraph(totalEnLetra(totalWithTip))
+                .setFont(normalFont)
+                .setFontSize(7)
+                .setTextAlignment(TextAlignment.CENTER)
+                .setMarginTop(2)
+                .setMarginBottom(3);
+        document.add(totalEnLetraParagraph);
+
         // Order type and payment method in one line
         Paragraph orderInfoParagraph = new Paragraph()
                 .add(new Text("Tipo: ").setFont(boldFont))
@@ -475,8 +494,13 @@ public class TicketPdfService {
                 .setMarginBottom(3));
 
         // Date and time
-        Paragraph dateTime = new Paragraph("Pagado: " + dateTimeService.formatToCompanyTime(order.getUpdatedAt(), "dd/MM/yyyy HH:mm"))
-                .setFont(normalFont)
+        Paragraph dateTime;
+        if (order.getStatus() == OrderStatus.PAID) {
+         dateTime = new Paragraph("Pagado: " + dateTimeService.formatToCompanyTime(order.getUpdatedAt(), "dd/MM/yyyy HH:mm"));
+        } else {
+            dateTime = new Paragraph("Creada: " + dateTimeService.formatToCompanyTime(order.getCreatedAt(), "dd/MM/yyyy HH:mm"));
+        }
+        dateTime.setFont(normalFont)
                 .setFontSize(8)
                 .setTextAlignment(TextAlignment.CENTER)
                 .setMarginBottom(5);
@@ -503,6 +527,14 @@ public class TicketPdfService {
                 .setMarginTop(2)
                 .setMarginBottom(5);
         document.add(visitAgain);
+
+        // Fiscal disclaimer
+        Paragraph fiscalDisclaimer = new Paragraph("Este no es un comprobante fiscal")
+                .setFont(normalFont)
+                .setFontSize(7)
+                .setTextAlignment(TextAlignment.CENTER)
+                .setMarginBottom(3);
+        document.add(fiscalDisclaimer);
 
         // System branding footer (GLOBAL - not per-company)
         String systemName = globalSystemConfigService.getConfiguration().getSystemName();
@@ -572,6 +604,64 @@ public class TicketPdfService {
         
         table.addCell(labelCell);
         table.addCell(valueCell);
+    }
+
+    /**
+     * Convert a BigDecimal amount to Mexican legal text format.
+     * Example: 1234.56 -> "Son: Un mil doscientos treinta y cuatro pesos 56/100 M.N."
+     */
+    private String totalEnLetra(BigDecimal amount) {
+        BigDecimal rounded = amount.setScale(2, RoundingMode.HALF_UP);
+        long intPart = rounded.toBigInteger().longValue();
+        int cents = rounded.remainder(BigDecimal.ONE).movePointRight(2).abs().intValue();
+
+        String words = integerToSpanish(intPart);
+        words = Character.toUpperCase(words.charAt(0)) + words.substring(1);
+
+        String pesosWord = (intPart == 1) ? "peso" : "pesos";
+        return "Son: " + words + " " + pesosWord + " " + String.format("%02d", cents) + "/100 M.N.";
+    }
+
+    private String integerToSpanish(long n) {
+        if (n == 0) return "cero";
+
+        if (n >= 1_000_000) {
+            long millions = n / 1_000_000;
+            long remainder = n % 1_000_000;
+            String prefix = (millions == 1) ? "un millon" : integerToSpanish(millions) + " millones";
+            return remainder == 0 ? prefix : prefix + " " + integerToSpanish(remainder);
+        }
+        if (n >= 1000) {
+            long thousands = n / 1000;
+            long remainder = n % 1000;
+            String prefix = (thousands == 1) ? "mil" : integerToSpanish(thousands) + " mil";
+            return remainder == 0 ? prefix : prefix + " " + integerToSpanish(remainder);
+        }
+        if (n >= 100) {
+            if (n == 100) return "cien";
+            String[] centenas = {"", "ciento", "doscientos", "trescientos", "cuatrocientos",
+                    "quinientos", "seiscientos", "setecientos", "ochocientos", "novecientos"};
+            long remainder = n % 100;
+            return remainder == 0 ? centenas[(int) (n / 100)] : centenas[(int) (n / 100)] + " " + integerToSpanish(remainder);
+        }
+        if (n >= 30) {
+            String[] decenas = {"", "", "", "treinta", "cuarenta", "cincuenta",
+                    "sesenta", "setenta", "ochenta", "noventa"};
+            long remainder = n % 10;
+            return remainder == 0 ? decenas[(int) (n / 10)] : decenas[(int) (n / 10)] + " y " + integerToSpanish(remainder);
+        }
+        if (n >= 20) {
+            String[] veintes = {"veinte", "veintiun", "veintidos", "veintitres", "veinticuatro",
+                    "veinticinco", "veintiseis", "veintisiete", "veintiocho", "veintinueve"};
+            return veintes[(int) (n - 20)];
+        }
+        if (n >= 10) {
+            String[] teens = {"diez", "once", "doce", "trece", "catorce", "quince",
+                    "dieciseis", "diecisiete", "dieciocho", "diecinueve"};
+            return teens[(int) (n - 10)];
+        }
+        String[] unidades = {"", "un", "dos", "tres", "cuatro", "cinco", "seis", "siete", "ocho", "nueve"};
+        return unidades[(int) n];
     }
 
     /**

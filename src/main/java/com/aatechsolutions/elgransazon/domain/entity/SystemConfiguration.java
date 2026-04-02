@@ -52,6 +52,11 @@ public class SystemConfiguration implements Serializable {
     // GlobalSystemConfig entity for GLOBAL (not per-company) system branding.
     // See GlobalSystemConfig for system-wide branding.
 
+    @Size(max = 13, message = "El RFC no puede exceder los 13 caracteres")
+    @Pattern(regexp = "^$|^[A-Z&Ñ]{3,4}[0-9]{6}[A-Z0-9]{3}$", message = "El formato del RFC es inválido")
+    @Column(name = "rfc", length = 13)
+    private String rfc;
+
     @NotBlank(message = "La dirección es obligatoria")
     @Size(max = 500, message = "La dirección no puede exceder los 500 caracteres")
     @Column(name = "address", nullable = false, length = 500)
@@ -80,6 +85,16 @@ public class SystemConfiguration implements Serializable {
     @Column(name = "average_consumption_time_minutes", nullable = false)
     @Builder.Default
     private Integer averageConsumptionTimeMinutes = 120; // Default: 2 hours
+
+    // Ticket logo intensity (10-100%). Controls how dark/visible the logo prints on thermal tickets.
+    // Higher value = darker print (more pixels become black dots). 50% ≈ original threshold.
+    // Useful for logos with light colors that don't print well on thermal printers.
+    @NotNull(message = "La intensidad del logo del ticket es obligatoria")
+    @Min(value = 10, message = "La intensidad mínima es 10%")
+    @Max(value = 100, message = "La intensidad máxima es 100%")
+    @Column(name = "ticket_logo_opacity", nullable = false)
+    @Builder.Default
+    private Integer ticketLogoOpacity = 50; // Default: 50% (original threshold ~128)
 
     // Payment methods with enable/disable status (for restaurant/in-house orders)
     @ElementCollection(fetch = FetchType.EAGER)

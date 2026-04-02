@@ -36,6 +36,7 @@ public class DashboardServiceImpl implements DashboardService {
     private final RestaurantTableRepository tableRepository;
     private final ReservationRepository reservationRepository;
     private final DateTimeService dateTimeService;
+    private final LicenseService licenseService;
 
     @Override
     public DashboardStatsDTO getDashboardStats() {
@@ -89,11 +90,12 @@ public class DashboardServiceImpl implements DashboardService {
         // Get popular items
         List<PopularItemDTO> popularItems = getPopularItems(todayOrders);
 
-        // Get active employees (excluding PROGRAMMER) - filtered by company
-        Long totalEmployees = employeeService.countAllByCompany(company);
+        // Get active employees (excluding PROGRAMMER) - capacity based on license maxUsers
         Long activeEmployees = employeeService.countEnabledByCompany(company);
-        Double capacityPercentage = totalEmployees > 0 
-            ? (activeEmployees.doubleValue() / totalEmployees.doubleValue()) * 100 
+        SystemLicense license = licenseService.getLicense();
+        int maxUsers = (license != null && license.getMaxUsers() != null) ? license.getMaxUsers() : 0;
+        Double capacityPercentage = maxUsers > 0 
+            ? (activeEmployees.doubleValue() / (double) maxUsers) * 100 
             : 0.0;
         
         // MULTI-TENANT: Get employee initials filtered by company
@@ -143,7 +145,7 @@ public class DashboardServiceImpl implements DashboardService {
             .totalHistoricalRevenue(totalHistoricalRevenue)
             .popularItems(popularItems)
             .activeEmployees(activeEmployees.intValue())
-            .totalEmployees(totalEmployees.intValue())
+            .totalEmployees(maxUsers)
             .capacityPercentage(capacityPercentage)
             .employeeInitials(employeeInitials)
             .inventoryAlerts(inventoryAlerts)
@@ -227,29 +229,7 @@ public class DashboardServiceImpl implements DashboardService {
             }
         }
         
-        // If no items today, try to get from all-time PAID orders
-        if (itemCounts.isEmpty()) {
-            // MULTI-TENANT: Require company context - no fallback to global data
-            Company company = CompanyContext.requireCurrentCompany();
-            List<Order> allOrders = orderRepository.findByCompany(company);
-            for (Order order : allOrders) {
-                // Only count items from PAID orders
-                if (order.getStatus() != OrderStatus.PAID) {
-                    continue;
-                }
-                if (order.getOrderDetails() != null) {
-                    for (OrderDetail detail : order.getOrderDetails()) {
-                        if (detail.getItemMenu() != null && !detail.isComboChild()) {
-                            String itemName = detail.getItemMenu().getName();
-                            Long quantity = detail.getQuantity().longValue();
-                            itemCounts.merge(itemName, quantity, Long::sum);
-                        }
-                    }
-                }
-            }
-        }
-        
-        // If still no items, return empty list
+        // If no items for the given period, return empty list
         if (itemCounts.isEmpty()) {
             return List.of();
         }
@@ -442,25 +422,11 @@ public class DashboardServiceImpl implements DashboardService {
             .filter(order -> order.getStatus() == OrderStatus.ON_THE_WAY)
             .count();
         
-        // Calculate average preparation time for completed orders today
-        List<Order> completedOrders = activeOrders.stream()
-            .filter(order -> order.getStatus() == OrderStatus.PAID && order.getUpdatedAt() != null)
-            .collect(Collectors.toList());
-        
-        double avgPreparationTime = 0.0;
-        if (!completedOrders.isEmpty()) {
-            long totalMinutes = completedOrders.stream()
-                .mapToLong(order -> Duration.between(order.getCreatedAt(), order.getUpdatedAt()).toMinutes())
-                .sum();
-            avgPreparationTime = (double) totalMinutes / completedOrders.size();
-        }
-        
         return new PendingOrdersDTO(
             pending,
             inPreparation,
             ready,
-            onTheWay,
-            avgPreparationTime
+            onTheWay
         );
     }
 

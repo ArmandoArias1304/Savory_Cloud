@@ -311,6 +311,9 @@ public class CompanyServiceImpl implements CompanyService {
         log.info("Default Admin employee created for company: {} (username: {})", 
             savedCompany.getSlug(), admin.getUsername());
 
+        // Create default employees for each operational role
+        createDefaultEmployeesForAllRoles(savedCompany, admin);
+
         return savedCompany;
     }
 
@@ -378,6 +381,9 @@ public class CompanyServiceImpl implements CompanyService {
         Employee admin = createCustomAdmin(savedCompany, adminUsername, adminFirstName, adminLastName, adminPassword);
         log.info("Custom Admin employee created for company: {} (username: {})", 
             savedCompany.getSlug(), admin.getUsername());
+
+        // Create default employees for each operational role
+        createDefaultEmployeesForAllRoles(savedCompany, admin);
 
         return savedCompany;
     }
@@ -638,6 +644,69 @@ public class CompanyServiceImpl implements CompanyService {
             .build();
 
         return employeeRepository.save(admin);
+    }
+
+    /**
+     * Creates one default employee for each operational role (MANAGER, WAITER, CHEF, BARISTA, CASHIER, DELIVERY).
+     * Each employee gets a generic username and password based on the Spanish role name.
+     * Password pattern: spanishRoleName(lowercase) + "1234" (e.g. mesero1234, cajero1234)
+     */
+    private void createDefaultEmployeesForAllRoles(Company company, Employee admin) {
+        // Map: ROLE constant -> { spanishName, username }
+        String[][] roleMappings = {
+            { Role.MANAGER,  "Gerente",    "gerente" },
+            { Role.WAITER,   "Mesero",     "mesero" },
+            { Role.CHEF,     "Chef",       "chef" },
+            { Role.BARISTA,  "Barista",    "barista" },
+            { Role.CASHIER,  "Cajero",     "cajero" },
+            { Role.DELIVERY, "Repartidor", "repartidor" },
+        };
+
+        for (String[] mapping : roleMappings) {
+            String roleConstant = mapping[0];
+            String spanishName  = mapping[1];
+            String username     = mapping[2];
+
+            try {
+                Role role = roleRepository.findByNombreRol(roleConstant)
+                        .orElse(null);
+                if (role == null) {
+                    log.warn("Role {} not found, skipping default employee creation", roleConstant);
+                    continue;
+                }
+
+                Set<Role> roles = new HashSet<>();
+                roles.add(role);
+
+                String password = username + "1234";
+
+                Employee employee = Employee.builder()
+                        .company(company)
+                        .username(username)
+                        .nombre(spanishName)
+                        .apellido(company.getName())
+                        .edad(25)
+                        .contrasenia(passwordEncoder.encode(password))
+                        .telefono(null)
+                        .salario(0.0)
+                        .enabled(true)
+                        .roles(roles)
+                        .supervisor(admin)
+                        .createdBy("SYSTEM")
+                        .updatedBy("SYSTEM")
+                        .createdAt(LocalDateTime.now())
+                        .updatedAt(LocalDateTime.now())
+                        .build();
+
+                employeeRepository.save(employee);
+                log.info("Default {} employee created for company: {} (username: {}, password: {})",
+                        spanishName, company.getSlug(), username, password);
+
+            } catch (Exception e) {
+                log.error("Error creating default {} employee for company {}: {}",
+                        spanishName, company.getSlug(), e.getMessage());
+            }
+        }
     }
 
     private String generateLicenseKey(String slug) {

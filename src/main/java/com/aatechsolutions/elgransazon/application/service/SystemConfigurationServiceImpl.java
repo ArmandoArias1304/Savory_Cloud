@@ -116,8 +116,10 @@ public class SystemConfigurationServiceImpl implements SystemConfigurationServic
         existingConfig.setAddress(configuration.getAddress());
         existingConfig.setPhone(configuration.getPhone());
         existingConfig.setEmail(configuration.getEmail());
+        existingConfig.setRfc(configuration.getRfc());
         existingConfig.setTaxRate(configuration.getTaxRate());
         existingConfig.setAverageConsumptionTimeMinutes(configuration.getAverageConsumptionTimeMinutes());
+        existingConfig.setTicketLogoOpacity(configuration.getTicketLogoOpacity());
         
         log.debug("Existing averageConsumptionTimeMinutes after update: {}", existingConfig.getAverageConsumptionTimeMinutes());
         

@@ -195,22 +195,11 @@ public class WaiterPaymentController {
             
             // Reload order to get updated values
             order = waiterOrderService.findByIdWithDetails(orderId).orElse(order);
-            
-            // Generate PDF ticket
-            try {
-                byte[] pdfBytes = ticketPdfService.generateTicket(order);
-                session.setAttribute("ticketPdf", pdfBytes);
-                session.setAttribute("ticketFilename", "ticket_" + order.getOrderNumber() + ".pdf");
-                log.info("PDF ticket generated and stored in session");
-            } catch (Exception e) {
-                log.error("Error generating PDF ticket: {}", e.getMessage(), e);
-                // Continue even if PDF generation fails
-            }
-            
+
             redirectAttributes.addFlashAttribute("successMessage",
                     "Pago procesado exitosamente para el pedido " + order.getOrderNumber() + 
                     ". Total pagado: " + order.getFormattedTotalWithTip());
-            redirectAttributes.addFlashAttribute("downloadTicket", true);
+            redirectAttributes.addFlashAttribute("printTicketOrderId", orderId);
             
             return "redirect:/waiter/orders";
 

@@ -435,12 +435,14 @@
                     <p
                       class="text-sm text-gray-500 dark:text-gray-400 text-center"
                     >
-                      No hay órdenes registradas aún
+                      Aún no hay pedidos pagados para hacer el ranking de platos
+                      más populares
                     </p>
                     <p
                       class="text-xs text-gray-400 dark:text-gray-500 text-center mt-1"
                     >
-                      Los platos más populares aparecerán aquí
+                      Cuando se paguen pedidos hoy, los platos más populares
+                      aparecerán aquí
                     </p>
                   </div>
                 </div>
@@ -859,28 +861,6 @@
                   </p>
                 </div>
               </div>
-
-              <div class="bg-gray-50 dark:bg-gray-700 rounded-xl p-3">
-                <div class="flex items-center justify-between">
-                  <div class="flex items-center gap-2">
-                    <span
-                      class="material-symbols-outlined text-gray-600 dark:text-gray-400 text-lg"
-                      >schedule</span
-                    >
-                    <p class="text-sm text-gray-700 dark:text-gray-300">
-                      Tiempo promedio
-                    </p>
-                  </div>
-                  <p class="text-lg font-bold text-gray-900 dark:text-white">
-                    <span
-                      id="avg-preparation-time"
-                      th:text="${stats.pendingOrders != null ? #numbers.formatDecimal(stats.pendingOrders.avgPreparationTime, 1, 0) : 0}"
-                      >0</span
-                    >
-                    min
-                  </p>
-                </div>
-              </div>
             </div>
 
             <!-- Today's Reservations -->
@@ -1234,14 +1214,24 @@
 
         function renderPopularItems(items) {
           if (!items || items.length === 0) {
+            const periodText =
+              filterSelect.value === "today"
+                ? "hoy"
+                : filterSelect.value === "week"
+                  ? "esta semana"
+                  : "este mes";
+            const subtitleText =
+              filterSelect.value === "today"
+                ? "Cuando se paguen pedidos hoy, los platos más populares aparecerán aquí"
+                : "Los platos más populares aparecerán aquí cuando haya pedidos pagados";
             container.innerHTML = `
               <div class="flex flex-col items-center justify-center p-8 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
                 <span class="material-symbols-outlined text-gray-400 text-5xl mb-3">restaurant_menu</span>
                 <p class="text-sm text-gray-500 dark:text-gray-400 text-center">
-                  No hay órdenes registradas para este período
+                  Aún no hay pedidos pagados para hacer el ranking de platos más populares
                 </p>
                 <p class="text-xs text-gray-400 dark:text-gray-500 text-center mt-1">
-                  Los platos más populares aparecerán aquí
+                  ${subtitleText}
                 </p>
               </div>
             `;
@@ -1376,10 +1366,13 @@
             reconnectDelay = 1000;
 
             // Subscribe to admin kitchen channel for order updates
-            stompClient.subscribe(`/topic/admin/kitchen/${companyId}`, function (message) {
-              const notification = JSON.parse(message.body);
-              handleDashboardOrderUpdate(notification);
-            });
+            stompClient.subscribe(
+              `/topic/admin/kitchen/${companyId}`,
+              function (message) {
+                const notification = JSON.parse(message.body);
+                handleDashboardOrderUpdate(notification);
+              },
+            );
           },
           function (error) {
             if (isIntentionalDisconnect) {
@@ -1499,15 +1492,6 @@
           const onTheWayEl = document.getElementById("on-the-way-orders-count");
           if (onTheWayEl && stats.pendingOrders.onTheWay != null) {
             onTheWayEl.textContent = stats.pendingOrders.onTheWay;
-            updatedCount++;
-          }
-
-          // Average Preparation Time
-          const avgTimeEl = document.getElementById("avg-preparation-time");
-          if (avgTimeEl && stats.pendingOrders.avgPreparationTime != null) {
-            avgTimeEl.textContent = Math.round(
-              stats.pendingOrders.avgPreparationTime,
-            );
             updatedCount++;
           }
         }

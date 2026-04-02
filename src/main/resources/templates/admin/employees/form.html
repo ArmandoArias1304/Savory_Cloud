@@ -294,7 +294,7 @@
                       placeholder="Ej: jperez"
                       title="El usuario debe tener entre 3 y 50 caracteres (letras minúsculas, números y guiones bajos)"
                       oninput="this.value = this.value.toLowerCase()"
-                      style="text-transform: lowercase;"
+                      style="text-transform: lowercase"
                     />
                     <p
                       class="mt-2 text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1"
@@ -420,7 +420,9 @@
                         class="absolute inset-y-0 right-0 flex items-center px-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
                         tabindex="-1"
                       >
-                        <span class="material-symbols-outlined text-xl">visibility</span>
+                        <span class="material-symbols-outlined text-xl"
+                          >visibility</span
+                        >
                       </button>
                     </div>
                     <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
@@ -457,7 +459,11 @@
                         >workspace_premium</span
                       >
                       Rol
-                      <span class="text-red-500">*</span>
+                      <span
+                        th:if="${employee.idEmpleado == null}"
+                        class="text-red-500"
+                        >*</span
+                      >
                       <span
                         sec:authorize="hasRole('ROLE_MANAGER')"
                         class="text-xs font-normal text-gray-500"
@@ -468,11 +474,16 @@
                         class="text-xs font-normal text-yellow-600 dark:text-yellow-400"
                         >(Rol protegido)</span
                       >
+                      <span
+                        th:if="${employee.idEmpleado != null and !isAdminEmployee}"
+                        class="text-xs font-normal text-gray-500"
+                        >(No editable)</span
+                      >
                     </label>
 
-                    <!-- Editable select for non-ADMIN employees (only visible to ADMIN users) -->
+                    <!-- Editable select ONLY when creating a new employee (ADMIN users only) -->
                     <select
-                      th:if="${!isAdminEmployee}"
+                      th:if="${employee.idEmpleado == null}"
                       id="role"
                       name="roleId"
                       required
@@ -490,7 +501,10 @@
                     </select>
 
                     <!-- Read-only display for ADMIN employees (locked) -->
-                    <div th:if="${isAdminEmployee}" class="relative">
+                    <div
+                      th:if="${isAdminEmployee and employee.idEmpleado != null}"
+                      class="relative"
+                    >
                       <input
                         type="text"
                         value="Administrador"
@@ -503,17 +517,25 @@
                       >
                     </div>
 
-                    <!-- Read-only display for MANAGER -->
-                    <input
-                      th:if="${!isAdminEmployee}"
-                      sec:authorize="hasRole('ROLE_MANAGER')"
-                      type="text"
-                      th:value="${employee.roleDisplayName}"
-                      disabled
-                      class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-900 text-gray-700 dark:text-gray-400 cursor-not-allowed"
-                    />
+                    <!-- Read-only display for ALL non-ADMIN employees in edit mode -->
+                    <div
+                      th:if="${!isAdminEmployee and employee.idEmpleado != null}"
+                      class="relative"
+                    >
+                      <input
+                        type="text"
+                        th:value="${employee.roleDisplayName}"
+                        disabled
+                        class="w-full px-4 py-3 rounded-xl border-2 border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-semibold cursor-not-allowed"
+                      />
+                      <span
+                        class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500"
+                        >lock</span
+                      >
+                    </div>
+
                     <p
-                      th:if="${!isAdminEmployee}"
+                      th:if="${employee.idEmpleado == null}"
                       class="mt-2 text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1"
                     >
                       <span class="material-symbols-outlined text-sm"
@@ -522,7 +544,7 @@
                       El rol determina los permisos del empleado
                     </p>
                     <p
-                      th:if="${isAdminEmployee}"
+                      th:if="${isAdminEmployee and employee.idEmpleado != null}"
                       class="mt-2 text-xs text-yellow-700 dark:text-yellow-400 flex items-center gap-1"
                     >
                       <span class="material-symbols-outlined text-sm"
@@ -530,6 +552,15 @@
                       >
                       El rol de Administrador no puede ser modificado por
                       seguridad
+                    </p>
+                    <p
+                      th:if="${!isAdminEmployee and employee.idEmpleado != null}"
+                      class="mt-2 text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1"
+                    >
+                      <span class="material-symbols-outlined text-sm"
+                        >lock</span
+                      >
+                      El rol no puede ser modificado después de la creación
                     </p>
                   </div>
 
@@ -951,7 +982,9 @@
                       class="absolute inset-y-0 right-0 flex items-center px-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
                       tabindex="-1"
                     >
-                      <span class="material-symbols-outlined text-xl">visibility</span>
+                      <span class="material-symbols-outlined text-xl"
+                        >visibility</span
+                      >
                     </button>
                   </div>
                   <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
@@ -989,7 +1022,9 @@
                       class="absolute inset-y-0 right-0 flex items-center px-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
                       tabindex="-1"
                     >
-                      <span class="material-symbols-outlined text-xl">visibility</span>
+                      <span class="material-symbols-outlined text-xl"
+                        >visibility</span
+                      >
                     </button>
                   </div>
                 </div>
@@ -1254,13 +1289,13 @@
       // Toggle password visibility
       function togglePassword(inputId, btn) {
         const input = document.getElementById(inputId);
-        const icon = btn.querySelector('.material-symbols-outlined');
-        if (input.type === 'password') {
-          input.type = 'text';
-          icon.textContent = 'visibility_off';
+        const icon = btn.querySelector(".material-symbols-outlined");
+        if (input.type === "password") {
+          input.type = "text";
+          icon.textContent = "visibility_off";
         } else {
-          input.type = 'password';
-          icon.textContent = 'visibility';
+          input.type = "password";
+          icon.textContent = "visibility";
         }
       }
 
@@ -1283,7 +1318,8 @@
         const salario = form
           .querySelector('input[name="salario"]')
           .value.trim();
-        const roleId = form.querySelector('select[name="roleId"]').value;
+        const roleSelect = form.querySelector('select[name="roleId"]');
+        const roleId = roleSelect ? roleSelect.value : null;
         const employeeId = form.querySelector(
           'input[name="idEmpleado"]',
         )?.value;
@@ -1482,8 +1518,8 @@
           return false;
         }
 
-        // Validate role selection
-        if (!roleId) {
+        // Validate role selection (only for new employees, role is read-only on edit)
+        if (!isEdit && !roleId) {
           event.preventDefault();
           Swal.fire({
             title: "Rol requerido",
@@ -1557,8 +1593,6 @@
           this.classList.add("border-gray-300", "dark:border-gray-600");
         }
       });
-
-     
 
       // Password validation
       passwordInput?.addEventListener("blur", function () {
@@ -1655,8 +1689,7 @@
               errorMsg.remove();
             }
           }
-        } catch (error) {
-        }
+        } catch (error) {}
       }
 
       // Shift Modal Functions

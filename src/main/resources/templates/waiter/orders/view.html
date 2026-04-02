@@ -805,9 +805,11 @@
                 <span class="material-symbols-outlined">edit</span>
                 Editar Pedido
               </a>
-              <!-- Print Receipt -->
+              <!-- Print Ticket via QZ Tray / PDF fallback -->
               <button
-                onclick="window.print()"
+                id="btn-print-ticket"
+                th:data-order-id="${order.idOrder}"
+                onclick="printTicketFromView(this)"
                 class="flex items-center justify-center gap-2 w-full px-4 py-3 rounded-xl bg-gray-600 dark:bg-gray-700 hover:bg-gray-700 dark:hover:bg-gray-600 text-white font-semibold transition-all shadow-md hover:shadow-lg"
               >
                 <span class="material-symbols-outlined">print</span>
@@ -830,11 +832,122 @@
 
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
-    <!-- SweetAlert2 -->
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- QZ Tray for thermal printing -->
+    <script src="https://cdn.jsdelivr.net/npm/qz-tray@2/qz-tray.js"></script>
 
     <script th:inline="javascript">
+      /*<![CDATA[*/
+
+      // ========== QZ Tray Ticket Printing ==========
+      var _printingInProgress = false;
+      function printTicketFromView(btn) {
+        if (_printingInProgress) return;
+        _printingInProgress = true;
+        btn.disabled = true;
+        btn.classList.add("opacity-50", "cursor-not-allowed");
+        var orderId = btn.dataset.orderId;
+        function _unlock() {
+          _printingInProgress = false;
+          btn.disabled = false;
+          btn.classList.remove("opacity-50", "cursor-not-allowed");
+        }
+        var rawUrl = /*[[@{/waiter/orders/}]]*/ "/waiter/orders/";
+        rawUrl = rawUrl + orderId + "/download-ticket-raw";
+        var pdfUrl = /*[[@{/waiter/orders/}]]*/ "/waiter/orders/";
+        pdfUrl = pdfUrl + orderId + "/download-ticket";
+
+        if (typeof qz === "undefined" || !qz.websocket) {
+          _fallbackPdfDownload(pdfUrl, orderId, _unlock);
+          return;
+        }
+        var probe = new WebSocket("ws://localhost:8182");
+        var probeTimer = setTimeout(function () {
+          probe.close();
+          _fallbackPdfDownload(pdfUrl, orderId, _unlock);
+        }, 1500);
+        probe.onopen = function () {
+          clearTimeout(probeTimer);
+          probe.close();
+          _doQzPrint(rawUrl, pdfUrl, orderId, _unlock);
+        };
+        probe.onerror = function () {
+          clearTimeout(probeTimer);
+          _fallbackPdfDownload(pdfUrl, orderId, _unlock);
+        };
+      }
+
+      function _doQzPrint(rawUrl, pdfUrl, orderId, unlock) {
+        qz.websocket
+          .connect()
+          .then(function () {
+            return fetch(rawUrl);
+          })
+          .then(function (resp) {
+            if (!resp.ok) throw new Error("HTTP " + resp.status);
+            return resp.arrayBuffer();
+          })
+          .then(function (buf) {
+            var bytes = new Uint8Array(buf);
+            var binary = "";
+            for (var i = 0; i < bytes.length; i++)
+              binary += String.fromCharCode(bytes[i]);
+            var b64 = btoa(binary);
+            return qz.printers.getDefault().then(function (printer) {
+              var config = qz.configs.create(printer);
+              return qz.print(config, [
+                { type: "raw", format: "base64", data: b64 },
+              ]);
+            });
+          })
+          .then(function () {
+            return qz.websocket.disconnect();
+          })
+          .then(function () {
+            unlock();
+            Swal.fire({
+              icon: "success",
+              title: "Ticket enviado",
+              text: "El ticket se envió a la impresora.",
+              timer: 2000,
+              showConfirmButton: false,
+              background: document.documentElement.classList.contains("dark")
+                ? "#1f2937"
+                : "#ffffff",
+              color: document.documentElement.classList.contains("dark")
+                ? "#f3f4f6"
+                : "#1f2937",
+            });
+          })
+          .catch(function (err) {
+            console.error("QZ Tray print error:", err);
+            if (qz.websocket.isActive()) qz.websocket.disconnect();
+            _fallbackPdfDownload(pdfUrl, orderId, unlock);
+          });
+      }
+
+      function _fallbackPdfDownload(pdfUrl, orderId, unlock) {
+        Swal.fire({
+          icon: "warning",
+          title: "Impresora no disponible",
+          html: "No se detectó la impresora de tickets.<br>¿Deseas descargar el ticket en PDF?",
+          showCancelButton: true,
+          confirmButtonText: "Descargar PDF",
+          cancelButtonText: "Cancelar",
+          confirmButtonColor: "#3085d6",
+          background: document.documentElement.classList.contains("dark")
+            ? "#1f2937"
+            : "#ffffff",
+          color: document.documentElement.classList.contains("dark")
+            ? "#f3f4f6"
+            : "#1f2937",
+        }).then(function (result) {
+          unlock();
+          if (result.isConfirmed) {
+            window.location.href = pdfUrl;
+          }
+        });
+      }
+      // ========== END QZ Tray ==========
       /*<![CDATA[*/
       // Format currency
       function formatCurrency(amount) {

@@ -25,6 +25,7 @@
     />
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qz-tray@2/qz-tray.js"></script>
     <script>
       tailwind.config = {
         darkMode: "class",
@@ -1340,16 +1341,43 @@
         }).format(amount);
       }
 
-      // Auto-download ticket PDF after payment
+      // Auto-print ticket via QZ Tray after payment
       document.addEventListener("DOMContentLoaded", function () {
-        const downloadTicket = /*[[${downloadTicket}]]*/ false;
-        if (downloadTicket) {
-          // Trigger download after a short delay
-          setTimeout(function () {
-            window.location.href = "/admin/payments/download-ticket";
-          }, 500);
+        const printOrderId = /*[[${printTicketOrderId}]]*/ null;
+        if (printOrderId) {
+          var rawUrl = "/admin/orders/" + printOrderId + "/download-ticket-raw";
+          printTicketViaQZ(rawUrl);
         }
       });
+
+      function printTicketViaQZ(rawUrl) {
+        if (typeof qz === "undefined" || !qz.websocket) return;
+        if (qz.websocket.isActive()) { _doQzPrint(rawUrl); return; }
+        var probe = new WebSocket("ws://localhost:8182");
+        var probeTimer = setTimeout(function () { probe.close(); }, 500);
+        probe.onopen = function () {
+          clearTimeout(probeTimer); probe.close();
+          qz.websocket.connect().then(function () { _doQzPrint(rawUrl); }).catch(function () {});
+        };
+        probe.onerror = function () { clearTimeout(probeTimer); };
+      }
+
+      function _doQzPrint(rawUrl) {
+        fetch(rawUrl)
+          .then(function (r) { if (!r.ok) throw new Error("fetch failed"); return r.arrayBuffer(); })
+          .then(function (buf) {
+            var b = new Uint8Array(buf), s = "";
+            for (var i = 0; i < b.length; i++) s += String.fromCharCode(b[i]);
+            return btoa(s);
+          })
+          .then(function (b64) {
+            return qz.printers.getDefault().then(function (p) {
+              return qz.print(qz.configs.create(p), [{ type: "raw", format: "base64", data: b64 }]);
+            });
+          })
+          .then(function () { console.log("Ticket enviado a imprimir (ESC/POS)."); })
+          .catch(function (e) { console.warn("No se pudo imprimir ticket:", e); });
+      }
     </script>
 
     <!-- Sidebar Scripts Fragment -->

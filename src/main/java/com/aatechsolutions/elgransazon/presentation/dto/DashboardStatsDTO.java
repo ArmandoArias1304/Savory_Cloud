@@ -259,7 +259,6 @@ public class DashboardStatsDTO {
         private Long inPreparation;
         private Long ready;
         private Long onTheWay;
-        private Double avgPreparationTime; // in minutes
     }
 
     /**

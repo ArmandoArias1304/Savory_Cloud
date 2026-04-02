@@ -53,6 +53,7 @@ public class OrderController {
     private final WebSocketNotificationService wsNotificationService;
     private final BusinessHoursService businessHoursService;
     private final TicketPdfService ticketPdfService;
+    private final TicketEscPosService ticketEscPosService;
     private final com.aatechsolutions.elgransazon.domain.repository.ComplementRepository complementRepository;
     private final com.aatechsolutions.elgransazon.domain.repository.ItemMenuComplementRepository itemMenuComplementRepository;
     private final com.aatechsolutions.elgransazon.domain.repository.ItemMenuComboItemRepository itemMenuComboItemRepository;
@@ -82,6 +83,7 @@ public class OrderController {
             WebSocketNotificationService wsNotificationService,
             BusinessHoursService businessHoursService,
             TicketPdfService ticketPdfService,
+            TicketEscPosService ticketEscPosService,
             com.aatechsolutions.elgransazon.domain.repository.ComplementRepository complementRepository,
             com.aatechsolutions.elgransazon.domain.repository.ItemMenuComplementRepository itemMenuComplementRepository,
             com.aatechsolutions.elgransazon.domain.repository.ItemMenuComboItemRepository itemMenuComboItemRepository,
@@ -109,6 +111,7 @@ public class OrderController {
         this.wsNotificationService = wsNotificationService;
         this.businessHoursService = businessHoursService;
         this.ticketPdfService = ticketPdfService;
+        this.ticketEscPosService = ticketEscPosService;
         this.complementRepository = complementRepository;
         this.itemMenuComplementRepository = itemMenuComplementRepository;
         this.itemMenuComboItemRepository = itemMenuComboItemRepository;
@@ -3351,12 +3354,6 @@ public class OrderController {
             Order order = orderService.findByIdWithDetails(orderId)
                     .orElseThrow(() -> new IllegalArgumentException("Orden no encontrada"));
             
-            // Validate that order is PAID
-            if (order.getStatus() != OrderStatus.PAID) {
-                log.warn("Attempted to download ticket for unpaid order: {}", order.getOrderNumber());
-                return ResponseEntity.badRequest().build();
-            }
-            
             // Generate PDF ticket
             byte[] pdfBytes = ticketPdfService.generateTicket(order);
             
@@ -3374,6 +3371,45 @@ public class OrderController {
             return ResponseEntity.notFound().build();
         } catch (Exception e) {
             log.error("Error generating ticket for order {}", orderId, e);
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    /**
+     * Download ESC/POS raw ticket for paid order (for thermal printers via QZ Tray)
+     * GET /{role}/orders/{orderId}/download-ticket-raw
+     */
+    @GetMapping("/{orderId}/download-ticket-raw")
+    public ResponseEntity<byte[]> downloadTicketRaw(
+            @PathVariable String role,
+            @PathVariable Long orderId,
+            Authentication authentication) {
+
+        log.info("User {} downloading ESC/POS ticket for order {}", authentication.getName(), orderId);
+
+        validateRole(role, authentication);
+
+        try {
+            OrderService orderService = getOrderService(role);
+            Order order = orderService.findByIdWithDetails(orderId)
+                    .orElseThrow(() -> new IllegalArgumentException("Orden no encontrada"));
+
+            byte[] escposBytes = ticketEscPosService.generateTicket(order);
+
+            org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+            headers.setContentType(org.springframework.http.MediaType.APPLICATION_OCTET_STREAM);
+            headers.setContentDispositionFormData("attachment", "ticket_" + order.getOrderNumber() + ".bin");
+            headers.setCacheControl("must-revalidate, post-check=0, pre-check=0");
+
+            return ResponseEntity.ok()
+                    .headers(headers)
+                    .body(escposBytes);
+
+        } catch (IllegalArgumentException e) {
+            log.error("Order not found: {}", orderId, e);
+            return ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            log.error("Error generating ESC/POS ticket for order {}", orderId, e);
             return ResponseEntity.internalServerError().build();
         }
     }

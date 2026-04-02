@@ -364,39 +364,19 @@ public class EmployeeController {
             Employee existingEmployee = employeeService.findById(id)
                     .orElseThrow(() -> new IllegalArgumentException("Empleado no encontrado"));
             
-            // Prevent role change for ADMIN employees
+            // ALWAYS preserve existing role - role cannot be changed via edit
+            employee.setRoles(existingEmployee.getRoles());
+
             if (existingEmployee.hasRole(Role.ADMIN)) {
                 log.warn("Attempted to change role of ADMIN employee ID: {}", id);
-                // Preserve ADMIN role
-                employee.setRoles(existingEmployee.getRoles());
                 // Admin must be their own supervisor or null. 
                 // Requirement: "El admin solo tendrá como supervisor el mismo"
                 // We set supervisor to self (using existing entity which has the ID)
                 employee.setSupervisor(existingEmployee);
             } else {
-                // Set role (only for non-ADMIN employees)
-                if (roleId != null) {
-                    Optional<Role> role = roleRepository.findById(roleId);
-                    if (role.isPresent()) {
-                        Set<Role> roles = new HashSet<>();
-                        roles.add(role.get());
-                        employee.setRoles(roles);
-                        
-                        // Check if promoted to ADMIN (unlikely given UI but possible)
-                        if (role.get().getNombreRol().equals(Role.ADMIN)) {
-                            employee.setSupervisor(existingEmployee);
-                        } else {
-                             // Regular employee supervisor assignment
-                            if (supervisorId != null) {
-                                employeeService.findById(supervisorId).ifPresent(employee::setSupervisor);
-                            }
-                        }
-                    }
-                } else {
-                     // No role change, preserve supervisor assignment logic
-                     if (supervisorId != null) {
-                        employeeService.findById(supervisorId).ifPresent(employee::setSupervisor);
-                     }
+                // Regular employee supervisor assignment
+                if (supervisorId != null) {
+                    employeeService.findById(supervisorId).ifPresent(employee::setSupervisor);
                 }
             }
             

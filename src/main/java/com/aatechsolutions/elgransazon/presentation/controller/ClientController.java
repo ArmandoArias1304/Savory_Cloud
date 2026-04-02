@@ -1195,7 +1195,7 @@ public class ClientController {
 
             return ResponseEntity.ok(Map.of(
                 "success", true,
-                "message", "Pedido " + cancelledOrder.getOrderNumber() + " cancelado exitosamente. El stock ha sido devuelto automáticamente.",
+                "message", "Pedido " + cancelledOrder.getOrderNumber() + " cancelado exitosamente.",
                 "orderNumber", cancelledOrder.getOrderNumber()
             ));
 
@@ -1245,7 +1245,7 @@ public class ClientController {
 
             return ResponseEntity.ok(Map.of(
                 "success", true,
-                "message", "Item '" + deletedItem.getItemMenu().getName() + "' eliminado exitosamente. El stock ha sido devuelto.",
+                "message", "Item '" + deletedItem.getItemMenu().getName() + "' eliminado exitosamente.",
                 "itemName", deletedItem.getItemMenu().getName()
             ));
 
@@ -1261,7 +1261,7 @@ public class ClientController {
                         "success", true,
                         "isLastItem", true,
                         "orderCancelled", true,
-                        "message", "Era el último item del pedido. El pedido " + cancelledOrder.getOrderNumber() + " ha sido cancelado y el stock fue devuelto.",
+                        "message", "Era el último item del pedido. El pedido " + cancelledOrder.getOrderNumber() + " ha sido cancelado.",
                         "orderNumber", cancelledOrder.getOrderNumber()
                     ));
                 } catch (Exception cancelError) {

@@ -496,7 +496,7 @@ public class EmployeeService {
         if (company == null) {
             return employeeRepository.countAllExcludingProgrammer();
         }
-        return employeeRepository.findByCompany(company).size();
+        return employeeRepository.countAllByCompanyExcludingProgrammer(company);
     }
 
     /**

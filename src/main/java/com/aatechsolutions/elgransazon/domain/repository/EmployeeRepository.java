@@ -168,4 +168,13 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
            "WHERE e.enabled = true AND e.company = :company " +
            "AND (r.nombreRol IS NULL OR r.nombreRol != 'ROLE_PROGRAMMER')")
     long countEnabledByCompanyExcludingProgrammer(@Param("company") Company company);
+
+    /**
+     * Count all employees by company excluding PROGRAMMER role
+     */
+    @Query("SELECT COUNT(DISTINCT e.idEmpleado) FROM Employee e " +
+           "LEFT JOIN e.roles r " +
+           "WHERE e.company = :company " +
+           "AND (r.nombreRol IS NULL OR r.nombreRol != 'ROLE_PROGRAMMER')")
+    long countAllByCompanyExcludingProgrammer(@Param("company") Company company);
 }
