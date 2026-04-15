@@ -1,0 +1,263 @@
+<!doctype html>
+<html
+  xmlns:th="http://www.thymeleaf.org"
+  lang="es"
+>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title th:text="${globalSystemConfig != null ? globalSystemConfig.systemName + ' - Autofactura' : 'Autofactura'}">
+      Autofactura
+    </title>
+    <link crossorigin="" href="https://fonts.gstatic.com/" rel="preconnect" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@300;400;500;600;700"
+      rel="stylesheet"
+    />
+
+    <!-- Sistema de Temas (Modo Claro/Oscuro) -->
+    <div th:replace="~{fragments/theme :: themeResources}"></div>
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#38e07b",
+              "primary-dark": "#2bc866",
+              "background-light": "#f8faf9",
+              "background-dark": "#0f1713",
+            },
+            fontFamily: {
+              display: ["Work Sans"],
+            },
+            borderRadius: {
+              DEFAULT: "0.5rem",
+              lg: "0.75rem",
+              xl: "1rem",
+              "2xl": "1.5rem",
+              full: "9999px",
+            },
+          },
+        },
+      };
+    </script>
+  </head>
+  <body
+    class="bg-gradient-to-br from-background-light to-gray-50 dark:from-background-dark dark:to-gray-900 font-display text-gray-800 dark:text-gray-200 min-h-screen"
+  >
+    <div class="max-w-2xl mx-auto px-4 py-8 sm:py-12">
+
+      <!-- HEADER -->
+      <div class="text-center mb-8">
+        <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/10 mb-4">
+          <span class="material-symbols-outlined text-primary text-4xl">receipt_long</span>
+        </div>
+        <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
+          Autofactura
+        </h1>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Genere su factura electrónica (CFDI 4.0)</p>
+      </div>
+
+      <!-- ERROR MESSAGE (no order found / config unavailable) -->
+      <div th:if="${error}" class="mb-6 p-4 rounded-xl bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 flex items-start gap-3">
+        <span class="material-symbols-outlined text-red-600 dark:text-red-400">error</span>
+        <p class="font-semibold text-red-800 dark:text-red-300" th:text="${error}"></p>
+      </div>
+
+      <!-- SUCCESS MESSAGE -->
+      <div th:if="${successMessage}" class="mb-6 p-4 rounded-xl bg-green-50 dark:bg-green-900/20 border-l-4 border-green-500 flex items-start gap-3">
+        <span class="material-symbols-outlined text-green-600 dark:text-green-400">check_circle</span>
+        <p class="font-semibold text-green-800 dark:text-green-300" th:text="${successMessage}"></p>
+      </div>
+
+      <!-- ALREADY INVOICED — show download links -->
+      <div th:if="${alreadyInvoiced}" class="bg-white dark:bg-gray-900 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 p-6">
+        <div class="text-center mb-6">
+          <span class="material-symbols-outlined text-green-500 text-5xl mb-2">task_alt</span>
+          <h2 class="text-xl font-bold text-gray-900 dark:text-white">Factura Generada</h2>
+          <p class="text-sm text-gray-500 dark:text-gray-400 mt-1" th:if="${order.facturamaCfdiUuid}">
+            Folio Fiscal: <span class="font-mono text-xs" th:text="${order.facturamaCfdiUuid}"></span>
+          </p>
+        </div>
+
+        <!-- Order summary -->
+        <div class="p-4 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 mb-6">
+          <div class="flex justify-between items-center mb-2">
+            <span class="text-sm text-gray-500 dark:text-gray-400">Orden</span>
+            <span class="font-semibold text-gray-900 dark:text-white" th:text="${order.orderNumber}"></span>
+          </div>
+          <div class="flex justify-between items-center">
+            <span class="text-sm text-gray-500 dark:text-gray-400">Total</span>
+            <span class="font-bold text-lg text-primary" th:text="'$' + ${#numbers.formatDecimal(order.total, 1, 2)}"></span>
+          </div>
+        </div>
+
+        <!-- Download buttons -->
+        <div class="grid grid-cols-2 gap-4">
+          <a th:href="@{/autofactura/{key}/pdf(key=${order.autofacturaKey})}"
+             class="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-red-600 text-white font-semibold hover:bg-red-700 transition-colors">
+            <span class="material-symbols-outlined">picture_as_pdf</span>
+            Descargar PDF
+          </a>
+          <a th:href="@{/autofactura/{key}/xml(key=${order.autofacturaKey})}"
+             class="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition-colors">
+            <span class="material-symbols-outlined">code</span>
+            Descargar XML
+          </a>
+        </div>
+      </div>
+
+      <!-- AUTOFACTURA FORM (only if order exists, not yet invoiced, and config is ready) -->
+      <div th:if="${order != null and !alreadyInvoiced}" class="space-y-6">
+
+        <!-- Order Summary Card -->
+        <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 p-6">
+          <h3 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2 mb-4">
+            <span class="material-symbols-outlined text-primary">shopping_bag</span>
+            Resumen del Pedido
+          </h3>
+
+          <div class="space-y-2 mb-4">
+            <div class="flex justify-between">
+              <span class="text-sm text-gray-500 dark:text-gray-400">Orden</span>
+              <span class="font-semibold text-gray-900 dark:text-white" th:text="${order.orderNumber}"></span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-sm text-gray-500 dark:text-gray-400">Fecha</span>
+              <span class="text-gray-900 dark:text-white" th:text="${#tz.format(order.createdAt, 'dd/MM/yyyy HH:mm')}"></span>
+            </div>
+          </div>
+
+          <!-- Items -->
+          <div class="border-t border-gray-200 dark:border-gray-700 pt-3 space-y-1">
+            <th:block th:each="detail : ${order.orderDetails}">
+              <!-- Main item row -->
+              <div class="flex justify-between text-sm"
+                   th:classappend="${detail.comboChild ? 'pl-4 text-xs' : ''}">
+                <span class="text-gray-700 dark:text-gray-300">
+                  <span th:if="${detail.comboParent}" class="text-primary font-semibold">[COMBO] </span>
+                  <span th:if="${detail.comboChild}" class="text-gray-400 dark:text-gray-500">↳ </span>
+                  <span th:text="${detail.quantity}"></span>x
+                  <span th:text="${detail.itemMenu.name}"></span>
+                </span>
+                <span class="font-semibold text-gray-900 dark:text-white"
+                      th:text="'$' + ${#numbers.formatDecimal(detail.subtotal, 1, 2)}"></span>
+              </div>
+              <!-- Complements for this item -->
+              <th:block th:if="${detail.selectedComplements != null and !detail.selectedComplements.isEmpty()}">
+                <div th:each="comp : ${detail.selectedComplements}"
+                     class="flex justify-between text-xs pl-4"
+                     th:classappend="${detail.comboChild ? 'pl-8' : ''}">
+                  <span class="text-gray-400 dark:text-gray-500">
+                    + <span th:text="${comp.complement.name}"></span>
+                    <span th:if="${comp.quantity > 1}" th:text="' x' + ${comp.quantity}"></span>
+                  </span>
+                  <span class="text-gray-400 dark:text-gray-500"
+                        th:text="'$' + ${#numbers.formatDecimal(comp.subtotal, 1, 2)}"></span>
+                </div>
+              </th:block>
+            </th:block>
+          </div>
+
+          <div class="border-t border-gray-200 dark:border-gray-700 mt-3 pt-3">
+            <div class="flex justify-between items-center">
+              <span class="font-bold text-gray-900 dark:text-white">Total</span>
+              <span class="font-bold text-xl text-primary" th:text="'$' + ${#numbers.formatDecimal(order.total, 1, 2)}"></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Fiscal Data Form -->
+        <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 p-6">
+          <h3 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2 mb-4">
+            <span class="material-symbols-outlined text-primary">badge</span>
+            Datos Fiscales
+          </h3>
+          <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">
+            Ingrese sus datos fiscales para generar su factura (CFDI 4.0)
+          </p>
+
+          <form th:action="@{/autofactura/{key}(key=${order.autofacturaKey})}" method="post" class="space-y-4">
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">RFC *</label>
+              <input
+                type="text"
+                name="rfc"
+                required
+                maxlength="13"
+                placeholder="Ej: XAXX010101000"
+                class="w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary focus:border-transparent uppercase"
+              />
+            </div>
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Razón Social / Nombre *</label>
+              <input
+                type="text"
+                name="legalName"
+                required
+                maxlength="300"
+                placeholder="Ej: EMPRESA EJEMPLO S.A. DE C.V."
+                class="w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary focus:border-transparent"
+              />
+              <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Tal como aparece en su Constancia de Situación Fiscal</p>
+            </div>
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Régimen Fiscal *</label>
+              <select
+                name="fiscalRegime"
+                required
+                class="w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary focus:border-transparent"
+              >
+                <option value="">Seleccione...</option>
+                <option th:each="entry : ${taxSystems}" th:value="${entry.key}" th:text="${entry.value}"></option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Uso del CFDI *</label>
+              <select
+                name="cfdiUse"
+                required
+                class="w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary focus:border-transparent"
+              >
+                <option value="">Seleccione...</option>
+                <option th:each="entry : ${cfdiUses}" th:value="${entry.key}" th:text="${entry.value}"></option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Código Postal Fiscal *</label>
+              <input
+                type="text"
+                name="zipCode"
+                required
+                maxlength="5"
+                pattern="[0-9]{5}"
+                placeholder="Ej: 06600"
+                class="w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary focus:border-transparent"
+              />
+            </div>
+
+            <button
+              type="submit"
+              class="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-primary text-white font-bold text-lg hover:bg-primary-dark transition-colors"
+            >
+              <span class="material-symbols-outlined">receipt_long</span>
+              Generar Factura
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <!-- FOOTER -->
+      <div class="text-center mt-8 text-xs text-gray-400 dark:text-gray-500">
+        <p>Facturación electrónica CFDI 4.0 — Powered by Facturama</p>
+      </div>
+
+    </div>
+  </body>
+</html>

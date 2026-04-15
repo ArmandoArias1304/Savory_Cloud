@@ -246,7 +246,7 @@ public class ClientController {
             model.addAttribute("currentRole", "client");
             model.addAttribute("customer", customer);
             model.addAttribute("orderTypes", Arrays.asList(OrderType.TAKEOUT, OrderType.DELIVERY));
-            model.addAttribute("orderType", OrderType.TAKEOUT); // Default order type
+            model.addAttribute("orderType", OrderType.DELIVERY); // Default order type
             model.addAttribute("enabledPaymentMethods", enabledPaymentMethods);
             model.addAttribute("deliveryPaymentMethods", deliveryPaymentMethods);
             model.addAttribute("customerAddresses", customerAddresses);

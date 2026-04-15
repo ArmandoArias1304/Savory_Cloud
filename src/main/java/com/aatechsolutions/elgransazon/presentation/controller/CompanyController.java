@@ -1,8 +1,11 @@
 package com.aatechsolutions.elgransazon.presentation.controller;
 
 import com.aatechsolutions.elgransazon.application.service.CompanyService;
+import com.aatechsolutions.elgransazon.application.service.FacturamaService;
 import com.aatechsolutions.elgransazon.domain.entity.Company;
+import com.aatechsolutions.elgransazon.domain.entity.FacturamaConfig;
 import com.aatechsolutions.elgransazon.domain.repository.CompanyRepository;
+import com.aatechsolutions.elgransazon.domain.repository.OrderRepository;
 import com.aatechsolutions.elgransazon.presentation.dto.CompanyCreateDTO;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -32,6 +35,8 @@ public class CompanyController {
 
     private final CompanyService companyService;
     private final CompanyRepository companyRepository;
+    private final FacturamaService facturamaService;
+    private final OrderRepository orderRepository;
 
     /**
      * List all companies with pagination
@@ -178,7 +183,86 @@ public class CompanyController {
                 .orElseThrow(() -> new IllegalArgumentException("Empresa no encontrada"));
         
         model.addAttribute("company", company);
+        
+        // Facturama config for this company
+        FacturamaConfig facturamaConfig = facturamaService.getConfigForCompany(company).orElse(null);
+        model.addAttribute("facturamaConfig", facturamaConfig);
+        model.addAttribute("facturamaLiveMode", facturamaService.isLiveMode());
+        model.addAttribute("totalCfdis", orderRepository.countByCompanyAndFacturamaCfdiIdIsNotNull(company));
+        
         return "programmer/companies/view";
+    }
+
+    /**
+     * Initialize Facturama configuration for a company.
+     */
+    @PostMapping("/{id}/facturama/init")
+    public String initFacturama(
+            @PathVariable Long id,
+            RedirectAttributes redirectAttributes,
+            Authentication authentication) {
+
+        try {
+            Company company = companyRepository.findById(id)
+                    .orElseThrow(() -> new IllegalArgumentException("Empresa no encontrada"));
+
+            facturamaService.initConfig(company);
+
+            redirectAttributes.addFlashAttribute("success",
+                    "Configuración de Facturama inicializada. Ahora el admin puede subir los certificados CSD.");
+
+            log.info("Facturama config initialized for company {} by {}", company.getSlug(), authentication.getName());
+
+        } catch (Exception e) {
+            log.error("Error initializing Facturama config: {}", e.getMessage());
+            redirectAttributes.addFlashAttribute("error",
+                    "Error al inicializar configuración: " + e.getMessage());
+        }
+
+        return "redirect:/programmer/companies/" + id;
+    }
+
+    /**
+     * Toggle Facturama integration enabled/disabled for a company.
+     * Validates that CSD and legal data are configured before enabling.
+     */
+    @PostMapping("/{id}/facturama/toggle")
+    public String toggleFacturama(
+            @PathVariable Long id,
+            @RequestParam boolean enabled,
+            RedirectAttributes redirectAttributes,
+            Authentication authentication) {
+
+        try {
+            Company company = companyRepository.findById(id)
+                    .orElseThrow(() -> new IllegalArgumentException("Empresa no encontrada"));
+
+            FacturamaConfig config = facturamaService.getConfigForCompany(company)
+                    .orElseThrow(() -> new IllegalStateException("No se ha inicializado la configuración de Facturama"));
+
+            if (enabled) {
+                if (!config.getCsdUploaded() || !config.getLegalDataConfigured()) {
+                    redirectAttributes.addFlashAttribute("error",
+                            "No se puede activar: el admin debe completar los certificados CSD y datos fiscales primero.");
+                    return "redirect:/programmer/companies/" + id;
+                }
+                facturamaService.enableIntegration(config);
+                redirectAttributes.addFlashAttribute("success",
+                        "Facturación electrónica activada. Los tickets incluirán el enlace de autofactura.");
+            } else {
+                facturamaService.disableIntegration(config);
+                redirectAttributes.addFlashAttribute("success",
+                        "Facturación electrónica desactivada.");
+            }
+
+            log.info("Facturama toggled to {} for company {} by {}", enabled, company.getSlug(), authentication.getName());
+
+        } catch (Exception e) {
+            log.error("Error toggling Facturama for company {}: {}", id, e.getMessage());
+            redirectAttributes.addFlashAttribute("error", e.getMessage());
+        }
+
+        return "redirect:/programmer/companies/" + id;
     }
 
     /**

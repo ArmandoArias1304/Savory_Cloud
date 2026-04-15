@@ -26,6 +26,9 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -525,6 +528,49 @@ public class ProgrammerController {
             response.put("success", false);
             response.put("message", "Error al eliminar la imagen: " + e.getMessage());
             return ResponseEntity.internalServerError().body(response);
+        }
+    }
+
+    /**
+     * AJAX endpoint: count CFDIs by company and date range.
+     * Dates are received as local dates (America/Mexico_City) and converted to UTC for the DB query.
+     */
+    @GetMapping("/api/cfdi-count")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> countCfdis(
+            @RequestParam Long companyId,
+            @RequestParam String from,
+            @RequestParam String to) {
+
+        try {
+            Company company = companyService.findAll().stream()
+                    .filter(c -> c.getIdCompany().equals(companyId))
+                    .findFirst()
+                    .orElse(null);
+            if (company == null) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Empresa no encontrada"));
+            }
+
+            ZoneId zone = ZoneId.of("America/Mexico_City");
+            LocalDate fromDate = LocalDate.parse(from);
+            LocalDate toDate = LocalDate.parse(to);
+
+            if (fromDate.isAfter(toDate)) {
+                return ResponseEntity.badRequest().body(Map.of("error", "La fecha 'desde' debe ser menor o igual a 'hasta'"));
+            }
+
+            // Convert local dates to UTC range
+            LocalDateTime startUtc = fromDate.atStartOfDay(zone).withZoneSameInstant(ZoneId.of("UTC")).toLocalDateTime();
+            LocalDateTime endUtc = toDate.plusDays(1).atStartOfDay(zone).withZoneSameInstant(ZoneId.of("UTC")).toLocalDateTime();
+
+            long count = orderRepository.countCfdisByCompanyAndDateRange(company, startUtc, endUtc);
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("count", count);
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            log.error("Error counting CFDIs: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
 

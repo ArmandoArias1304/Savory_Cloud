@@ -31,17 +31,20 @@ public class PaymentController {
     private final SystemConfigurationService systemConfigurationService;
     private final OrderRepository orderRepository;
     private final EmployeeService employeeService;
+    private final FacturamaService facturamaService;
 
     // Constructor manual para inyectar adminOrderService específicamente
     public PaymentController(
             @Qualifier("adminOrderService") OrderService orderService,
             SystemConfigurationService systemConfigurationService,
             OrderRepository orderRepository,
-            EmployeeService employeeService) {
+            EmployeeService employeeService,
+            FacturamaService facturamaService) {
         this.orderService = orderService;
         this.systemConfigurationService = systemConfigurationService;
         this.orderRepository = orderRepository;
         this.employeeService = employeeService;
+        this.facturamaService = facturamaService;
     }
 
     /**
@@ -229,6 +232,29 @@ public class PaymentController {
             
             // Reload order to get updated values
             order = orderService.findByIdWithDetails(orderId).orElse(order);
+            final var paidOrder = order;
+
+            // Generate autofactura key (if Facturama billing is configured for this company)
+            try {
+                facturamaService.getConfigForCurrentCompany()
+                    .filter(com.aatechsolutions.elgransazon.domain.entity.FacturamaConfig::isReady)
+                    .ifPresent(fc -> {
+                        String autofacturaKey = java.util.UUID.randomUUID().toString();
+                        jakarta.servlet.http.HttpServletRequest req =
+                                ((org.springframework.web.context.request.ServletRequestAttributes)
+                                org.springframework.web.context.request.RequestContextHolder.currentRequestAttributes())
+                                .getRequest();
+                        String baseUrl = req.getScheme() + "://" + req.getServerName()
+                                + (req.getServerPort() == 80 || req.getServerPort() == 443 ? "" : ":" + req.getServerPort());
+                        String selfInvoiceUrl = baseUrl + "/autofactura/" + autofacturaKey;
+                        paidOrder.setAutofacturaKey(autofacturaKey);
+                        paidOrder.setSelfInvoiceUrl(selfInvoiceUrl);
+                        orderRepository.save(paidOrder);
+                        log.info("Autofactura key generated for order: {}", paidOrder.getOrderNumber());
+                    });
+            } catch (Exception ex) {
+                log.warn("Autofactura key generation failed (non-blocking): {}", ex.getMessage());
+            }
 
             redirectAttributes.addFlashAttribute("successMessage",
                     "Pago procesado exitosamente para el pedido " + order.getOrderNumber() + 

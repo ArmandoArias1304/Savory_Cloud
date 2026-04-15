@@ -1,0 +1,484 @@
+<!doctype html>
+<html
+  xmlns:th="http://www.thymeleaf.org"
+  xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+  lang="es"
+>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title
+      th:text="${globalSystemConfig.systemName + ' - Facturación Electrónica'}"
+    >
+      SavoryCloud - Facturación Electrónica
+    </title>
+    <link crossorigin="" href="https://fonts.gstatic.com/" rel="preconnect" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@300;400;500;600;700"
+      rel="stylesheet"
+    />
+
+    <!-- Sistema de Temas (Modo Claro/Oscuro) -->
+    <div th:replace="~{fragments/theme :: themeResources}"></div>
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#38e07b",
+              "primary-dark": "#2bc866",
+              "background-light": "#f8faf9",
+              "background-dark": "#0f1713",
+            },
+            fontFamily: {
+              display: ["Work Sans"],
+            },
+            borderRadius: {
+              DEFAULT: "0.5rem",
+              lg: "0.75rem",
+              xl: "1rem",
+              "2xl": "1.5rem",
+              full: "9999px",
+            },
+          },
+        },
+      };
+    </script>
+    <!-- Sidebar Styles Fragment -->
+    <div th:replace="~{fragments/sidebar :: sidebarStyles}"></div>
+  </head>
+  <body
+    class="bg-gradient-to-br from-background-light to-gray-50 dark:from-background-dark dark:to-gray-900 font-display text-gray-800 dark:text-gray-200 overflow-hidden"
+  >
+    <!-- Menu Controls Fragment -->
+    <div th:replace="~{fragments/sidebar :: menuControls}"></div>
+
+    <div class="flex min-h-screen h-screen overflow-hidden">
+      <!-- SIDEBAR -->
+      <div
+        th:replace="~{fragments/sidebar :: sidebar(activeMenu='billing')}"
+      ></div>
+
+      <!-- MAIN CONTENT -->
+      <main class="flex-1 overflow-y-auto h-screen">
+        <div class="p-4 sm:p-6 lg:p-8 pt-20 md:pt-20 lg:pt-8 pb-32">
+          <!-- HEADER -->
+          <div
+            class="flex flex-col md:flex-row md:items-center justify-between mb-6"
+          >
+            <div>
+              <h2
+                class="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white mb-1"
+              >
+                <span class="material-symbols-outlined text-primary align-middle mr-2" style="font-size: 2rem;">receipt_long</span>
+                Facturación Electrónica
+              </h2>
+              <p class="text-sm sm:text-base text-gray-600 dark:text-gray-400">
+                Configura la emisión de recibos electrónicos y autofacturación para tus clientes
+              </p>
+            </div>
+            <a
+              href="/admin/system-configuration"
+              class="flex items-center justify-center gap-2 px-4 py-2 mt-4 md:mt-0 rounded-xl bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 font-semibold hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors shadow-md"
+            >
+              <span class="material-symbols-outlined">arrow_back</span>
+              <span>Volver a Configuración</span>
+            </a>
+          </div>
+
+          <!-- Success/Error Messages -->
+          <div
+            th:if="${successMessage}"
+            class="mb-6 p-4 rounded-xl bg-green-50 dark:bg-green-900/20 border-l-4 border-green-500 flex items-start gap-3"
+          >
+            <span class="material-symbols-outlined text-green-600 dark:text-green-400">check_circle</span>
+            <div class="flex-1">
+              <p class="font-semibold text-green-800 dark:text-green-300" th:text="${successMessage}"></p>
+            </div>
+            <button onclick="this.parentElement.remove()" class="text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-200">
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </div>
+
+          <div
+            th:if="${errorMessage}"
+            class="mb-6 p-4 rounded-xl bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 flex items-start gap-3"
+          >
+            <span class="material-symbols-outlined text-red-600 dark:text-red-400">error</span>
+            <div class="flex-1">
+              <p class="font-semibold text-red-800 dark:text-red-300" th:text="${errorMessage}"></p>
+            </div>
+            <button onclick="this.parentElement.remove()" class="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-200">
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </div>
+
+          <!-- HOW IT WORKS INFO -->
+          <div class="mb-6 p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500 flex items-start gap-3">
+            <span class="material-symbols-outlined text-blue-600 dark:text-blue-400">info</span>
+            <div class="flex-1">
+              <p class="font-semibold text-blue-800 dark:text-blue-300">¿Cómo funciona?</p>
+              <ol class="text-sm text-blue-700 dark:text-blue-400 mt-2 space-y-1 list-decimal pl-4">
+                <li>El proveedor inicializa la configuración inicial</li>
+                <li>Subes tus certificados CSD (.cer y .key) junto con tu RFC — <strong>no se almacenan</strong> en nuestro sistema, se envían directamente a Facturama</li>
+                <li>Configuras tus datos fiscales (razón social, régimen fiscal, C.P.)</li>
+                <li>Activas la facturación electrónica</li>
+                <li>Al cobrar cada pedido, se genera automáticamente un <strong>enlace de autofactura</strong></li>
+                <li>En el ticket impreso aparece un código y URL para que el cliente se <strong>autofacture</strong></li>
+              </ol>
+            </div>
+          </div>
+
+          <!-- CONTENT GRID -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+            <!-- ========== CARD 1: CSD Certificates ========== -->
+            <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800">
+              <div class="p-6 border-b border-gray-200 dark:border-gray-800">
+                <h3 class="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                  <span class="material-symbols-outlined text-primary">verified_user</span>
+                  Paso 1: Certificados CSD
+                </h3>
+              </div>
+              <div class="p-6">
+                <!-- Status -->
+                <div th:if="${facturamaConfig != null and facturamaConfig.csdUploaded}" 
+                     class="flex items-center gap-3 p-4 rounded-xl bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 mb-4">
+                  <span class="material-symbols-outlined text-green-600 dark:text-green-400">check_circle</span>
+                  <div>
+                    <p class="font-semibold text-green-800 dark:text-green-300">Certificados CSD cargados</p>
+                    <p class="text-sm text-green-600 dark:text-green-400" th:text="'RFC: ' + ${facturamaConfig.rfc}">Los certificados están configurados en Facturama</p>
+                  </div>
+                </div>
+
+                <!-- Upload form -->
+                <div th:if="${facturamaConfig != null}">
+                  <div class="p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 mb-4">
+                    <p class="text-sm text-amber-700 dark:text-amber-400 flex items-start gap-2">
+                      <span class="material-symbols-outlined text-sm mt-0.5">security</span>
+                      <span>
+                        <strong>Seguridad:</strong> Los archivos .cer, .key y la contraseña se envían directamente a Facturama mediante 
+                        conexión HTTPS. <strong>No se almacenan</strong> en nuestro sistema en ningún momento.
+                      </span>
+                    </p>
+                  </div>
+
+                  <form th:action="@{/admin/facturacion/upload-csd}" method="post" enctype="multipart/form-data" class="space-y-4">
+                    <div>
+                      <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                        RFC del Emisor
+                      </label>
+                      <input
+                        type="text"
+                        name="rfc"
+                        required
+                        maxlength="13"
+                        placeholder="Ej: AAA010101AAA"
+                        th:value="${facturamaConfig.rfc}"
+                        class="w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary focus:border-transparent uppercase"
+                      />
+                    </div>
+                    <div>
+                      <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                        Certificado (.cer)
+                      </label>
+                      <input
+                        type="file"
+                        name="cerFile"
+                        accept=".cer"
+                        required
+                        class="w-full px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:bg-primary/10 file:text-primary file:font-semibold"
+                      />
+                    </div>
+                    <div>
+                      <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                        Llave privada (.key)
+                      </label>
+                      <input
+                        type="file"
+                        name="keyFile"
+                        accept=".key"
+                        required
+                        class="w-full px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:bg-primary/10 file:text-primary file:font-semibold"
+                      />
+                    </div>
+                    <div>
+                      <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                        Contraseña del CSD
+                      </label>
+                      <input
+                        type="password"
+                        name="csdPassword"
+                        required
+                        autocomplete="off"
+                        placeholder="Contraseña de la llave privada"
+                        class="w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary focus:border-transparent"
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      class="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-white font-semibold hover:bg-primary-dark transition-colors"
+                    >
+                      <span class="material-symbols-outlined">upload_file</span>
+                      <span th:text="${facturamaConfig.csdUploaded ? 'Reemplazar Certificados' : 'Subir Certificados'}">Subir Certificados</span>
+                    </button>
+                  </form>
+                </div>
+
+                <!-- Config not initialized -->
+                <div th:unless="${facturamaConfig != null}"
+                     class="p-4 rounded-xl bg-gray-50 dark:bg-gray-800/50 text-center">
+                  <span class="material-symbols-outlined text-4xl text-gray-400 dark:text-gray-500 mb-2">lock</span>
+                  <p class="text-gray-500 dark:text-gray-400">Se debe inicializar la configuración primero</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- ========== CARD 2: Legal / Fiscal Data ========== -->
+            <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800">
+              <div class="p-6 border-b border-gray-200 dark:border-gray-800">
+                <h3 class="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                  <span class="material-symbols-outlined text-primary">description</span>
+                  Paso 2: Datos Fiscales
+                </h3>
+              </div>
+              <div class="p-6">
+                <!-- Status -->
+                <div th:if="${facturamaConfig != null and facturamaConfig.legalDataConfigured}" 
+                     class="flex items-center gap-3 p-4 rounded-xl bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 mb-4">
+                  <span class="material-symbols-outlined text-green-600 dark:text-green-400">check_circle</span>
+                  <p class="font-semibold text-green-800 dark:text-green-300">Datos fiscales configurados</p>
+                </div>
+
+                <!-- Form -->
+                <div th:if="${facturamaConfig != null}">
+                  <form th:action="@{/admin/facturacion/update-legal}" method="post" class="space-y-4">
+                    <div>
+                      <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                        Razón Social
+                      </label>
+                      <input
+                        type="text"
+                        name="legalName"
+                        required
+                        placeholder="Ej: Alimentos Pizza Max S.A. de C.V."
+                        th:value="${facturamaConfig.legalName}"
+                        class="w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary focus:border-transparent"
+                      />
+                      <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Nombre legal registrado ante el SAT (debe coincidir exactamente con el CSD)</p>
+                    </div>
+                    <div>
+                      <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                        Régimen Fiscal
+                      </label>
+                      <select
+                        name="taxSystem"
+                        required
+                        class="w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary focus:border-transparent"
+                      >
+                        <option value="">Seleccione...</option>
+                        <option th:each="entry : ${taxSystems}" th:value="${entry.key}" th:text="${entry.value}" th:selected="${facturamaConfig.fiscalRegime == entry.key}"></option>
+                      </select>
+                    </div>
+                    <div>
+                      <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                        Código Postal de Expedición
+                      </label>
+                      <input
+                        type="text"
+                        name="zipCode"
+                        required
+                        maxlength="5"
+                        pattern="[0-9]{5}"
+                        placeholder="Ej: 06600"
+                        th:value="${facturamaConfig.expeditionPlace}"
+                        class="w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary focus:border-transparent"
+                      />
+                      <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">C.P. del domicilio fiscal desde donde se emiten las facturas</p>
+                    </div>
+                    <button
+                      type="submit"
+                      class="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-white font-semibold hover:bg-primary-dark transition-colors"
+                    >
+                      <span class="material-symbols-outlined">save</span>
+                      Guardar Datos Fiscales
+                    </button>
+                  </form>
+                </div>
+
+                <!-- Config not initialized -->
+                <div th:unless="${facturamaConfig != null}"
+                     class="p-4 rounded-xl bg-gray-50 dark:bg-gray-800/50 text-center">
+                  <span class="material-symbols-outlined text-4xl text-gray-400 dark:text-gray-500 mb-2">lock</span>
+                  <p class="text-gray-500 dark:text-gray-400">Se debe inicializar la configuración primero</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- ========== CARD 3: Estado de Activación ========== -->
+            <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800">
+              <div class="p-6 border-b border-gray-200 dark:border-gray-800">
+                <h3 class="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                  <span class="material-symbols-outlined text-primary">toggle_on</span>
+                  Paso 3: Activación
+                </h3>
+              </div>
+              <div class="p-6">
+                <div th:if="${facturamaConfig != null}">
+                  
+                  <!-- Status checklist -->
+                  <div class="space-y-3 mb-6">
+                    <div class="flex items-center gap-3">
+                      <span class="material-symbols-outlined text-lg"
+                            th:classappend="${facturamaConfig != null ? ' text-green-500' : ' text-gray-400'}"
+                            th:text="${facturamaConfig != null ? 'check_circle' : 'radio_button_unchecked'}">
+                      </span>
+                      <span class="text-sm text-gray-700 dark:text-gray-300">Configuración inicializada</span>
+                    </div>
+                    <div class="flex items-center gap-3">
+                      <span class="material-symbols-outlined text-lg"
+                            th:classappend="${facturamaConfig.csdUploaded ? ' text-green-500' : ' text-gray-400'}"
+                            th:text="${facturamaConfig.csdUploaded ? 'check_circle' : 'radio_button_unchecked'}">
+                      </span>
+                      <span class="text-sm text-gray-700 dark:text-gray-300">Certificados CSD cargados</span>
+                    </div>
+                    <div class="flex items-center gap-3">
+                      <span class="material-symbols-outlined text-lg"
+                            th:classappend="${facturamaConfig.legalDataConfigured ? ' text-green-500' : ' text-gray-400'}"
+                            th:text="${facturamaConfig.legalDataConfigured ? 'check_circle' : 'radio_button_unchecked'}">
+                      </span>
+                      <span class="text-sm text-gray-700 dark:text-gray-300">Datos fiscales configurados</span>
+                    </div>
+                  </div>
+
+                  <!-- Active status (view-only) -->
+                  <div th:if="${facturamaConfig.enabled}" 
+                       class="p-4 rounded-xl bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
+                    <div class="flex items-center gap-3">
+                      <span class="material-symbols-outlined text-green-600 dark:text-green-400 text-2xl">check_circle</span>
+                      <div>
+                        <p class="font-bold text-green-800 dark:text-green-300">Facturación Activada</p>
+                        <p class="text-sm text-green-600 dark:text-green-400">
+                          Al cobrar cada pedido, se genera un enlace de autofactura en el ticket
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div th:unless="${facturamaConfig.enabled}" 
+                       class="p-4 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
+                    <div class="flex items-center gap-3">
+                      <span class="material-symbols-outlined text-amber-600 dark:text-amber-400 text-2xl">hourglass_top</span>
+                      <div>
+                        <p class="font-bold text-amber-800 dark:text-amber-300">En espera de activación</p>
+                        <p class="text-sm text-amber-600 dark:text-amber-400">
+                          La activación es gestionada por el equipo de SavoryCloud.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+
+                <!-- Config not initialized -->
+                <div th:unless="${facturamaConfig != null}"
+                     class="p-4 rounded-xl bg-gray-50 dark:bg-gray-800/50 text-center">
+                  <span class="material-symbols-outlined text-4xl text-gray-400 dark:text-gray-500 mb-2">lock</span>
+                  <p class="text-gray-500 dark:text-gray-400">Se debe inicializar la configuración primero</p>
+                </div>
+              </div>
+            </div>
+
+          </div>
+          <!-- END CONTENT GRID -->
+
+          <!-- CFDI Count by Date Range -->
+          <div class="mt-8 bg-white dark:bg-gray-900 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 overflow-hidden">
+            <div class="bg-gradient-to-r from-red-500 to-red-600 px-6 py-4">
+              <div class="flex items-center gap-3 text-white">
+                <span class="material-symbols-outlined text-2xl">description</span>
+                <h5 class="text-xl font-bold">Facturas Electrónicas (CFDI)</h5>
+              </div>
+            </div>
+            <div class="p-6">
+              <div class="flex flex-wrap items-end gap-3">
+                <div>
+                  <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Desde</label>
+                  <input type="date" id="cfdiFrom" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-red-500 focus:border-transparent" />
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Hasta</label>
+                  <input type="date" id="cfdiTo" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-red-500 focus:border-transparent" />
+                </div>
+                <button id="cfdiSearchBtn" type="button" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg transition-colors flex items-center gap-1">
+                  <span class="material-symbols-outlined text-lg">search</span>
+                  Consultar
+                </button>
+                <div id="cfdiResult" class="ml-auto flex items-center gap-2 hidden">
+                  <span class="text-sm text-gray-600 dark:text-gray-400 font-semibold">Total:</span>
+                  <span id="cfdiCount" class="text-3xl font-bold text-red-600 dark:text-red-400">0</span>
+                </div>
+              </div>
+              <p id="cfdiError" class="text-sm text-red-500 mt-2 hidden"></p>
+            </div>
+          </div>
+
+          <script>
+            document.getElementById('cfdiSearchBtn').addEventListener('click', function() {
+              const from = document.getElementById('cfdiFrom').value;
+              const to = document.getElementById('cfdiTo').value;
+              const errorEl = document.getElementById('cfdiError');
+              const resultEl = document.getElementById('cfdiResult');
+              const countEl = document.getElementById('cfdiCount');
+              const btn = this;
+
+              errorEl.classList.add('hidden');
+              resultEl.classList.add('hidden');
+
+              if (!from || !to) {
+                errorEl.textContent = 'Ambas fechas son requeridas';
+                errorEl.classList.remove('hidden');
+                return;
+              }
+              if (from > to) {
+                errorEl.textContent = 'La fecha "Desde" debe ser menor o igual a "Hasta"';
+                errorEl.classList.remove('hidden');
+                return;
+              }
+
+              btn.disabled = true;
+              btn.innerHTML = '<span class="material-symbols-outlined text-lg animate-spin">progress_activity</span> Consultando...';
+
+              fetch('/admin/facturacion/api/cfdi-count?from=' + from + '&to=' + to)
+                .then(r => r.json())
+                .then(data => {
+                  if (data.error) {
+                    errorEl.textContent = data.error;
+                    errorEl.classList.remove('hidden');
+                  } else {
+                    countEl.textContent = data.count;
+                    resultEl.classList.remove('hidden');
+                  }
+                })
+                .catch(() => {
+                  errorEl.textContent = 'Error al consultar';
+                  errorEl.classList.remove('hidden');
+                })
+                .finally(() => {
+                  btn.disabled = false;
+                  btn.innerHTML = '<span class="material-symbols-outlined text-lg">search</span> Consultar';
+                });
+            });
+          </script>
+        </div>
+      </main>
+    </div>
+  </body>
+</html>

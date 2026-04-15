@@ -15,6 +15,11 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.google.zxing.BarcodeFormat;
+import com.google.zxing.EncodeHintType;
+import com.google.zxing.qrcode.QRCodeWriter;
+import com.google.zxing.common.BitMatrix;
+
 /**
  * Service for generating ESC/POS raw tickets for thermal printers.
  * Mirrors the exact layout of TicketPdfService but uses native ESC/POS commands.
@@ -312,9 +317,20 @@ public class TicketEscPosService {
         printLine(out, "Esperamos volver a atenderle pronto");
         out.write(FONT_A);
 
-        // ── Fiscal disclaimer ──
+        // ── Fiscal disclaimer / Autofactura billing info ──
         out.write(FONT_B);
-        printLine(out, "Este no es un comprobante fiscal");
+        if (order.getAutofacturaKey() != null && !order.getAutofacturaKey().isBlank()) {
+            // Order has an autofactura key — show QR code
+            printSeparator(out);
+            printLine(out, "Facture este ticket");
+            printLine(out, "escaneando el codigo QR:");
+            if (order.getSelfInvoiceUrl() != null) {
+                writeQrCode(out, order.getSelfInvoiceUrl());
+            }
+            printSeparator(out);
+        } else {
+            printLine(out, "Este no es un comprobante fiscal");
+        }
         out.write(FONT_A);
 
         // ── System branding (small) ──
@@ -523,6 +539,50 @@ public class TicketEscPosService {
 
         } catch (Exception e) {
             log.warn("Could not render logo for ESC/POS ticket: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * Generate a QR code and write it as a raster bit image using GS v 0.
+     * Uses ZXing to generate the QR matrix, then converts to monochrome raster.
+     */
+    private void writeQrCode(ByteArrayOutputStream out, String text) {
+        try {
+            QRCodeWriter writer = new QRCodeWriter();
+            java.util.EnumMap<EncodeHintType, Object> hints = new java.util.EnumMap<>(EncodeHintType.class);
+            hints.put(EncodeHintType.MARGIN, 1);
+            BitMatrix matrix = writer.encode(text, BarcodeFormat.QR_CODE, 192, 192, hints);
+
+            int qrWidth = matrix.getWidth();
+            int qrHeight = matrix.getHeight();
+
+            // Width must be a multiple of 8 for raster
+            int rasterWidth = ((qrWidth + 7) / 8) * 8;
+            int widthBytes = rasterWidth / 8;
+
+            byte[] rasterData = new byte[widthBytes * qrHeight];
+            for (int y = 0; y < qrHeight; y++) {
+                for (int x = 0; x < qrWidth; x++) {
+                    if (matrix.get(x, y)) { // dark module = print dot
+                        int byteIndex = y * widthBytes + (x / 8);
+                        int bitIndex = 7 - (x % 8);
+                        rasterData[byteIndex] |= (byte) (1 << bitIndex);
+                    }
+                }
+            }
+
+            out.write(ALIGN_CENTER);
+            out.write(new byte[]{
+                    0x1D, 0x76, 0x30, 0x00,             // GS v 0 m=0 (normal)
+                    (byte) (widthBytes & 0xFF),          // xL
+                    (byte) ((widthBytes >> 8) & 0xFF),   // xH
+                    (byte) (qrHeight & 0xFF),            // yL
+                    (byte) ((qrHeight >> 8) & 0xFF)      // yH
+            });
+            out.write(rasterData);
+
+        } catch (Exception e) {
+            log.warn("Could not generate QR code for ESC/POS ticket: {}", e.getMessage());
         }
     }
 }

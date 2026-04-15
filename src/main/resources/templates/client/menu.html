@@ -1898,7 +1898,11 @@
           return;
         }
 
-        methods.forEach((method, index) => {
+        // Preferred order: CASH > DEBIT_CARD > CREDIT_CARD > TRANSFER
+        const preferredOrder = ["CASH", "DEBIT_CARD", "CREDIT_CARD", "TRANSFER"];
+        const defaultMethod = preferredOrder.find(m => methods.includes(m)) || methods[0];
+
+        methods.forEach((method) => {
           const option = document.createElement("option");
           option.value = method; // The enum name (e.g., "CASH")
 
@@ -1913,11 +1917,8 @@
           const info = displayInfo[method] || { icon: "💰", name: method };
           option.textContent = `${info.icon} ${info.name}`;
 
-          // Try to preserve previous selection or select first
-          if (
-            method === currentSelection ||
-            (index === 0 && !currentSelection)
-          ) {
+          // Select preferred default method
+          if (method === defaultMethod) {
             option.selected = true;
           }
 
@@ -4413,12 +4414,14 @@
 
         updateCartUI();
 
-        // Show/hide delivery references based on initial order type
+        // Show/hide delivery fields and set payment methods based on initial order type
         const orderTypeSelector = document.getElementById("orderTypeSelector");
-        if (orderTypeSelector && orderTypeSelector.value === "DELIVERY") {
-          document
-            .getElementById("deliveryReferencesContainer")
-            .classList.remove("hidden");
+        if (orderTypeSelector) {
+          updatePaymentMethodsForOrderType(orderTypeSelector.value);
+          if (orderTypeSelector.value === "DELIVERY") {
+            document.getElementById("deliveryAddressContainer").classList.remove("hidden");
+            document.getElementById("deliveryReferencesContainer").classList.remove("hidden");
+          }
         }
 
         // Preload promotions immediately so modal opens instantly

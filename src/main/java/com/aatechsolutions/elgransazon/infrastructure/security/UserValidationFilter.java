@@ -111,6 +111,7 @@ public class UserValidationFilter extends OncePerRequestFilter {
                path.startsWith("/client/login") ||
                path.startsWith("/client/register") ||
                path.startsWith("/client/verify-email") ||
+               path.startsWith("/autofactura/") ||
                path.startsWith("/css/") || 
                path.startsWith("/js/") || 
                path.startsWith("/images/") ||

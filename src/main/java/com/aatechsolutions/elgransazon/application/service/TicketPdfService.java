@@ -28,6 +28,11 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.google.zxing.BarcodeFormat;
+import com.google.zxing.EncodeHintType;
+import com.google.zxing.qrcode.QRCodeWriter;
+import com.google.zxing.common.BitMatrix;
+
 /**
  * Service for generating PDF tickets for orders
  * Optimized for thermal printers (58mm or 80mm)
@@ -528,13 +533,49 @@ public class TicketPdfService {
                 .setMarginBottom(5);
         document.add(visitAgain);
 
-        // Fiscal disclaimer
-        Paragraph fiscalDisclaimer = new Paragraph("Este no es un comprobante fiscal")
-                .setFont(normalFont)
-                .setFontSize(7)
-                .setTextAlignment(TextAlignment.CENTER)
-                .setMarginBottom(3);
-        document.add(fiscalDisclaimer);
+        // Fiscal disclaimer / Autofactura billing info
+        if (order.getAutofacturaKey() != null && !order.getAutofacturaKey().isBlank()) {
+            // Order has an autofactura key — show billing section with QR code
+            document.add(new Paragraph("━━━━━━━━━━━━━━━━━━━━━━━━━━")
+                    .setTextAlignment(TextAlignment.CENTER)
+                    .setMarginTop(3)
+                    .setMarginBottom(3));
+
+            Paragraph billingHint = new Paragraph("Facture este ticket escaneando el código QR:")
+                    .setFont(normalFont)
+                    .setFontSize(7)
+                    .setTextAlignment(TextAlignment.CENTER)
+                    .setMarginTop(2);
+            document.add(billingHint);
+
+            // Generate QR code with the autofactura URL
+            if (order.getSelfInvoiceUrl() != null) {
+                try {
+                    byte[] qrBytes = generateQrCodePng(order.getSelfInvoiceUrl(), 150);
+                    Image qrImage = new Image(ImageDataFactory.create(qrBytes));
+                    qrImage.setWidth(80);
+                    qrImage.setHeight(80);
+                    qrImage.setHorizontalAlignment(com.itextpdf.layout.properties.HorizontalAlignment.CENTER);
+                    qrImage.setMarginTop(3);
+                    qrImage.setMarginBottom(3);
+                    document.add(qrImage);
+                } catch (Exception e) {
+                    log.warn("Could not generate QR code for autofactura: {}", e.getMessage());
+                }
+            }
+
+            document.add(new Paragraph("━━━━━━━━━━━━━━━━━━━━━━━━━━")
+                    .setTextAlignment(TextAlignment.CENTER)
+                    .setMarginTop(3)
+                    .setMarginBottom(3));
+        } else {
+            Paragraph fiscalDisclaimer = new Paragraph("Este no es un comprobante fiscal")
+                    .setFont(normalFont)
+                    .setFontSize(7)
+                    .setTextAlignment(TextAlignment.CENTER)
+                    .setMarginBottom(3);
+            document.add(fiscalDisclaimer);
+        }
 
         // System branding footer (GLOBAL - not per-company)
         String systemName = globalSystemConfigService.getConfiguration().getSystemName();
@@ -695,5 +736,29 @@ public class TicketPdfService {
         }
         
         return baseHeight;
+    }
+
+    /**
+     * Generate a QR code as a PNG byte array.
+     */
+    private byte[] generateQrCodePng(String text, int size) throws Exception {
+        QRCodeWriter writer = new QRCodeWriter();
+        Map<EncodeHintType, Object> hints = new java.util.EnumMap<>(EncodeHintType.class);
+        hints.put(EncodeHintType.MARGIN, 1);
+        BitMatrix matrix = writer.encode(text, BarcodeFormat.QR_CODE, size, size, hints);
+
+        int width = matrix.getWidth();
+        int height = matrix.getHeight();
+        java.awt.image.BufferedImage image = new java.awt.image.BufferedImage(width, height,
+                java.awt.image.BufferedImage.TYPE_INT_RGB);
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                image.setRGB(x, y, matrix.get(x, y) ? 0xFF000000 : 0xFFFFFFFF);
+            }
+        }
+
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        javax.imageio.ImageIO.write(image, "PNG", baos);
+        return baos.toByteArray();
     }
 }

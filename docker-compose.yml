@@ -33,6 +33,11 @@ services:
       - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY}
       - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}
 
+      # Facturama (Facturación electrónica)
+      - FACTURAMA_USER=${FACTURAMA_USER}
+      - FACTURAMA_PASSWORD=${FACTURAMA_PASSWORD}
+      - FACTURAMA_LIVE_MODE=${FACTURAMA_LIVE_MODE:-false}
+
     restart: always
     depends_on:
       mysqldb:

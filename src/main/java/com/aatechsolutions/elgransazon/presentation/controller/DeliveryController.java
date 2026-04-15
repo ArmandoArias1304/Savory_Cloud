@@ -5,8 +5,10 @@ import com.aatechsolutions.elgransazon.application.service.CategoryService;
 import com.aatechsolutions.elgransazon.application.service.DateTimeService;
 import com.aatechsolutions.elgransazon.application.service.EmployeeService;
 import com.aatechsolutions.elgransazon.application.service.ItemMenuService;
+import com.aatechsolutions.elgransazon.application.service.FacturamaService;
 import com.aatechsolutions.elgransazon.application.service.OrderService;
 import com.aatechsolutions.elgransazon.application.service.SystemConfigurationService;
+import com.aatechsolutions.elgransazon.domain.repository.OrderRepository;
 import com.aatechsolutions.elgransazon.domain.entity.Category;
 import com.aatechsolutions.elgransazon.domain.entity.Employee;
 import com.aatechsolutions.elgransazon.domain.entity.ItemMenu;
@@ -50,6 +52,8 @@ public class DeliveryController {
     private final BusinessHoursService businessHoursService;
     private final CategoryService categoryService;
     private final ItemMenuService itemMenuService;
+    private final FacturamaService facturamaService;
+    private final OrderRepository orderRepository;
 
     /**
      * Display delivery dashboard
@@ -344,6 +348,33 @@ public class DeliveryController {
             deliveryOrderService.changeStatus(orderId, OrderStatus.PAID, username);
             
             log.info("Payment processed successfully for order {} by delivery {}", order.getOrderNumber(), username);
+
+            // Reload order to get updated values
+            order = deliveryOrderService.findByIdWithDetails(orderId).orElse(order);
+            final var paidOrder = order;
+
+            // Generate autofactura key (if Facturama billing is configured for this company)
+            try {
+                facturamaService.getConfigForCurrentCompany()
+                    .filter(com.aatechsolutions.elgransazon.domain.entity.FacturamaConfig::isReady)
+                    .ifPresent(fc -> {
+                        String autofacturaKey = java.util.UUID.randomUUID().toString();
+                        jakarta.servlet.http.HttpServletRequest req =
+                                ((org.springframework.web.context.request.ServletRequestAttributes)
+                                org.springframework.web.context.request.RequestContextHolder.currentRequestAttributes())
+                                .getRequest();
+                        String baseUrl = req.getScheme() + "://" + req.getServerName()
+                                + (req.getServerPort() == 80 || req.getServerPort() == 443 ? "" : ":" + req.getServerPort());
+                        String selfInvoiceUrl = baseUrl + "/autofactura/" + autofacturaKey;
+                        paidOrder.setAutofacturaKey(autofacturaKey);
+                        paidOrder.setSelfInvoiceUrl(selfInvoiceUrl);
+                        orderRepository.save(paidOrder);
+                        log.info("Autofactura key generated for order: {}", paidOrder.getOrderNumber());
+                    });
+            } catch (Exception ex) {
+                log.warn("Autofactura key generation failed (non-blocking): {}", ex.getMessage());
+            }
+
             redirectAttributes.addFlashAttribute("successMessage", 
                 "Pago cobrado exitosamente. Pedido #" + order.getOrderNumber() + " completado.");
             

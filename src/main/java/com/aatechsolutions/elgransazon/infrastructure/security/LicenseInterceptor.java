@@ -91,6 +91,7 @@ public class LicenseInterceptor extends OncePerRequestFilter {
                path.startsWith("/support") ||
                path.startsWith("/help") ||
                path.startsWith("/helpClient") ||
+               path.startsWith("/autofactura/") ||
                path.startsWith("/css/") ||
                path.startsWith("/js/") ||
                path.startsWith("/images/") ||

@@ -441,6 +441,35 @@
                 <p class="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">Clientes</p>
                 <h2 class="text-3xl font-bold text-gray-900 dark:text-white" th:text="${totalCustomers}">0</h2>
             </div>
+
+            <!-- Facturas Electrónicas (CFDIs) - Filtro por rango de fechas -->
+            <div class="stat-card bg-gradient-to-br from-white to-gray-50 dark:from-gray-900 dark:to-gray-800 p-6 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 col-span-1 sm:col-span-2 lg:col-span-3">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-12 h-12 bg-red-500/10 rounded-xl flex items-center justify-center">
+                        <span class="material-symbols-outlined text-2xl text-red-500">description</span>
+                    </div>
+                    <p class="text-lg font-bold text-gray-900 dark:text-white">Facturas Electrónicas (CFDI)</p>
+                </div>
+                <div class="flex flex-wrap items-end gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Desde</label>
+                        <input type="date" id="cfdiFrom" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-red-500 focus:border-transparent" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Hasta</label>
+                        <input type="date" id="cfdiTo" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-red-500 focus:border-transparent" />
+                    </div>
+                    <button id="cfdiSearchBtn" type="button" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg transition-colors flex items-center gap-1">
+                        <span class="material-symbols-outlined text-lg">search</span>
+                        Consultar
+                    </button>
+                    <div id="cfdiResult" class="ml-auto flex items-center gap-2 hidden">
+                        <span class="text-sm text-gray-600 dark:text-gray-400 font-semibold">Total:</span>
+                        <span id="cfdiCount" class="text-3xl font-bold text-red-600 dark:text-red-400">0</span>
+                    </div>
+                </div>
+                <p id="cfdiError" class="text-sm text-red-500 mt-2 hidden"></p>
+            </div>
         </div>
 
         <!-- Financial Summary -->
@@ -1448,6 +1477,58 @@
         companySelector.addEventListener('change', function() {
             const selectedCompanyId = this.value;
             window.location.href = '/programmer/dashboard?companyId=' + selectedCompanyId;
+        });
+    }
+
+    // ========== CFDI DATE RANGE SEARCH ==========
+    const cfdiSearchBtn = document.getElementById('cfdiSearchBtn');
+    if (cfdiSearchBtn) {
+        cfdiSearchBtn.addEventListener('click', function() {
+            const from = document.getElementById('cfdiFrom').value;
+            const to = document.getElementById('cfdiTo').value;
+            const errorEl = document.getElementById('cfdiError');
+            const resultEl = document.getElementById('cfdiResult');
+            const countEl = document.getElementById('cfdiCount');
+
+            errorEl.classList.add('hidden');
+            resultEl.classList.add('hidden');
+
+            if (!from || !to) {
+                errorEl.textContent = 'Ambas fechas son requeridas';
+                errorEl.classList.remove('hidden');
+                return;
+            }
+            if (from > to) {
+                errorEl.textContent = 'La fecha "Desde" debe ser menor o igual a "Hasta"';
+                errorEl.classList.remove('hidden');
+                return;
+            }
+
+            const companyId = companySelector ? companySelector.value : '';
+            if (!companyId) return;
+
+            cfdiSearchBtn.disabled = true;
+            cfdiSearchBtn.innerHTML = '<span class="material-symbols-outlined text-lg animate-spin">progress_activity</span> Consultando...';
+
+            fetch('/programmer/api/cfdi-count?companyId=' + companyId + '&from=' + from + '&to=' + to)
+                .then(r => r.json())
+                .then(data => {
+                    if (data.error) {
+                        errorEl.textContent = data.error;
+                        errorEl.classList.remove('hidden');
+                    } else {
+                        countEl.textContent = data.count;
+                        resultEl.classList.remove('hidden');
+                    }
+                })
+                .catch(() => {
+                    errorEl.textContent = 'Error al consultar';
+                    errorEl.classList.remove('hidden');
+                })
+                .finally(() => {
+                    cfdiSearchBtn.disabled = false;
+                    cfdiSearchBtn.innerHTML = '<span class="material-symbols-outlined text-lg">search</span> Consultar';
+                });
         });
     }
 

@@ -22,7 +22,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Builder
 @EqualsAndHashCode(of = {"idCompany"})
-@ToString(exclude = {"systemConfiguration", "systemLicense"})
+@ToString(exclude = {"systemConfiguration", "systemLicense", "facturamaConfig"})
 public class Company implements Serializable {
 
     @Id
@@ -134,6 +134,9 @@ public class Company implements Serializable {
 
     @OneToOne(mappedBy = "company", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private SystemLicense systemLicense;
+
+    @OneToOne(mappedBy = "company", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private FacturamaConfig facturamaConfig;
 
     // NOTE: BackupConfiguration is now GLOBAL (not per-company)
     // See BackupService.getOrCreateGlobalConfiguration()

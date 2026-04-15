@@ -96,6 +96,7 @@ public class LicenseValidationFilter extends OncePerRequestFilter {
                path.startsWith("/client/login") ||
                path.startsWith("/client/register") ||
                path.startsWith("/client/verify-email") ||
+               path.startsWith("/autofactura/") ||
                path.startsWith("/ws") ||
                path.startsWith("/topic/") ||
                path.startsWith("/flyers/") ||  // Flyers editor (public static resource)

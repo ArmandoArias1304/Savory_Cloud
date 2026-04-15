@@ -133,6 +133,9 @@ jobs:
             CLOUDINARY_CLOUD_NAME=${{ secrets.CLOUDINARY_CLOUD_NAME }}
             CLOUDINARY_API_KEY=${{ secrets.CLOUDINARY_API_KEY }}
             CLOUDINARY_API_SECRET=${{ secrets.CLOUDINARY_API_SECRET }}
+            FACTURAMA_USER=${{ secrets.FACTURAMA_USER }}
+            FACTURAMA_PASSWORD=${{ secrets.FACTURAMA_PASSWORD }}
+            FACTURAMA_LIVE_MODE=${{ secrets.FACTURAMA_LIVE_MODE }}
             ENVFILE
 
             # Rebuild y reiniciar contenedores

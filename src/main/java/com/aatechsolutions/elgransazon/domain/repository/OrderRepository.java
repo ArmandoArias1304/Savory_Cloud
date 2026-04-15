@@ -29,6 +29,15 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     Optional<Order> findByOrderNumber(String orderNumber);
 
     /**
+     * Find order by autofactura key and company (for public autofactura page)
+     */
+    @Query("SELECT o FROM Order o " +
+           "LEFT JOIN FETCH o.orderDetails od " +
+           "LEFT JOIN FETCH od.itemMenu " +
+           "WHERE o.autofacturaKey = :key AND o.company = :company")
+    Optional<Order> findByAutofacturaKeyAndCompany(@Param("key") String key, @Param("company") Company company);
+
+    /**
      * Find order by ID with all relationships loaded (for editing)
      */
     @Query("SELECT o FROM Order o " +
@@ -281,6 +290,23 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
      * Count all orders by company
      */
     long countByCompany(Company company);
+
+    /**
+     * Count invoiced orders (with CFDI) by company
+     */
+    long countByCompanyAndFacturamaCfdiIdIsNotNull(Company company);
+
+    /**
+     * Count invoiced orders (with CFDI) by company and date range (UTC)
+     */
+    @Query("SELECT COUNT(o) FROM Order o WHERE o.company = :company " +
+           "AND o.facturamaCfdiCreatedAt IS NOT NULL " +
+           "AND o.facturamaCfdiCreatedAt >= :startDate " +
+           "AND o.facturamaCfdiCreatedAt < :endDate")
+    long countCfdisByCompanyAndDateRange(
+            @Param("company") Company company,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate);
 
     /**
      * Count today's orders by company

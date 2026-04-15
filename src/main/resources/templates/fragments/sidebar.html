@@ -311,6 +311,20 @@
           <div
             class="mt-auto pt-4 border-t border-gray-200 dark:border-gray-800"
           >
+            <!-- Only ADMIN can access Facturación Electrónica -->
+            <a
+              sec:authorize="hasRole('ROLE_ADMIN')"
+              th:href="@{/admin/facturacion}"
+              th:classappend="${activeMenu == 'billing'} ? 'active bg-gradient-to-r from-primary/20 to-primary/10 text-gray-900 dark:text-white font-semibold' : 'text-gray-700 dark:text-gray-300 font-medium'"
+              class="nav-item flex items-center gap-3 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 text-sm sm:text-base"
+            >
+              <span
+                th:classappend="${activeMenu == 'billing'} ? 'text-primary' : ''"
+                class="material-symbols-outlined text-xl"
+                >request_quote</span
+              >
+              <span>Facturación</span>
+            </a>
             <!-- Only ADMIN can access System Configuration -->
             <a
               sec:authorize="hasRole('ROLE_ADMIN')"

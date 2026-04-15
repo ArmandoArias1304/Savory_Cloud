@@ -201,6 +201,41 @@ public class Order implements Serializable {
     @Column(name = "reservation_id")
     private Long reservationId;
 
+    // ========== Facturama Autofactura (Facturación Electrónica) ==========
+    // autofacturaKey is set at payment time (UUID); client visits /autofactura/{key} to self-invoice.
+    // facturamaCfdiId and facturamaCfdiUuid are set when the client completes the autofactura form.
+
+    /**
+     * Facturama CFDI ID (set after client generates their invoice via autofactura page).
+     */
+    @Column(name = "facturama_cfdi_id", length = 100)
+    private String facturamaCfdiId;
+
+    /**
+     * SAT fiscal folio UUID (set after CFDI creation).
+     */
+    @Column(name = "facturama_cfdi_uuid", length = 100)
+    private String facturamaCfdiUuid;
+
+    /**
+     * Unique autofactura key (UUID) generated at payment time.
+     * Used in the self-invoice URL: /autofactura/{key}
+     */
+    @Column(name = "autofactura_key", length = 50)
+    private String autofacturaKey;
+
+    /**
+     * Timestamp (UTC) when the CFDI was created via Facturama.
+     */
+    @Column(name = "facturama_cfdi_created_at")
+    private LocalDateTime facturamaCfdiCreatedAt;
+
+    /**
+     * Full self-invoice URL for this order (e.g. https://slug.domain.com/autofactura/{key}).
+     */
+    @Column(name = "self_invoice_url", length = 300)
+    private String selfInvoiceUrl;
+
     // ========== Lifecycle Callbacks ==========
 
     @PrePersist

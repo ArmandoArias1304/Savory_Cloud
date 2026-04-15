@@ -61,6 +61,7 @@ public class SecurityConfig {
                         .requestMatchers("/", "/home", "/home/menu", "/login", "/client/login", "/client/register", 
                                 "/client/verify-email", "/client/forgot-password", "/client/reset-password", 
                                 "/client/password-reset/**", "/help", "/support", "/helpClient", 
+                                "/autofactura/**",
                                 "/error", "/errores/**", "/css/**", "/js/**", 
                                 "/images/**", "/flyers/**", "/system-landing/**", "/license-expired", "/favicon.ico").permitAll()
                         .requestMatchers("/programmer/**").hasRole("PROGRAMMER")
