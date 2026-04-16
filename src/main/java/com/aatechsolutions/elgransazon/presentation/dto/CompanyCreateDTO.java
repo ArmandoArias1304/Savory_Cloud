@@ -51,6 +51,9 @@ public class CompanyCreateDTO {
 
     private String timezone = "America/Mexico_City";
 
+    // ========== SYSTEM CONFIGURATION FIELDS ==========
+    private java.math.BigDecimal taxRate = java.math.BigDecimal.valueOf(16.00);
+
     // ========== ADMIN USER FIELDS ==========
     @NotBlank(message = "El nombre del administrador es requerido")
     @Size(min = 2, max = 50, message = "El nombre debe tener entre 2 y 50 caracteres")

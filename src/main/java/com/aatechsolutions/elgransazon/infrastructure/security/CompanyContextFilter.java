@@ -41,7 +41,8 @@ public class CompanyContextFilter extends OncePerRequestFilter {
     private static final Set<String> EXCLUDED_PATHS = Set.of(
         "/css/", "/js/", "/images/", "/flyers/", "/sounds/", "/system-landing/",
         "/error", "/errores/",
-        "/favicon.ico"
+        "/favicon.ico",
+        "/.well-known/"
         // Note: /login and /perform_login are NOT excluded because
         // authentication needs company context to validate employees
     );

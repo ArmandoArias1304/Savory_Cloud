@@ -296,7 +296,7 @@ public class CompanyServiceImpl implements CompanyService {
         log.info("Company created with ID: {}", savedCompany.getIdCompany());
 
         // Create default SystemConfiguration
-        createDefaultConfiguration(savedCompany);
+        createDefaultConfiguration(savedCompany, null);
         log.info("Default SystemConfiguration created for company: {}", savedCompany.getSlug());
 
         // Create default SystemLicense
@@ -323,6 +323,7 @@ public class CompanyServiceImpl implements CompanyService {
                           String contactPhone, String address, String rfc, String timezone,
                           String adminUsername, String adminFirstName, String adminLastName, String adminPassword,
                           boolean freeTrial, String packageType, String billingCycle, int licenseMonths, Double licenseAmount,
+                          java.math.BigDecimal taxRate,
                           String performedBy) {
         log.info("Creating new company with parameters: {}", slug);
 
@@ -367,7 +368,7 @@ public class CompanyServiceImpl implements CompanyService {
         log.info("Company created with ID: {}", savedCompany.getIdCompany());
 
         // Create default SystemConfiguration
-        createDefaultConfiguration(savedCompany);
+        createDefaultConfiguration(savedCompany, taxRate);
         log.info("Default SystemConfiguration created for company: {}", savedCompany.getSlug());
 
         // Create configured SystemLicense with financial event
@@ -474,7 +475,7 @@ public class CompanyServiceImpl implements CompanyService {
 
     // ========== Private Helper Methods ==========
 
-    private SystemConfiguration createDefaultConfiguration(Company company) {
+    private SystemConfiguration createDefaultConfiguration(Company company, java.math.BigDecimal taxRate) {
         // Initialize payment methods
         Map<PaymentMethodType, Boolean> paymentMethods = new HashMap<>();
         paymentMethods.put(PaymentMethodType.CASH, true);
@@ -500,7 +501,7 @@ public class CompanyServiceImpl implements CompanyService {
             .email(company.getContactEmail() != null && !company.getContactEmail().isBlank()
                     ? company.getContactEmail()
                     : "miempresa@ejemplo.com")
-            .taxRate(BigDecimal.valueOf(16.00))
+            .taxRate(taxRate != null ? taxRate : BigDecimal.valueOf(16.00))
             .averageConsumptionTimeMinutes(120)
             .paymentMethods(paymentMethods)
             .deliveryPaymentMethods(deliveryPaymentMethods)

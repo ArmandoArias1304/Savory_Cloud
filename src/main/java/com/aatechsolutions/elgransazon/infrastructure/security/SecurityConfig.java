@@ -63,7 +63,8 @@ public class SecurityConfig {
                                 "/client/password-reset/**", "/help", "/support", "/helpClient", 
                                 "/autofactura/**",
                                 "/error", "/errores/**", "/css/**", "/js/**", 
-                                "/images/**", "/flyers/**", "/system-landing/**", "/license-expired", "/favicon.ico").permitAll()
+                                "/images/**", "/flyers/**", "/system-landing/**", "/license-expired", "/favicon.ico",
+                                "/.well-known/**").permitAll()
                         .requestMatchers("/programmer/**").hasRole("PROGRAMMER")
                         .requestMatchers("/admin/**").hasAnyRole("ADMIN", "MANAGER")
                         .requestMatchers("/waiter/**").hasRole("WAITER")

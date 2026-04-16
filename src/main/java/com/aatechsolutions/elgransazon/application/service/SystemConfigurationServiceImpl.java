@@ -117,7 +117,7 @@ public class SystemConfigurationServiceImpl implements SystemConfigurationServic
         existingConfig.setPhone(configuration.getPhone());
         existingConfig.setEmail(configuration.getEmail());
         existingConfig.setRfc(configuration.getRfc());
-        existingConfig.setTaxRate(configuration.getTaxRate());
+        // taxRate is managed by PROGRAMMER, not by admin — preserve existing value
         existingConfig.setAverageConsumptionTimeMinutes(configuration.getAverageConsumptionTimeMinutes());
         existingConfig.setTicketLogoOpacity(configuration.getTicketLogoOpacity());
         

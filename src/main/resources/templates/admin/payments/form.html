@@ -695,6 +695,7 @@
               <div
                 th:each="detail : ${order.orderDetails}"
                 class="order-item flex flex-col"
+                th:classappend="${detail.comboChild} ? 'pl-5' : ''"
               >
                 <div class="flex justify-between items-start">
                   <div class="flex-1">
@@ -717,6 +718,24 @@
                 >
                   <span class="material-symbols-outlined text-xs">comment</span>
                   <span th:text="${detail.displayComments}"></span>
+                </div>
+                <!-- Complementos del item -->
+                <div
+                  th:each="comp : ${detail.selectedComplements}"
+                  class="flex justify-between items-center mt-1"
+                  th:classappend="${detail.comboChild} ? 'pl-9' : 'pl-4'"
+                >
+                  <div class="flex items-center gap-1 text-purple-600 dark:text-purple-400">
+                    <span class="material-symbols-outlined text-xs">add_circle</span>
+                    <span class="text-xs" th:text="${comp.complement.name}"></span>
+                    <span class="text-gray-500 dark:text-gray-400 text-xs ml-1">
+                      x<span th:text="${comp.complement.isSauce != null && comp.complement.isSauce ? comp.quantity * detail.quantity : comp.quantity}"></span>
+                    </span>
+                  </div>
+                  <span
+                    class="text-xs font-medium text-purple-600 dark:text-purple-400"
+                    th:text="${comp.complement.isSauce != null && comp.complement.isSauce ? '$' + #numbers.formatDecimal(comp.subtotal * detail.quantity, 1, 2) : comp.getFormattedSubtotal()}"
+                  ></span>
                 </div>
               </div>
             </div>

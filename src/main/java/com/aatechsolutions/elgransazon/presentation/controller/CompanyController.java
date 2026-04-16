@@ -22,6 +22,8 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.math.BigDecimal;
+
 /**
  * Controller for company (multi-tenant) management
  * Access restricted to PROGRAMMER role only
@@ -133,6 +135,7 @@ public class CompanyController {
                     dto.getBillingCycle(),
                     dto.getLicenseMonths(),
                     dto.getLicenseAmount(),
+                    dto.getTaxRate(),
                     authentication.getName()
             );
             
@@ -294,6 +297,7 @@ public class CompanyController {
             @RequestParam(required = false) String address,
             @RequestParam(required = false) String rfc,
             @RequestParam(defaultValue = "America/Mexico_City") String timezone,
+            @RequestParam(required = false) BigDecimal taxRate,
             RedirectAttributes redirectAttributes,
             Authentication authentication) {
         
@@ -335,6 +339,11 @@ public class CompanyController {
             company.setRfc(rfc);
             if (timezone != null && !timezone.isBlank()) {
                 company.setTimezone(timezone);
+            }
+            
+            // Update taxRate on the company's SystemConfiguration
+            if (taxRate != null && company.getSystemConfiguration() != null) {
+                company.getSystemConfiguration().setTaxRate(taxRate);
             }
             
             companyRepository.save(company);

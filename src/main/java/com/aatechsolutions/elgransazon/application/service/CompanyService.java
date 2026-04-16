@@ -73,6 +73,7 @@ public interface CompanyService {
                    String contactPhone, String address, String rfc, String timezone,
                    String adminUsername, String adminFirstName, String adminLastName, String adminPassword,
                    boolean freeTrial, String packageType, String billingCycle, int licenseMonths, Double licenseAmount,
+                   java.math.BigDecimal taxRate,
                    String performedBy);
 
     /**

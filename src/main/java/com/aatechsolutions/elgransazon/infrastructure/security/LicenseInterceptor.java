@@ -103,6 +103,7 @@ public class LicenseInterceptor extends OncePerRequestFilter {
                path.startsWith("/topic/") ||
                path.startsWith("/sounds/") ||
                path.startsWith("/flyers/") ||  // Flyers editor (public static resource)
+               path.startsWith("/.well-known/") ||
                path.equals("/logout") ||
                path.equals("/perform_login") ||
                path.endsWith(".css") ||

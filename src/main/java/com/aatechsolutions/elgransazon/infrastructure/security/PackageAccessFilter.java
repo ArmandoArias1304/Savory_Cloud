@@ -73,6 +73,7 @@ public class PackageAccessFilter extends OncePerRequestFilter {
                path.startsWith("/flyers/") ||  // Flyers editor (public static resource)
                path.startsWith("/system-landing/") ||
                path.startsWith("/autofactura/") ||
+               path.startsWith("/.well-known/") ||
                path.equals("/client/login") ||
                path.equals("/client/register") ||
                path.startsWith("/ws") ||
