@@ -68,6 +68,7 @@ public class Promotion implements Serializable {
      * Example: Buy 2 (buyQuantity=2), Pay 1 (payQuantity=1)
      */
     @Min(value = 1, message = "La cantidad a comprar debe ser al menos 1")
+    @Max(value = 999999, message = "La cantidad a comprar no puede exceder 999,999")
     @Column(name = "buy_quantity")
     private Integer buyQuantity;
 
@@ -76,6 +77,7 @@ public class Promotion implements Serializable {
      * Example: Buy 2 (buyQuantity=2), Pay 1 (payQuantity=1)
      */
     @Min(value = 1, message = "La cantidad a pagar debe ser al menos 1")
+    @Max(value = 999999, message = "La cantidad a pagar no puede exceder 999,999")
     @Column(name = "pay_quantity")
     private Integer payQuantity;
 
@@ -94,7 +96,8 @@ public class Promotion implements Serializable {
      * Example: 5.00 for $5 off
      */
     @DecimalMin(value = "0.0", inclusive = false, message = "El monto debe ser mayor a 0")
-    @Digits(integer = 8, fraction = 2, message = "El monto debe tener máximo 8 dígitos y 2 decimales")
+    @DecimalMax(value = "999999.99", message = "El monto no puede exceder $999,999.99")
+    @Digits(integer = 6, fraction = 2, message = "El monto debe tener máximo 6 dígitos y 2 decimales")
     @Column(name = "discount_amount", precision = 10, scale = 2)
     private BigDecimal discountAmount;
 
@@ -105,6 +108,7 @@ public class Promotion implements Serializable {
      * If null or 1, discount applies to every item
      */
     @Min(value = 1, message = "La cantidad mínima debe ser al menos 1")
+    @Max(value = 999999, message = "La cantidad mínima no puede exceder 999,999")
     @Column(name = "min_quantity_for_fixed_discount")
     private Integer minQuantityForFixedDiscount;
 

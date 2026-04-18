@@ -14,6 +14,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Public controller for the autofactura (self-invoicing) page.
@@ -34,6 +36,9 @@ public class AutofacturaController {
 
     private final OrderRepository orderRepository;
     private final FacturamaService facturamaService;
+
+    // Guard against concurrent CFDI creation for the same autofactura key
+    private final Set<String> activeCfdiCreations = ConcurrentHashMap.newKeySet();
 
     /**
      * Show the autofactura form for a specific order.
@@ -145,7 +150,27 @@ public class AutofacturaController {
             return "autofactura";
         }
 
+        // Prevent concurrent CFDI creation for the same key (double-click guard)
+        if (!activeCfdiCreations.add(key)) {
+            log.warn("Duplicate autofactura submission blocked for key: {}", key);
+            model.addAttribute("error", "Ya se está procesando su factura, por favor espere.");
+            model.addAttribute("order", order);
+            model.addAttribute("alreadyInvoiced", false);
+            model.addAttribute("taxSystems", getTaxSystems());
+            model.addAttribute("cfdiUses", getCfdiUses());
+            return "autofactura";
+        }
+
         try {
+            // Re-check after acquiring lock (another request may have finished)
+            Order freshOrder = orderRepository.findByAutofacturaKeyAndCompany(key, CompanyContext.getCurrentCompany())
+                    .orElse(null);
+            if (freshOrder != null && freshOrder.getFacturamaCfdiId() != null && !freshOrder.getFacturamaCfdiId().isBlank()) {
+                model.addAttribute("order", freshOrder);
+                model.addAttribute("alreadyInvoiced", true);
+                return "autofactura";
+            }
+
             // Create CFDI via Facturama
             Map<String, String> cfdiResult = facturamaService.createCfdi(
                     order, config,
@@ -176,6 +201,8 @@ public class AutofacturaController {
             model.addAttribute("alreadyInvoiced", false);
             model.addAttribute("taxSystems", getTaxSystems());
             model.addAttribute("cfdiUses", getCfdiUses());
+        } finally {
+            activeCfdiCreations.remove(key);
         }
 
         return "autofactura";

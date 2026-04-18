@@ -205,6 +205,7 @@ public class ItemMenuController {
             @RequestParam(value = "requiresBaristaPreparation", required = false) Boolean requiresBaristaPreparationParam,
             @RequestParam(value = "isBuffet", required = false) Boolean isBuffetParam,
             @RequestParam(value = "isCombo", required = false) Boolean isComboParam,
+            @RequestParam(value = "dineInOnly", required = false) Boolean dineInOnlyParam,
             @RequestParam(value = "comboItemIds", required = false) List<Long> comboItemIds,
             @RequestParam(value = "comboItemQuantities", required = false) List<Integer> comboItemQuantities,
             @RequestParam(value = "associateAllSauces", required = false) Boolean associateAllSauces,
@@ -238,6 +239,9 @@ public class ItemMenuController {
         
         // Set isCombo on item
         itemMenu.setIsCombo(Boolean.TRUE.equals(isComboParam));
+        
+        // Set dineInOnly on item
+        itemMenu.setDineInOnly(Boolean.TRUE.equals(dineInOnlyParam));
         
         // Set hasCustomSchedule on item
         itemMenu.setHasCustomSchedule(Boolean.TRUE.equals(hasCustomSchedule));
@@ -391,6 +395,7 @@ public class ItemMenuController {
             @RequestParam(value = "requiresBaristaPreparation", required = false) Boolean requiresBaristaPreparationParam,
             @RequestParam(value = "isBuffet", required = false) Boolean isBuffetParam,
             @RequestParam(value = "isCombo", required = false) Boolean isComboParam,
+            @RequestParam(value = "dineInOnly", required = false) Boolean dineInOnlyParam,
             @RequestParam(value = "comboItemIds", required = false) List<Long> comboItemIds,
             @RequestParam(value = "comboItemQuantities", required = false) List<Integer> comboItemQuantities,
             @RequestParam(value = "associateAllSauces", required = false) Boolean associateAllSauces,
@@ -425,6 +430,9 @@ public class ItemMenuController {
         // Set isCombo on item
         itemMenu.setIsCombo(Boolean.TRUE.equals(isComboParam));
         log.info("🔍 isCombo: {}", isComboParam);
+        
+        // Set dineInOnly on item
+        itemMenu.setDineInOnly(Boolean.TRUE.equals(dineInOnlyParam));
         
         // Set hasCustomSchedule on item
         itemMenu.setHasCustomSchedule(Boolean.TRUE.equals(hasCustomSchedule));

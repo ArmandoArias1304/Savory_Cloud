@@ -174,12 +174,18 @@ public class CashierPaymentController {
                 return "cashier/payments/form";
             }
 
-            // Validate tip is not negative
+            // Validate tip
             if (tip == null) {
                 tip = BigDecimal.ZERO;
             }
             if (tip.compareTo(BigDecimal.ZERO) < 0) {
                 throw new IllegalArgumentException("La propina no puede ser negativa");
+            }
+            if (tip.compareTo(new BigDecimal("999999.99")) > 0) {
+                throw new IllegalArgumentException("La propina no puede ser mayor a $999,999.99");
+            }
+            if (tip.scale() > 2) {
+                throw new IllegalArgumentException("La propina solo permite hasta 2 decimales");
             }
 
             // Get current cashier employee

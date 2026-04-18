@@ -200,16 +200,20 @@ public class FacturamaService {
             receiver.put("TaxZipCode", receiverZipCode);
             body.set("Receiver", receiver);
 
-            // Items
+            // Items — each OrderDetail and each complement becomes its own CFDI line.
+            // No merging: combos, items with complements, and simple items all stay
+            // as individual lines to preserve the exact detail of the order.
             ArrayNode items = objectMapper.createArrayNode();
 
             for (OrderDetail detail : order.getOrderDetails()) {
-                BigDecimal unitPrice = detail.getUnitPrice();
+                // Use promotional price when a promotion was applied, otherwise original price
+                BigDecimal effectiveUnitPrice = detail.getPromotionAppliedPrice() != null
+                        ? detail.getPromotionAppliedPrice()
+                        : detail.getUnitPrice();
 
                 // Add the item only if price > 0 (skip combo sub-items at $0)
-                if (unitPrice != null && unitPrice.compareTo(BigDecimal.ZERO) > 0) {
-                    addCfdiItem(items, detail.getItemMenu().getName(),
-                            detail.getQuantity(), unitPrice);
+                if (effectiveUnitPrice != null && effectiveUnitPrice.compareTo(BigDecimal.ZERO) > 0) {
+                    addCfdiItem(items, detail.getItemMenu().getName(), detail.getQuantity(), effectiveUnitPrice);
                 }
 
                 // Always check complements — even zero-price items can have paid complements
@@ -219,8 +223,13 @@ public class FacturamaService {
                         if (compPrice == null || compPrice.compareTo(BigDecimal.ZERO) <= 0) {
                             continue;
                         }
+                        // For sauces, quantity is per-serving; multiply by item qty for effective total
+                        int effectiveQty = comp.getQuantity();
+                        if (Boolean.TRUE.equals(comp.getComplement().getIsSauce())) {
+                            effectiveQty = effectiveQty * detail.getQuantity();
+                        }
                         addCfdiItem(items, "Complemento - " + comp.getComplement().getName(),
-                                comp.getQuantity(), compPrice);
+                                effectiveQty, compPrice);
                     }
                 }
             }
@@ -393,15 +402,22 @@ public class FacturamaService {
      * Add a CFDI line item with IVA 16% (desglosado from tax-included price).
      * Restaurant prices include IVA, so we decompose:
      *   UnitPrice (sin IVA) = price / 1.16
-     *   Tax = UnitPrice * 0.16
+     *   Tax = expectedTotal - subtotal  (NOT subtotal * 0.16)
+     *
+     * We derive the tax as the difference between the tax-included total and the
+     * subtotal sin IVA.  This guarantees each line's total equals the exact
+     * tax-included price × quantity, so the CFDI grand total matches the order
+     * total without accumulated rounding errors across lines.
      */
     private void addCfdiItem(ArrayNode items, String description, int quantity, BigDecimal taxIncludedPrice) {
         ObjectNode item = objectMapper.createObjectNode();
 
         BigDecimal unitPriceSinIva = taxIncludedPrice.divide(BigDecimal.valueOf(1.16), 6, RoundingMode.HALF_UP);
         BigDecimal subtotal = unitPriceSinIva.multiply(BigDecimal.valueOf(quantity)).setScale(2, RoundingMode.HALF_UP);
-        BigDecimal taxAmount = subtotal.multiply(BigDecimal.valueOf(0.16)).setScale(2, RoundingMode.HALF_UP);
-        BigDecimal total = subtotal.add(taxAmount).setScale(2, RoundingMode.HALF_UP);
+        // Derive tax from the exact tax-included amount so line total = price × qty
+        BigDecimal expectedTotal = taxIncludedPrice.multiply(BigDecimal.valueOf(quantity)).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal taxAmount = expectedTotal.subtract(subtotal);
+        BigDecimal total = expectedTotal;
 
         item.put("ProductCode", "90101500"); // Restaurantes y comida para llevar
         item.put("Description", description);

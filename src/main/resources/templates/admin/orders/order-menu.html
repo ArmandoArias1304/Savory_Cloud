@@ -317,6 +317,7 @@
                   th:data-schedule-info="${item.scheduleInfo}"
                   th:data-is-buffet="${item.isBuffet != null && item.isBuffet}"
                   th:data-is-combo="${item.isCombo != null && item.isCombo}"
+                  th:data-dine-in-only="${item.dineInOnly != null && item.dineInOnly}"
                   onclick="openItemModal(this)"
                 >
                   <!-- Promotion Badge (Top Right Corner) -->
@@ -734,12 +735,12 @@
       // Load promotions when page loads
       loadPromotions();
 
-      // ========== BUFFET ITEM FILTERING ==========
-      // Hide buffet items if order type is not DINE_IN
+      // ========== BUFFET & DINE-IN ONLY ITEM FILTERING ==========
+      // Hide buffet and dine-in-only items if order type is not DINE_IN
       function filterBuffetItems() {
         const isDineIn = orderData.orderType === "DINE_IN";
         document.querySelectorAll(".menu-item-card").forEach((card) => {
-          if (card.dataset.isBuffet === "true") {
+          if (card.dataset.isBuffet === "true" || card.dataset.dineInOnly === "true") {
             card.style.display = isDineIn ? "" : "none";
           }
         });
@@ -2839,7 +2840,7 @@
                           .map(
                             (sc) => `
                           <span class="inline-flex items-center text-[10px] text-purple-600 dark:text-purple-400 mr-1">
-                            ${sc.isSauce ? "🫙" : "➕"} ${sc.name}${sc.quantity > 1 ? " x" + sc.quantity : ""}${sc.extraPrice > 0 ? " (+$" + (sc.extraPrice * sc.quantity).toFixed(2) + ")" : ""}
+                            ${sc.isSauce ? "🫙" : "➕"} ${sc.name}${(sc.isSauce ? sc.quantity * (child.quantity || 1) * item.quantity : sc.quantity) > 1 ? " x" + (sc.isSauce ? sc.quantity * (child.quantity || 1) * item.quantity : sc.quantity) : ""}${sc.extraPrice > 0 ? " (+$" + (sc.extraPrice * sc.quantity * (sc.isSauce ? (child.quantity || 1) * item.quantity : 1)).toFixed(2) + ")" : ""}
                           </span>
                         `,
                           )
@@ -2873,8 +2874,8 @@
                         comp.extraPrice > 0
                           ? `
                       <p class="text-xs text-purple-600 dark:text-purple-400 font-semibold">
-                        $${(comp.extraPrice * comp.quantity).toFixed(2)}
-                        ${comp.quantity > 1 ? `<span class="text-gray-400 font-normal">($${comp.extraPrice.toFixed(2)} c/u)</span>` : ""}
+                        $${(comp.extraPrice * comp.quantity * (comp.isSauce ? item.quantity : 1)).toFixed(2)}
+                        ${comp.isSauce && item.quantity > 1 ? `<span class="text-gray-400 font-normal">(${item.quantity}x$${(comp.extraPrice * comp.quantity).toFixed(2)})</span>` : comp.quantity > 1 ? `<span class="text-gray-400 font-normal">($${comp.extraPrice.toFixed(2)} c/u)</span>` : ""}
                       </p>
                       `
                           : ""
@@ -3285,19 +3286,25 @@
       }
 
       function handleStockError(message) {
-        // Parse message to find items: "Stock insufficient... : CocaCola 4L, Pepsi. ¡Te invitamos..."
+        // Parse item names from stock error messages.
+        // Format 1 (pre-validation): "...stock de los siguientes items: Item1, Item2. ¡Te invitamos..."
+        // Format 2 (deduction):      "Stock insuficiente de 'Salsa BBQ'. Requerido: 2 UN, Disponible: 1 UN"
         let itemsToRemove = [];
         let itemsStr = "";
-        if (message.includes(": ")) {
-          let itemPart = message.split(": ")[1];
-          // Remove the invitation text suffix if present so we get just the items
-          if (itemPart.includes(". ¡Te invitamos")) {
-            itemPart = itemPart.split(". ¡Te invitamos")[0];
-          }
 
-          if (itemPart) {
-            itemsStr = itemPart;
-            itemsToRemove = itemPart.split(", ").map((s) => s.trim());
+        // Try Format 1 first (items after "items: " and before ". ¡Te invitamos")
+        const f1Match = message.match(/items:\s*(.+?)\. ¡Te invitamos/);
+        if (f1Match) {
+          itemsStr = f1Match[1].trim();
+          itemsToRemove = itemsStr.split(", ").map((s) => s.trim());
+        } else {
+          // Fallback: extract name between single quotes (Format 2)
+          const f2Match = message.match(/'([^']+)'/);
+          if (f2Match) {
+            itemsStr = f2Match[1];
+          } else {
+            // Last resort: show the raw message
+            itemsStr = message;
           }
         }
 

@@ -123,6 +123,15 @@ public class ItemMenu implements Serializable {
     private Boolean isCombo = false;
 
     /**
+     * Indicates if this item is only available for dine-in consumption.
+     * TRUE: Item only appears for DINE_IN orders (e.g., items served on plates that can't be packed).
+     * FALSE: Item is available for all order types (DINE_IN, TAKEOUT, DELIVERY).
+     */
+    @Column(name = "dine_in_only", nullable = false)
+    @Builder.Default
+    private Boolean dineInOnly = false;
+
+    /**
      * Maximum number of sauces that can be selected for this item
      * NULL or 0: No sauces allowed or unlimited (depends on business logic)
      * > 0: Maximum number of different sauces the customer can choose

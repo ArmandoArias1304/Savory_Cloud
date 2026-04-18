@@ -791,6 +791,9 @@ public class OrderController {
                     if (Boolean.TRUE.equals(detail.getItemMenu().getIsBuffet())) {
                         throw new IllegalArgumentException("El item '" + detail.getItemMenu().getName() + "' es de tipo buffet y solo está disponible para pedidos de tipo 'Para comer aquí'.");
                     }
+                    if (Boolean.TRUE.equals(detail.getItemMenu().getDineInOnly())) {
+                        throw new IllegalArgumentException("El item '" + detail.getItemMenu().getName() + "' solo está disponible para consumo en el establecimiento.");
+                    }
                 }
             }
             
@@ -816,7 +819,7 @@ public class OrderController {
             return "redirect:/" + role + "/orders/view/" + orderId;
 
         } catch (IllegalArgumentException | IllegalStateException e) {
-            log.error("Validation error adding items to order: {}", e.getMessage());
+            log.warn("Validation error adding items to order: {}", e.getMessage());
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
             return "redirect:/" + role + "/orders/" + orderId + "/add-items";
 
@@ -862,6 +865,9 @@ public class OrderController {
                 for (OrderDetail detail : newOrderDetails) {
                     if (Boolean.TRUE.equals(detail.getItemMenu().getIsBuffet())) {
                         throw new IllegalArgumentException("El item '" + detail.getItemMenu().getName() + "' es de tipo buffet y solo está disponible para pedidos de tipo 'Para comer aquí'.");
+                    }
+                    if (Boolean.TRUE.equals(detail.getItemMenu().getDineInOnly())) {
+                        throw new IllegalArgumentException("El item '" + detail.getItemMenu().getName() + "' solo está disponible para consumo en el establecimiento.");
                     }
                 }
             }
@@ -1119,6 +1125,9 @@ public class OrderController {
                     if (Boolean.TRUE.equals(detail.getItemMenu().getIsBuffet())) {
                         throw new IllegalArgumentException("El item '" + detail.getItemMenu().getName() + "' es de buffet y solo está disponible para pedidos 'Para comer aquí'.");
                     }
+                    if (Boolean.TRUE.equals(detail.getItemMenu().getDineInOnly())) {
+                        throw new IllegalArgumentException("El item '" + detail.getItemMenu().getName() + "' solo está disponible para consumo en el establecimiento.");
+                    }
                 }
             }
             
@@ -1265,6 +1274,11 @@ public class OrderController {
                             "El item '" + detail.getItemMenu().getName() + "' es de buffet y solo está disponible para pedidos 'Para comer aquí'.");
                         return "redirect:/" + role + "/orders";
                     }
+                    if (Boolean.TRUE.equals(detail.getItemMenu().getDineInOnly())) {
+                        redirectAttributes.addFlashAttribute("errorMessage", 
+                            "El item '" + detail.getItemMenu().getName() + "' solo está disponible para consumo en el establecimiento.");
+                        return "redirect:/" + role + "/orders";
+                    }
                 }
             }
             
@@ -1291,7 +1305,7 @@ public class OrderController {
             return "redirect:/" + role + "/orders";
 
         } catch (IllegalArgumentException | IllegalStateException e) {
-            log.error("Validation error creating order: {}", e.getMessage());
+            log.warn("Validation error creating order: {}", e.getMessage());
             model.addAttribute("errorMessage", e.getMessage());
             loadFormData(model, order, username, role);
             return role + "/orders/form";
@@ -1471,6 +1485,21 @@ public class OrderController {
                     redirectAttributes.addFlashAttribute("errorMessage", statusMessage);
                     return "redirect:/" + role + "/orders/edit/" + id;
                 }
+                // If changing away from DINE_IN, validate no buffet or dine-in-only items exist
+                if (order.getOrderType() != OrderType.DINE_IN && existingOrder.getOrderDetails() != null) {
+                    for (OrderDetail detail : existingOrder.getOrderDetails()) {
+                        if (Boolean.TRUE.equals(detail.getItemMenu().getIsBuffet())) {
+                            redirectAttributes.addFlashAttribute("errorMessage",
+                                "No se puede cambiar el tipo de pedido porque contiene el item buffet '" + detail.getItemMenu().getName() + "' que solo está disponible para 'Para comer aquí'.");
+                            return "redirect:/" + role + "/orders/edit/" + id;
+                        }
+                        if (Boolean.TRUE.equals(detail.getItemMenu().getDineInOnly())) {
+                            redirectAttributes.addFlashAttribute("errorMessage",
+                                "No se puede cambiar el tipo de pedido porque contiene el item '" + detail.getItemMenu().getName() + "' que solo está disponible para consumo en el establecimiento.");
+                            return "redirect:/" + role + "/orders/edit/" + id;
+                        }
+                    }
+                }
             }
             
             // Validate PAID status restrictions for customer and payment fields
@@ -1528,7 +1557,7 @@ public class OrderController {
             return "redirect:/" + role + "/orders";
 
         } catch (IllegalArgumentException | IllegalStateException e) {
-            log.error("Validation error updating order: {}", e.getMessage());
+            log.warn("Validation error updating order: {}", e.getMessage());
             model.addAttribute("errorMessage", e.getMessage());
             order.setIdOrder(id);
             loadFormData(model, order, username, role);
@@ -1645,7 +1674,7 @@ public class OrderController {
             wsNotificationService.notifyOrderCancelled(cancelled);
             
         } catch (IllegalStateException e) {
-            log.error("Error cancelling order: {}", e.getMessage());
+            log.warn("Error cancelling order: {}", e.getMessage());
             response.put("success", false);
             response.put("message", e.getMessage());
         } catch (Exception e) {
@@ -1731,11 +1760,11 @@ public class OrderController {
             response.put("message", "Estado del pedido cambiado a " + status.getDisplayName());
             response.put("order", buildOrderDTO(updated));
         } catch (IllegalArgumentException e) {
-            log.error("Invalid status: {}", newStatus);
+            log.warn("Invalid status: {}", newStatus);
             response.put("success", false);
             response.put("message", "Estado inválido: " + newStatus);
         } catch (IllegalStateException e) {
-            log.error("Error changing order status: {}", e.getMessage());
+            log.warn("Error changing order status: {}", e.getMessage());
             response.put("success", false);
             response.put("message", e.getMessage());
         } catch (Exception e) {
@@ -1814,6 +1843,13 @@ public class OrderController {
                     return response;
                 }
 
+                // Validate dine-in-only items: only allowed for DINE_IN orders
+                if (Boolean.TRUE.equals(item.getDineInOnly()) && order.getOrderType() != OrderType.DINE_IN) {
+                    response.put("success", false);
+                    response.put("message", "El item '" + item.getName() + "' solo está disponible para consumo en el establecimiento  aquí.");
+                    return response;
+                }
+
                 OrderDetail detail = OrderDetail.builder()
                     .itemMenu(item)
                     .quantity(itemRequest.getQuantity())
@@ -1835,7 +1871,7 @@ public class OrderController {
             response.put("newItemsCount", newItems.size());
             response.put("newTotal", updated.getFormattedTotal());
         } catch (IllegalStateException e) {
-            log.error("Error adding items to order: {}", e.getMessage());
+            log.warn("Error adding items to order: {}", e.getMessage());
             response.put("success", false);
             response.put("message", e.getMessage());
         } catch (Exception e) {
@@ -1877,7 +1913,7 @@ public class OrderController {
             try {
                 status = OrderStatus.valueOf(newStatus);
             } catch (IllegalArgumentException ex) {
-                log.error("Invalid status enum: {}", newStatus);
+                log.warn("Invalid status enum: {}", newStatus);
                 response.put("success", false);
                 response.put("message", "Estado inválido: " + newStatus);
                 return response;
@@ -1891,11 +1927,11 @@ public class OrderController {
             response.put("order", buildOrderDTO(updated));
             response.put("orderStatus", updated.getStatus().name());
         } catch (IllegalArgumentException e) {
-            log.error("Error changing items status (IllegalArgument): {}", e.getMessage());
+            log.warn("Error changing items status (IllegalArgument): {}", e.getMessage());
             response.put("success", false);
             response.put("message", e.getMessage());
         } catch (IllegalStateException e) {
-            log.error("Error changing items status: {}", e.getMessage());
+            log.warn("Error changing items status: {}", e.getMessage());
             response.put("success", false);
             response.put("message", e.getMessage());
         } catch (Exception e) {
@@ -1944,7 +1980,7 @@ public class OrderController {
             response.put("order", buildOrderDTO(updated));
             response.put("orderStatus", updated.getStatus().name());
         } catch (IllegalStateException e) {
-            log.error("Error changing all chef items: {}", e.getMessage());
+            log.warn("Error changing all chef items: {}", e.getMessage());
             response.put("success", false);
             response.put("message", e.getMessage());
         } catch (Exception e) {
@@ -1999,14 +2035,14 @@ public class OrderController {
             response.put("orderTotal", order.getTotal());
             response.put("orderStatus", order.getStatus().name());
             response.put("orderStatusLabel", order.getStatus().getDisplayName());
-            response.put("remainingItems", order.getOrderDetails().size());
+            response.put("remainingItems", order.getOrderDetails().stream().filter(d -> !d.isComboChild()).count());
             
         } catch (IllegalArgumentException e) {
-            log.error("Item not found: {}", e.getMessage());
+            log.warn("Item not found: {}", e.getMessage());
             response.put("success", false);
             response.put("message", e.getMessage());
         } catch (IllegalStateException e) {
-            log.error("Cannot delete item: {}", e.getMessage());
+            log.warn("Cannot delete item: {}", e.getMessage());
             
             // Check if this is the last item scenario
             if ("LAST_ITEM_CANCEL_ORDER".equals(e.getMessage())) {
@@ -2068,11 +2104,11 @@ public class OrderController {
             response.put("complementName", deletedComplement.getComplement().getName());
             
         } catch (IllegalArgumentException e) {
-            log.error("Complement not found: {}", e.getMessage());
+            log.warn("Complement not found: {}", e.getMessage());
             response.put("success", false);
             response.put("message", e.getMessage());
         } catch (IllegalStateException e) {
-            log.error("Cannot delete complement: {}", e.getMessage());
+            log.warn("Cannot delete complement: {}", e.getMessage());
             response.put("success", false);
             response.put("message", e.getMessage());
         } catch (Exception e) {
@@ -3367,7 +3403,7 @@ public class OrderController {
                     .body(pdfBytes);
                     
         } catch (IllegalArgumentException e) {
-            log.error("Order not found: {}", orderId, e);
+            log.warn("Order not found: {}", orderId);
             return ResponseEntity.notFound().build();
         } catch (Exception e) {
             log.error("Error generating ticket for order {}", orderId, e);
@@ -3406,7 +3442,7 @@ public class OrderController {
                     .body(escposBytes);
 
         } catch (IllegalArgumentException e) {
-            log.error("Order not found: {}", orderId, e);
+            log.warn("Order not found: {}", orderId);
             return ResponseEntity.notFound().build();
         } catch (Exception e) {
             log.error("Error generating ESC/POS ticket for order {}", orderId, e);

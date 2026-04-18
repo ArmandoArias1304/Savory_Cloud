@@ -337,6 +337,12 @@ public class DeliveryController {
             if (tip.compareTo(BigDecimal.ZERO) < 0) {
                 throw new IllegalArgumentException("La propina no puede ser negativa");
             }
+            if (tip.compareTo(new BigDecimal("999999.99")) > 0) {
+                throw new IllegalArgumentException("La propina no puede ser mayor a $999,999.99");
+            }
+            if (tip.scale() > 2) {
+                throw new IllegalArgumentException("La propina solo permite hasta 2 decimales");
+            }
             
             // Set tip and paidBy before changing status to PAID
             order.setTip(tip);

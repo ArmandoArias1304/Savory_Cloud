@@ -312,6 +312,7 @@
                   th:data-schedule-info="${item.scheduleInfo}"
                   th:data-is-buffet="${item.isBuffet != null && item.isBuffet}"
                   th:data-is-combo="${item.isCombo != null && item.isCombo}"
+                  th:data-dine-in-only="${item.dineInOnly != null && item.dineInOnly}"
                   onclick="openItemModal(this)"
                 >
                   <!-- Promotion Badge (Top Right Corner) -->
@@ -1665,12 +1666,12 @@
       // Load promotions when page loads
       loadPromotions();
 
-      // ========== BUFFET ITEM FILTERING ==========
-      // Hide buffet items if order type is not DINE_IN
+      // ========== BUFFET & DINE-IN ONLY ITEM FILTERING ==========
+      // Hide buffet and dine-in-only items if order type is not DINE_IN
       function filterBuffetItems() {
         const isDineIn = orderData.orderType === "DINE_IN";
         document.querySelectorAll(".menu-item-card").forEach((card) => {
-          if (card.dataset.isBuffet === "true") {
+          if (card.dataset.isBuffet === "true" || card.dataset.dineInOnly === "true") {
             card.style.display = isDineIn ? "" : "none";
           }
         });
@@ -1990,9 +1991,10 @@
                           ? "text-white"
                           : "text-gray-900"
                     } mb-2">${itemName}</h2>
-                    <p class="text-5xl font-black text-primary mb-4">$${itemPrice.toFixed(
+                    <p class="text-5xl font-black text-primary mb-2">$${itemPrice.toFixed(
                       2,
                     )}</p>
+                    <p id="complements-total" class="text-sm text-orange-600 font-semibold mb-4"></p>
                     <p class="${isDarkMode ? "text-gray-300" : "text-gray-600"} mb-6 flex-grow">${
                       itemDescription || "Sin descripción disponible"
                     }</p>
@@ -2735,7 +2737,7 @@
                           .map(
                             (sc) => `
                           <span class="inline-flex items-center text-[10px] text-purple-600 dark:text-purple-400 mr-1">
-                            ${sc.isSauce ? "🫙" : "➕"} ${sc.name}${sc.quantity > 1 ? " x" + sc.quantity : ""}${sc.extraPrice > 0 ? " (+$" + (sc.extraPrice * sc.quantity).toFixed(2) + ")" : ""}
+                            ${sc.isSauce ? "🫙" : "➕"} ${sc.name}${(sc.isSauce ? sc.quantity * (child.quantity || 1) * item.quantity : sc.quantity) > 1 ? " x" + (sc.isSauce ? sc.quantity * (child.quantity || 1) * item.quantity : sc.quantity) : ""}${sc.extraPrice > 0 ? " (+$" + (sc.extraPrice * sc.quantity * (sc.isSauce ? (child.quantity || 1) * item.quantity : 1)).toFixed(2) + ")" : ""}
                           </span>
                         `,
                           )
@@ -2766,8 +2768,8 @@
                         ${comp.name}
                       </p>
                       <p class="text-xs text-purple-600 dark:text-purple-400 font-semibold">
-                        $${(comp.extraPrice * comp.quantity).toFixed(2)}
-                        ${comp.quantity > 1 ? `<span class="text-gray-400 font-normal">($${comp.extraPrice.toFixed(2)} c/u)</span>` : ""}
+                        $${(comp.extraPrice * comp.quantity * (comp.isSauce ? item.quantity : 1)).toFixed(2)}
+                        ${comp.isSauce && item.quantity > 1 ? `<span class="text-gray-400 font-normal">(${item.quantity}x$${(comp.extraPrice * comp.quantity).toFixed(2)})</span>` : comp.quantity > 1 ? `<span class="text-gray-400 font-normal">($${comp.extraPrice.toFixed(2)} c/u)</span>` : ""}
                       </p>
                     </div>
                     <div class="flex items-center gap-1">
@@ -2884,8 +2886,16 @@
         });
       }
 
+      // Guard flag to prevent duplicate order submissions
+      let isSubmitting = false;
+
       // Submit order
       function submitOrder() {
+        // Prevent duplicate submissions
+        if (isSubmitting) {
+          return;
+        }
+
         if (cart.length === 0) {
           Swal.fire({
             icon: "warning",
@@ -2901,9 +2911,13 @@
           return;
         }
 
+        // Lock submission immediately
+        isSubmitting = true;
+        const submitBtn = document.getElementById("submitOrderBtn");
+        if (submitBtn) submitBtn.disabled = true;
+
         // For DELIVERY orders, address is already set in the order
         // Validation is handled by the backend
-
 
         // Payment method is already set in orderData from server (cannot be changed)
         const paymentMethod = /*[[${paymentMethod.name()}]]*/ "CASH";
@@ -2945,12 +2959,10 @@
           items: items,
         };
 
-
         // Determine endpoint based on mode
         const endpoint = isAddItemsMode
           ? `/client/orders/${existingOrderId}/add-items`
           : "/client/orders/create";
-
 
         // Send AJAX request
         fetch(endpoint, {
@@ -2963,6 +2975,7 @@
           .then((response) => response.json())
           .then((data) => {
             if (data.success) {
+              cart = [];
               Swal.fire({
                 title: isAddItemsMode ? "¡Items agregados!" : "¡Pedido creado!",
                 text: isAddItemsMode
@@ -2979,21 +2992,38 @@
                 window.location.href = "/client/orders";
               });
             } else {
-              // Handle validation errors
-              Swal.fire({
-                title: "Error",
-                text: data.message || "No se pudo crear el pedido",
-                icon: "error",
-                background: document.documentElement.classList.contains("dark")
-                  ? "#1f2937"
-                  : "#ffffff",
-                color: document.documentElement.classList.contains("dark")
-                  ? "#f3f4f6"
-                  : "#1f2937",
-              });
+              // Reset submission guard on error
+              isSubmitting = false;
+              if (submitBtn) submitBtn.disabled = false;
+              // Handle Error
+              if (data.errorType === "PROMOTION_EXPIRED") {
+                handleExpiredPromotions(data.expiredPromotions);
+              } else if (
+                data.errorType === "STOCK_ERROR" ||
+                (data.message && data.message.includes("Stock insuficiente"))
+              ) {
+                handleStockError(data.message);
+              } else {
+                Swal.fire({
+                  title: "Error",
+                  text: data.message || "No se pudo crear el pedido",
+                  icon: "error",
+                  background: document.documentElement.classList.contains(
+                    "dark",
+                  )
+                    ? "#1f2937"
+                    : "#ffffff",
+                  color: document.documentElement.classList.contains("dark")
+                    ? "#f3f4f6"
+                    : "#1f2937",
+                });
+              }
             }
           })
           .catch((error) => {
+            // Reset submission guard on error
+            isSubmitting = false;
+            if (submitBtn) submitBtn.disabled = false;
             Swal.fire({
               title: "Error",
               text: "No se pudo crear el pedido. Intenta nuevamente.",
@@ -3007,6 +3037,128 @@
             });
           });
 
+      }
+
+      function handleExpiredPromotions(expiredPromotions) {
+        const isDark = document.documentElement.classList.contains("dark");
+
+        // Build HTML list
+        const itemsList = expiredPromotions
+          .map((item) => {
+            const formatter = new Intl.NumberFormat("es-MX", {
+              style: "currency",
+              currency: "MXN",
+            });
+            return `<div style="text-align: left; padding: 12px; background-color: ${isDark ? "rgba(217, 119, 6, 0.15)" : "#fef3c7"}; border-radius: 8px; margin-bottom: 8px; border: 1px solid ${isDark ? "rgba(217, 119, 6, 0.3)" : "#fbbf24"};">
+              <p style="font-weight: 600; color: ${isDark ? "#f3f4f6" : "#1f2937"}; margin-bottom: 4px;">${item.itemName}</p>
+              <p style="font-size: 0.875rem; color: ${isDark ? "#d1d5db" : "#4b5563"}; margin-bottom: 4px;">
+                Promoción ${item.reason}${item.promotionName ? ": " + item.promotionName : ""}
+              </p>
+              <p style="font-size: 0.875rem; margin-top: 4px; color: ${isDark ? "#d1d5db" : "#374151"};">
+                <span style="color: ${isDark ? "#9ca3af" : "#6b7280"};">Cantidad:</span> <strong>${item.quantity}</strong>
+              </p>
+              <p style="font-size: 0.875rem; font-weight: 500; color: #ff9f43; margin-top: 4px;">
+                Nuevo precio: ${formatter.format(item.normalPrice)} c/u = 
+                <strong>${formatter.format(item.subtotal)}</strong>
+              </p>
+            </div>`;
+          })
+          .join("");
+
+        Swal.fire({
+          icon: "warning",
+          title: "Promociones actualizadas",
+          html: `<div style="color: ${isDark ? "#e5e7eb" : "#374151"};">
+            <p style="margin-bottom: 16px; font-size: 0.95rem; color: ${isDark ? "#d1d5db" : "#4b5563"};">Los siguientes productos ya no cuentan con promoción activa y se cobrarán a precio regular:</p>
+            ${itemsList}
+            <p style="margin-top: 16px; font-size: 0.875rem; color: ${isDark ? "#9ca3af" : "#6b7280"};">
+              ¿Deseas continuar con tu pedido a precio regular o prefieres revisarlo?
+            </p>
+          </div>`,
+          showCancelButton: true,
+          confirmButtonText: "Continuar con pedido",
+          cancelButtonText: "Revisar carrito",
+          confirmButtonColor: "#ff9f43",
+          cancelButtonColor: "#6b7280",
+          width: "600px",
+          background: isDark ? "#1f2937" : "#ffffff",
+          color: isDark ? "#f3f4f6" : "#1f2937",
+        }).then((result) => {
+          if (result.isConfirmed) {
+            // Remove promotions from affected cart items
+            expiredPromotions.forEach((expired) => {
+              cart.forEach((cartItem) => {
+                if (cartItem.id == expired.itemId) {
+                  cartItem.appliedPromotionId = null;
+                  cartItem.promotionAppliedPrice = null;
+                  cartItem.promotionLabel = null;
+                  // Recalculate subtotal without promotion
+                  cartItem.subtotal = cartItem.price * cartItem.quantity;
+                }
+              });
+            });
+            updateCartUI();
+            // Retry submission directly
+            submitOrder();
+          }
+          // If cancelled, just close the dialog and let user modify cart
+        });
+      }
+
+      function handleStockError(message) {
+        let itemsToRemove = [];
+        let itemsStr = "";
+
+        // Try Format 1 first (items after "items: " and before ". ¡Te invitamos")
+        const f1Match = message.match(/items:\s*(.+?)\. ¡Te invitamos/);
+        if (f1Match) {
+          itemsStr = f1Match[1].trim();
+          itemsToRemove = itemsStr.split(", ").map((s) => s.trim());
+        } else {
+          // Fallback: extract name between single quotes
+          const f2Match = message.match(/'([^']+)'/);
+          if (f2Match) {
+            itemsStr = f2Match[1];
+          } else {
+            itemsStr = message;
+          }
+        }
+
+        Swal.fire({
+          icon: "warning",
+          title: "¡Lo sentimos mucho!",
+          html: `No tenemos suficiente stock de <b>${itemsStr}</b> en este momento.<br><br>Pero seguro encuentras otras opciones deliciosas en nuestro menú.`,
+          background: document.documentElement.classList.contains("dark")
+            ? "#1f2937"
+            : "#ffffff",
+          color: document.documentElement.classList.contains("dark")
+            ? "#f3f4f6"
+            : "#1f2937",
+          confirmButtonText: "Ver otras opciones",
+          confirmButtonColor: "#ff9f43",
+        }).then(() => {
+          if (itemsToRemove.length > 0) {
+            const initialLength = cart.length;
+            cart = cart.filter(
+              (cartItem) => !itemsToRemove.includes(cartItem.name),
+            );
+
+            if (cart.length < initialLength) {
+              updateCartUI();
+              const Toast = Swal.mixin({
+                toast: true,
+                position: "top-end",
+                showConfirmButton: false,
+                timer: 3000,
+                timerProgressBar: true,
+              });
+              Toast.fire({
+                icon: "info",
+                title: "Items eliminados del carrito por falta de stock",
+              });
+            }
+          }
+        });
       }
 
       // ========== COMBO ITEM MODAL ==========
@@ -3204,7 +3356,6 @@
                       <span class="font-semibold ${isDarkMode ? "text-white" : "text-gray-900"}">${ci.childItemName}</span>
                       <span class="text-xs px-2 py-0.5 rounded-full ${isDarkMode ? "bg-teal-900/40 text-teal-300" : "bg-teal-100 text-teal-700"}">x${ci.quantity}</span>
                     </div>
-                    <span class="text-xs ${isDarkMode ? "text-gray-400" : "text-gray-500"}">${ci.childRequiresPreparation ? "👨‍🍳 Chef" : ci.childRequiresBaristaPreparation ? "☕ Barista" : "📦 Listo"}</span>
                   </div>
                   ${
                     hasSauces || hasComplements

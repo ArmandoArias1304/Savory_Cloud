@@ -309,6 +309,7 @@
                   th:data-schedule-info="${item.scheduleInfo}"
                   th:data-is-buffet="${item.isBuffet != null && item.isBuffet}"
                   th:data-is-combo="${item.isCombo != null && item.isCombo}"
+                  th:data-dine-in-only="${item.dineInOnly != null && item.dineInOnly}"
                   onclick="openItemModal(this)"
                 >
                   <!-- Promotion Badge (Top Right Corner) -->
@@ -782,7 +783,7 @@
       loadPromotions();
 
       // ========== BUFFET ITEM FILTERING ==========
-      // Hide/show buffet items based on current order type
+      // Hide/show buffet and dine-in-only items based on current order type
       function filterBuffetItems() {
         // Get current order type - could be changed dynamically by the client
         const currentOrderType =
@@ -791,7 +792,7 @@
             : orderData.orderType;
         const isDineIn = currentOrderType === "DINE_IN";
         document.querySelectorAll(".menu-item-card").forEach((card) => {
-          if (card.dataset.isBuffet === "true") {
+          if (card.dataset.isBuffet === "true" || card.dataset.dineInOnly === "true") {
             card.style.display = isDineIn ? "" : "none";
           }
         });
@@ -2298,9 +2299,10 @@
                           ? "text-white"
                           : "text-gray-900"
                     } mb-2">${itemName}</h2>
-                    <p class="text-5xl font-black text-primary mb-4">$${itemPrice.toFixed(
+                    <p class="text-5xl font-black text-primary mb-2">$${itemPrice.toFixed(
                       2,
                     )}</p>
+                    <p id="complements-total" class="text-sm text-orange-600 font-semibold mb-4"></p>
                     <p class="${isDarkMode ? "text-gray-300" : "text-gray-600"} mb-6 flex-grow">${
                       itemDescription || "Sin descripción disponible"
                     }</p>
@@ -3188,7 +3190,7 @@
                           .map(
                             (sc) => `
                           <span class="inline-flex items-center text-[10px] text-purple-600 dark:text-purple-400 mr-1">
-                            ${sc.isSauce ? "🫙" : "➕"} ${sc.name}${sc.quantity > 1 ? " x" + sc.quantity : ""}${sc.extraPrice > 0 ? " (+$" + (sc.extraPrice * sc.quantity).toFixed(2) + ")" : ""}
+                            ${sc.isSauce ? "🫙" : "➕"} ${sc.name}${(sc.isSauce ? sc.quantity * (child.quantity || 1) * item.quantity : sc.quantity) > 1 ? " x" + (sc.isSauce ? sc.quantity * (child.quantity || 1) * item.quantity : sc.quantity) : ""}${sc.extraPrice > 0 ? " (+$" + (sc.extraPrice * sc.quantity * (sc.isSauce ? (child.quantity || 1) * item.quantity : 1)).toFixed(2) + ")" : ""}
                           </span>
                         `,
                           )
@@ -3222,8 +3224,8 @@
                         comp.extraPrice > 0
                           ? `
                       <p class="text-xs text-purple-600 dark:text-purple-400 font-semibold">
-                        $${(comp.extraPrice * comp.quantity).toFixed(2)}
-                        ${comp.quantity > 1 ? `<span class="text-gray-400 font-normal">($${comp.extraPrice.toFixed(2)} c/u)</span>` : ""}
+                        $${(comp.extraPrice * comp.quantity * (comp.isSauce ? item.quantity : 1)).toFixed(2)}
+                        ${comp.isSauce && item.quantity > 1 ? `<span class="text-gray-400 font-normal">(${item.quantity}x$${(comp.extraPrice * comp.quantity).toFixed(2)})</span>` : comp.quantity > 1 ? `<span class="text-gray-400 font-normal">($${comp.extraPrice.toFixed(2)} c/u)</span>` : ""}
                       </p>
                       `
                           : ""
@@ -3631,23 +3633,26 @@
       function handleStockError(message) {
         let itemsToRemove = [];
         let itemsStr = "";
-        if (message.includes(": ")) {
-          let itemPart = message.split(": ")[1];
-          // Remove the invitation text suffix if present so we get just the items
-          if (itemPart.includes(". ¡Te invitamos")) {
-            itemPart = itemPart.split(". ¡Te invitamos")[0];
-          }
 
-          if (itemPart) {
-            itemsStr = itemPart;
-            itemsToRemove = itemPart.split(", ").map((s) => s.trim());
+        // Try Format 1 first (items after "items: " and before ". ¡Te invitamos")
+        const f1Match = message.match(/items:\s*(.+?)\. ¡Te invitamos/);
+        if (f1Match) {
+          itemsStr = f1Match[1].trim();
+          itemsToRemove = itemsStr.split(", ").map((s) => s.trim());
+        } else {
+          // Fallback: extract name between single quotes
+          const f2Match = message.match(/'([^']+)'/);
+          if (f2Match) {
+            itemsStr = f2Match[1];
+          } else {
+            itemsStr = message;
           }
         }
 
         Swal.fire({
           icon: "warning",
           title: "¡Lo sentimos mucho!",
-          html: `<b>${itemsStr}</b>, no hay suficiente stock en este momento.<br><br>Pero seguro encuentras otras opciones deliciosas en nuestro menú.`,
+          html: `No tenemos suficiente stock de <b>${itemsStr}</b> en este momento.<br><br>Pero seguro encuentras otras opciones deliciosas en nuestro menú.`,
           background: document.documentElement.classList.contains("dark")
             ? "#1f2937"
             : "#ffffff",

@@ -204,25 +204,25 @@ public class TicketPdfService {
         // Pre-process: Group identical non-combo items without complements
         // so e.g. 3 separate "Coca Cola" lines become one "Coca Cola x5"
         List<OrderDetail> rawDetails = order.getOrderDetails();
-        Map<Long, int[]> mergedQty = new LinkedHashMap<>();        // itemMenuId -> [totalQuantity]
-        Map<Long, BigDecimal[]> mergedTotals = new LinkedHashMap<>(); // itemMenuId -> [originalTotal, finalTotal]
+        Map<String, int[]> mergedQty = new LinkedHashMap<>();        // itemMenuId_price -> [totalQuantity]
+        Map<String, BigDecimal[]> mergedTotals = new LinkedHashMap<>(); // itemMenuId_price -> [originalTotal, finalTotal]
         List<OrderDetail> ticketOrder = new ArrayList<>();
 
         for (OrderDetail detail : rawDetails) {
             boolean canMerge = !detail.isComboParent() && !detail.isComboChild()
                     && (detail.getSelectedComplements() == null || detail.getSelectedComplements().isEmpty());
-            Long itemMenuId = detail.getItemMenu().getIdItemMenu();
+            String mergeKey = detail.getItemMenu().getIdItemMenu() + "_" + detail.getUnitPrice().toPlainString();
             BigDecimal lineOriginal = detail.getUnitPrice()
                     .multiply(BigDecimal.valueOf(detail.getQuantity()));
 
-            if (canMerge && mergedQty.containsKey(itemMenuId)) {
-                mergedQty.get(itemMenuId)[0] += detail.getQuantity();
-                mergedTotals.get(itemMenuId)[0] = mergedTotals.get(itemMenuId)[0].add(lineOriginal);
-                mergedTotals.get(itemMenuId)[1] = mergedTotals.get(itemMenuId)[1].add(detail.getSubtotal());
+            if (canMerge && mergedQty.containsKey(mergeKey)) {
+                mergedQty.get(mergeKey)[0] += detail.getQuantity();
+                mergedTotals.get(mergeKey)[0] = mergedTotals.get(mergeKey)[0].add(lineOriginal);
+                mergedTotals.get(mergeKey)[1] = mergedTotals.get(mergeKey)[1].add(detail.getSubtotal());
             } else {
                 if (canMerge) {
-                    mergedQty.put(itemMenuId, new int[]{detail.getQuantity()});
-                    mergedTotals.put(itemMenuId, new BigDecimal[]{lineOriginal, detail.getSubtotal()});
+                    mergedQty.put(mergeKey, new int[]{detail.getQuantity()});
+                    mergedTotals.put(mergeKey, new BigDecimal[]{lineOriginal, detail.getSubtotal()});
                 }
                 ticketOrder.add(detail);
             }
@@ -231,7 +231,7 @@ public class TicketPdfService {
         for (OrderDetail detail : ticketOrder) {
             boolean isMerged = !detail.isComboParent() && !detail.isComboChild()
                     && (detail.getSelectedComplements() == null || detail.getSelectedComplements().isEmpty());
-            Long itemMenuId = detail.getItemMenu().getIdItemMenu();
+            String mergeKey = detail.getItemMenu().getIdItemMenu() + "_" + detail.getUnitPrice().toPlainString();
 
             // Item name and quantity - with combo grouping
             String itemName = detail.getItemMenu().getName();
@@ -247,10 +247,10 @@ public class TicketPdfService {
             Integer quantity;
             BigDecimal precioOriginalConIVA;
             BigDecimal precioFinalConIVA;
-            if (isMerged && mergedQty.containsKey(itemMenuId)) {
-                quantity = mergedQty.get(itemMenuId)[0];
-                precioOriginalConIVA = mergedTotals.get(itemMenuId)[0].setScale(2, RoundingMode.HALF_UP);
-                precioFinalConIVA = mergedTotals.get(itemMenuId)[1];
+            if (isMerged && mergedQty.containsKey(mergeKey)) {
+                quantity = mergedQty.get(mergeKey)[0];
+                precioOriginalConIVA = mergedTotals.get(mergeKey)[0].setScale(2, RoundingMode.HALF_UP);
+                precioFinalConIVA = mergedTotals.get(mergeKey)[1];
             } else {
                 quantity = detail.getQuantity();
                 precioOriginalConIVA = detail.getUnitPrice().multiply(BigDecimal.valueOf(quantity))
@@ -339,6 +339,11 @@ public class TicketPdfService {
                     String complementName = "  + " + odc.getComplement().getName();
                     Integer compQuantity = odc.getQuantity();
                     BigDecimal compTotal = odc.getSubtotal(); // unitPrice × quantity
+                    // For sauces, multiply by parent item quantity
+                    if (Boolean.TRUE.equals(odc.getComplement().getIsSauce())) {
+                        compQuantity = compQuantity * detail.getQuantity();
+                        compTotal = compTotal.multiply(BigDecimal.valueOf(detail.getQuantity()));
+                    }
                     
                     // Complement name cell (indented, extra for combo children)
                     Cell compNameCell = new Cell()
@@ -439,20 +444,18 @@ public class TicketPdfService {
                 // IVA (ya calculado sobre el subtotal real)
                 addTotalRow(totalsTable, "IVA (" + order.getTaxRate() + "%):", "$" + taxAmount.toString(), normalFont, boldFont, false);
 
-                // Tip (if any)
-                BigDecimal totalWithTip = total;
+                // Total (bold) - sin propina
+                addTotalRow(totalsTable, "TOTAL:", "$" + total.setScale(2, RoundingMode.HALF_UP).toString(), boldFont, boldFont, true);
+
+                // Tip below total (if any)
                 if (order.getTip() != null && order.getTip().compareTo(BigDecimal.ZERO) > 0) {
                         addTotalRow(totalsTable, "Propina:", "$" + order.getTip().toString(), normalFont, boldFont, false);
-                        totalWithTip = total.add(order.getTip());
                 }
-
-                // Total (bold)
-                addTotalRow(totalsTable, "TOTAL:", "$" + totalWithTip.setScale(2, RoundingMode.HALF_UP).toString(), boldFont, boldFont, true);
 
                 document.add(totalsTable);
 
         // Total in words (Mexican format)
-        Paragraph totalEnLetraParagraph = new Paragraph(totalEnLetra(totalWithTip))
+        Paragraph totalEnLetraParagraph = new Paragraph(totalEnLetra(total))
                 .setFont(normalFont)
                 .setFontSize(7)
                 .setTextAlignment(TextAlignment.CENTER)

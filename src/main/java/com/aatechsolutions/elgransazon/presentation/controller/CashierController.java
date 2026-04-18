@@ -462,7 +462,7 @@ public class CashierController {
             return "cashier/orders/order-customer-info";
             
         } catch (IllegalArgumentException e) {
-            log.error("Invalid order type: {}", orderType);
+            log.warn("Invalid order type: {}", orderType);
             redirectAttributes.addFlashAttribute("errorMessage", "Tipo de orden inválido");
             return "redirect:/cashier/orders/select-table";
         }
@@ -564,7 +564,7 @@ public class CashierController {
             return "cashier/orders/order-menu";
             
         } catch (IllegalArgumentException e) {
-            log.error("Invalid order type: {}", orderType);
+            log.warn("Invalid order type: {}", orderType);
             redirectAttributes.addFlashAttribute("errorMessage", "Tipo de orden inválido");
             return "redirect:/cashier/orders/select-table";
         }
@@ -621,6 +621,18 @@ public class CashierController {
                        (tableId != null ? "&tableId=" + tableId : "");
             }
 
+            // Validate buffet and dine-in-only items: only allowed for DINE_IN orders
+            if (order.getOrderType() != OrderType.DINE_IN) {
+                for (OrderDetail detail : orderDetails) {
+                    if (Boolean.TRUE.equals(detail.getItemMenu().getIsBuffet())) {
+                        throw new IllegalArgumentException("El item '" + detail.getItemMenu().getName() + "' es de tipo buffet y solo está disponible para pedidos de tipo 'Para comer aquí'.");
+                    }
+                    if (Boolean.TRUE.equals(detail.getItemMenu().getDineInOnly())) {
+                        throw new IllegalArgumentException("El item '" + detail.getItemMenu().getName() + "' solo está disponible para consumo en el establecimiento.");
+                    }
+                }
+            }
+
             // Set audit fields
             order.setCreatedBy(username);
 
@@ -634,7 +646,7 @@ public class CashierController {
             return "redirect:/cashier/orders";
 
         } catch (IllegalArgumentException | IllegalStateException e) {
-            log.error("Validation error creating order: {}", e.getMessage());
+            log.warn("Validation error creating order: {}", e.getMessage());
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
             return "redirect:/cashier/orders/menu?orderType=" + order.getOrderType() + 
                    (tableId != null ? "&tableId=" + tableId : "");
@@ -789,7 +801,7 @@ public class CashierController {
             return "cashier/orders/form";
 
         } catch (IllegalArgumentException e) {
-            log.error("Error accessing edit form: {}", e.getMessage());
+            log.warn("Error accessing edit form: {}", e.getMessage());
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
             return "redirect:/cashier/orders";
         } catch (Exception e) {
@@ -833,6 +845,21 @@ public class CashierController {
                     String statusMessage = getOrderTypeChangeRestrictionMessage(existingOrder);
                     redirectAttributes.addFlashAttribute("errorMessage", statusMessage);
                     return "redirect:/cashier/orders/edit/" + id;
+                }
+                // If changing away from DINE_IN, validate no buffet or dine-in-only items exist
+                if (order.getOrderType() != OrderType.DINE_IN && existingOrder.getOrderDetails() != null) {
+                    for (OrderDetail detail : existingOrder.getOrderDetails()) {
+                        if (Boolean.TRUE.equals(detail.getItemMenu().getIsBuffet())) {
+                            redirectAttributes.addFlashAttribute("errorMessage",
+                                "No se puede cambiar el tipo de pedido porque contiene el item buffet '" + detail.getItemMenu().getName() + "' que solo está disponible para 'Para comer aquí'.");
+                            return "redirect:/cashier/orders/edit/" + id;
+                        }
+                        if (Boolean.TRUE.equals(detail.getItemMenu().getDineInOnly())) {
+                            redirectAttributes.addFlashAttribute("errorMessage",
+                                "No se puede cambiar el tipo de pedido porque contiene el item '" + detail.getItemMenu().getName() + "' que solo está disponible para consumo en el establecimiento.");
+                            return "redirect:/cashier/orders/edit/" + id;
+                        }
+                    }
                 }
             }
             
@@ -895,7 +922,7 @@ public class CashierController {
             return "redirect:/cashier/orders";
 
         } catch (IllegalArgumentException e) {
-            log.error("Validation error updating order: {}", e.getMessage());
+            log.warn("Validation error updating order: {}", e.getMessage());
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
             return "redirect:/cashier/orders/edit/" + id;
         } catch (Exception e) {
@@ -946,11 +973,11 @@ public class CashierController {
             response.put("message", "Estado del pedido cambiado a " + status.getDisplayName());
             response.put("order", buildOrderDTO(updated));
         } catch (IllegalArgumentException e) {
-            log.error("Invalid status: {}", newStatus);
+            log.warn("Invalid status: {}", newStatus);
             response.put("success", false);
             response.put("message", "Estado inválido: " + newStatus);
         } catch (IllegalStateException e) {
-            log.error("Error changing order status: {}", e.getMessage());
+            log.warn("Error changing order status: {}", e.getMessage());
             response.put("success", false);
             response.put("message", e.getMessage());
         } catch (Exception e) {
@@ -1055,7 +1082,7 @@ public class CashierController {
                 response.put("stockInfo", stockInfo);
             }
         } catch (IllegalStateException e) {
-            log.error("Error cancelling order: {}", e.getMessage());
+            log.warn("Error cancelling order: {}", e.getMessage());
             response.put("success", false);
             response.put("message", e.getMessage());
         } catch (Exception e) {
@@ -1103,14 +1130,14 @@ public class CashierController {
             response.put("orderTotal", order.getTotal());
             response.put("orderStatus", order.getStatus().name());
             response.put("orderStatusLabel", order.getStatus().getDisplayName());
-            response.put("remainingItems", order.getOrderDetails().size());
+            response.put("remainingItems", order.getOrderDetails().stream().filter(d -> !d.isComboChild()).count());
             
         } catch (IllegalArgumentException e) {
-            log.error("Item not found: {}", e.getMessage());
+            log.warn("Item not found: {}", e.getMessage());
             response.put("success", false);
             response.put("message", e.getMessage());
         } catch (IllegalStateException e) {
-            log.error("Cannot delete item: {}", e.getMessage());
+            log.warn("Cannot delete item: {}", e.getMessage());
             
             // Check if this is the last item scenario
             if ("LAST_ITEM_CANCEL_ORDER".equals(e.getMessage())) {

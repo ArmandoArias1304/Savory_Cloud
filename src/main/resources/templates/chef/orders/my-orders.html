@@ -158,7 +158,7 @@
           <!-- ORDER CARD -->
           <div
             th:each="order : ${orders}"
-            class="bg-white dark:bg-gray-800 rounded-3xl shadow-md hover:shadow-2xl flex flex-col overflow-hidden transition-all duration-300 h-[490px]"
+            class="bg-white dark:bg-gray-800 rounded-3xl shadow-md hover:shadow-2xl flex flex-col overflow-hidden transition-all duration-300 h-[580px]"
             th:classappend="${order.status.name() == 'READY'} ? 'border-2 border-green-400 dark:border-green-500' : (${order.status.name() == 'DELIVERED'} ? 'border-2 border-purple-400 dark:border-purple-500' : (${order.status.name() == 'CANCELLED'} ? 'border-2 border-red-400 dark:border-red-500' : (${order.status.name() == 'PAID'} ? 'border-2 border-yellow-400 dark:border-yellow-500' : 'border border-gray-300 dark:border-gray-700')))"
           >
             <!-- Card Header -->
@@ -321,9 +321,8 @@
                           th:text="${comp.complement.name}"
                         ></span>
                         <span
-                          th:if="${comp.quantity > 1}"
                           class="text-xs text-gray-500 dark:text-gray-400"
-                          th:text="'x' + ${comp.quantity}"
+                          th:text="'x' + ${comp.quantity * detail.quantity}"
                         ></span>
                       </div>
                     </th:block>
@@ -342,7 +341,6 @@
                           th:text="${comp.complement.name}"
                         ></span>
                         <span
-                          th:if="${comp.quantity > 1}"
                           class="text-xs text-gray-500 dark:text-gray-400"
                           th:text="'x' + ${comp.quantity}"
                         ></span>

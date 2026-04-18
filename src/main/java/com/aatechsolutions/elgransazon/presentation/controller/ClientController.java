@@ -471,6 +471,16 @@ public class ClientController {
                         itemMenu.getCategory().getName() + "' y está desactivada por el momento.");
                 }
                 
+                // Check stock availability BEFORE schedule (available=false means out of stock)
+                if (!Boolean.TRUE.equals(itemMenu.getAvailable())) {
+                    log.warn("Stock check failed for item '{}' in client order", itemMenu.getName());
+                    return ResponseEntity.badRequest().body(Map.of(
+                        "success", false,
+                        "message", "¡Lo sentimos! No tenemos suficiente stock de los siguientes items: " + itemMenu.getName() + ". ¡Te invitamos a seguir descubriendo las deliciosas opciones de nuestro menú!",
+                        "errorType", "STOCK_ERROR"
+                    ));
+                }
+                
                 // Validate item availability schedule (day and time)
                 if (!itemMenuService.isItemAvailableNow(itemId)) {
                     java.time.DayOfWeek javaDow = dateTimeService.todayLocal().getDayOfWeek();
@@ -656,7 +666,7 @@ public class ClientController {
                             : compQuantity;
                         if (!complement.hasEnoughStock(totalComplementQuantity)) {
                             throw new IllegalStateException(
-                                "Stock insuficiente para el complemento '" + complement.getName());
+                                "Stock insuficiente para el complemento '" + complement.getName() + "'");
                         }
                         
                         // Create OrderDetailComplement
@@ -693,6 +703,12 @@ public class ClientController {
                             "message", "El item '" + detail.getItemMenu().getName() + "' es de tipo buffet y solo está disponible para pedidos de tipo 'Para comer aquí'."
                         ));
                     }
+                    if (Boolean.TRUE.equals(detail.getItemMenu().getDineInOnly())) {
+                        return ResponseEntity.badRequest().body(Map.of(
+                            "success", false,
+                            "message", "El item '" + detail.getItemMenu().getName() + "' solo está disponible para consumo en el establecimiento."
+                        ));
+                    }
                 }
             }
             
@@ -703,9 +719,10 @@ public class ClientController {
                 String itemNames = stockErrors.values().stream()
                     .collect(Collectors.joining(", "));
                 
+                log.warn("Stock validation failed for client order: {}", itemNames);
                 return ResponseEntity.badRequest().body(Map.of(
                     "success", false,
-                    "message", "Stock insuficiente para: " + itemNames + ". ¡Te invitamos a ver otras opciones deliciosas en nuestro menú!",
+                    "message", "¡Lo sentimos! No tenemos suficiente stock de los siguientes items: " + itemNames + ". ¡Te invitamos a seguir descubriendo las deliciosas opciones de nuestro menú!",
                     "errorType", "STOCK_ERROR"
                 ));
             }
@@ -733,8 +750,17 @@ public class ClientController {
                 "orderId", createdOrder.getIdOrder()
             ));
             
+        } catch (IllegalStateException | IllegalArgumentException e) {
+            log.warn("Order validation failed: {}", e.getMessage());
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("message", e.getMessage());
+            if (e.getMessage() != null && (e.getMessage().contains("Stock insuficiente") || e.getMessage().contains("No tenemos suficiente stock"))) {
+                errorResponse.put("errorType", "STOCK_ERROR");
+            }
+            return ResponseEntity.badRequest().body(errorResponse);
         } catch (Exception e) {
-            log.error("Error creating order", e);
+            log.error("Unexpected error creating order", e);
             return ResponseEntity.badRequest().body(Map.of(
                 "success", false,
                 "message", "Error al crear el pedido: " + e.getMessage()
@@ -910,6 +936,16 @@ public class ClientController {
                 if (itemMenu.getCategory() != null && !Boolean.TRUE.equals(itemMenu.getCategory().getActive())) {
                     throw new IllegalStateException("El item '" + itemMenu.getName() + "' pertenece a la categoría '" + 
                         itemMenu.getCategory().getName() + "' y está desactivada por el momento.");
+                }
+                
+                // Check stock availability BEFORE schedule (available=false means out of stock)
+                if (!Boolean.TRUE.equals(itemMenu.getAvailable())) {
+                    log.warn("Stock check failed for item '{}' in client add-items", itemMenu.getName());
+                    return ResponseEntity.badRequest().body(Map.of(
+                        "success", false,
+                        "message", "¡Lo sentimos! No tenemos suficiente stock de los siguientes items: " + itemMenu.getName() + ". ¡Te invitamos a seguir descubriendo las deliciosas opciones de nuestro menú!",
+                        "errorType", "STOCK_ERROR"
+                    ));
                 }
                 
                 // Validate item availability schedule (day and time)
@@ -1133,6 +1169,12 @@ public class ClientController {
                             "message", "El item '" + detail.getItemMenu().getName() + "' es de tipo buffet y solo está disponible para pedidos de tipo 'Para comer aquí'."
                         ));
                     }
+                    if (Boolean.TRUE.equals(detail.getItemMenu().getDineInOnly())) {
+                        return ResponseEntity.badRequest().body(Map.of(
+                            "success", false,
+                            "message", "El item '" + detail.getItemMenu().getName() + "' solo está disponible para consumo en el establecimiento."
+                        ));
+                    }
                 }
             }
 
@@ -1148,8 +1190,17 @@ public class ClientController {
                 "orderId", updatedOrder.getIdOrder()
             ));
 
+        } catch (IllegalStateException | IllegalArgumentException e) {
+            log.warn("Add items validation failed: {}", e.getMessage());
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("message", e.getMessage());
+            if (e.getMessage() != null && (e.getMessage().contains("Stock insuficiente") || e.getMessage().contains("No tenemos suficiente stock"))) {
+                errorResponse.put("errorType", "STOCK_ERROR");
+            }
+            return ResponseEntity.badRequest().body(errorResponse);
         } catch (Exception e) {
-            log.error("Error adding items to order", e);
+            log.error("Unexpected error adding items to order", e);
             return ResponseEntity.badRequest().body(Map.of(
                 "success", false,
                 "message", "Error al agregar items: " + e.getMessage()

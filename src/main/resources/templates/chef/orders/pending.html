@@ -480,6 +480,14 @@
                         th:if="${detail.isNewItem != null && detail.isNewItem && detail.itemStatus.name() != 'READY' && detail.itemStatus.name() != 'DELIVERED'}"
                         class="mt-2"
                       >
+                        <p
+                          class="text-xs text-gray-500 dark:text-gray-400 mb-1 ml-1"
+                        >
+                          🕐
+                          <span
+                            th:text="${#tz.format(detail.addedAt, 'HH:mm')}"
+                          ></span>
+                        </p>
                         <span
                           class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-gradient-to-r from-red-500 to-pink-500 text-white shadow-lg shadow-red-500/50 animate-pulse border border-red-300"
                         >
@@ -490,14 +498,55 @@
                           </span>
                           ¡NUEVO ITEM!
                         </span>
-                        <p
-                          class="text-xs text-gray-500 dark:text-gray-400 mt-1.5 ml-1"
-                        >
-                          🕐
-                          <span
-                            th:text="${#tz.format(detail.addedAt, 'HH:mm')}"
-                          ></span>
-                        </p>
+                      </div>
+
+                      <!-- CHEF: No item-level buttons - uses order-level bulk button only -->
+
+                      <!-- Complements and Sauces -->
+                      <div
+                        th:if="${detail.selectedComplements != null && !detail.selectedComplements.isEmpty()}"
+                        class="pl-4 mt-1 space-y-1"
+                      >
+                        <!-- Sauces -->
+                        <th:block th:each="comp : ${detail.selectedComplements}">
+                          <div
+                            th:if="${comp.complement.isSauce != null && comp.complement.isSauce}"
+                            class="flex items-center gap-1.5"
+                          >
+                            <span
+                              class="material-symbols-outlined text-blue-500 dark:text-blue-400 !text-sm"
+                              >add_circle</span
+                            >
+                            <span
+                              class="text-sm text-blue-700 dark:text-blue-300 font-medium"
+                              th:text="${comp.complement.name}"
+                            ></span>
+                            <span
+                              class="text-xs text-gray-500 dark:text-gray-400"
+                              th:text="'x' + ${comp.quantity * detail.quantity}"
+                            ></span>
+                          </div>
+                        </th:block>
+                        <!-- Regular Complements -->
+                        <th:block th:each="comp : ${detail.selectedComplements}">
+                          <div
+                            th:if="${comp.complement.isSauce == null || !comp.complement.isSauce}"
+                            class="flex items-center gap-1.5"
+                          >
+                            <span
+                              class="material-symbols-outlined text-purple-500 dark:text-purple-400 !text-sm"
+                              >add_circle</span
+                            >
+                            <span
+                              class="text-sm text-purple-700 dark:text-purple-300 font-medium"
+                              th:text="${comp.complement.name}"
+                            ></span>
+                            <span
+                              class="text-xs text-gray-500 dark:text-gray-400"
+                              th:text="'x' + ${comp.quantity}"
+                            ></span>
+                          </div>
+                        </th:block>
                       </div>
 
                       <!-- Item Status Badge -->
@@ -539,8 +588,6 @@
                           Entregado
                         </span>
                       </div>
-
-                      <!-- CHEF: No item-level buttons - uses order-level bulk button only -->
 
                       <!-- Barista Item Slide Controls -->
                       <div th:if="${isBarista}" class="mt-3">
@@ -609,54 +656,6 @@
 
                       <!-- Added At (for new items) -->
                     </div>
-                  </div>
-                  <!-- Complements and Sauces -->
-                  <div
-                    th:if="${detail.selectedComplements != null && !detail.selectedComplements.isEmpty()}"
-                    class="pl-4 mt-1 space-y-1"
-                  >
-                    <!-- Sauces -->
-                    <th:block th:each="comp : ${detail.selectedComplements}">
-                      <div
-                        th:if="${comp.complement.isSauce != null && comp.complement.isSauce}"
-                        class="flex items-center gap-1.5"
-                      >
-                        <span
-                          class="material-symbols-outlined text-blue-500 dark:text-blue-400 !text-sm"
-                          >add_circle</span
-                        >
-                        <span
-                          class="text-sm text-blue-700 dark:text-blue-300 font-medium"
-                          th:text="${comp.complement.name}"
-                        ></span>
-                        <span
-                          th:if="${comp.quantity > 1}"
-                          class="text-xs text-gray-500 dark:text-gray-400"
-                          th:text="'x' + ${comp.quantity}"
-                        ></span>
-                      </div>
-                    </th:block>
-                    <!-- Regular Complements -->
-                    <th:block th:each="comp : ${detail.selectedComplements}">
-                      <div
-                        th:if="${comp.complement.isSauce == null || !comp.complement.isSauce}"
-                        class="flex items-center gap-1.5"
-                      >
-                        <span
-                          class="material-symbols-outlined text-purple-500 dark:text-purple-400 !text-sm"
-                          >add_circle</span
-                        >
-                        <span
-                          class="text-sm text-purple-700 dark:text-purple-300 font-medium"
-                          th:text="${comp.complement.name}"
-                        ></span>
-                        <span
-                          th:if="${comp.quantity > 1}"
-                          class="text-xs text-gray-500 dark:text-gray-400"
-                          th:text="'x' + ${comp.quantity}"
-                        ></span>
-                      </div>
-                    </th:block>
                   </div>
 
                   <p

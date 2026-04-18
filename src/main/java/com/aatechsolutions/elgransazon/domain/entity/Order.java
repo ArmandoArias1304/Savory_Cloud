@@ -165,6 +165,8 @@ public class Order implements Serializable {
     // ========== Tip (Propina) ==========
 
     @DecimalMin(value = "0.0", message = "La propina no puede ser negativa")
+    @DecimalMax(value = "999999.99", message = "La propina no puede ser mayor a $999,999.99")
+    @Digits(integer = 6, fraction = 2, message = "La propina solo permite hasta 2 decimales")
     @Column(name = "tip", precision = 10, scale = 2)
     @Builder.Default
     private BigDecimal tip = BigDecimal.ZERO;

@@ -137,25 +137,25 @@ public class TicketEscPosService {
 
         // ── Pre-process: merge identical simple items ──
         List<OrderDetail> rawDetails = order.getOrderDetails();
-        Map<Long, int[]> mergedQty = new LinkedHashMap<>();
-        Map<Long, BigDecimal[]> mergedTotals = new LinkedHashMap<>();
+        Map<String, int[]> mergedQty = new LinkedHashMap<>();
+        Map<String, BigDecimal[]> mergedTotals = new LinkedHashMap<>();
         List<OrderDetail> ticketOrder = new ArrayList<>();
 
         for (OrderDetail detail : rawDetails) {
             boolean canMerge = !detail.isComboParent() && !detail.isComboChild()
                     && (detail.getSelectedComplements() == null || detail.getSelectedComplements().isEmpty());
-            Long itemMenuId = detail.getItemMenu().getIdItemMenu();
+            String mergeKey = detail.getItemMenu().getIdItemMenu() + "_" + detail.getUnitPrice().toPlainString();
             BigDecimal lineOriginal = detail.getUnitPrice()
                     .multiply(BigDecimal.valueOf(detail.getQuantity()));
 
-            if (canMerge && mergedQty.containsKey(itemMenuId)) {
-                mergedQty.get(itemMenuId)[0] += detail.getQuantity();
-                mergedTotals.get(itemMenuId)[0] = mergedTotals.get(itemMenuId)[0].add(lineOriginal);
-                mergedTotals.get(itemMenuId)[1] = mergedTotals.get(itemMenuId)[1].add(detail.getSubtotal());
+            if (canMerge && mergedQty.containsKey(mergeKey)) {
+                mergedQty.get(mergeKey)[0] += detail.getQuantity();
+                mergedTotals.get(mergeKey)[0] = mergedTotals.get(mergeKey)[0].add(lineOriginal);
+                mergedTotals.get(mergeKey)[1] = mergedTotals.get(mergeKey)[1].add(detail.getSubtotal());
             } else {
                 if (canMerge) {
-                    mergedQty.put(itemMenuId, new int[]{detail.getQuantity()});
-                    mergedTotals.put(itemMenuId, new BigDecimal[]{lineOriginal, detail.getSubtotal()});
+                    mergedQty.put(mergeKey, new int[]{detail.getQuantity()});
+                    mergedTotals.put(mergeKey, new BigDecimal[]{lineOriginal, detail.getSubtotal()});
                 }
                 ticketOrder.add(detail);
             }
@@ -165,7 +165,7 @@ public class TicketEscPosService {
         for (OrderDetail detail : ticketOrder) {
             boolean isMerged = !detail.isComboParent() && !detail.isComboChild()
                     && (detail.getSelectedComplements() == null || detail.getSelectedComplements().isEmpty());
-            Long itemMenuId = detail.getItemMenu().getIdItemMenu();
+            String mergeKey = detail.getItemMenu().getIdItemMenu() + "_" + detail.getUnitPrice().toPlainString();
 
             String itemName = detail.getItemMenu().getName();
             boolean isComboParent = detail.isComboParent();
@@ -179,10 +179,10 @@ public class TicketEscPosService {
             Integer quantity;
             BigDecimal precioOriginalConIVA;
             BigDecimal precioFinalConIVA;
-            if (isMerged && mergedQty.containsKey(itemMenuId)) {
-                quantity = mergedQty.get(itemMenuId)[0];
-                precioOriginalConIVA = mergedTotals.get(itemMenuId)[0].setScale(2, RoundingMode.HALF_UP);
-                precioFinalConIVA = mergedTotals.get(itemMenuId)[1];
+            if (isMerged && mergedQty.containsKey(mergeKey)) {
+                quantity = mergedQty.get(mergeKey)[0];
+                precioOriginalConIVA = mergedTotals.get(mergeKey)[0].setScale(2, RoundingMode.HALF_UP);
+                precioFinalConIVA = mergedTotals.get(mergeKey)[1];
             } else {
                 quantity = detail.getQuantity();
                 precioOriginalConIVA = detail.getUnitPrice().multiply(BigDecimal.valueOf(quantity))
@@ -218,8 +218,15 @@ public class TicketEscPosService {
             if (detail.getSelectedComplements() != null && !detail.getSelectedComplements().isEmpty()) {
                 for (OrderDetailComplement odc : detail.getSelectedComplements()) {
                     String compName = "+ " + odc.getComplement().getName();
-                    String compQty = String.valueOf(odc.getQuantity());
-                    String compTotal = "$" + odc.getSubtotal().setScale(2, RoundingMode.HALF_UP).toPlainString();
+                    // For sauces, multiply by parent item quantity
+                    int effectiveQty = odc.getQuantity();
+                    BigDecimal effectiveTotal = odc.getSubtotal();
+                    if (Boolean.TRUE.equals(odc.getComplement().getIsSauce())) {
+                        effectiveQty = effectiveQty * detail.getQuantity();
+                        effectiveTotal = effectiveTotal.multiply(BigDecimal.valueOf(detail.getQuantity()));
+                    }
+                    String compQty = String.valueOf(effectiveQty);
+                    String compTotal = "$" + effectiveTotal.setScale(2, RoundingMode.HALF_UP).toPlainString();
 
                     String indent = isComboChild ? "    " : "  ";
                     if (hasPromotions) {
@@ -263,21 +270,20 @@ public class TicketEscPosService {
 
         printTotalLine(out, "IVA (" + order.getTaxRate() + "%):", "$" + taxAmount.toString(), false);
 
-        BigDecimal totalWithTip = total;
+        // TOTAL (bold) - sin propina
+        out.write(BOLD_ON);
+        printTotalLine(out, "TOTAL:", "$" + total.setScale(2, RoundingMode.HALF_UP).toPlainString(), true);
+        out.write(BOLD_OFF);
+
+        // Tip below total (if any)
         if (order.getTip() != null && order.getTip().compareTo(BigDecimal.ZERO) > 0) {
             printTotalLine(out, "Propina:", "$" + order.getTip().toString(), false);
-            totalWithTip = total.add(order.getTip());
         }
-
-        // TOTAL (bold)
-        out.write(BOLD_ON);
-        printTotalLine(out, "TOTAL:", "$" + totalWithTip.setScale(2, RoundingMode.HALF_UP).toPlainString(), true);
-        out.write(BOLD_OFF);
 
         // Total in words (Mexican format: "Son: Quinientos pesos 00/100 M.N.")
         out.write(ALIGN_CENTER);
         out.write(FONT_B);
-        printLine(out, totalEnLetra(totalWithTip));
+        printLine(out, totalEnLetra(total));
         out.write(FONT_A);
 
         // ── Order info (centered) ──

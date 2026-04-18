@@ -1135,10 +1135,16 @@ public class OrderServiceImpl implements OrderService {
             if (detail.getSelectedComplements() != null) {
                 for (OrderDetailComplement odc : detail.getSelectedComplements()) {
                     Complement complement = odc.getComplement();
-                    if (complement != null && !complement.hasEnoughStock(odc.getQuantity())) {
-                        // Use negative ID to distinguish complement errors from item errors
-                        errors.put(-complement.getIdComplement(), 
-                                  "Complemento: " + complement.getName());
+                    if (complement != null) {
+                        // For sauces, multiply by parent item quantity (sauces are per-serving)
+                        int effectiveQty = odc.getQuantity();
+                        if (Boolean.TRUE.equals(complement.getIsSauce())) {
+                            effectiveQty = odc.getQuantity() * detail.getQuantity();
+                        }
+                        if (!complement.hasEnoughStock(effectiveQty)) {
+                            // Use negative ID to distinguish complement errors from item errors
+                            errors.put(-complement.getIdComplement(), complement.getName());
+                        }
                     }
                 }
             }
@@ -1379,6 +1385,13 @@ public class OrderServiceImpl implements OrderService {
             } catch (IllegalStateException e) {
                 log.error("Error deducting stock for complement {}: {}", 
                          odc.getComplement().getName(), e.getMessage());
+                // Wrap in user-friendly format (same as items) so frontend can parse the name
+                if (e.getMessage() != null && e.getMessage().startsWith("Stock insuficiente")) {
+                    throw new IllegalStateException(
+                        "¡Lo sentimos! No tenemos suficiente stock de los siguientes items: " +
+                        odc.getComplement().getName() +
+                        ". ¡Te invitamos a seguir descubriendo las deliciosas opciones de nuestro menú!", e);
+                }
                 throw e;
             }
         }

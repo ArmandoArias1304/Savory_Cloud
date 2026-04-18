@@ -265,6 +265,7 @@ public class ItemMenuServiceImpl implements ItemMenuService {
         existing.setRequiresBaristaPreparation(item.getRequiresBaristaPreparation());
         existing.setIsBuffet(item.getIsBuffet());
         existing.setIsCombo(item.getIsCombo());
+        existing.setDineInOnly(item.getDineInOnly());
         existing.setMaxSauces(item.getMaxSauces());
         existing.setUpdatedAt(LocalDateTime.now());
 

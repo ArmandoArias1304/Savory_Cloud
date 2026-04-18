@@ -553,10 +553,12 @@
                           id="tip"
                           step="0.01"
                           min="0"
+                          max="999999.99"
                           value="0.00"
+                          data-prev="0.00"
                           class="input-field w-full rounded-xl border-2 border-gray-300 bg-white dark:bg-gray-700 p-4 pl-11 text-xl font-bold text-gray-900 dark:text-white focus:outline-none"
                           placeholder="0.00"
-                          oninput="calculateTotalWithTip()"
+                          oninput="if(this.value.includes('.')){let p=this.value.split('.');if(p[1].length>2)this.value=p[0]+'.'+p[1].slice(0,2);}if(this.value!==''&&parseFloat(this.value)>999999.99){this.value=this.dataset.prev||'0';}else{this.dataset.prev=this.value;}if(this.value!==''&&parseFloat(this.value)<0)this.value='0';calculateTotalWithTip()"
                         />
                       </div>
                     </div>

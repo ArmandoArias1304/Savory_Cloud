@@ -319,14 +319,7 @@
                       <div
                         class="w-12 h-12 rounded-lg bg-gray-100 dark:bg-gray-800 overflow-hidden flex-shrink-0"
                       >
-                        <img
-                          th:if="${ic.complement.imageUrl != null && !ic.complement.imageUrl.isEmpty()}"
-                          th:src="${ic.complement.imageUrl}"
-                          th:alt="${ic.complement.name}"
-                          class="w-full h-full object-cover"
-                        />
                         <div
-                          th:if="${ic.complement.imageUrl == null || ic.complement.imageUrl.isEmpty()}"
                           class="w-full h-full flex items-center justify-center"
                         >
                           <span
