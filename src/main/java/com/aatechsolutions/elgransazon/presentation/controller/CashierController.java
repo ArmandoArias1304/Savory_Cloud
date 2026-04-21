@@ -898,22 +898,12 @@ public class CashierController {
                 order.setTable(null);
             }
 
-            // Keep the same employee (creator)
-            order.setEmployee(existingOrder.getEmployee());
-
-            // Prepare the order object with updated basic info
-            existingOrder.setOrderType(order.getOrderType());
-            existingOrder.setTable(order.getTable());
-            existingOrder.setCustomerName(order.getCustomerName());
-            existingOrder.setCustomerPhone(order.getCustomerPhone());
-            existingOrder.setDeliveryAddress(order.getDeliveryAddress());
-            existingOrder.setDeliveryReferences(order.getDeliveryReferences());
-            existingOrder.setPaymentMethod(order.getPaymentMethod());
-            existingOrder.setUpdatedBy(username);
+            // Set audit fields
+            order.setUpdatedBy(username);
 
             // Update ONLY basic order info (no items, no stock manipulation)
             // Items are managed separately via add-items and delete-item endpoints
-            Order updatedOrder = cashierOrderService.updateOrderInfo(id, existingOrder);
+            Order updatedOrder = cashierOrderService.updateOrderInfo(id, order);
 
             log.info("Order {} info updated successfully by cashier {}", updatedOrder.getOrderNumber(), username);
             redirectAttributes.addFlashAttribute("successMessage",

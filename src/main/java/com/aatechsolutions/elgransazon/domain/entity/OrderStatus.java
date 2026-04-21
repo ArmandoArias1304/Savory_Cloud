@@ -10,7 +10,7 @@ public enum OrderStatus {
     ON_THE_WAY("En camino"),      // Solo para DELIVERY
     DELIVERED("Entregado"),
     CANCELLED("Cancelado"),
-    PAID("Pagado");               // Para módulo futuro de pagos
+    PAID("Pagado");               
 
     private final String displayName;
 

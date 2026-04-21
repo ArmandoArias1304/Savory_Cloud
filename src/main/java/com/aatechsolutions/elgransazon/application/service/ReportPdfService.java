@@ -686,7 +686,7 @@ public class ReportPdfService {
             addSectionTitle(document, boldFont, "🚗 Repartidores - Entregas Realizadas");
             Table deliveryTable = new Table(new float[]{0.5f, 3, 1.5f, 2, 1.5f});
             deliveryTable.setWidth(UnitValue.createPercentValue(100));
-            addTableHeader(deliveryTable, boldFont, "#", "Nombre", "Entregas", "Total Entregado", "Propinas");
+            addTableHeader(deliveryTable, boldFont, "#", "Nombre", "Entregas", "Total Cobrado", "Propinas");
             
             int rank = 1;
             
@@ -922,7 +922,6 @@ public class ReportPdfService {
         addTableHeader(typeTable, boldFont, "Tipo de Orden", "Cantidad", "Ingresos", "% del Total");
 
         for (OrderType type : OrderType.values()) {
-            if (type == OrderType.DINE_IN) continue; // Clientes no pueden hacer pedidos para comer aquí
             long count = ordersByType.getOrDefault(type, 0L);
             BigDecimal revenue = revenueByType.getOrDefault(type, BigDecimal.ZERO);
             String percentage = totalCustomerOrdersCount > 0

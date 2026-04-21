@@ -206,14 +206,16 @@ public class FacturamaService {
             ArrayNode items = objectMapper.createArrayNode();
 
             for (OrderDetail detail : order.getOrderDetails()) {
-                // Use promotional price when a promotion was applied, otherwise original price
-                BigDecimal effectiveUnitPrice = detail.getPromotionAppliedPrice() != null
-                        ? detail.getPromotionAppliedPrice()
-                        : detail.getUnitPrice();
+                // Use the authoritative line subtotal stored on the OrderDetail
+                // (it already reflects any promotion: PERCENTAGE_DISCOUNT,
+                // FIXED_AMOUNT_DISCOUNT, BUY_X_PAY_Y, combo, etc.).
+                // Recalculating from promotionAppliedPrice × quantity can lose
+                // ±1 cent when the subtotal is not divisible exactly by quantity.
+                BigDecimal lineSubtotal = detail.getSubtotal();
 
-                // Add the item only if price > 0 (skip combo sub-items at $0)
-                if (effectiveUnitPrice != null && effectiveUnitPrice.compareTo(BigDecimal.ZERO) > 0) {
-                    addCfdiItem(items, detail.getItemMenu().getName(), detail.getQuantity(), effectiveUnitPrice);
+                // Add the item only if subtotal > 0 (skip combo sub-items at $0)
+                if (lineSubtotal != null && lineSubtotal.compareTo(BigDecimal.ZERO) > 0) {
+                    addCfdiItem(items, detail.getItemMenu().getName(), detail.getQuantity(), lineSubtotal);
                 }
 
                 // Always check complements — even zero-price items can have paid complements
@@ -228,8 +230,10 @@ public class FacturamaService {
                         if (Boolean.TRUE.equals(comp.getComplement().getIsSauce())) {
                             effectiveQty = effectiveQty * detail.getQuantity();
                         }
+                        // Pass the exact tax-included line total for the complement
+                        BigDecimal compLineTotal = compPrice.multiply(BigDecimal.valueOf(effectiveQty));
                         addCfdiItem(items, "Complemento - " + comp.getComplement().getName(),
-                                effectiveQty, compPrice);
+                                effectiveQty, compLineTotal);
                     }
                 }
             }
@@ -399,31 +403,38 @@ public class FacturamaService {
     }
 
     /**
-     * Add a CFDI line item with IVA 16% (desglosado from tax-included price).
-     * Restaurant prices include IVA, so we decompose:
-     *   UnitPrice (sin IVA) = price / 1.16
-     *   Tax = expectedTotal - subtotal  (NOT subtotal * 0.16)
+     * Add a CFDI line item with IVA 16% (desglosado from a tax-included LINE total).
      *
-     * We derive the tax as the difference between the tax-included total and the
-     * subtotal sin IVA.  This guarantees each line's total equals the exact
-     * tax-included price × quantity, so the CFDI grand total matches the order
-     * total without accumulated rounding errors across lines.
+     * IMPORTANT: the caller passes the exact tax-included total for the line
+     * (e.g. detail.getSubtotal() — the authoritative value stored in the DB),
+     * NOT a unit price. The unit price sin IVA is derived from that total so
+     * that Σ item.Total === order.getTotal() with no ±1 cent drift caused by
+     * rounding promotionAppliedPrice and re-multiplying.
+     *
+     * Tax = expectedTotal - subtotal (NOT subtotal * 0.16) so subtotal + tax
+     * equals the line total exactly.
      */
-    private void addCfdiItem(ArrayNode items, String description, int quantity, BigDecimal taxIncludedPrice) {
+    private void addCfdiItem(ArrayNode items, String description, int quantity, BigDecimal taxIncludedLineTotal) {
         ObjectNode item = objectMapper.createObjectNode();
 
-        BigDecimal unitPriceSinIva = taxIncludedPrice.divide(BigDecimal.valueOf(1.16), 6, RoundingMode.HALF_UP);
-        BigDecimal subtotal = unitPriceSinIva.multiply(BigDecimal.valueOf(quantity)).setScale(2, RoundingMode.HALF_UP);
-        // Derive tax from the exact tax-included amount so line total = price × qty
-        BigDecimal expectedTotal = taxIncludedPrice.multiply(BigDecimal.valueOf(quantity)).setScale(2, RoundingMode.HALF_UP);
-        BigDecimal taxAmount = expectedTotal.subtract(subtotal);
-        BigDecimal total = expectedTotal;
+        // Snap the line total to 2 decimals (it should already be, but be safe)
+        BigDecimal total = taxIncludedLineTotal.setScale(2, RoundingMode.HALF_UP);
+        // UnitPrice sin IVA: derive per-unit con IVA first (high precision), then strip IVA.
+        // This preserves the original per-unit menu price (e.g. $69.57 -> $59.97) and avoids
+        // the artifact of rounding the line subtotal to 2 decimals before dividing by quantity
+        // (which would turn $59.975 into $59.98).
+        BigDecimal unitPriceConIva = total.divide(BigDecimal.valueOf(quantity), 6, RoundingMode.HALF_UP);
+        BigDecimal unitPriceSinIva = unitPriceConIva.divide(BigDecimal.valueOf(1.16), 6, RoundingMode.HALF_UP);
+        // Subtotal sin IVA derived from the exact line total (independent of unit price rounding)
+        BigDecimal subtotal = total.divide(BigDecimal.valueOf(1.16), 2, RoundingMode.HALF_UP);
+        // Derive tax from the exact tax-included total so subtotal + tax = total exactly
+        BigDecimal taxAmount = total.subtract(subtotal);
 
         item.put("ProductCode", "90101500"); // Restaurantes y comida para llevar
         item.put("Description", description);
         item.put("Unit", "Servicio");
         item.put("UnitCode", "E48"); // Unidad de servicio
-        item.put("UnitPrice", unitPriceSinIva.setScale(6, RoundingMode.HALF_UP).doubleValue());
+        item.put("UnitPrice", unitPriceSinIva.doubleValue());
         item.put("Quantity", quantity);
         item.put("Subtotal", subtotal.doubleValue());
         item.put("TaxObject", "02"); // Sí objeto de impuesto
