@@ -127,6 +127,11 @@ public class SystemConfigurationServiceImpl implements SystemConfigurationServic
         } else {
             existingConfig.setDefaultDeliveryCost(BigDecimal.ZERO);
         }
+
+        // Restaurant geolocation + max delivery distance (all nullable; null disables the check).
+        existingConfig.setRestaurantLatitude(configuration.getRestaurantLatitude());
+        existingConfig.setRestaurantLongitude(configuration.getRestaurantLongitude());
+        existingConfig.setDeliveryMaxDistanceMeters(configuration.getDeliveryMaxDistanceMeters());
         
         log.debug("Existing averageConsumptionTimeMinutes after update: {}", existingConfig.getAverageConsumptionTimeMinutes());
         

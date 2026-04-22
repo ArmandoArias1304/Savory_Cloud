@@ -90,6 +90,25 @@ public class SystemConfiguration implements Serializable {
     @Builder.Default
     private BigDecimal defaultDeliveryCost = BigDecimal.ZERO;
 
+    // ========== Restaurant Geolocation (for delivery range validation) ==========
+    // Nullable: when both coords + maxDistance are configured, delivery is restricted
+    // to addresses within the configured straight-line radius (meters) from these coords.
+    @DecimalMin(value = "-90.0", message = "Latitud inválida")
+    @DecimalMax(value = "90.0", message = "Latitud inválida")
+    @Column(name = "restaurant_latitude")
+    private Double restaurantLatitude;
+
+    @DecimalMin(value = "-180.0", message = "Longitud inválida")
+    @DecimalMax(value = "180.0", message = "Longitud inválida")
+    @Column(name = "restaurant_longitude")
+    private Double restaurantLongitude;
+
+    // Max delivery distance in METERS (straight-line). Null or <=0 disables the check.
+    @Min(value = 1, message = "La distancia máxima debe ser al menos 1 metro")
+    @Max(value = 1_000_000, message = "La distancia máxima no puede exceder 1,000,000 metros")
+    @Column(name = "delivery_max_distance_meters")
+    private Integer deliveryMaxDistanceMeters;
+
     @NotNull(message = "El tiempo promedio de consumo es obligatorio")
     @Min(value = 30, message = "El tiempo promedio de consumo debe ser al menos 30 minutos")
     @Max(value = 480, message = "El tiempo promedio de consumo no puede exceder los 480 minutos (8 horas)")
@@ -230,6 +249,57 @@ public class SystemConfiguration implements Serializable {
             return isDeliveryPaymentMethodEnabled(type);
         }
         return isPaymentMethodEnabled(type);
+    }
+
+    // ========== Delivery Range Helpers (Haversine) ==========
+
+    /**
+     * True only when the admin has configured BOTH the restaurant coords AND a positive max distance.
+     * If false, no delivery distance check should be performed.
+     */
+    public boolean hasDeliveryRangeRestriction() {
+        return restaurantLatitude != null
+                && restaurantLongitude != null
+                && deliveryMaxDistanceMeters != null
+                && deliveryMaxDistanceMeters > 0;
+    }
+
+    /**
+     * Straight-line (great-circle) distance in METERS between the configured restaurant
+     * coordinates and the given point, using the Haversine formula.
+     * Returns null if the restaurant coords are not configured.
+     */
+    public Double distanceToInMeters(Double targetLatitude, Double targetLongitude) {
+        if (restaurantLatitude == null || restaurantLongitude == null
+                || targetLatitude == null || targetLongitude == null) {
+            return null;
+        }
+        final double earthRadiusMeters = 6_371_000d;
+        double lat1Rad = Math.toRadians(restaurantLatitude);
+        double lat2Rad = Math.toRadians(targetLatitude);
+        double dLat = Math.toRadians(targetLatitude - restaurantLatitude);
+        double dLng = Math.toRadians(targetLongitude - restaurantLongitude);
+        double a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
+                + Math.cos(lat1Rad) * Math.cos(lat2Rad)
+                * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return earthRadiusMeters * c;
+    }
+
+    /**
+     * Returns true when the given coords are within the configured delivery range,
+     * OR when no restriction has been configured (open policy).
+     */
+    public boolean isWithinDeliveryRange(Double targetLatitude, Double targetLongitude) {
+        if (!hasDeliveryRangeRestriction()) {
+            return true;
+        }
+        Double distance = distanceToInMeters(targetLatitude, targetLongitude);
+        if (distance == null) {
+            // Restriction is configured but target coords missing → reject (be safe).
+            return false;
+        }
+        return distance <= deliveryMaxDistanceMeters;
     }
 
     // Helper method to get active social networks

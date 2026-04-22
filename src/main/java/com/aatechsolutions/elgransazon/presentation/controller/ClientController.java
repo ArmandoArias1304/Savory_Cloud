@@ -433,6 +433,18 @@ public class ClientController {
                         "message", "Para pedidos a domicilio debes seleccionar una dirección guardada"
                     ));
                 }
+
+                // Validate delivery range (only when admin has configured restaurant coords + max distance).
+                SystemConfiguration deliveryConfig = systemConfigurationService.getConfiguration();
+                if (deliveryConfig != null && deliveryConfig.hasDeliveryRangeRestriction()
+                        && !deliveryConfig.isWithinDeliveryRange(deliveryLatitude, deliveryLongitude)) {
+                    log.warn("Customer {} blocked from creating DELIVERY order — address out of range (lat={}, lng={})",
+                            customer.getUsername(), deliveryLatitude, deliveryLongitude);
+                    return ResponseEntity.badRequest().body(Map.of(
+                        "success", false,
+                        "message", "El servicio de entrega a domicilio no está disponible para su ubicación"
+                    ));
+                }
             }
             
             BigDecimal taxRate = new BigDecimal(systemConfigurationService.getConfiguration().getTaxRate().toString());
@@ -1779,7 +1791,18 @@ public class ClientController {
             Double latitude = ((Number) addressData.get("latitude")).doubleValue();
             Double longitude = ((Number) addressData.get("longitude")).doubleValue();
             boolean setAsDefault = Boolean.TRUE.equals(addressData.get("setAsDefault"));
-            
+
+            // Block saving an address that is outside the configured delivery range.
+            SystemConfiguration cfg = systemConfigurationService.getConfiguration();
+            if (cfg != null && cfg.hasDeliveryRangeRestriction() && !cfg.isWithinDeliveryRange(latitude, longitude)) {
+                log.warn("Customer {} blocked from creating address — out of delivery range (lat={}, lng={})",
+                        customer.getUsername(), latitude, longitude);
+                return ResponseEntity.badRequest().body(Map.of(
+                        "success", false,
+                        "message", "El servicio de entrega a domicilio no está disponible para su ubicación"
+                ));
+            }
+
             var newAddress = customerAddressService.createAddress(
                     customer.getIdCustomer(), label, address, reference, 
                     latitude, longitude, setAsDefault);
@@ -1818,7 +1841,18 @@ public class ClientController {
             Double latitude = ((Number) addressData.get("latitude")).doubleValue();
             Double longitude = ((Number) addressData.get("longitude")).doubleValue();
             boolean setAsDefault = Boolean.TRUE.equals(addressData.get("setAsDefault"));
-            
+
+            // Block updating an address that is outside the configured delivery range.
+            SystemConfiguration cfg = systemConfigurationService.getConfiguration();
+            if (cfg != null && cfg.hasDeliveryRangeRestriction() && !cfg.isWithinDeliveryRange(latitude, longitude)) {
+                log.warn("Customer {} blocked from updating address {} — out of delivery range (lat={}, lng={})",
+                        customer.getUsername(), addressId, latitude, longitude);
+                return ResponseEntity.badRequest().body(Map.of(
+                        "success", false,
+                        "message", "El servicio de entrega a domicilio no está disponible para su ubicación"
+                ));
+            }
+
             customerAddressService.updateAddress(
                     addressId, customer.getIdCustomer(), label, address, 
                     reference, latitude, longitude, setAsDefault);

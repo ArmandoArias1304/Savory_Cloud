@@ -882,6 +882,180 @@
                   </div>
                 </div>
 
+                <!-- Delivery Range (Restaurant geolocation + max distance) -->
+                <div class="mt-6 p-5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/40">
+                  <div class="flex items-start justify-between mb-3 gap-3">
+                    <div>
+                      <h4 class="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                        <span class="material-symbols-outlined text-primary">my_location</span>
+                        Rango de Entrega a Domicilio
+                      </h4>
+                      <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        Si configura las coordenadas del restaurante <b>y</b> una distancia máxima,
+                        los clientes solo podrán hacer pedidos a domicilio dentro de ese radio (en línea recta).
+                        Deje los tres campos vacíos para no aplicar ninguna restricción.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onclick="useRestaurantCurrentLocation()"
+                      class="shrink-0 inline-flex items-center gap-1 px-3 py-2 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 text-xs font-semibold"
+                    >
+                      <span class="material-symbols-outlined text-base">gps_fixed</span>
+                      Usar mi ubicación
+                    </button>
+                  </div>
+
+                  <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label
+                        for="restaurantLatitude"
+                        class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+                      >
+                        Latitud
+                      </label>
+                      <input
+                        type="number"
+                        id="restaurantLatitude"
+                        th:field="*{restaurantLatitude}"
+                        step="0.000001"
+                        min="-90"
+                        max="90"
+                        placeholder="Ej: 18.0059"
+                        class="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary focus:outline-none"
+                      />
+                      <p
+                        class="mt-1 text-sm text-red-600 dark:text-red-400"
+                        th:if="${#fields.hasErrors('restaurantLatitude')}"
+                        th:errors="*{restaurantLatitude}"
+                      ></p>
+                    </div>
+                    <div>
+                      <label
+                        for="restaurantLongitude"
+                        class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+                      >
+                        Longitud
+                      </label>
+                      <input
+                        type="number"
+                        id="restaurantLongitude"
+                        th:field="*{restaurantLongitude}"
+                        step="0.000001"
+                        min="-180"
+                        max="180"
+                        placeholder="Ej: -93.3746"
+                        class="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary focus:outline-none"
+                      />
+                      <p
+                        class="mt-1 text-sm text-red-600 dark:text-red-400"
+                        th:if="${#fields.hasErrors('restaurantLongitude')}"
+                        th:errors="*{restaurantLongitude}"
+                      ></p>
+                    </div>
+                    <div>
+                      <label
+                        for="deliveryMaxDistanceMeters"
+                        class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+                      >
+                        Distancia máx. (metros)
+                      </label>
+                      <input
+                        type="number"
+                        id="deliveryMaxDistanceMeters"
+                        th:field="*{deliveryMaxDistanceMeters}"
+                        step="1"
+                        min="1"
+                        max="1000000"
+                        placeholder="Ej: 3000"
+                        class="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary focus:outline-none"
+                      />
+                      <p
+                        class="mt-1 text-sm text-red-600 dark:text-red-400"
+                        th:if="${#fields.hasErrors('deliveryMaxDistanceMeters')}"
+                        th:errors="*{deliveryMaxDistanceMeters}"
+                      ></p>
+                    </div>
+                  </div>
+                </div>
+
+                <script>
+                  function useRestaurantCurrentLocation() {
+                    const isDark = () =>
+                      document.documentElement.classList.contains("dark");
+                    const swalTheme = () => ({
+                      background: isDark() ? "#1f2937" : "#ffffff",
+                      color: isDark() ? "#f3f4f6" : "#1f2937",
+                      confirmButtonColor: "#38e07b",
+                    });
+
+                    if (!navigator.geolocation) {
+                      Swal.fire({
+                        icon: "error",
+                        title: "Geolocalización no disponible",
+                        text: "Su navegador no soporta geolocalización.",
+                        ...swalTheme(),
+                      });
+                      return;
+                    }
+
+                    let cancelled = false;
+
+                    Swal.fire({
+                      title: "Obteniendo su ubicación...",
+                      html:
+                        '<div class="flex flex-col items-center gap-3">' +
+                        '  <div class="inline-block w-12 h-12 border-4 border-gray-200 border-t-primary rounded-full animate-spin"></div>' +
+                        '  <p class="text-sm text-gray-600 dark:text-gray-400">Permita el acceso a la ubicación en su navegador.</p>' +
+                        "</div>",
+                      showConfirmButton: false,
+                      showCloseButton: true,
+                      allowOutsideClick: false,
+                      allowEscapeKey: true,
+                      ...swalTheme(),
+                      didOpen: () => {
+                        navigator.geolocation.getCurrentPosition(
+                          function (pos) {
+                            if (cancelled) return;
+                            document.getElementById(
+                              "restaurantLatitude"
+                            ).value = pos.coords.latitude.toFixed(6);
+                            document.getElementById(
+                              "restaurantLongitude"
+                            ).value = pos.coords.longitude.toFixed(6);
+                            Swal.fire({
+                              icon: "success",
+                              title: "Ubicación capturada",
+                              text:
+                                "Lat: " +
+                                pos.coords.latitude.toFixed(6) +
+                                ", Lng: " +
+                                pos.coords.longitude.toFixed(6) +
+                                ". No olvide guardar la configuración.",
+                              timer: 2500,
+                              showConfirmButton: false,
+                              ...swalTheme(),
+                            });
+                          },
+                          function (err) {
+                            if (cancelled) return;
+                            Swal.fire({
+                              icon: "error",
+                              title: "No se pudo obtener la ubicación",
+                              text: err.message || "Permiso denegado.",
+                              ...swalTheme(),
+                            });
+                          },
+                          { enableHighAccuracy: true, timeout: 15000 }
+                        );
+                      },
+                      willClose: () => {
+                        cancelled = true;
+                      },
+                    });
+                  }
+                </script>
+
                 <!-- Average Consumption Time -->
                 <div>
                   <label

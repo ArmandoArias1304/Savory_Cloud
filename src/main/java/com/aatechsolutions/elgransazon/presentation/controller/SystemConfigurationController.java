@@ -9,10 +9,13 @@ import com.aatechsolutions.elgransazon.domain.entity.*;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.propertyeditors.CustomNumberEditor;
+import org.springframework.beans.propertyeditors.StringTrimmerEditor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
+import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
@@ -36,6 +39,19 @@ public class SystemConfigurationController {
     private final SocialNetworkService socialNetworkService;
     private final LicenseService licenseService;
     private final ImageStorageService imageStorageService;
+
+    /**
+     * Treat empty form inputs as null so the optional Double/Integer fields
+     * (restaurantLatitude/Longitude, deliveryMaxDistanceMeters) bind cleanly.
+     */
+    @InitBinder
+    public void initBinder(WebDataBinder binder) {
+        binder.registerCustomEditor(String.class, new StringTrimmerEditor(true));
+        // Allow empty form inputs to bind as null on optional numeric fields
+        // (restaurantLatitude / restaurantLongitude / deliveryMaxDistanceMeters).
+        binder.registerCustomEditor(Double.class, new CustomNumberEditor(Double.class, true));
+        binder.registerCustomEditor(Integer.class, new CustomNumberEditor(Integer.class, true));
+    }
 
     /**
      * Display system configuration page
