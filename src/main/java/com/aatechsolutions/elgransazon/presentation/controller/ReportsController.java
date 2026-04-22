@@ -85,8 +85,8 @@ public class ReportsController {
         // Sort by payment date (most recent first)
         paidOrders = paidOrders.stream()
             .sorted((o1, o2) -> {
-                LocalDateTime date1 = o1.getUpdatedAt() != null ? o1.getUpdatedAt() : o1.getCreatedAt();
-                LocalDateTime date2 = o2.getUpdatedAt() != null ? o2.getUpdatedAt() : o2.getCreatedAt();
+                LocalDateTime date1 = o1.getPaidAt() != null ? o1.getPaidAt() : (o1.getUpdatedAt() != null ? o1.getUpdatedAt() : o1.getCreatedAt());
+                LocalDateTime date2 = o2.getPaidAt() != null ? o2.getPaidAt() : (o2.getUpdatedAt() != null ? o2.getUpdatedAt() : o2.getCreatedAt());
                 return date2.compareTo(date1);
             })
             .collect(Collectors.toList());
@@ -111,6 +111,17 @@ public class ReportsController {
         List<Map<String, Object>> topSellingComplements = calculateTopSellingComplements(paidOrders, 10);
         BigDecimal totalComplementsSales = calculateTotalComplementsSales(paidOrders);
 
+        // Delivery cost totals (only DELIVERY orders contribute)
+        List<Order> deliveryOrders = paidOrders.stream()
+            .filter(o -> o.getOrderType() == OrderType.DELIVERY
+                && o.getDeliveryCost() != null
+                && o.getDeliveryCost().compareTo(BigDecimal.ZERO) > 0)
+            .collect(Collectors.toList());
+        BigDecimal totalDeliveryCost = deliveryOrders.stream()
+            .map(Order::getDeliveryCost)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+        long totalDeliveryOrders = deliveryOrders.size();
+
         // Total item-only sales (sum of category sales, excludes complements)
         BigDecimal totalItemSales = salesByCategory.values().stream()
             .reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -124,6 +135,8 @@ public class ReportsController {
         model.addAttribute("topSellingItems", topSellingItems);
         model.addAttribute("topSellingComplements", topSellingComplements);
         model.addAttribute("totalComplementsSales", totalComplementsSales);
+        model.addAttribute("totalDeliveryCost", totalDeliveryCost);
+        model.addAttribute("totalDeliveryOrders", totalDeliveryOrders);
         model.addAttribute("startDate", startDate);
         model.addAttribute("endDate", endDate);
 
@@ -163,9 +176,12 @@ public class ReportsController {
 
         return orders.stream()
             .filter(order -> {
-                LocalDateTime orderDate = order.getUpdatedAt() != null ? 
-                    order.getUpdatedAt() : order.getCreatedAt();
-                
+                // Filter PAID orders by their authoritative payment timestamp.
+                // Fall back to updatedAt/createdAt only for legacy orders missing paidAt.
+                LocalDateTime orderDate = order.getPaidAt() != null
+                        ? order.getPaidAt()
+                        : (order.getUpdatedAt() != null ? order.getUpdatedAt() : order.getCreatedAt());
+
                 if (orderDate == null) return false;
                 
                 boolean afterStart = finalStartDateTime == null || !orderDate.isBefore(finalStartDateTime);

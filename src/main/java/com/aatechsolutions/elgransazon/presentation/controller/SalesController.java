@@ -81,11 +81,14 @@ public class SalesController {
                 .collect(Collectors.toList());
         }
 
-        // Sort by payment date (most recent first)
+        // Sort by payment date (most recent first). Use paidAt (authoritative payment timestamp);
+        // fall back to updatedAt/createdAt only for legacy rows missing paidAt.
         paidOrders = paidOrders.stream()
             .sorted((o1, o2) -> {
-                LocalDateTime date1 = o1.getUpdatedAt() != null ? o1.getUpdatedAt() : o1.getCreatedAt();
-                LocalDateTime date2 = o2.getUpdatedAt() != null ? o2.getUpdatedAt() : o2.getCreatedAt();
+                LocalDateTime date1 = o1.getPaidAt() != null ? o1.getPaidAt()
+                        : (o1.getUpdatedAt() != null ? o1.getUpdatedAt() : o1.getCreatedAt());
+                LocalDateTime date2 = o2.getPaidAt() != null ? o2.getPaidAt()
+                        : (o2.getUpdatedAt() != null ? o2.getUpdatedAt() : o2.getCreatedAt());
                 return date2.compareTo(date1);
             })
             .collect(Collectors.toList());
@@ -185,8 +188,11 @@ public class SalesController {
 
         return orders.stream()
             .filter(order -> {
-                LocalDateTime orderDate = order.getUpdatedAt() != null ? 
-                    order.getUpdatedAt() : order.getCreatedAt();
+                // PAID orders are filtered by their authoritative payment timestamp (paidAt).
+                // Legacy fallback to updatedAt/createdAt only when paidAt is missing.
+                LocalDateTime orderDate = order.getPaidAt() != null
+                        ? order.getPaidAt()
+                        : (order.getUpdatedAt() != null ? order.getUpdatedAt() : order.getCreatedAt());
                 
                 if (orderDate == null) return false;
                 

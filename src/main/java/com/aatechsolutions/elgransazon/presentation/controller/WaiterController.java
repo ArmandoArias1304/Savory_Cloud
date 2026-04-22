@@ -136,12 +136,17 @@ public class WaiterController {
             LocalDateTime startOfDay = dateTimeService.startOfDayUtc(dateTimeService.todayLocal());
             LocalDateTime endOfDay = dateTimeService.endOfDayUtc(dateTimeService.todayLocal());
             
+            // Filter today's paid orders by their authoritative payment timestamp (paidAt),
+            // not by createdAt — an order created on day N can be paid on day N+1, and the
+            // tip/revenue must be reported on the day it was actually collected.
             List<Order> todaysPaidOrders = allPaidOrders.stream()
                     .filter(order -> {
-                        LocalDateTime createdAt = order.getCreatedAt();
-                        return createdAt != null && 
-                               !createdAt.isBefore(startOfDay) && 
-                               !createdAt.isAfter(endOfDay);
+                        LocalDateTime paidAt = order.getPaidAt() != null
+                                ? order.getPaidAt()
+                                : (order.getUpdatedAt() != null ? order.getUpdatedAt() : order.getCreatedAt());
+                        return paidAt != null &&
+                               !paidAt.isBefore(startOfDay) &&
+                               !paidAt.isAfter(endOfDay);
                     })
                     .toList();
             
@@ -234,7 +239,13 @@ public class WaiterController {
             long todayInPreparation = todaysOrders.stream().filter(o -> o.getStatus() == OrderStatus.IN_PREPARATION).count();
             long todayReady = todaysOrders.stream().filter(o -> o.getStatus() == OrderStatus.READY).count();
             long todayDelivered = todaysOrders.stream().filter(o -> o.getStatus() == OrderStatus.DELIVERED).count();
-            long todayPaid = todaysOrders.stream().filter(o -> o.getStatus() == OrderStatus.PAID).count();
+            long todayPaid = paidOrders.stream()
+                    .filter(order -> {
+                        LocalDateTime paidAt = order.getPaidAt() != null ? order.getPaidAt()
+                                : (order.getUpdatedAt() != null ? order.getUpdatedAt() : order.getCreatedAt());
+                        return paidAt != null && !paidAt.isBefore(startOfDay) && !paidAt.isAfter(endOfDay);
+                    })
+                    .count();
             long todayCancelled = todaysOrders.stream().filter(o -> o.getStatus() == OrderStatus.CANCELLED).count();
             
             // Calculate revenue and tips
@@ -246,13 +257,21 @@ public class WaiterController {
                     .map(order -> order.getTip() != null ? order.getTip() : BigDecimal.ZERO)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
             
-            BigDecimal todayRevenue = todaysOrders.stream()
-                    .filter(o -> o.getStatus() == OrderStatus.PAID)
+            BigDecimal todayRevenue = paidOrders.stream()
+                    .filter(order -> {
+                        LocalDateTime paidAt = order.getPaidAt() != null ? order.getPaidAt()
+                                : (order.getUpdatedAt() != null ? order.getUpdatedAt() : order.getCreatedAt());
+                        return paidAt != null && !paidAt.isBefore(startOfDay) && !paidAt.isAfter(endOfDay);
+                    })
                     .map(order -> order.getTotal() != null ? order.getTotal() : BigDecimal.ZERO)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
             
-            BigDecimal todayTips = todaysOrders.stream()
-                    .filter(o -> o.getStatus() == OrderStatus.PAID)
+            BigDecimal todayTips = paidOrders.stream()
+                    .filter(order -> {
+                        LocalDateTime paidAt = order.getPaidAt() != null ? order.getPaidAt()
+                                : (order.getUpdatedAt() != null ? order.getUpdatedAt() : order.getCreatedAt());
+                        return paidAt != null && !paidAt.isBefore(startOfDay) && !paidAt.isAfter(endOfDay);
+                    })
                     .map(order -> order.getTip() != null ? order.getTip() : BigDecimal.ZERO)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
             
@@ -281,13 +300,21 @@ public class WaiterController {
                 
                 long dayOrderCount = dayOrders.size();
                 
-                BigDecimal dayRevenue = dayOrders.stream()
-                        .filter(o -> o.getStatus() == OrderStatus.PAID)
+                BigDecimal dayRevenue = paidOrders.stream()
+                        .filter(order -> {
+                            LocalDateTime paidAt = order.getPaidAt() != null ? order.getPaidAt()
+                                    : (order.getUpdatedAt() != null ? order.getUpdatedAt() : order.getCreatedAt());
+                            return paidAt != null && !paidAt.isBefore(dayStart) && !paidAt.isAfter(dayEnd);
+                        })
                         .map(order -> order.getTotal() != null ? order.getTotal() : BigDecimal.ZERO)
                         .reduce(BigDecimal.ZERO, BigDecimal::add);
                 
-                BigDecimal dayTips = dayOrders.stream()
-                        .filter(o -> o.getStatus() == OrderStatus.PAID)
+                BigDecimal dayTips = paidOrders.stream()
+                        .filter(order -> {
+                            LocalDateTime paidAt = order.getPaidAt() != null ? order.getPaidAt()
+                                    : (order.getUpdatedAt() != null ? order.getUpdatedAt() : order.getCreatedAt());
+                            return paidAt != null && !paidAt.isBefore(dayStart) && !paidAt.isAfter(dayEnd);
+                        })
                         .map(order -> order.getTip() != null ? order.getTip() : BigDecimal.ZERO)
                         .reduce(BigDecimal.ZERO, BigDecimal::add);
                 
@@ -422,11 +449,12 @@ public class WaiterController {
                         List<Order> todayPaidOrders = orderRepository.findByEmployeeId(waiter.getIdEmpleado())
                                 .stream()
                                 .filter(order -> {
-                                    LocalDateTime createdAt = order.getCreatedAt();
-                                    return order.getStatus() == OrderStatus.PAID &&
-                                           createdAt != null && 
-                                           !createdAt.isBefore(startOfDay) && 
-                                           !createdAt.isAfter(endOfDay);
+                                    if (order.getStatus() != OrderStatus.PAID) return false;
+                                    LocalDateTime paidAt = order.getPaidAt() != null ? order.getPaidAt()
+                                            : (order.getUpdatedAt() != null ? order.getUpdatedAt() : order.getCreatedAt());
+                                    return paidAt != null &&
+                                           !paidAt.isBefore(startOfDay) && 
+                                           !paidAt.isAfter(endOfDay);
                                 })
                                 .toList();
                         

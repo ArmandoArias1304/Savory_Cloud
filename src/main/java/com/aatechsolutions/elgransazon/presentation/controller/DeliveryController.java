@@ -182,7 +182,11 @@ public class DeliveryController {
         List<Order> completedOrders = new java.util.ArrayList<>();
         completedOrders.addAll(paidOrders);
         completedOrders.addAll(cancelledOrders);
-        completedOrders.sort((o1, o2) -> o2.getUpdatedAt().compareTo(o1.getUpdatedAt()));
+        completedOrders.sort((o1, o2) -> {
+            java.time.LocalDateTime d1 = o1.getPaidAt() != null ? o1.getPaidAt() : (o1.getUpdatedAt() != null ? o1.getUpdatedAt() : o1.getCreatedAt());
+            java.time.LocalDateTime d2 = o2.getPaidAt() != null ? o2.getPaidAt() : (o2.getUpdatedAt() != null ? o2.getUpdatedAt() : o2.getCreatedAt());
+            return d2.compareTo(d1);
+        });
         
         log.info("Found {} completed deliveries (PAID: {}, CANCELLED: {}) for delivery person {}", 
             completedOrders.size(), paidOrders.size(), cancelledOrders.size(), username);
@@ -432,10 +436,11 @@ public class DeliveryController {
             
             List<Order> todaysPaidOrders = allPaidOrders.stream()
                     .filter(order -> {
-                        java.time.LocalDateTime createdAt = order.getCreatedAt();
-                        return createdAt != null && 
-                               !createdAt.isBefore(startOfDay) && 
-                               !createdAt.isAfter(endOfDay);
+                        java.time.LocalDateTime paidAt = order.getPaidAt() != null ? order.getPaidAt()
+                                : (order.getUpdatedAt() != null ? order.getUpdatedAt() : order.getCreatedAt());
+                        return paidAt != null && 
+                               !paidAt.isBefore(startOfDay) && 
+                               !paidAt.isAfter(endOfDay);
                     })
                     .collect(Collectors.toList());
             
@@ -558,7 +563,13 @@ public class DeliveryController {
             long todayInPreparation = todaysOrders.stream().filter(o -> o.getStatus() == OrderStatus.IN_PREPARATION).count();
             long todayReady = todaysOrders.stream().filter(o -> o.getStatus() == OrderStatus.READY).count();
             long todayDelivered = todaysOrders.stream().filter(o -> o.getStatus() == OrderStatus.DELIVERED).count();
-            long todayPaid = todaysOrders.stream().filter(o -> o.getStatus() == OrderStatus.PAID).count();
+            long todayPaid = paidOrders.stream()
+                    .filter(order -> {
+                        java.time.LocalDateTime paidAt = order.getPaidAt() != null ? order.getPaidAt()
+                                : (order.getUpdatedAt() != null ? order.getUpdatedAt() : order.getCreatedAt());
+                        return paidAt != null && !paidAt.isBefore(startOfDay) && !paidAt.isAfter(endOfDay);
+                    })
+                    .count();
             long todayCancelled = todaysOrders.stream().filter(o -> o.getStatus() == OrderStatus.CANCELLED).count();
             
             // Calculate revenue and tips
@@ -570,13 +581,21 @@ public class DeliveryController {
                     .map(order -> order.getTip() != null ? order.getTip() : BigDecimal.ZERO)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
             
-            BigDecimal todayRevenue = todaysOrders.stream()
-                    .filter(o -> o.getStatus() == OrderStatus.PAID)
+            BigDecimal todayRevenue = paidOrders.stream()
+                    .filter(order -> {
+                        java.time.LocalDateTime paidAt = order.getPaidAt() != null ? order.getPaidAt()
+                                : (order.getUpdatedAt() != null ? order.getUpdatedAt() : order.getCreatedAt());
+                        return paidAt != null && !paidAt.isBefore(startOfDay) && !paidAt.isAfter(endOfDay);
+                    })
                     .map(order -> order.getTotal() != null ? order.getTotal() : BigDecimal.ZERO)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
             
-            BigDecimal todayTips = todaysOrders.stream()
-                    .filter(o -> o.getStatus() == OrderStatus.PAID)
+            BigDecimal todayTips = paidOrders.stream()
+                    .filter(order -> {
+                        java.time.LocalDateTime paidAt = order.getPaidAt() != null ? order.getPaidAt()
+                                : (order.getUpdatedAt() != null ? order.getUpdatedAt() : order.getCreatedAt());
+                        return paidAt != null && !paidAt.isBefore(startOfDay) && !paidAt.isAfter(endOfDay);
+                    })
                     .map(order -> order.getTip() != null ? order.getTip() : BigDecimal.ZERO)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
             
@@ -605,13 +624,21 @@ public class DeliveryController {
                 
                 long dayOrderCount = dayOrders.size();
                 
-                BigDecimal dayRevenue = dayOrders.stream()
-                        .filter(o -> o.getStatus() == OrderStatus.PAID)
+                BigDecimal dayRevenue = paidOrders.stream()
+                        .filter(order -> {
+                            java.time.LocalDateTime paidAt = order.getPaidAt() != null ? order.getPaidAt()
+                                    : (order.getUpdatedAt() != null ? order.getUpdatedAt() : order.getCreatedAt());
+                            return paidAt != null && !paidAt.isBefore(dayStart) && !paidAt.isAfter(dayEnd);
+                        })
                         .map(order -> order.getTotal() != null ? order.getTotal() : BigDecimal.ZERO)
                         .reduce(BigDecimal.ZERO, BigDecimal::add);
                 
-                BigDecimal dayTips = dayOrders.stream()
-                        .filter(o -> o.getStatus() == OrderStatus.PAID)
+                BigDecimal dayTips = paidOrders.stream()
+                        .filter(order -> {
+                            java.time.LocalDateTime paidAt = order.getPaidAt() != null ? order.getPaidAt()
+                                    : (order.getUpdatedAt() != null ? order.getUpdatedAt() : order.getCreatedAt());
+                            return paidAt != null && !paidAt.isBefore(dayStart) && !paidAt.isAfter(dayEnd);
+                        })
                         .map(order -> order.getTip() != null ? order.getTip() : BigDecimal.ZERO)
                         .reduce(BigDecimal.ZERO, BigDecimal::add);
                 

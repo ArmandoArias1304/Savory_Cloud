@@ -297,6 +297,13 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     long countByCompanyAndFacturamaCfdiIdIsNotNull(Company company);
 
     /**
+     * Count invoiced orders by company using the CFDI timestamp.
+     * Preferred over {@link #countByCompanyAndFacturamaCfdiIdIsNotNull(Company)}
+     * because it shares the same field used by date-range reports, keeping totals consistent.
+     */
+    long countByCompanyAndFacturamaCfdiCreatedAtIsNotNull(Company company);
+
+    /**
      * Count invoiced orders (with CFDI) by company and date range (UTC)
      */
     @Query("SELECT COUNT(o) FROM Order o WHERE o.company = :company " +
@@ -304,6 +311,30 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
            "AND o.facturamaCfdiCreatedAt >= :startDate " +
            "AND o.facturamaCfdiCreatedAt < :endDate")
     long countCfdisByCompanyAndDateRange(
+            @Param("company") Company company,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate);
+
+    /**
+     * Aggregate PAID orders for a company within a date range (UTC), broken down by whether
+     * the order was invoiced (has a Facturama CFDI) or not.
+     *
+     * Filters by {@code paidAt} (authoritative payment timestamp; never overwritten after the
+     * status transition to PAID, so safe even after autofactura CFDI saves).
+     *
+     * Returns a single row: [paidCount, paidTotal, invoicedCount, invoicedTotal].
+     */
+    @Query("SELECT " +
+           "  COUNT(o), " +
+           "  COALESCE(SUM(o.total), 0), " +
+           "  SUM(CASE WHEN o.facturamaCfdiId IS NOT NULL THEN 1 ELSE 0 END), " +
+           "  COALESCE(SUM(CASE WHEN o.facturamaCfdiId IS NOT NULL THEN o.total ELSE 0 END), 0) " +
+           "FROM Order o " +
+           "WHERE o.company = :company " +
+           "  AND o.status = com.aatechsolutions.elgransazon.domain.entity.OrderStatus.PAID " +
+           "  AND o.paidAt >= :startDate " +
+           "  AND o.paidAt < :endDate")
+    List<Object[]> sumPaidOrdersByCompanyAndDateRange(
             @Param("company") Company company,
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate);
@@ -366,25 +397,27 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     // ========== Statistics by Date Range (for dynamic cards) ==========
 
     /**
-     * Count PAID orders by date range and company (global - any employee)
-     * Used for Admin's "Pedidos Pagados" card
+     * Count PAID orders by date range and company (global - any employee).
+     * Filters by {@code paidAt} (authoritative payment timestamp).
+     * Used for Admin's "Pedidos Pagados" card.
      */
     @Query("SELECT COUNT(o) FROM Order o WHERE o.company = :company " +
            "AND o.status = 'PAID' " +
-           "AND o.updatedAt BETWEEN :startDate AND :endDate")
+           "AND o.paidAt BETWEEN :startDate AND :endDate")
     long countPaidByDateRangeAndCompany(
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate,
             @Param("company") Company company);
 
     /**
-     * Count PAID orders by date range, paidBy username, and company
-     * Used for Waiter/Cashier's "Pedidos Cobrados" card (only their collections)
+     * Count PAID orders by date range, paidBy username, and company.
+     * Filters by {@code paidAt} (authoritative payment timestamp).
+     * Used for Waiter/Cashier's "Pedidos Cobrados" card (only their collections).
      */
     @Query("SELECT COUNT(o) FROM Order o WHERE o.company = :company " +
            "AND o.status = 'PAID' " +
            "AND o.paidBy.username = :username " +
-           "AND o.updatedAt BETWEEN :startDate AND :endDate")
+           "AND o.paidAt BETWEEN :startDate AND :endDate")
     long countPaidByUsernameAndDateRangeAndCompany(
             @Param("username") String username,
             @Param("startDate") LocalDateTime startDate,
@@ -405,25 +438,27 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
             @Param("company") Company company);
 
     /**
-     * Get revenue by date range and company (total of PAID orders)
-     * Used for "Ingresos" card
+     * Get revenue by date range and company (total of PAID orders).
+     * Filters by {@code paidAt} (authoritative payment timestamp).
+     * Used for "Ingresos" card.
      */
     @Query("SELECT COALESCE(SUM(o.total), 0) FROM Order o WHERE o.company = :company " +
            "AND o.status = 'PAID' " +
-           "AND o.updatedAt BETWEEN :startDate AND :endDate")
+           "AND o.paidAt BETWEEN :startDate AND :endDate")
     BigDecimal getRevenueByDateRangeAndCompany(
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate,
             @Param("company") Company company);
 
     /**
-     * Get revenue collected by specific user in date range
-     * Used for Waiter/Cashier's own revenue card
+     * Get revenue collected by specific user in date range.
+     * Filters by {@code paidAt} (authoritative payment timestamp).
+     * Used for Waiter/Cashier's own revenue card.
      */
     @Query("SELECT COALESCE(SUM(o.total), 0) FROM Order o WHERE o.company = :company " +
            "AND o.status = 'PAID' " +
            "AND o.paidBy.username = :username " +
-           "AND o.updatedAt BETWEEN :startDate AND :endDate")
+           "AND o.paidAt BETWEEN :startDate AND :endDate")
     BigDecimal getRevenueByUsernameAndDateRangeAndCompany(
             @Param("username") String username,
             @Param("startDate") LocalDateTime startDate,
@@ -431,14 +466,15 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
             @Param("company") Company company);
 
     /**
-     * Get revenue for orders created by user but paid by others in date range
-     * Used for Waiter's "Ingresos Globales" card
+     * Get revenue for orders created by user but paid by others in date range.
+     * Filters by {@code paidAt} (authoritative payment timestamp).
+     * Used for Waiter's "Ingresos Globales" card.
      */
     @Query("SELECT COALESCE(SUM(o.total), 0) FROM Order o WHERE o.company = :company " +
            "AND o.status = 'PAID' " +
            "AND o.createdBy = :createdByUsername " +
            "AND o.paidBy.username <> :createdByUsername " +
-           "AND o.updatedAt BETWEEN :startDate AND :endDate")
+           "AND o.paidAt BETWEEN :startDate AND :endDate")
     BigDecimal getRevenueCreatedByUserPaidByOthersAndDateRangeAndCompany(
             @Param("createdByUsername") String createdByUsername,
             @Param("startDate") LocalDateTime startDate,
@@ -446,14 +482,15 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
             @Param("company") Company company);
 
     /**
-     * Get revenue for orders created AND paid by the same user in date range
-     * Used for Waiter/Cashier's "Ingresos Propios" card (orders I created AND I collected)
+     * Get revenue for orders created AND paid by the same user in date range.
+     * Filters by {@code paidAt} (authoritative payment timestamp).
+     * Used for Waiter/Cashier's "Ingresos Propios" card (orders I created AND I collected).
      */
     @Query("SELECT COALESCE(SUM(o.total), 0) FROM Order o WHERE o.company = :company " +
            "AND o.status = 'PAID' " +
            "AND o.createdBy = :username " +
            "AND o.paidBy.username = :username " +
-           "AND o.updatedAt BETWEEN :startDate AND :endDate")
+           "AND o.paidAt BETWEEN :startDate AND :endDate")
     BigDecimal getRevenueCreatedAndPaidBySameUserAndDateRangeAndCompany(
             @Param("username") String username,
             @Param("startDate") LocalDateTime startDate,

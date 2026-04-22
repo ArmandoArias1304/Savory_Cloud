@@ -260,7 +260,11 @@ public class CashierOrderServiceImpl implements OrderService {
                 order.getPaidBy() != null && 
                 order.getPaidBy().getUsername().equalsIgnoreCase(currentUsername)
             )
-            .sorted((o1, o2) -> o2.getUpdatedAt().compareTo(o1.getUpdatedAt()))
+            .sorted((o1, o2) -> {
+                java.time.LocalDateTime d1 = o1.getPaidAt() != null ? o1.getPaidAt() : (o1.getUpdatedAt() != null ? o1.getUpdatedAt() : o1.getCreatedAt());
+                java.time.LocalDateTime d2 = o2.getPaidAt() != null ? o2.getPaidAt() : (o2.getUpdatedAt() != null ? o2.getUpdatedAt() : o2.getCreatedAt());
+                return d2.compareTo(d1);
+            })
             .collect(Collectors.toList());
     }
 

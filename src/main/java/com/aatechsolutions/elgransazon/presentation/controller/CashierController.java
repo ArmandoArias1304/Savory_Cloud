@@ -1260,7 +1260,9 @@ public class CashierController {
             // Today's collected orders
             List<Order> todaysCollectedOrders = collectedOrders.stream()
                     .filter(order -> {
-                        java.time.LocalDateTime paidAt = order.getUpdatedAt() != null ? order.getUpdatedAt() : order.getCreatedAt();
+                        java.time.LocalDateTime paidAt = order.getPaidAt() != null
+                                ? order.getPaidAt()
+                                : (order.getUpdatedAt() != null ? order.getUpdatedAt() : order.getCreatedAt());
                         return paidAt.isAfter(startOfDay) && paidAt.isBefore(endOfDay);
                     })
                     .toList();
@@ -1322,7 +1324,9 @@ public class CashierController {
                 
                 List<Order> dayOrders = collectedOrders.stream()
                         .filter(order -> {
-                            java.time.LocalDateTime paidAt = order.getUpdatedAt() != null ? order.getUpdatedAt() : order.getCreatedAt();
+                            java.time.LocalDateTime paidAt = order.getPaidAt() != null
+                                    ? order.getPaidAt()
+                                    : (order.getUpdatedAt() != null ? order.getUpdatedAt() : order.getCreatedAt());
                             return paidAt.isAfter(dayStart) && paidAt.isBefore(dayEnd);
                         })
                         .toList();
@@ -1751,7 +1755,7 @@ public class CashierController {
                         List<Order> todayPaidOrders = adminOrderService.findByStatus(OrderStatus.PAID)
                                 .stream()
                                 .filter(order -> {
-                                    LocalDateTime paidDate = order.getUpdatedAt() != null ? order.getUpdatedAt() : order.getCreatedAt();
+                                    LocalDateTime paidDate = order.getPaidAt() != null ? order.getPaidAt() : (order.getUpdatedAt() != null ? order.getUpdatedAt() : order.getCreatedAt());
                                     return order.getPaidBy() != null &&
                                            order.getPaidBy().getIdEmpleado().equals(cashier.getIdEmpleado()) &&
                                            paidDate != null && 

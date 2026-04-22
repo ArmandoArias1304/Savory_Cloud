@@ -181,10 +181,14 @@ public class AutofacturaController {
                     zipCode.trim()
             );
 
-            // Save CFDI data on order
+            // Save CFDI data on order.
+            // Mark updatedBy as AUTOFACTURA so audit logs distinguish customer-driven self-invoicing
+            // from employee edits. paidAt is intentionally NOT touched here — it must keep the value
+            // set when the order originally transitioned to PAID.
             order.setFacturamaCfdiId(cfdiResult.get("cfdi_id"));
             order.setFacturamaCfdiUuid(cfdiResult.get("cfdi_uuid"));
             order.setFacturamaCfdiCreatedAt(LocalDateTime.now(java.time.ZoneOffset.UTC));
+            order.setUpdatedBy("AUTOFACTURA");
             orderRepository.save(order);
 
             log.info("Autofactura CFDI created for order: {} (CFDI ID: {})",

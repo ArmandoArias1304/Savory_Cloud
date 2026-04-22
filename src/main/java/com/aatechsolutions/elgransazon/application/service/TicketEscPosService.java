@@ -316,7 +316,7 @@ public class TicketEscPosService {
         printSeparator(out);
         out.write(FONT_B);
         if (order.getStatus() == OrderStatus.PAID) {
-            printLine(out, "Pagado: " + dateTimeService.formatToCompanyTime(order.getUpdatedAt(), "dd/MM/yyyy HH:mm"));
+            printLine(out, "Pagado: " + dateTimeService.formatToCompanyTime(order.getPaidAt(), "dd/MM/yyyy HH:mm"));
         } else {
             printLine(out, "Creada: " + dateTimeService.formatToCompanyTime(order.getCreatedAt(), "dd/MM/yyyy HH:mm"));
         }

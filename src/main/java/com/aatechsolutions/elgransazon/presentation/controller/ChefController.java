@@ -311,8 +311,8 @@ public class ChefController {
                 return !hasPendingWork;
             })
             .sorted((o1, o2) -> {
-                LocalDateTime d1 = o1.getUpdatedAt() != null ? o1.getUpdatedAt() : o1.getCreatedAt();
-                LocalDateTime d2 = o2.getUpdatedAt() != null ? o2.getUpdatedAt() : o2.getCreatedAt();
+                LocalDateTime d1 = o1.getPaidAt() != null ? o1.getPaidAt() : (o1.getUpdatedAt() != null ? o1.getUpdatedAt() : o1.getCreatedAt());
+                LocalDateTime d2 = o2.getPaidAt() != null ? o2.getPaidAt() : (o2.getUpdatedAt() != null ? o2.getUpdatedAt() : o2.getCreatedAt());
                 return d2.compareTo(d1);
             })
             .toList();
@@ -436,10 +436,10 @@ public class ChefController {
             // Today's orders prepared by this chef/barista
             List<Order> todaysOrders = allOrders.stream()
                     .filter(order -> {
-                        LocalDateTime updatedAt = order.getUpdatedAt();
-                        return updatedAt != null && 
-                               !updatedAt.isBefore(startOfDay) && 
-                               !updatedAt.isAfter(endOfDay);
+                        LocalDateTime createdAt = order.getCreatedAt();
+                        return createdAt != null && 
+                               !createdAt.isBefore(startOfDay) && 
+                               !createdAt.isAfter(endOfDay);
                     })
                     .toList();
             
@@ -472,10 +472,10 @@ public class ChefController {
                 
                 long dayOrders = allOrders.stream()
                         .filter(order -> {
-                            LocalDateTime updatedAt = order.getUpdatedAt();
-                            return updatedAt != null && 
-                                   !updatedAt.isBefore(dayStart) && 
-                                   !updatedAt.isAfter(dayEnd);
+                            LocalDateTime createdAt = order.getCreatedAt();
+                            return createdAt != null && 
+                                   !createdAt.isBefore(dayStart) && 
+                                   !createdAt.isAfter(dayEnd);
                         })
                         .count();
                 
@@ -614,10 +614,11 @@ public class ChefController {
                                     return preparer != null && preparer.getIdEmpleado().equals(emp.getIdEmpleado());
                                 })
                                 .filter(order -> {
-                                    LocalDateTime updatedAt = order.getUpdatedAt();
-                                    return updatedAt != null && 
-                                           !updatedAt.isBefore(startOfDay) && 
-                                           !updatedAt.isAfter(endOfDay);
+                                    LocalDateTime paidAt = order.getPaidAt() != null ? order.getPaidAt()
+                                            : (order.getUpdatedAt() != null ? order.getUpdatedAt() : order.getCreatedAt());
+                                    return paidAt != null && 
+                                           !paidAt.isBefore(startOfDay) && 
+                                           !paidAt.isAfter(endOfDay);
                                 })
                                 .count();
                         

@@ -606,22 +606,22 @@
                 </p>
               </div>
               <div
-                th:if="${order.updatedAt != null}"
+                th:if="${order.paidAt != null}"
                 class="text-xs text-gray-600 dark:text-gray-400"
               >
                 <p class="mb-1">
                   <span class="font-semibold text-gray-700 dark:text-gray-300"
-                    >Actualizado:</span
+                    >Pagado:</span
                   >
                   <span
-                    th:text="${#tz.format(order.updatedAt, 'dd/MM/yyyy HH:mm')}"
+                    th:text="${#tz.format(order.paidAt, 'dd/MM/yyyy HH:mm')}"
                   ></span>
                 </p>
-                <p th:if="${order.updatedBy != null}">
+                <p th:if="${order.paidBy != null}">
                   <span class="font-semibold text-gray-700 dark:text-gray-300"
                     >Por:</span
                   >
-                  <span th:text="${order.updatedBy}"></span>
+                  <span th:text="${order.paidBy.username}"></span>
                 </p>
               </div>
               <div

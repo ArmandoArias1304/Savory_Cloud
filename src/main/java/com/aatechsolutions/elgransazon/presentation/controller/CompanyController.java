@@ -191,7 +191,7 @@ public class CompanyController {
         FacturamaConfig facturamaConfig = facturamaService.getConfigForCompany(company).orElse(null);
         model.addAttribute("facturamaConfig", facturamaConfig);
         model.addAttribute("facturamaLiveMode", facturamaService.isLiveMode());
-        model.addAttribute("totalCfdis", orderRepository.countByCompanyAndFacturamaCfdiIdIsNotNull(company));
+        model.addAttribute("totalCfdis", orderRepository.countByCompanyAndFacturamaCfdiCreatedAtIsNotNull(company));
         
         return "programmer/companies/view";
     }

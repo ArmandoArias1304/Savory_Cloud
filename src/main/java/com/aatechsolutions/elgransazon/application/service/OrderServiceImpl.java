@@ -728,6 +728,12 @@ public class OrderServiceImpl implements OrderService {
             order.setPaidBy(order.getEmployee()); // Fallback to order creator - FIXED: was setPreparedBy
         }
 
+        // Track timestamp when order is marked as PAID (only set once; never overwritten by later updates).
+        // This is the authoritative "paidAt" used by all revenue/sales/CFDI reports.
+        if (newStatus == OrderStatus.PAID && order.getPaidAt() == null) {
+            order.setPaidAt(LocalDateTime.now());
+        }
+
         // If order is marked as PAID, free the table
         // NOTE: Table is NOT freed when DELIVERED - only when PAID
         if (newStatus == OrderStatus.PAID && orderType == OrderType.DINE_IN) {
@@ -745,7 +751,9 @@ public class OrderServiceImpl implements OrderService {
         // If order is marked as PAID, update employee monthly statistics
         if (newStatus == OrderStatus.PAID) {
             try {
-                LocalDateTime paidDate = order.getUpdatedAt();
+                // Use paidAt (authoritative payment timestamp) so monthly stats are bucketed correctly
+                // even when the order was created in a different month than the one it was paid in.
+                LocalDateTime paidDate = order.getPaidAt() != null ? order.getPaidAt() : LocalDateTime.now();
                 Integer month = paidDate.getMonthValue();
                 Integer year = paidDate.getYear();
                 
@@ -809,8 +817,7 @@ public class OrderServiceImpl implements OrderService {
         // Validate that order can accept new items
         if (!order.canAcceptNewItems()) {
             throw new IllegalStateException(
-                String.format("No se pueden agregar items a este pedido. Tipo: %s, Estado: %s. " +
-                             "Solo pedidos PARA COMER AQUÍ, PARA PASAR A RECOGER y ENTREGA A DOMICILIO pueden recibir items adicionales.",
+                String.format("No se pueden agregar items a este pedido. Tipo: %s, Estado: %s.",
                               order.getOrderType().getDisplayName(),
                               order.getStatus().getDisplayName())
             );

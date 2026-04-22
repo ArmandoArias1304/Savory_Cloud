@@ -180,10 +180,7 @@ public class FacturamaController {
                 return ResponseEntity.badRequest().body(Map.of("error", "Sin contexto de empresa"));
             }
 
-            ZoneId zone = ZoneId.of("America/Mexico_City");
-            if (company.getTimezone() != null && !company.getTimezone().isBlank()) {
-                try { zone = ZoneId.of(company.getTimezone()); } catch (Exception ignored) {}
-            }
+            ZoneId zone = resolveZone(company);
 
             LocalDate fromDate = LocalDate.parse(from);
             LocalDate toDate = LocalDate.parse(to);
@@ -201,6 +198,75 @@ public class FacturamaController {
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
+    }
+
+    /**
+     * AJAX endpoint: report of PAID orders within a date range, broken down by whether they were
+     * invoiced (have a CFDI) or not. Dates are interpreted in the company's timezone.
+     *
+     * Filters by {@code Order.paidAt} (authoritative payment timestamp; never overwritten after
+     * the order transitions to PAID, so it is safe even after autofactura CFDI saves).
+     */
+    @GetMapping("/api/paid-orders-report")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> paidOrdersReport(
+            @RequestParam String from,
+            @RequestParam String to) {
+        try {
+            Company company = CompanyContext.getCurrentCompany();
+            if (company == null) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Sin contexto de empresa"));
+            }
+
+            ZoneId zone = resolveZone(company);
+
+            LocalDate fromDate = LocalDate.parse(from);
+            LocalDate toDate = LocalDate.parse(to);
+
+            if (fromDate.isAfter(toDate)) {
+                return ResponseEntity.badRequest().body(Map.of("error", "La fecha 'desde' debe ser menor o igual a 'hasta'"));
+            }
+
+            LocalDateTime startUtc = fromDate.atStartOfDay(zone).withZoneSameInstant(ZoneId.of("UTC")).toLocalDateTime();
+            LocalDateTime endUtc = toDate.plusDays(1).atStartOfDay(zone).withZoneSameInstant(ZoneId.of("UTC")).toLocalDateTime();
+
+            java.util.List<Object[]> rows = orderRepository.sumPaidOrdersByCompanyAndDateRange(company, startUtc, endUtc);
+            Object[] row = (rows != null && !rows.isEmpty()) ? rows.get(0) : null;
+
+            long paidCount = row != null && row[0] != null ? ((Number) row[0]).longValue() : 0L;
+            java.math.BigDecimal paidTotal = row != null && row[1] != null
+                    ? new java.math.BigDecimal(row[1].toString())
+                    : java.math.BigDecimal.ZERO;
+            long invoicedCount = row != null && row[2] != null ? ((Number) row[2]).longValue() : 0L;
+            java.math.BigDecimal invoicedTotal = row != null && row[3] != null
+                    ? new java.math.BigDecimal(row[3].toString())
+                    : java.math.BigDecimal.ZERO;
+
+            long notInvoicedCount = paidCount - invoicedCount;
+            java.math.BigDecimal notInvoicedTotal = paidTotal.subtract(invoicedTotal);
+
+            Map<String, Object> result = new java.util.LinkedHashMap<>();
+            result.put("paidCount", paidCount);
+            result.put("paidTotal", paidTotal);
+            result.put("invoicedCount", invoicedCount);
+            result.put("invoicedTotal", invoicedTotal);
+            result.put("notInvoicedCount", notInvoicedCount);
+            result.put("notInvoicedTotal", notInvoicedTotal);
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            log.error("Error generating paid orders report: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    private ZoneId resolveZone(Company company) {
+        if (company.getTimezone() != null && !company.getTimezone().isBlank()) {
+            try {
+                return ZoneId.of(company.getTimezone());
+            } catch (Exception ignored) {
+            }
+        }
+        return ZoneId.of("America/Mexico_City");
     }
 
     // ========== Private Helpers ==========

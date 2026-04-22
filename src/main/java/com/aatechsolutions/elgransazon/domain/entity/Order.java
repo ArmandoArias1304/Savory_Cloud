@@ -207,6 +207,16 @@ public class Order implements Serializable {
     @Column(name = "delivered_at")
     private LocalDateTime deliveredAt;
 
+    /**
+     * Timestamp (UTC) when the order status transitioned to PAID.
+     *
+     * Set exactly once by {@link com.aatechsolutions.elgransazon.application.service.OrderServiceImpl#changeStatus}
+     * when {@code newStatus == PAID}. Never overwritten afterwards (autofactura saves do not touch this field),
+     * so it is the authoritative source of truth for revenue/sales/CFDI date filtering.
+     */
+    @Column(name = "paid_at")
+    private LocalDateTime paidAt;
+
     // ========== Reservation Association ==========
     // This field stores the reservation ID associated with this order
     // When an order is created for a reserved table, this field links to the reservation

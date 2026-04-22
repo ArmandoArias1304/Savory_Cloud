@@ -361,7 +361,7 @@ public class DashboardServiceImpl implements DashboardService {
         todayOrders.stream()
             .filter(order -> order.getStatus() == OrderStatus.PAID)
             .forEach(order -> {
-                LocalDateTime orderDate = order.getUpdatedAt() != null ? order.getUpdatedAt() : order.getCreatedAt();
+                LocalDateTime orderDate = order.getPaidAt() != null ? order.getPaidAt() : (order.getUpdatedAt() != null ? order.getUpdatedAt() : order.getCreatedAt());
                 int hour = orderDate.getHour();
                 
                 HourlySalesDTO currentData = hourlySalesMap.get(hour);

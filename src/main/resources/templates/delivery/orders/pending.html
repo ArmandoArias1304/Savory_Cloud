@@ -344,6 +344,7 @@
                 <div
                   th:each="detail : ${order.orderDetails}"
                   class="py-4 border-b border-gray-100 dark:border-gray-700 flex flex-col gap-2 last:border-b-0"
+                  th:classappend="${detail.comboParent} ? 'border-l-2 border-l-teal-400 dark:border-l-teal-600 pl-2' : (${detail.comboChild} ? 'pl-5' : '')"
                 >
                   <div class="flex justify-between items-start">
                     <div class="flex-1">
@@ -356,6 +357,17 @@
                         ></span>
                         <span th:text="${detail.itemMenu.name}"></span>
                       </p>
+                      <span
+                        th:if="${detail.comboParent}"
+                        class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300 mt-1"
+                      >
+                        <span class="material-symbols-outlined" style="font-size: 0.625rem">inventory_2</span>
+                        COMBO
+                      </span>
+                      <span
+                        th:if="${detail.comboChild}"
+                        class="block text-[10px] text-teal-600 dark:text-teal-400 font-medium mt-0.5"
+                      >&#8627; parte del combo</span>
                       <p
                         th:if="${detail.displayComments != null}"
                         class="text-xs text-gray-600 dark:text-gray-400 italic mt-1"
@@ -364,7 +376,8 @@
                       </p>
                     </div>
                     <p
-                      class="text-sm font-bold text-gray-900 dark:text-white"
+                      class="text-sm font-bold flex-shrink-0"
+                      th:classappend="${detail.comboChild} ? 'text-gray-400 dark:text-gray-600' : 'text-gray-900 dark:text-white'"
                       th:text="${detail.formattedSubtotal}"
                     ></p>
                   </div>

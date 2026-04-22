@@ -249,7 +249,7 @@
               </div>
 
               <!-- STATISTICS CARDS -->
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 <!-- Total Sales -->
                 <div
                   class="p-6 rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 shadow-lg"
@@ -312,6 +312,34 @@
                       <span class="text-xs text-gray-500">Sin datos</span>
                     </div>
                   </div>
+                </div>
+
+                <!-- Total Delivery Cost -->
+                <div
+                  class="p-6 rounded-2xl bg-gradient-to-br from-orange-50 to-orange-100/50 dark:from-orange-900/20 dark:to-orange-900/10 border border-orange-200 dark:border-orange-800 shadow-lg sm:col-span-2 lg:col-span-1"
+                >
+                  <div class="flex items-center justify-between mb-2">
+                    <h3
+                      class="text-sm font-semibold text-gray-700 dark:text-gray-300"
+                    >
+                      Total Envío a Domicilio (con IVA)
+                    </h3>
+                    <span class="material-symbols-outlined text-orange-600"
+                      >local_shipping</span
+                    >
+                  </div>
+                  <p
+                    class="text-3xl font-bold text-gray-900 dark:text-white"
+                    th:text="${#numbers.formatCurrency(totalDeliveryCost)}"
+                  >
+                    $0.00
+                  </p>
+                  <p
+                    class="text-sm text-gray-600 dark:text-gray-400 mt-1"
+                    th:text="${totalDeliveryOrders + ' órdenes a domicilio'}"
+                  >
+                    0 órdenes a domicilio
+                  </p>
                 </div>
               </div>
 

@@ -255,8 +255,8 @@ public class ReportPdfService {
             
             webOrders.stream()
                 .sorted((o1, o2) -> {
-                    LocalDateTime date1 = o1.getUpdatedAt() != null ? o1.getUpdatedAt() : o1.getCreatedAt();
-                    LocalDateTime date2 = o2.getUpdatedAt() != null ? o2.getUpdatedAt() : o2.getCreatedAt();
+                    LocalDateTime date1 = o1.getPaidAt() != null ? o1.getPaidAt() : (o1.getUpdatedAt() != null ? o1.getUpdatedAt() : o1.getCreatedAt());
+                    LocalDateTime date2 = o2.getPaidAt() != null ? o2.getPaidAt() : (o2.getUpdatedAt() != null ? o2.getUpdatedAt() : o2.getCreatedAt());
                     return date2.compareTo(date1); // Most recent first
                 })
                 .forEach(order -> {

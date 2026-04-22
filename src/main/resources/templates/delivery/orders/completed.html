@@ -267,6 +267,7 @@
                 <div
                   th:each="detail : ${order.orderDetails}"
                   class="flex justify-between items-start gap-2 pb-2 border-b border-gray-100 dark:border-gray-700 last:border-0"
+                  th:classappend="${detail.comboParent} ? 'border-l-2 border-l-teal-400 dark:border-l-teal-600 pl-1.5' : (${detail.comboChild} ? 'pl-4' : '')"
                 >
                   <div class="flex-1 min-w-0">
                     <p
@@ -275,6 +276,17 @@
                       <span th:text="${detail.quantity}">1</span>x
                       <span th:text="${detail.itemMenu.name}">Item</span>
                     </p>
+                    <span
+                      th:if="${detail.comboParent}"
+                      class="inline-flex items-center gap-0.5 px-1 py-0.5 rounded text-[9px] font-bold bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300 mt-0.5"
+                    >
+                      <span class="material-symbols-outlined" style="font-size: 0.5rem">inventory_2</span>
+                      COMBO
+                    </span>
+                    <span
+                      th:if="${detail.comboChild}"
+                      class="block text-[9px] text-teal-600 dark:text-teal-400 font-medium mt-0.5"
+                    >&#8627; parte del combo</span>
                     <p
                       th:if="${detail.displayComments != null}"
                       class="text-xs text-gray-500 dark:text-gray-400 italic mt-0.5 truncate"
@@ -291,7 +303,8 @@
                     </p>
                   </div>
                   <span
-                    class="text-xs font-bold text-gray-900 dark:text-white flex-shrink-0"
+                    class="text-xs font-bold flex-shrink-0"
+                    th:classappend="${detail.comboChild} ? 'text-gray-400 dark:text-gray-600' : 'text-gray-900 dark:text-white'"
                     th:text="${detail.formattedSubtotal}"
                     >$0.00</span
                   >
@@ -403,6 +416,18 @@
                   >
                 </div>
                 <div
+                  class="flex justify-between items-center pt-1.5 border-t-2 border-yellow-300 dark:border-yellow-700"
+                >
+                  <span class="text-sm font-bold text-gray-900 dark:text-white"
+                    >Total:</span
+                  >
+                  <span
+                    class="text-base font-bold text-yellow-600 dark:text-yellow-400"
+                    th:text="${order.formattedTotal}"
+                    >$0.00</span
+                  >
+                </div>
+                <div
                   th:if="${order.tip != null and order.tip.compareTo(T(java.math.BigDecimal).ZERO) > 0}"
                   class="flex justify-between items-center pt-1 border-t border-yellow-200 dark:border-yellow-800"
                 >
@@ -419,18 +444,6 @@
                   <span
                     class="text-xs font-bold text-green-700 dark:text-green-400"
                     th:text="${order.formattedTip}"
-                    >$0.00</span
-                  >
-                </div>
-                <div
-                  class="flex justify-between items-center pt-1.5 border-t-2 border-yellow-300 dark:border-yellow-700"
-                >
-                  <span class="text-sm font-bold text-gray-900 dark:text-white"
-                    >Total:</span
-                  >
-                  <span
-                    class="text-base font-bold text-yellow-600 dark:text-yellow-400"
-                    th:text="${order.formattedTotalWithTip}"
                     >$0.00</span
                   >
                 </div>

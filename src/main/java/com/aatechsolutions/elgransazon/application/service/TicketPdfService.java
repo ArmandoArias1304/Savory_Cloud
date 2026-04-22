@@ -514,7 +514,7 @@ public class TicketPdfService {
         // Date and time
         Paragraph dateTime;
         if (order.getStatus() == OrderStatus.PAID) {
-         dateTime = new Paragraph("Pagado: " + dateTimeService.formatToCompanyTime(order.getUpdatedAt(), "dd/MM/yyyy HH:mm"));
+         dateTime = new Paragraph("Pagado: " + dateTimeService.formatToCompanyTime(order.getPaidAt(), "dd/MM/yyyy HH:mm"));
         } else {
             dateTime = new Paragraph("Creada: " + dateTimeService.formatToCompanyTime(order.getCreatedAt(), "dd/MM/yyyy HH:mm"));
         }
