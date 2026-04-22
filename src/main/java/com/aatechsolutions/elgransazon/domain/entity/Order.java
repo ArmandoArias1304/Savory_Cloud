@@ -171,6 +171,17 @@ public class Order implements Serializable {
     @Builder.Default
     private BigDecimal tip = BigDecimal.ZERO;
 
+    // ========== Delivery Cost (only meaningful for DELIVERY orders) ==========
+    // Includes IVA. For non-DELIVERY orders, this value is forced to 0 by the service layer.
+
+    @NotNull(message = "El costo de envío es requerido")
+    @DecimalMin(value = "0.0", message = "El costo de envío no puede ser negativo")
+    @DecimalMax(value = "999999.99", message = "El costo de envío no puede ser mayor a $999,999.99")
+    @Digits(integer = 6, fraction = 2, message = "El costo de envío solo permite hasta 2 decimales")
+    @Column(name = "delivery_cost", precision = 8, scale = 2, nullable = false)
+    @Builder.Default
+    private BigDecimal deliveryCost = BigDecimal.ZERO;
+
     // ========== Audit Fields ==========
 
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -288,10 +299,18 @@ public class Order implements Serializable {
      */
     public void recalculateAmounts() {
         // Step 1: Total is the sum of all order details + their complements (already includes IVA)
-        this.total = orderDetails.stream()
+        BigDecimal itemsTotal = orderDetails.stream()
                 .map(OrderDetail::getTotalWithComplements)
                 .reduce(BigDecimal.ZERO, BigDecimal::add)
                 .setScale(2, RoundingMode.HALF_UP);
+
+        // Add delivery cost (only meaningful for DELIVERY orders; service layer forces 0 for others).
+        // deliveryCost already includes IVA.
+        BigDecimal effectiveDeliveryCost = (this.deliveryCost != null && this.orderType == OrderType.DELIVERY)
+                ? this.deliveryCost
+                : BigDecimal.ZERO;
+
+        this.total = itemsTotal.add(effectiveDeliveryCost).setScale(2, RoundingMode.HALF_UP);
         
         // Step 2: Calculate subtotal (price without IVA) from total
         // subtotal = total / (1 + taxRate/100)
@@ -398,12 +417,63 @@ public class Order implements Serializable {
     }
 
     /**
+     * Get the delivery cost portion that corresponds to the price WITHOUT IVA.
+     * deliveryCost stored in DB already includes IVA.
+     */
+    public BigDecimal getDeliveryCostWithoutTax() {
+        if (this.deliveryCost == null
+                || this.orderType != OrderType.DELIVERY
+                || this.deliveryCost.compareTo(BigDecimal.ZERO) <= 0) {
+            return BigDecimal.ZERO;
+        }
+        if (this.taxRate == null || this.taxRate.compareTo(BigDecimal.ZERO) <= 0) {
+            return this.deliveryCost.setScale(2, RoundingMode.HALF_UP);
+        }
+        BigDecimal taxMultiplier = BigDecimal.ONE.add(
+                this.taxRate.divide(BigDecimal.valueOf(100), 10, RoundingMode.HALF_UP)
+        );
+        return this.deliveryCost.divide(taxMultiplier, 2, RoundingMode.HALF_UP);
+    }
+
+    /**
+     * Get the IVA portion of the delivery cost.
+     * = deliveryCost - deliveryCostWithoutTax
+     */
+    public BigDecimal getDeliveryCostTaxAmount() {
+        if (this.deliveryCost == null
+                || this.orderType != OrderType.DELIVERY
+                || this.deliveryCost.compareTo(BigDecimal.ZERO) <= 0) {
+            return BigDecimal.ZERO;
+        }
+        return this.deliveryCost.subtract(getDeliveryCostWithoutTax())
+                .setScale(2, RoundingMode.HALF_UP);
+    }
+
+    /**
+     * Get the items-only subtotal without IVA (excludes delivery cost).
+     * For display: lets the user see the items charge separated from envío.
+     */
+    public BigDecimal getSubtotalWithoutDelivery() {
+        BigDecimal sub = this.subtotal != null ? this.subtotal : BigDecimal.ZERO;
+        return sub.subtract(getDeliveryCostWithoutTax()).setScale(2, RoundingMode.HALF_UP);
+    }
+
+    /**
+     * Get the items-only tax amount (excludes delivery's IVA portion).
+     */
+    public BigDecimal getTaxAmountWithoutDelivery() {
+        BigDecimal tax = this.taxAmount != null ? this.taxAmount : BigDecimal.ZERO;
+        return tax.subtract(getDeliveryCostTaxAmount()).setScale(2, RoundingMode.HALF_UP);
+    }
+
+    /**
      * Get the promotion discount amount without IVA.
-     * Discount = originalSubtotalWithoutTax - subtotal (order.subtotal is already without IVA)
+     * Discount = originalSubtotalWithoutTax - subtotalWithoutDelivery
+     * (subtracting deliveryCostWithoutTax so the promo is reported standalone).
      */
     public BigDecimal getDiscountWithoutTax() {
         BigDecimal original = getOriginalSubtotalWithoutTax();
-        BigDecimal current = this.subtotal != null ? this.subtotal : BigDecimal.ZERO;
+        BigDecimal current = getSubtotalWithoutDelivery();
         BigDecimal discount = original.subtract(current);
         return discount.compareTo(BigDecimal.ZERO) > 0 ? discount : BigDecimal.ZERO;
     }
@@ -437,6 +507,27 @@ public class Order implements Serializable {
             return "$0.00";
         }
         return String.format("$%.2f", subtotal);
+    }
+
+    /**
+     * Get formatted items-only subtotal (excludes delivery cost without IVA).
+     */
+    public String getFormattedSubtotalWithoutDelivery() {
+        return String.format("$%.2f", getSubtotalWithoutDelivery());
+    }
+
+    /**
+     * Get formatted items-only tax amount (excludes delivery's IVA portion).
+     */
+    public String getFormattedTaxAmountWithoutDelivery() {
+        return String.format("$%.2f", getTaxAmountWithoutDelivery());
+    }
+
+    /**
+     * Get formatted delivery cost without IVA.
+     */
+    public String getFormattedDeliveryCostWithoutTax() {
+        return String.format("$%.2f", getDeliveryCostWithoutTax());
     }
 
     /**

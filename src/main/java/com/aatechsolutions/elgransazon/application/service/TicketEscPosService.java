@@ -257,7 +257,9 @@ public class TicketEscPosService {
 
         BigDecimal subtotalOriginalSinIVA = subtotalItemsSinIVA.add(subtotalComplementosSinIVA);
         BigDecimal subtotalRounded = subtotalOriginalSinIVA.setScale(2, RoundingMode.HALF_UP);
-        BigDecimal taxAmount = order.getTaxAmount();
+        // IVA shown on the ticket excludes the delivery's IVA portion so the rows sum to total
+        // (the envío row, printed below, shows the gross delivery cost which already includes its own IVA).
+        BigDecimal taxAmount = order.getTaxAmountWithoutDelivery();
         BigDecimal total = order.getTotal();
 
         out.write(ALIGN_RIGHT);
@@ -269,6 +271,14 @@ public class TicketEscPosService {
         }
 
         printTotalLine(out, "IVA (" + order.getTaxRate() + "%):", "$" + taxAmount.toString(), false);
+
+        // Delivery cost (gross, IVA included) so rows sum: subtotal - desc + iva_items + envío = total
+        if (order.getOrderType() == OrderType.DELIVERY
+                && order.getDeliveryCost() != null
+                && order.getDeliveryCost().compareTo(BigDecimal.ZERO) > 0) {
+            BigDecimal envioGross = order.getDeliveryCost().setScale(2, RoundingMode.HALF_UP);
+            printTotalLine(out, "Envío:", "$" + envioGross.toPlainString(), false);
+        }
 
         // TOTAL (bold) - sin propina
         out.write(BOLD_ON);

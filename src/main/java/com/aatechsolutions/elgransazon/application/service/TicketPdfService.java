@@ -421,7 +421,9 @@ public class TicketPdfService {
         // Subtotal original total sin IVA (items + complementos, antes de descuento)
         BigDecimal subtotalOriginalSinIVA = subtotalItemsSinIVA.add(subtotalComplementosSinIVA);
 
-        BigDecimal taxAmount = order.getTaxAmount();
+        // IVA shown on the ticket excludes the delivery's IVA portion so the rows sum to total
+        // (the envío row, printed below, shows the gross delivery cost which already includes its own IVA).
+        BigDecimal taxAmount = order.getTaxAmountWithoutDelivery();
         BigDecimal total = order.getTotal();
 
                 // Totals table
@@ -443,6 +445,14 @@ public class TicketPdfService {
 
                 // IVA (ya calculado sobre el subtotal real)
                 addTotalRow(totalsTable, "IVA (" + order.getTaxRate() + "%):", "$" + taxAmount.toString(), normalFont, boldFont, false);
+
+                // Delivery cost (gross, IVA included) so rows sum: subtotal - desc + iva_items + envío = total
+                if (order.getOrderType() == OrderType.DELIVERY
+                        && order.getDeliveryCost() != null
+                        && order.getDeliveryCost().compareTo(BigDecimal.ZERO) > 0) {
+                    BigDecimal envioGross = order.getDeliveryCost().setScale(2, RoundingMode.HALF_UP);
+                    addTotalRow(totalsTable, "Envío:", "$" + envioGross.toPlainString(), normalFont, boldFont, false);
+                }
 
                 // Total (bold) - sin propina
                 addTotalRow(totalsTable, "TOTAL:", "$" + total.setScale(2, RoundingMode.HALF_UP).toString(), boldFont, boldFont, true);

@@ -41,6 +41,10 @@ public class FacturamaService {
     private static final String SANDBOX_URL = "https://apisandbox.facturama.mx/";
     private static final String PRODUCTION_URL = "https://api.facturama.mx/";
 
+    // SAT c_ClaveProdServ codes
+    private static final String PROD_CODE_RESTAURANT = "90101500"; // Restaurantes y comida para llevar
+    private static final String PROD_CODE_DELIVERY = "78102203";   // Servicios de mensajería de entrega rápida
+
     private final FacturamaConfigRepository facturamaConfigRepository;
     private final ObjectMapper objectMapper;
     private final RestTemplate restTemplate;
@@ -215,7 +219,8 @@ public class FacturamaService {
 
                 // Add the item only if subtotal > 0 (skip combo sub-items at $0)
                 if (lineSubtotal != null && lineSubtotal.compareTo(BigDecimal.ZERO) > 0) {
-                    addCfdiItem(items, detail.getItemMenu().getName(), detail.getQuantity(), lineSubtotal);
+                    addCfdiItem(items, detail.getItemMenu().getName(), detail.getQuantity(), lineSubtotal,
+                            PROD_CODE_RESTAURANT);
                 }
 
                 // Always check complements — even zero-price items can have paid complements
@@ -233,9 +238,18 @@ public class FacturamaService {
                         // Pass the exact tax-included line total for the complement
                         BigDecimal compLineTotal = compPrice.multiply(BigDecimal.valueOf(effectiveQty));
                         addCfdiItem(items, "Complemento - " + comp.getComplement().getName(),
-                                effectiveQty, compLineTotal);
+                                effectiveQty, compLineTotal, PROD_CODE_RESTAURANT);
                     }
                 }
+            }
+
+            // Delivery cost (only for DELIVERY orders, includes IVA like the other items)
+            // SAT ProductCode 78102203 = Servicios de mensajería de entrega rápida (delivery local).
+            if (order.getOrderType() == OrderType.DELIVERY
+                    && order.getDeliveryCost() != null
+                    && order.getDeliveryCost().compareTo(BigDecimal.ZERO) > 0) {
+                addCfdiItem(items, "Costo de envío a domicilio", 1, order.getDeliveryCost(),
+                        PROD_CODE_DELIVERY);
             }
 
             body.set("Items", items);
@@ -414,7 +428,8 @@ public class FacturamaService {
      * Tax = expectedTotal - subtotal (NOT subtotal * 0.16) so subtotal + tax
      * equals the line total exactly.
      */
-    private void addCfdiItem(ArrayNode items, String description, int quantity, BigDecimal taxIncludedLineTotal) {
+    private void addCfdiItem(ArrayNode items, String description, int quantity,
+                             BigDecimal taxIncludedLineTotal, String productCode) {
         ObjectNode item = objectMapper.createObjectNode();
 
         // Snap the line total to 2 decimals (it should already be, but be safe)
@@ -430,7 +445,7 @@ public class FacturamaService {
         // Derive tax from the exact tax-included total so subtotal + tax = total exactly
         BigDecimal taxAmount = total.subtract(subtotal);
 
-        item.put("ProductCode", "90101500"); // Restaurantes y comida para llevar
+        item.put("ProductCode", productCode);
         item.put("Description", description);
         item.put("Unit", "Servicio");
         item.put("UnitCode", "E48"); // Unidad de servicio

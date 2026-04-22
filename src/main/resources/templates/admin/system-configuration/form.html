@@ -844,12 +844,40 @@
                       step="0.01"
                       min="0"
                       max="100"
-                      disabled
+                      readonly
                       class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 cursor-not-allowed"
                     />
+                    <input type="hidden" name="taxRate" th:value="${configuration.taxRate}" />
                     <p class="mt-1 text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
                       <span class="material-symbols-outlined text-xs">lock</span>
                       Este valor es configurado por el administrador del sistema.
+                    </p>
+                  </div>
+
+                  <div>
+                    <label
+                      for="defaultDeliveryCost"
+                      class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+                    >
+                      Costo de Envío por Defecto ($)
+                    </label>
+                    <input
+                      type="number"
+                      id="defaultDeliveryCost"
+                      th:field="*{defaultDeliveryCost}"
+                      step="0.01"
+                      min="0"
+                      max="999999.99"
+                      required
+                      class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary focus:outline-none"
+                    />
+                    <p
+                      class="mt-1 text-sm text-red-600 dark:text-red-400"
+                      th:if="${#fields.hasErrors('defaultDeliveryCost')}"
+                      th:errors="*{defaultDeliveryCost}"
+                    ></p>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                      Ingrese el monto por defecto a cobrar para envíos a domicilio. Incluye IVA.
                     </p>
                   </div>
                 </div>

@@ -502,6 +502,18 @@
                 <span id="cartIVA" class="font-semibold">$0.00</span>
               </div>
 
+              <!-- Costo de Envío (solo DELIVERY) -->
+              <div
+                id="cartDeliveryContainer"
+                class="hidden flex justify-between text-xs text-gray-600 dark:text-gray-400"
+              >
+                <span class="flex items-center gap-1">
+                  <span class="material-symbols-outlined text-base">local_shipping</span>
+                  Envío a domicilio
+                </span>
+                <span id="cartDelivery" class="font-semibold">$0.00</span>
+              </div>
+
               <!-- Total - Prominent -->
               <div
                 class="flex justify-between items-center bg-primary/10 rounded-lg px-3 py-2"
@@ -707,6 +719,9 @@
         deliveryAddress: /*[[${deliveryAddress}]]*/ null,
         deliveryReferences: /*[[${deliveryReferences}]]*/ null,
       };
+
+      // Costo de env\u00edo por defecto (se aplica cuando orderType === DELIVERY)
+      window.DEFAULT_DELIVERY_COST = /*[[${defaultDeliveryCost}]]*/ 0;
 
       // Tax rate from system configuration
       const taxRate = /*[[${config.taxRate}]]*/ 0.0; // Tax rate as percentage (e.g., 19.0 for 19%)
@@ -1871,6 +1886,11 @@
 
         // Filter buffet items based on new order type
         filterBuffetItems();
+
+        // Refrescar UI del carrito (Env\u00edo a domicilio depende del orderType)
+        if (typeof updateCartUI === "function") {
+          updateCartUI();
+        }
       }
 
       // Update payment methods dropdown based on order type
@@ -3038,13 +3058,39 @@
         const descuentoTotalSinIVA =
           round2(subtotalSinIVA) - round2(baseImponible);
 
+        // Costo de envío (solo se suma si orderType actual es DELIVERY)
+        const currentOrderTypeForDelivery =
+          typeof getCurrentOrderType === "function"
+            ? getCurrentOrderType()
+            : orderData.orderType;
+        const deliveryCostNum = Number(window.DEFAULT_DELIVERY_COST) || 0;
+        const showDelivery =
+          currentOrderTypeForDelivery === "DELIVERY" && deliveryCostNum > 0;
+        const totalConEnvio = showDelivery
+          ? totalConPromocion + deliveryCostNum
+          : totalConPromocion;
+
         // Redondear a 2 decimales (consistente con view.html)
         cartSubtotalEl.textContent = `$${round2(subtotalSinIVA).toFixed(2)}`;
         cartIVAEl.textContent = `$${round2(iva).toFixed(2)}`;
         cartTotalEl.textContent =
-          totalConPromocion === 0
+          totalConEnvio === 0
             ? "GRATIS"
-            : `$${totalConPromocion.toFixed(2)}`;
+            : `$${round2(totalConEnvio).toFixed(2)}`;
+
+        // Actualizar fila de Costo de Envío
+        const deliveryContainer = document.getElementById(
+          "cartDeliveryContainer",
+        );
+        const deliveryElement = document.getElementById("cartDelivery");
+        if (deliveryContainer && deliveryElement) {
+          if (showDelivery) {
+            deliveryElement.textContent = `$${round2(deliveryCostNum).toFixed(2)}`;
+            deliveryContainer.classList.remove("hidden");
+          } else {
+            deliveryContainer.classList.add("hidden");
+          }
+        }
 
         const discountContainer = document.getElementById(
           "cartDiscountContainer",

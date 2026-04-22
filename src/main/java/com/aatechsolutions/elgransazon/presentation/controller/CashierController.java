@@ -458,6 +458,8 @@ public class CashierController {
             model.addAttribute("tableId", tableId);
             model.addAttribute("linkedReservation", linkedReservation);
             model.addAttribute("currentRole", "cashier");
+            // Expose system configuration so DELIVERY block can prefill deliveryCost
+            model.addAttribute("config", systemConfigurationService.getConfiguration());
             
             return "cashier/orders/order-customer-info";
             
@@ -479,6 +481,7 @@ public class CashierController {
             @RequestParam(required = false) String customerPhone,
             @RequestParam(required = false) String deliveryAddress,
             @RequestParam(required = false) String deliveryReferences,
+            @RequestParam(required = false) java.math.BigDecimal deliveryCost,
             Authentication authentication,
             Model model,
             RedirectAttributes redirectAttributes) {
@@ -552,6 +555,14 @@ public class CashierController {
             model.addAttribute("customerPhone", customerPhone);
             model.addAttribute("deliveryAddress", deliveryAddress);
             model.addAttribute("deliveryReferences", deliveryReferences);
+            // For DELIVERY orders, prefill from form value or config default; otherwise 0
+            java.math.BigDecimal effectiveDeliveryCost;
+            if (type == OrderType.DELIVERY) {
+                effectiveDeliveryCost = (deliveryCost != null) ? deliveryCost : config.getDefaultDeliveryCost();
+            } else {
+                effectiveDeliveryCost = java.math.BigDecimal.ZERO;
+            }
+            model.addAttribute("deliveryCost", effectiveDeliveryCost);
             model.addAttribute("categories", categories);
             model.addAttribute("itemsByCategory", itemsByCategory);
             model.addAttribute("allItems", availableItems);
@@ -787,6 +798,7 @@ public class CashierController {
             model.addAttribute("availableTables", availableTables);
             model.addAttribute("availableItems", availableItemsDTO);
             model.addAttribute("taxRate", config.getTaxRate());
+            model.addAttribute("defaultDeliveryCost", config.getDefaultDeliveryCost());
             model.addAttribute("orderTypes", OrderType.values());
             model.addAttribute("paymentMethods", enabledPaymentMethods);
             model.addAttribute("regularPaymentMethods", regularPaymentMethodsDTO);

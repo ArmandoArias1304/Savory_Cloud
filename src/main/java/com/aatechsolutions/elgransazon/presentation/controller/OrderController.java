@@ -533,6 +533,8 @@ public class OrderController {
         model.addAttribute("selectedTable", selectedTable);
         model.addAttribute("linkedReservation", linkedReservation);
         model.addAttribute("currentRole", role);
+        // Expose system configuration so DELIVERY block can prefill deliveryCost
+        model.addAttribute("config", systemConfigurationService.getConfiguration());
 
         return role + "/orders/order-customer-info";
     }
@@ -549,6 +551,7 @@ public class OrderController {
             @RequestParam(required = false) String customerPhone,
             @RequestParam(required = false) String deliveryAddress,
             @RequestParam(required = false) String deliveryReferences,
+            @RequestParam(required = false) java.math.BigDecimal deliveryCost,
             Authentication authentication,
             Model model,
             RedirectAttributes redirectAttributes) {
@@ -624,6 +627,14 @@ public class OrderController {
         model.addAttribute("customerPhone", customerPhone);
         model.addAttribute("deliveryAddress", deliveryAddress);
         model.addAttribute("deliveryReferences", deliveryReferences);
+        // For DELIVERY orders, prefill from form value or config default; otherwise 0
+        java.math.BigDecimal effectiveDeliveryCost;
+        if (type == OrderType.DELIVERY) {
+            effectiveDeliveryCost = (deliveryCost != null) ? deliveryCost : config.getDefaultDeliveryCost();
+        } else {
+            effectiveDeliveryCost = java.math.BigDecimal.ZERO;
+        }
+        model.addAttribute("deliveryCost", effectiveDeliveryCost);
         model.addAttribute("categories", categories);
         model.addAttribute("itemsByCategory", itemsByCategory);
         model.addAttribute("allItems", availableItems);
@@ -1076,6 +1087,7 @@ public class OrderController {
             String customerPhone = (String) requestData.get("customerPhone");
             String deliveryAddress = (String) requestData.get("deliveryAddress");
             String deliveryReferences = (String) requestData.get("deliveryReferences");
+            Object deliveryCostRaw = requestData.get("deliveryCost");
 
             OrderType orderType = orderTypeStr != null ? OrderType.valueOf(orderTypeStr) : OrderType.DINE_IN;
             PaymentMethodType paymentMethod = paymentMethodStr != null ? PaymentMethodType.valueOf(paymentMethodStr) : PaymentMethodType.CASH;
@@ -1095,6 +1107,26 @@ public class OrderController {
             order.setCustomerPhone(customerPhone);
             order.setDeliveryAddress(deliveryAddress);
             order.setDeliveryReferences(deliveryReferences);
+            // Delivery cost: only meaningful for DELIVERY (service layer also enforces this)
+            if (orderType == OrderType.DELIVERY) {
+                java.math.BigDecimal dc;
+                if (deliveryCostRaw == null || deliveryCostRaw.toString().isBlank()) {
+                    dc = config.getDefaultDeliveryCost();
+                } else {
+                    try {
+                        dc = new java.math.BigDecimal(deliveryCostRaw.toString());
+                    } catch (NumberFormatException ex) {
+                        throw new IllegalArgumentException("Costo de envío inválido");
+                    }
+                }
+                if (dc.compareTo(java.math.BigDecimal.ZERO) < 0
+                        || dc.compareTo(new java.math.BigDecimal("999999.99")) > 0) {
+                    throw new IllegalArgumentException("El costo de envío debe estar entre 0 y 999,999.99");
+                }
+                order.setDeliveryCost(dc);
+            } else {
+                order.setDeliveryCost(java.math.BigDecimal.ZERO);
+            }
             order.setCreatedBy(username);
             order.setStatus(OrderStatus.PENDING);
 
@@ -1433,6 +1465,7 @@ public class OrderController {
                     model.addAttribute("regularPaymentMethods", regularPaymentMethodsDTO);
                     model.addAttribute("deliveryPaymentMethods", deliveryPaymentMethodsDTO);
                     model.addAttribute("taxRate", config.getTaxRate());
+                    model.addAttribute("defaultDeliveryCost", config.getDefaultDeliveryCost());
                     model.addAttribute("formAction", "/" + role + "/orders/" + id);
                     model.addAttribute("currentRole", role);
                     

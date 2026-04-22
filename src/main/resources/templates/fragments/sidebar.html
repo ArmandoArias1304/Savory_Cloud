@@ -387,30 +387,33 @@
     <!-- SIDEBAR JAVASCRIPT Fragment -->
     <th:block th:fragment="sidebarScripts">
       <script>
-        // Sidebar toggle
+        // Sidebar toggle (guarded: pages that include this fragment without the
+        // sidebar markup, e.g. fullscreen order-menu, must not throw).
         const menuToggle = document.getElementById("menuToggle");
         const sidebar = document.getElementById("sidebar");
         const menuOverlay = document.getElementById("menuOverlay");
 
-        menuToggle.addEventListener("click", () => {
-          sidebar.classList.toggle("open");
-          menuOverlay.classList.toggle("show");
-        });
-
-        menuOverlay.addEventListener("click", () => {
-          sidebar.classList.remove("open");
-          menuOverlay.classList.remove("show");
-        });
-
-        const navItems = document.querySelectorAll(".nav-item");
-        navItems.forEach((item) => {
-          item.addEventListener("click", () => {
-            if (window.innerWidth < 1024) {
-              sidebar.classList.remove("open");
-              menuOverlay.classList.remove("show");
-            }
+        if (menuToggle && sidebar && menuOverlay) {
+          menuToggle.addEventListener("click", () => {
+            sidebar.classList.toggle("open");
+            menuOverlay.classList.toggle("show");
           });
-        });
+
+          menuOverlay.addEventListener("click", () => {
+            sidebar.classList.remove("open");
+            menuOverlay.classList.remove("show");
+          });
+
+          const navItems = document.querySelectorAll(".nav-item");
+          navItems.forEach((item) => {
+            item.addEventListener("click", () => {
+              if (window.innerWidth < 1024) {
+                sidebar.classList.remove("open");
+                menuOverlay.classList.remove("show");
+              }
+            });
+          });
+        }
       </script>
 
       <!-- User Limit Enforcement Script (only for ADMIN when limit is exceeded) -->

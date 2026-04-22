@@ -79,6 +79,17 @@ public class SystemConfiguration implements Serializable {
     @Column(name = "tax_rate", nullable = false, precision = 5, scale = 2)
     private BigDecimal taxRate;
 
+    // ========== Default Delivery Cost ==========
+    // Default amount charged for DELIVERY orders. Includes IVA.
+    // Staff can override per order in admin/waiter/cashier; clients always use this default.
+    @NotNull(message = "El costo de envío por defecto es obligatorio")
+    @DecimalMin(value = "0.0", message = "El costo de envío no puede ser negativo")
+    @DecimalMax(value = "999999.99", message = "El costo de envío no puede ser mayor a $999,999.99")
+    @Digits(integer = 6, fraction = 2, message = "El costo de envío solo permite hasta 2 decimales")
+    @Column(name = "default_delivery_cost", nullable = false, precision = 8, scale = 2)
+    @Builder.Default
+    private BigDecimal defaultDeliveryCost = BigDecimal.ZERO;
+
     @NotNull(message = "El tiempo promedio de consumo es obligatorio")
     @Min(value = 30, message = "El tiempo promedio de consumo debe ser al menos 30 minutos")
     @Max(value = 480, message = "El tiempo promedio de consumo no puede exceder los 480 minutos (8 horas)")

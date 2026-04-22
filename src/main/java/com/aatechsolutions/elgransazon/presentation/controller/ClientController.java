@@ -240,6 +240,11 @@ public class ClientController {
                     .findFirst()
                     .orElse(null);
             
+            // Default delivery cost (used by JS to add to cart total when orderType==DELIVERY)
+            BigDecimal defaultDeliveryCost = config.getDefaultDeliveryCost() != null
+                    ? config.getDefaultDeliveryCost()
+                    : BigDecimal.ZERO;
+
             model.addAttribute("config", config);
             model.addAttribute("categories", categories);
             model.addAttribute("itemsByCategory", itemsByCategory);
@@ -252,6 +257,7 @@ public class ClientController {
             model.addAttribute("customerAddresses", customerAddresses);
             model.addAttribute("defaultAddress", defaultAddress);
             model.addAttribute("hasAddresses", !customerAddresses.isEmpty());
+            model.addAttribute("defaultDeliveryCost", defaultDeliveryCost);
             
             return "client/menu";
             
@@ -430,6 +436,12 @@ public class ClientController {
             }
             
             BigDecimal taxRate = new BigDecimal(systemConfigurationService.getConfiguration().getTaxRate().toString());
+            // Customers cannot override the delivery cost — always use the configured default.
+            BigDecimal effectiveDeliveryCost = (orderType == OrderType.DELIVERY)
+                    ? (systemConfigurationService.getConfiguration().getDefaultDeliveryCost() != null
+                        ? systemConfigurationService.getConfiguration().getDefaultDeliveryCost()
+                        : BigDecimal.ZERO)
+                    : BigDecimal.ZERO;
             
             @SuppressWarnings("unchecked")
             List<Map<String, Object>> items = (List<Map<String, Object>>) orderData.get("items");
@@ -443,6 +455,7 @@ public class ClientController {
                     .deliveryLatitude(deliveryLatitude)
                     .deliveryLongitude(deliveryLongitude)
                     .taxRate(taxRate)
+                    .deliveryCost(effectiveDeliveryCost)
                     .status(OrderStatus.PENDING)
                     .customer(customer)
                     .customerName(customer.getFullName())

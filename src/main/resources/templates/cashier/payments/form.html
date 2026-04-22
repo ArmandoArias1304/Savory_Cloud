@@ -782,7 +782,7 @@
                   class="flex justify-between text-base font-medium text-gray-600 dark:text-gray-400 border-t border-gray-200 dark:border-gray-700 pt-2"
                 >
                   <span>Subtotal con descuento</span>
-                  <span th:text="${order.formattedSubtotal}"></span>
+                  <span th:text="${order.formattedSubtotalWithoutDelivery}"></span>
                 </div>
               </div>
               <!-- Sin descuento -->
@@ -791,7 +791,7 @@
                 class="flex justify-between text-base font-medium text-gray-600 dark:text-gray-400"
               >
                 <span>Subtotal</span>
-                <span th:text="${order.formattedSubtotal}"></span>
+                <span th:text="${order.formattedSubtotalWithoutDelivery}"></span>
               </div>
               <div
                 class="flex justify-between text-base font-medium text-gray-600 dark:text-gray-400 dark:text-gray-400"
@@ -799,7 +799,17 @@
                 <span
                   >Impuestos (<span th:text="${order.taxRate}">0</span>%)</span
                 >
-                <span th:text="${order.formattedTaxAmount}"></span>
+                <span th:text="${order.formattedTaxAmountWithoutDelivery}"></span>
+              </div>
+              <div
+                th:if="${order.orderType != null and order.orderType.name() == 'DELIVERY' and order.deliveryCost != null and order.deliveryCost.compareTo(T(java.math.BigDecimal).ZERO) > 0}"
+                class="flex justify-between text-base font-medium text-gray-600 dark:text-gray-400"
+              >
+                <span class="flex items-center gap-1">
+                  <span class="material-symbols-outlined text-base">local_shipping</span>
+                  Envío a domicilio
+                </span>
+                <span th:text="'$' + ${#numbers.formatDecimal(order.deliveryCost, 1, 2)}">$0.00</span>
               </div>
               <div
                 class="flex justify-between text-base font-medium text-gray-600 dark:text-gray-400 dark:text-gray-400"

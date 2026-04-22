@@ -336,6 +336,31 @@
                     maxlength="500"
                   ></textarea>
                 </div>
+
+                <!-- Delivery Cost (only for DELIVERY) -->
+                <div id="deliveryCostSection">
+                  <label
+                    class="block text-xs uppercase text-gray-500 dark:text-gray-400 font-medium mb-2"
+                  >
+                    Costo de Envío <span class="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    id="deliveryCost"
+                    name="deliveryCost"
+                    step="0.01"
+                    min="0"
+                    max="999999.99"
+                    th:value="${order.deliveryCost}"
+                    th:disabled="${order.status == T(com.aatechsolutions.elgransazon.domain.entity.OrderStatus).PAID}"
+                    th:classappend="${order.status == T(com.aatechsolutions.elgransazon.domain.entity.OrderStatus).PAID} ? 'opacity-60 cursor-not-allowed' : ''"
+                    class="w-full px-4 py-3 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-xl focus:ring-2 focus:ring-primary transition-all"
+                    placeholder="0.00"
+                  />
+                  <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    Monto a cobrar por el envío a domicilio (incluye IVA).
+                  </p>
+                </div>
               </div>
             </div>
 
@@ -407,6 +432,7 @@
       window.APP_DATA = {
         availableItems: /*[[${availableItems}]]*/ [],
         taxRate: /*[[${taxRate}]]*/ 0,
+        defaultDeliveryCost: /*[[${defaultDeliveryCost}]]*/ 0,
         orderType: /*[[${order.orderType?.name()}]]*/ "DINE_IN",
         orderDetails: /*[[${orderDetails}]]*/ [],
         isEditMode: /*[[${order.idOrder != null}]]*/ false,
@@ -429,6 +455,7 @@
       let regularPaymentMethods = [];
       let deliveryPaymentMethods = [];
       let currentPaymentMethod = null;
+      let defaultDeliveryCost = 0;
 
       // Initialize data from backend
       if (window.APP_DATA) {
@@ -446,6 +473,7 @@
         regularPaymentMethods = window.APP_DATA.regularPaymentMethods || [];
         deliveryPaymentMethods = window.APP_DATA.deliveryPaymentMethods || [];
         currentPaymentMethod = window.APP_DATA.currentPaymentMethod || null;
+        defaultDeliveryCost = parseFloat(window.APP_DATA.defaultDeliveryCost) || 0;
 
       }
 
@@ -482,6 +510,8 @@
         const deliveryAddressRequired = document.getElementById(
           "deliveryAddressRequired",
         );
+        const deliveryCostSection = document.getElementById("deliveryCostSection");
+        const deliveryCostInput = document.getElementById("deliveryCost");
 
         // Customer fields
         const customerName = document.getElementById("customerName");
@@ -498,6 +528,11 @@
           referencesSection.style.display = "none";
           if (deliveryAddressRequired)
             deliveryAddressRequired.style.display = "none";
+          if (deliveryCostSection) deliveryCostSection.style.display = "none";
+          if (deliveryCostInput) {
+            deliveryCostInput.required = false;
+            deliveryCostInput.value = "0";
+          }
 
           customerName.required = false;
           customerPhone.required = false;
@@ -512,6 +547,14 @@
           referencesSection.style.display = "block";
           if (deliveryAddressRequired)
             deliveryAddressRequired.style.display = "inline";
+          if (deliveryCostSection) deliveryCostSection.style.display = "block";
+          if (deliveryCostInput) {
+            deliveryCostInput.required = true;
+            const cur = parseFloat(deliveryCostInput.value);
+            if (!cur || cur <= 0) {
+              deliveryCostInput.value = (defaultDeliveryCost || 0).toFixed(2);
+            }
+          }
 
           customerName.required = true;
           customerPhone.required = true;
@@ -526,6 +569,11 @@
           referencesSection.style.display = "none";
           if (deliveryAddressRequired)
             deliveryAddressRequired.style.display = "none";
+          if (deliveryCostSection) deliveryCostSection.style.display = "none";
+          if (deliveryCostInput) {
+            deliveryCostInput.required = false;
+            deliveryCostInput.value = "0";
+          }
 
           customerName.required = true;
           customerPhone.required = true;

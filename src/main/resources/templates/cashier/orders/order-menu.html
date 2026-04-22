@@ -496,6 +496,18 @@
                 <span id="cartIVA">$0.00</span>
               </div>
 
+              <!-- Costo de Envío (solo para DELIVERY al crear pedido nuevo) -->
+              <div
+                id="cartDeliveryContainer"
+                class="hidden flex justify-between items-center text-sm font-semibold text-gray-600 dark:text-gray-400"
+              >
+                <span class="flex items-center gap-1">
+                  <span class="material-symbols-outlined text-base">local_shipping</span>
+                  Costo de Envío
+                </span>
+                <span id="cartDelivery">$0.00</span>
+              </div>
+
               <!-- Total -->
               <div
                 class="flex justify-between items-center text-lg font-black bg-primary/10 rounded-lg p-3"
@@ -587,6 +599,7 @@
         customerPhone: /*[[${customerPhone}]]*/ null,
         deliveryAddress: /*[[${deliveryAddress}]]*/ null,
         deliveryReferences: /*[[${deliveryReferences}]]*/ null,
+        deliveryCost: /*[[${deliveryCost}]]*/ 0,
       };
 
       // Existing order data (for add-items mode)
@@ -2772,13 +2785,38 @@
         const descuentoTotalSinIVA =
           round2(subtotalSinIVA) - round2(baseImponible);
 
+        // Costo de envío (solo se suma al total para pedidos DELIVERY nuevos;
+        // en modo agregar items, el envio ya forma parte de la orden existente).
+        const deliveryCostNum = Number(orderData.deliveryCost) || 0;
+        const showDelivery =
+          !isAddItemsMode &&
+          orderData.orderType === "DELIVERY" &&
+          deliveryCostNum > 0;
+        const totalConEnvio = showDelivery
+          ? totalConPromocion + deliveryCostNum
+          : totalConPromocion;
+
         // Redondear a 2 decimales (consistente con view.html)
         cartSubtotalEl.textContent = `$${round2(subtotalSinIVA).toFixed(2)}`;
         cartIVAEl.textContent = `$${round2(iva).toFixed(2)}`;
         cartTotalEl.textContent =
-          totalConPromocion === 0
+          totalConEnvio === 0
             ? "GRATIS"
-            : `$${totalConPromocion.toFixed(2)}`;
+            : `$${round2(totalConEnvio).toFixed(2)}`;
+
+        // Actualizar fila de Costo de Envío
+        const deliveryContainer = document.getElementById(
+          "cartDeliveryContainer",
+        );
+        const deliveryElement = document.getElementById("cartDelivery");
+        if (deliveryContainer && deliveryElement) {
+          if (showDelivery) {
+            deliveryElement.textContent = `$${round2(deliveryCostNum).toFixed(2)}`;
+            deliveryContainer.classList.remove("hidden");
+          } else {
+            deliveryContainer.classList.add("hidden");
+          }
+        }
 
         const discountContainer = document.getElementById(
           "cartDiscountContainer",

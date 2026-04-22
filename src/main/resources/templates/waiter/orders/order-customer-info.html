@@ -358,6 +358,40 @@
                       </div>
                     </div>
 
+                    <!-- Delivery Cost (only for DELIVERY) -->
+                    <div th:if="${orderType.name() == 'DELIVERY'}">
+                      <label
+                        for="deliveryCost"
+                        class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                      >
+                        Costo de Envío <span class="text-red-500">*</span>
+                      </label>
+                      <div class="relative">
+                        <div
+                          class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"
+                        >
+                          <span
+                            class="material-symbols-outlined text-gray-400 text-xl"
+                            >payments</span>
+                        </div>
+                        <input
+                          type="number"
+                          id="deliveryCost"
+                          name="deliveryCost"
+                          step="0.01"
+                          min="0"
+                          max="999999.99"
+                          required
+                          th:value="${config != null} ? ${config.defaultDeliveryCost} : 0"
+                          class="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-all"
+                          placeholder="0.00"
+                        />
+                      </div>
+                      <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                        Monto a cobrar por el envío a domicilio (incluye IVA). Se prellenó con el valor configurado por defecto.
+                      </p>
+                    </div>
+
                     <!-- Optional Address for TAKEOUT -->
                     <div th:if="${orderType.name() == 'TAKEOUT'}">
                       <label

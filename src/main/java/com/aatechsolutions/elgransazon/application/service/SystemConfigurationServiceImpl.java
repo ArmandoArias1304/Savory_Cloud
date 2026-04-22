@@ -120,6 +120,13 @@ public class SystemConfigurationServiceImpl implements SystemConfigurationServic
         // taxRate is managed by PROGRAMMER, not by admin — preserve existing value
         existingConfig.setAverageConsumptionTimeMinutes(configuration.getAverageConsumptionTimeMinutes());
         existingConfig.setTicketLogoOpacity(configuration.getTicketLogoOpacity());
+
+        // Default delivery cost (admin-managed). Treat null as ZERO to honor non-null DB constraint.
+        if (configuration.getDefaultDeliveryCost() != null) {
+            existingConfig.setDefaultDeliveryCost(configuration.getDefaultDeliveryCost());
+        } else {
+            existingConfig.setDefaultDeliveryCost(BigDecimal.ZERO);
+        }
         
         log.debug("Existing averageConsumptionTimeMinutes after update: {}", existingConfig.getAverageConsumptionTimeMinutes());
         

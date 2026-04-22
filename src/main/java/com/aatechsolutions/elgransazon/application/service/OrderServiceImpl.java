@@ -161,6 +161,13 @@ public class OrderServiceImpl implements OrderService {
         BigDecimal taxRate = getTaxRate();
         order.setTaxRate(taxRate);
 
+        // Normalize deliveryCost: only meaningful for DELIVERY; force ZERO otherwise.
+        if (order.getOrderType() != OrderType.DELIVERY || order.getDeliveryCost() == null) {
+            order.setDeliveryCost(order.getOrderType() == OrderType.DELIVERY && order.getDeliveryCost() != null
+                    ? order.getDeliveryCost()
+                    : BigDecimal.ZERO);
+        }
+
         // 8. Process order details and deduct stock
         for (OrderDetail detail : orderDetails) {
             ItemMenu item = itemMenuRepository.findById(detail.getItemMenu().getIdItemMenu())
@@ -423,6 +430,15 @@ public class OrderServiceImpl implements OrderService {
         existingOrder.setDeliveryReferences(updatedOrder.getDeliveryReferences());
         existingOrder.setPaymentMethod(updatedOrder.getPaymentMethod());
 
+        // Delivery cost: clear when leaving DELIVERY; otherwise apply incoming value (default 0).
+        if (newOrderType != OrderType.DELIVERY) {
+            existingOrder.setDeliveryCost(BigDecimal.ZERO);
+        } else {
+            existingOrder.setDeliveryCost(updatedOrder.getDeliveryCost() != null
+                    ? updatedOrder.getDeliveryCost()
+                    : BigDecimal.ZERO);
+        }
+
         // Handle table changes
         handleTableChange(existingOrder, oldTable, newTable, oldOrderType, newOrderType, 
                          updatedOrder.getUpdatedBy());
@@ -486,9 +502,21 @@ public class OrderServiceImpl implements OrderService {
         existingOrder.setPaymentMethod(updatedOrder.getPaymentMethod());
         existingOrder.setUpdatedBy(updatedOrder.getUpdatedBy());
 
+        // Delivery cost: clear when leaving DELIVERY; otherwise apply incoming value (default 0).
+        if (newOrderType != OrderType.DELIVERY) {
+            existingOrder.setDeliveryCost(BigDecimal.ZERO);
+        } else {
+            existingOrder.setDeliveryCost(updatedOrder.getDeliveryCost() != null
+                    ? updatedOrder.getDeliveryCost()
+                    : BigDecimal.ZERO);
+        }
+
         // Handle table changes (release old table, assign new table)
         handleTableChange(existingOrder, oldTable, newTable, oldOrderType, newOrderType, 
                          updatedOrder.getUpdatedBy());
+
+        // Recalculate totals so deliveryCost / orderType change is reflected in subtotal/tax/total
+        existingOrder.recalculateAmounts();
 
         // Save updated order
         Order savedOrder = orderRepository.save(existingOrder);

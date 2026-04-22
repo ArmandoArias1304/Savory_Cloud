@@ -773,7 +773,7 @@
                   >
                   <span
                     class="font-semibold text-gray-900 dark:text-white"
-                    th:text="'$' + ${#numbers.formatDecimal(order.subtotal, 1, 2)}"
+                    th:text="'$' + ${#numbers.formatDecimal(order.subtotalWithoutDelivery, 1, 2)}"
                   >
                     $0.00
                   </span>
@@ -786,7 +786,7 @@
                   <span class="text-gray-600 dark:text-gray-400">Subtotal</span>
                   <span
                     class="font-semibold text-gray-900 dark:text-white"
-                    th:text="'$' + ${#numbers.formatDecimal(order.subtotal, 1, 2)}"
+                    th:text="'$' + ${#numbers.formatDecimal(order.subtotalWithoutDelivery, 1, 2)}"
                   >
                     $0.00
                   </span>
@@ -800,7 +800,24 @@
                 </span>
                 <span
                   class="font-semibold text-gray-900 dark:text-white"
-                  th:text="'$' + ${#numbers.formatDecimal(order.taxAmount, 1, 2)}"
+                  th:text="'$' + ${#numbers.formatDecimal(order.taxAmountWithoutDelivery, 1, 2)}"
+                >
+                  $0.00
+                </span>
+              </div>
+
+              <!-- Envío a domicilio (solo DELIVERY con costo) -->
+              <div
+                th:if="${order.orderType != null and order.orderType.name() == 'DELIVERY' and order.deliveryCost != null and order.deliveryCost.compareTo(T(java.math.BigDecimal).ZERO) > 0}"
+                class="flex items-center justify-between"
+              >
+                <span class="text-gray-600 dark:text-gray-400 flex items-center gap-1">
+                  <span class="material-symbols-outlined text-base">local_shipping</span>
+                  Envío a domicilio
+                </span>
+                <span
+                  class="font-semibold text-gray-900 dark:text-white"
+                  th:text="'$' + ${#numbers.formatDecimal(order.deliveryCost, 1, 2)}"
                 >
                   $0.00
                 </span>

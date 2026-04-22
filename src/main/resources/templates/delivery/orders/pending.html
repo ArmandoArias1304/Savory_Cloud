@@ -381,7 +381,7 @@
                   >
                   <span
                     class="text-sm font-semibold text-gray-900 dark:text-white"
-                    th:text="${order.formattedSubtotal}"
+                    th:text="${order.formattedSubtotalWithoutDelivery}"
                   ></span>
                 </div>
                 <div class="flex justify-between items-center mb-2">
@@ -390,8 +390,21 @@
                   >
                   <span
                     class="text-sm font-semibold text-gray-900 dark:text-white"
-                    th:text="${order.formattedTaxAmount}"
+                    th:text="${order.formattedTaxAmountWithoutDelivery}"
                   ></span>
+                </div>
+                <div
+                  th:if="${order.orderType != null and order.orderType.name() == 'DELIVERY' and order.deliveryCost != null and order.deliveryCost.compareTo(T(java.math.BigDecimal).ZERO) > 0}"
+                  class="flex justify-between items-center mb-2"
+                >
+                  <span class="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-1">
+                    <span class="material-symbols-outlined text-base">local_shipping</span>
+                    Envío:
+                  </span>
+                  <span
+                    class="text-sm font-semibold text-gray-900 dark:text-white"
+                    th:text="'$' + ${#numbers.formatDecimal(order.deliveryCost, 1, 2)}"
+                  >$0.00</span>
                 </div>
                 <div class="flex justify-between items-center">
                   <span
