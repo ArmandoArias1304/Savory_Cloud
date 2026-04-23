@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 
 /**
  * Inner transaction helper for ingredient stock operations.
@@ -56,7 +57,7 @@ public class IngredientStockTxHelper {
                             currentStock.stripTrailingZeros().toPlainString(), unit));
         }
 
-        ingredient.setCurrentStock(currentStock.subtract(quantityToDeduct));
+        ingredient.setCurrentStock(currentStock.subtract(quantityToDeduct).setScale(2, RoundingMode.HALF_UP));
         ingredientRepository.save(ingredient);
 
         log.debug("Stock deducted: {} -{} {}. Remaining: {}",
@@ -81,7 +82,7 @@ public class IngredientStockTxHelper {
                 ? ingredient.getCurrentStock()
                 : BigDecimal.ZERO;
 
-        BigDecimal newStock = currentStock.add(quantityToReturn);
+        BigDecimal newStock = currentStock.add(quantityToReturn).setScale(2, RoundingMode.HALF_UP);
 
         BigDecimal maxStock = ingredient.getMaxStock();
         if (maxStock != null && newStock.compareTo(maxStock) > 0) {

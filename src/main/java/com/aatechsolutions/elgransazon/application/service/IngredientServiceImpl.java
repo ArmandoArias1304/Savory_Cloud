@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -178,8 +179,6 @@ public class IngredientServiceImpl implements IngredientService {
         // costPerUnit is managed through addStock() method, preserve existing value
         // ingredient.setCostPerUnit(ingredientDetails.getCostPerUnit());
         ingredient.setCurrency(ingredientDetails.getCurrency());
-        ingredient.setStorageLocation(ingredientDetails.getStorageLocation());
-        ingredient.setShelfLifeDays(ingredientDetails.getShelfLifeDays());
         ingredient.setActive(ingredientDetails.getActive());
         ingredient.setCategory(category);
 
@@ -247,8 +246,7 @@ public class IngredientServiceImpl implements IngredientService {
                 final String searchLower = normalizedSearch.toLowerCase();
                 ingredients = ingredients.stream()
                     .filter(i -> i.getName().toLowerCase().contains(searchLower) ||
-                               (i.getDescription() != null && i.getDescription().toLowerCase().contains(searchLower)) ||
-                               (i.getStorageLocation() != null && i.getStorageLocation().toLowerCase().contains(searchLower)))
+                               (i.getDescription() != null && i.getDescription().toLowerCase().contains(searchLower)))
                     .collect(Collectors.toList());
             }
             
@@ -384,7 +382,7 @@ public class IngredientServiceImpl implements IngredientService {
         BigDecimal previousStock = ingredient.getCurrentStock();
 
         // Calcular nuevo stock
-        BigDecimal newStock = previousStock.add(quantityToAdd);
+        BigDecimal newStock = previousStock.add(quantityToAdd).setScale(2, RoundingMode.HALF_UP);
 
         // Actualizar stock del ingrediente
         ingredient.setCurrentStock(newStock);

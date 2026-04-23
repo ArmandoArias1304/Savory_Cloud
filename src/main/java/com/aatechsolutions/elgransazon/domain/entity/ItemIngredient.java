@@ -6,6 +6,7 @@ import lombok.*;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 
 /**
@@ -33,9 +34,9 @@ public class ItemIngredient implements Serializable {
     // ========== Quantity Configuration ==========
 
     @NotNull(message = "La cantidad es requerida")
-    @DecimalMin(value = "0.001", inclusive = true, message = "La cantidad debe ser mayor a 0")
-    @Digits(integer = 7, fraction = 3, message = "La cantidad debe tener máximo 7 dígitos y 3 decimales")
-    @Column(name = "quantity", precision = 10, scale = 3, nullable = false)
+    @DecimalMin(value = "0.01", inclusive = true, message = "La cantidad debe ser mayor a 0")
+    @Digits(integer = 7, fraction = 2, message = "La cantidad debe tener máximo 7 dígitos y 2 decimales")
+    @Column(name = "quantity", precision = 9, scale = 2, nullable = false)
     private BigDecimal quantity;
 
     @NotBlank(message = "La unidad de medida es requerida")
@@ -154,7 +155,7 @@ public class ItemIngredient implements Serializable {
             );
         }
 
-        BigDecimal newStock = currentStock.subtract(requiredQuantity);
+        BigDecimal newStock = currentStock.subtract(requiredQuantity).setScale(2, RoundingMode.HALF_UP);
         ingredient.setCurrentStock(newStock);
         
         return newStock;

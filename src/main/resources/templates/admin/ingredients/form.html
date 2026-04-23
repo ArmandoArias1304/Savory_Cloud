@@ -278,7 +278,7 @@
                   th:field="*{minStock}"
                   required
                   min="0"
-                  step="0.001"
+                  step="0.01"
                   class="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-primary focus:outline-none"
                   placeholder="0.00"
                 />
@@ -315,7 +315,7 @@
                   id="maxStock"
                   th:field="*{maxStock}"
                   min="0"
-                  step="0.001"
+                  step="0.01"
                   th:readonly="${ingredient.idIngredient != null}"
                   th:classappend="${ingredient.idIngredient != null ? 'bg-gray-200 dark:bg-gray-700 cursor-not-allowed opacity-75' : ''}"
                   class="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-primary focus:outline-none"
@@ -366,7 +366,7 @@
                   th:field="*{currentStock}"
                   required
                   min="0"
-                  step="0.001"
+                  step="0.01"
                   th:readonly="${ingredient.idIngredient != null}"
                   th:classappend="${ingredient.idIngredient != null ? 'bg-gray-200 dark:bg-gray-700 cursor-not-allowed opacity-75' : ''}"
                   class="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-primary focus:outline-none"
@@ -441,93 +441,8 @@
                 </p>
               </div>
 
-              <!-- Moneda -->
-              <div>
-                <label
-                  for="currency"
-                  class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
-                >
-                  Moneda
-                </label>
-                <select
-                  id="currency"
-                  th:field="*{currency}"
-                  class="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-primary focus:outline-none"
-                >
-                  <option value="MXN">MXN (MX$)</option>
-                  <option value="USD">USD ($)</option>
-                  <option value="EUR">EUR (€)</option>
-                  <option value="GTQ">GTQ (Q)</option>
-                </select>
-                <p
-                  th:if="${#fields.hasErrors('currency')}"
-                  th:errors="*{currency}"
-                  class="mt-1 text-sm text-red-600 dark:text-red-400"
-                ></p>
-              </div>
-            </div>
-          </div>
-
-          <!-- ALMACENAMIENTO -->
-          <div class="p-6 bg-white dark:bg-gray-900">
-            <h2
-              class="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2 mb-6"
-            >
-              <span class="material-symbols-outlined text-primary"
-                >warehouse</span
-              >
-              Información de Almacenamiento
-            </h2>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <!-- Ubicación -->
-              <div>
-                <label
-                  for="storageLocation"
-                  class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
-                >
-                  Ubicación de Almacenamiento
-                </label>
-                <input
-                  type="text"
-                  id="storageLocation"
-                  th:field="*{storageLocation}"
-                  maxlength="100"
-                  class="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-primary focus:outline-none"
-                  placeholder="Ej: Refrigerador A, Estante B"
-                />
-                <p
-                  th:if="${#fields.hasErrors('storageLocation')}"
-                  th:errors="*{storageLocation}"
-                  class="mt-1 text-sm text-red-600 dark:text-red-400"
-                ></p>
-              </div>
-
-              <!-- Vida útil -->
-              <div>
-                <label
-                  for="shelfLifeDays"
-                  class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
-                >
-                  Vida Útil (días)
-                </label>
-                <input
-                  type="number"
-                  id="shelfLifeDays"
-                  th:field="*{shelfLifeDays}"
-                  min="0"
-                  class="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-primary focus:outline-none"
-                  placeholder="Ej: 7, 30, 365"
-                />
-                <p
-                  th:if="${#fields.hasErrors('shelfLifeDays')}"
-                  th:errors="*{shelfLifeDays}"
-                  class="mt-1 text-sm text-red-600 dark:text-red-400"
-                ></p>
-                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                  Número de días antes de caducidad
-                </p>
-              </div>
+              <!-- Moneda (fija MXN) -->
+              <input type="hidden" th:field="*{currency}" value="MXN" />
             </div>
           </div>
 
@@ -586,7 +501,7 @@
                     type="number"
                     name="quantityToAdd"
                     id="quantityToAdd"
-                    th:step="${ingredient.unitOfMeasure == 'UN' ? '1' : '0.001'}"
+                    th:step="${ingredient.unitOfMeasure == 'UN' ? '1' : '0.01'}"
                     th:min="${ingredient.unitOfMeasure == 'UN' ? '1' : '0.01'}"
                     required
                     th:placeholder="${ingredient.unitOfMeasure == 'UN' ? 'Ej: 50' : 'Ej: 50.5'}"

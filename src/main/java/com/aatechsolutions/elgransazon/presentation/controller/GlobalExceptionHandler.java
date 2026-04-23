@@ -105,7 +105,7 @@ public class GlobalExceptionHandler {
      * checking for nested ConstraintViolationException.
      */
     public static String extractConstraintMessages(Exception ex) {
-        Throwable cause = ex.getCause();
+        Throwable cause = ex;
         while (cause != null && !(cause instanceof ConstraintViolationException)) {
             cause = cause.getCause();
         }

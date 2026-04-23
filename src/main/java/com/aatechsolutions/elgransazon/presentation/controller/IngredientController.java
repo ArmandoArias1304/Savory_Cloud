@@ -166,8 +166,8 @@ public class IngredientController {
     @PostMapping
     public String createIngredient(
             @Valid @ModelAttribute("ingredient") Ingredient ingredient,
-            @RequestParam Long categoryId,
             BindingResult result,
+            @RequestParam Long categoryId,
             Model model,
             RedirectAttributes redirectAttributes,
             Authentication authentication) {
@@ -316,8 +316,8 @@ public class IngredientController {
     public String updateIngredient(
             @PathVariable Long id,
             @Valid @ModelAttribute("ingredient") Ingredient ingredient,
-            @RequestParam Long categoryId,
             BindingResult result,
+            @RequestParam Long categoryId,
             Model model,
             RedirectAttributes redirectAttributes) {
 

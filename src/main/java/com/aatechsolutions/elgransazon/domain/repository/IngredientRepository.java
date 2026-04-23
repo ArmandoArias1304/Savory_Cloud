@@ -38,11 +38,6 @@ public interface IngredientRepository extends JpaRepository<Ingredient, Long> {
     List<Ingredient> findByDescriptionContainingIgnoreCase(String description);
 
     /**
-     * Find ingredients by storage location containing (case insensitive)
-     */
-    List<Ingredient> findByStorageLocationContainingIgnoreCase(String storageLocation);
-
-    /**
      * Find ingredients by category
      */
     List<Ingredient> findByCategoryIdCategoryOrderByNameAsc(Long categoryId);
@@ -98,7 +93,6 @@ public interface IngredientRepository extends JpaRepository<Ingredient, Long> {
            "WHERE (:search IS NULL OR " +
            "LOWER(i.name) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
            "LOWER(i.description) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
-           "LOWER(i.storageLocation) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
            "CAST(i.costPerUnit AS string) LIKE CONCAT('%', :search, '%')) " +
            "AND (:categoryId IS NULL OR i.category.idCategory = :categoryId) " +
            "AND (:active IS NULL OR i.active = :active) " +
@@ -196,7 +190,6 @@ public interface IngredientRepository extends JpaRepository<Ingredient, Long> {
            "AND (:search IS NULL OR " +
            "LOWER(i.name) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
            "LOWER(i.description) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
-           "LOWER(i.storageLocation) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
            "CAST(i.costPerUnit AS string) LIKE CONCAT('%', :search, '%')) " +
            "AND (:categoryId IS NULL OR i.category.idCategory = :categoryId) " +
            "AND (:active IS NULL OR i.active = :active) " +

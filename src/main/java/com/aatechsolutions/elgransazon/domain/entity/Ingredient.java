@@ -48,20 +48,20 @@ public class Ingredient implements Serializable {
 
     @NotNull(message = "El stock actual es requerido")
     @DecimalMin(value = "0.0", inclusive = true, message = "El stock actual no puede ser negativo")
-    @Digits(integer = 7, fraction = 3, message = "El stock debe tener máximo 7 dígitos y 3 decimales")
-    @Column(name = "current_stock", precision = 10, scale = 3)
+    @Digits(integer = 7, fraction = 2, message = "El stock debe tener máximo 7 dígitos y 2 decimales")
+    @Column(name = "current_stock", precision = 9, scale = 2)
     @Builder.Default
     private BigDecimal currentStock = BigDecimal.ZERO;
 
     @NotNull(message = "El stock mínimo es requerido")
     @DecimalMin(value = "0.0", inclusive = true, message = "El stock mínimo no puede ser negativo")
-    @Digits(integer = 7, fraction = 3, message = "El stock mínimo debe tener máximo 7 dígitos y 3 decimales")
-    @Column(name = "min_stock", precision = 10, scale = 3)
+    @Digits(integer = 7, fraction = 2, message = "El stock mínimo debe tener máximo 7 dígitos y 2 decimales")
+    @Column(name = "min_stock", precision = 9, scale = 2)
     private BigDecimal minStock;
 
     @DecimalMin(value = "0.0", inclusive = true, message = "El stock máximo no puede ser negativo")
-    @Digits(integer = 7, fraction = 3, message = "El stock máximo debe tener máximo 7 dígitos y 3 decimales")
-    @Column(name = "max_stock", precision = 10, scale = 3)
+    @Digits(integer = 7, fraction = 2, message = "El stock máximo debe tener máximo 7 dígitos y 2 decimales")
+    @Column(name = "max_stock", precision = 9, scale = 2)
     private BigDecimal maxStock;
 
     @Size(max = 20, message = "La unidad de medida no puede exceder 20 caracteres")
@@ -78,17 +78,7 @@ public class Ingredient implements Serializable {
     @Size(max = 3, message = "El código de moneda debe tener 3 caracteres")
     @Column(name = "currency", length = 3)
     @Builder.Default
-    private String currency = "USD";
-
-    // ========== Storage ==========
-
-    @Size(max = 100, message = "La ubicación de almacenamiento no puede exceder 100 caracteres")
-    @Column(name = "storage_location", length = 100)
-    private String storageLocation;
-
-    @Min(value = 0, message = "La vida útil no puede ser negativa")
-    @Column(name = "shelf_life_days")
-    private Integer shelfLifeDays;
+    private String currency = "MXN";
 
     // ========== Status ==========
 

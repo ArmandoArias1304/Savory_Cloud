@@ -371,7 +371,10 @@ public class ItemMenuController {
 
         } catch (Exception e) {
             log.error("Error creating menu item", e);
-            model.addAttribute("errorMessage", "Error al crear el item del menú: " + e.getMessage());
+            String friendlyMessage = GlobalExceptionHandler.extractConstraintMessages(e);
+            model.addAttribute("errorMessage", friendlyMessage != null
+                    ? friendlyMessage
+                    : "Error al crear el item del menú: " + e.getMessage());
             List<ItemIngredient> recipe = buildRecipe(ingredientIds, quantities, units);
             loadFormData(model, itemMenu, recipe);
             loadAvailabilityFormData(model, itemMenu);
@@ -597,7 +600,10 @@ public class ItemMenuController {
 
         } catch (Exception e) {
             log.error("Error updating menu item: {}", e.getMessage(), e);
-            model.addAttribute("errorMessage", "Error al actualizar el item del menú: " + e.getMessage());
+            String friendlyMessage = GlobalExceptionHandler.extractConstraintMessages(e);
+            model.addAttribute("errorMessage", friendlyMessage != null
+                    ? friendlyMessage
+                    : "Error al actualizar el item del menú: " + e.getMessage());
             loadFormData(model, itemMenu, itemMenuService.getRecipe(id));
             loadAvailabilityFormData(model, itemMenu);
             model.addAttribute("formAction", "/admin/menu-items/" + id);
