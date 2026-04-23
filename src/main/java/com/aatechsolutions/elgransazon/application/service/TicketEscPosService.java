@@ -343,6 +343,15 @@ public class TicketEscPosService {
             if (order.getSelfInvoiceUrl() != null) {
                 writeQrCode(out, order.getSelfInvoiceUrl());
             }
+            // Invoicing deadline legend (last day of payment month, in company timezone)
+            java.time.LocalDate deadline = order.getInvoiceDeadline(
+                    com.aatechsolutions.elgransazon.infrastructure.util.CompanyLocalTime.getZone());
+            if (deadline != null) {
+                String deadlineText = deadline.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+                out.write(BOLD_ON);
+                printLine(out, "Facture antes del " + deadlineText);
+                out.write(BOLD_OFF);
+            }
             printSeparator(out);
         } else {
             printLine(out, "Este no es un comprobante fiscal");

@@ -597,6 +597,40 @@ public class Order implements Serializable {
     }
 
     /**
+     * Compute the autofactura deadline (last day of the month in which the order was paid),
+     * expressed in the company's local timezone.
+     *
+     * Anchor: {@code paidAt} if present, otherwise {@code createdAt} (legacy fallback).
+     * Both are stored as UTC LocalDateTime, so they are converted to the given zone before
+     * extracting the calendar month.
+     *
+     * Returns {@code null} only when the order has neither timestamp (should never happen
+     * in practice).
+     */
+    public java.time.LocalDate getInvoiceDeadline(java.time.ZoneId zone) {
+        java.time.LocalDateTime anchor = paidAt != null ? paidAt : createdAt;
+        if (anchor == null || zone == null) {
+            return null;
+        }
+        java.time.LocalDate localDate = anchor.atZone(java.time.ZoneOffset.UTC)
+                .withZoneSameInstant(zone)
+                .toLocalDate();
+        return java.time.YearMonth.from(localDate).atEndOfMonth();
+    }
+
+    /**
+     * Check whether the invoicing window for this order has expired.
+     * Strict cutoff at end-of-day on the last day of the payment month, in the company timezone.
+     */
+    public boolean isAutofacturaExpired(java.time.ZoneId zone) {
+        java.time.LocalDate deadline = getInvoiceDeadline(zone);
+        if (deadline == null) {
+            return false;
+        }
+        return java.time.LocalDate.now(zone).isAfter(deadline);
+    }
+
+    /**
      * Get delivery person name
      */
     public String getDeliveryPersonName() {

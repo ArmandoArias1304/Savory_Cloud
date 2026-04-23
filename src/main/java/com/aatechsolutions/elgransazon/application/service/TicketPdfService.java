@@ -577,6 +577,20 @@ public class TicketPdfService {
                 }
             }
 
+            // Invoicing deadline legend (last day of payment month, in company timezone)
+            java.time.LocalDate deadline = order.getInvoiceDeadline(
+                    com.aatechsolutions.elgransazon.infrastructure.util.CompanyLocalTime.getZone());
+            if (deadline != null) {
+                String deadlineText = deadline.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+                Paragraph deadlineLegend = new Paragraph("Facture antes del " + deadlineText)
+                        .setFont(boldFont)
+                        .setFontSize(7)
+                        .setTextAlignment(TextAlignment.CENTER)
+                        .setMarginTop(2)
+                        .setMarginBottom(2);
+                document.add(deadlineLegend);
+            }
+
             document.add(new Paragraph("━━━━━━━━━━━━━━━━━━━━━━━━━━")
                     .setTextAlignment(TextAlignment.CENTER)
                     .setMarginTop(3)

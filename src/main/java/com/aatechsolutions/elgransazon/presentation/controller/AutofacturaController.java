@@ -5,6 +5,7 @@ import com.aatechsolutions.elgransazon.domain.entity.FacturamaConfig;
 import com.aatechsolutions.elgransazon.domain.entity.Order;
 import com.aatechsolutions.elgransazon.domain.repository.OrderRepository;
 import com.aatechsolutions.elgransazon.infrastructure.context.CompanyContext;
+import com.aatechsolutions.elgransazon.infrastructure.util.CompanyLocalTime;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.*;
@@ -13,6 +14,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -70,6 +72,15 @@ public class AutofacturaController {
             return "autofactura";
         }
 
+        // Check if the invoicing window has expired (strict cutoff at end of payment month
+        // in the company's local timezone — aligned with the SAT monthly declaration cycle).
+        if (order.isAutofacturaExpired(CompanyLocalTime.getZone())) {
+            String deadlineText = order.getInvoiceDeadline(CompanyLocalTime.getZone())
+                    .format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+            model.addAttribute("error", "El plazo para facturar esta orden venció el " + deadlineText);
+            return "autofactura";
+        }
+
         // Check if Facturama is configured for this company
         FacturamaConfig config = facturamaService.getConfigForCurrentCompany()
                 .filter(FacturamaConfig::isReady)
@@ -117,6 +128,14 @@ public class AutofacturaController {
         if (order.getFacturamaCfdiId() != null && !order.getFacturamaCfdiId().isBlank()) {
             model.addAttribute("order", order);
             model.addAttribute("alreadyInvoiced", true);
+            return "autofactura";
+        }
+
+        // Re-check expiry on POST (defends against expiry crossing while user was filling the form)
+        if (order.isAutofacturaExpired(CompanyLocalTime.getZone())) {
+            String deadlineText = order.getInvoiceDeadline(CompanyLocalTime.getZone())
+                    .format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+            model.addAttribute("error", "El plazo para facturar esta orden venció el " + deadlineText);
             return "autofactura";
         }
 
