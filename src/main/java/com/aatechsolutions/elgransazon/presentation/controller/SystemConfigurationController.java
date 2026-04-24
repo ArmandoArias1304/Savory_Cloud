@@ -358,33 +358,44 @@ public class SystemConfigurationController {
     }
 
     /**
-     * Upload restaurant logo image
+     * Upload (or set) the restaurant logo.
+     *
+     * Accepts two modes (Direct Creator Upload is preferred):
+     *  1. Direct Upload: the JS already uploaded to Cloudflare and sends only {@code imageUrl}.
+     *  2. Server-side (fallback): legacy {@code restaurantLogoFile} multipart.
      */
     @PostMapping("/upload-restaurant-logo")
     public String uploadRestaurantLogo(
-            @RequestParam("restaurantLogoFile") MultipartFile file,
+            @RequestParam(value = "restaurantLogoFile", required = false) MultipartFile file,
+            @RequestParam(value = "imageUrl", required = false) String imageUrl,
             RedirectAttributes redirectAttributes) {
 
-        log.info("Processing restaurant logo upload");
+        log.info("Processing restaurant logo upload (directUpload={})", imageUrl != null && !imageUrl.isBlank());
 
-        if (file == null || file.isEmpty()) {
+        boolean hasFile = file != null && !file.isEmpty();
+        boolean hasUrl = imageUrl != null && !imageUrl.isBlank();
+        if (!hasFile && !hasUrl) {
             redirectAttributes.addFlashAttribute("errorMessage", "No se seleccionó ningún archivo");
             return "redirect:/admin/system-configuration";
         }
 
         try {
-            // Delete previous logo from Cloudinary if exists
+            // Delete previous logo from Cloudflare if exists (fire-and-forget)
             SystemConfiguration config = configurationService.getConfiguration();
             if (config.getRestaurantLogoUrl() != null && !config.getRestaurantLogoUrl().isEmpty()) {
                 imageStorageService.deleteImage(config.getRestaurantLogoUrl());
             }
 
-            // Upload to Cloudinary in Home/CompanyLogoImage folder
-            String imageUrl = imageStorageService.saveImage(file, "company-logo", "restaurant-logo");
-            config.setRestaurantLogoUrl(imageUrl);
+            String finalUrl;
+            if (hasUrl) {
+                finalUrl = imageUrl.trim();
+            } else {
+                finalUrl = imageStorageService.saveImage(file, "restaurant-logo", "restaurant-logo");
+            }
+            config.setRestaurantLogoUrl(finalUrl);
             configurationService.updateConfiguration(config);
 
-            log.info("Restaurant logo uploaded successfully: {}", imageUrl);
+            log.info("Restaurant logo updated: {}", finalUrl);
             redirectAttributes.addFlashAttribute("successMessage", "Logo del restaurante actualizado exitosamente");
         } catch (Exception e) {
             log.error("Error uploading restaurant logo: {}", e.getMessage());

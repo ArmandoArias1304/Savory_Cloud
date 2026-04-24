@@ -127,23 +127,12 @@
 			<artifactId>spring-security-test</artifactId>
 			<scope>test</scope>
 		</dependency>
-		<!-- Cloudinary SDK -->
-		<dependency>
-			<groupId>com.cloudinary</groupId>
-			<artifactId>cloudinary-http44</artifactId>
-			<version>1.36.0</version>
-		</dependency>
-		<!-- Image Processing -->
-		<dependency>
-			<groupId>net.coobird</groupId>
-			<artifactId>thumbnailator</artifactId>
-			<version>0.4.20</version>
-		</dependency>
-		<dependency>
-			<groupId>org.sejda.imageio</groupId>
-			<artifactId>webp-imageio</artifactId>
-			<version>0.1.6</version>
-		</dependency>
+		<!--
+			Cloudflare Images: uses Spring's built-in RestClient (spring-web 6.1+).
+			No SDK required — communicates with Cloudflare REST API directly.
+			Image format/quality/resizing is handled by Cloudflare's CDN (URL-based
+			transformations), so we no longer need Cloudinary, Thumbnailator or webp-imageio.
+		-->
 	</dependencies>
 
 	<build>

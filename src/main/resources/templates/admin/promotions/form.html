@@ -191,7 +191,7 @@
                       >
                       <span
                         class="text-sm text-gray-500 dark:text-gray-500 mt-2"
-                        >JPG, PNG, GIF o WEBP - Máximo 5MB</span
+                        >JPG, PNG, GIF o WEBP - Máximo 3MB</span
                       >
                     </label>
 
@@ -1082,12 +1082,12 @@
       function previewPromoImage(event) {
         const file = event.target.files[0];
         if (file) {
-          const maxSize = 5 * 1024 * 1024; // 5MB
+          const maxSize = 3 * 1024 * 1024; // 3MB
           if (file.size > maxSize) {
             Swal.fire({
               icon: "warning",
               title: "Imagen demasiado pesada",
-              html: "Tu imagen pesa más de <b>5MB</b><br>Te recomendamos reducir su tamaño o usar un formato más ligero como <b>WEBP</b>.",
+              html: "Tu imagen pesa más de <b>3MB</b><br>Te recomendamos reducir su tamaño o usar un formato más ligero como <b>WEBP</b>.",
               confirmButtonText: "Entendido",
               confirmButtonColor: "#38e07b",
               background: document.documentElement.classList.contains("dark")
@@ -1164,6 +1164,27 @@
         container.classList.add("hidden");
         uploadArea.classList.remove("hidden");
       }
+    </script>
+
+    <!-- Cloudflare Direct Upload helper + form integration. The file the user picks is
+         uploaded straight from the browser to Cloudflare on submit; only the final
+         delivery URL is sent to our server (in the hidden imageUrl field). -->
+    <script th:src="@{/js/cf-direct-upload.js}" defer></script>
+    <script defer>
+      window.addEventListener("DOMContentLoaded", function () {
+        if (!window.CFDirectUpload) return;
+        CFDirectUpload.setupForm({
+          formId: "promotionForm",
+          fileInputId: "imageFile",
+          urlInputId: "imageUrl",
+          tokenUrl: "/admin/api/cf-images/upload-token",
+          kind: "promotions",
+          getName: function () {
+            const el = document.getElementById("name");
+            return el && el.value ? el.value : "promotion";
+          },
+        });
+      });
     </script>
 
     <!-- Sidebar Scripts Fragment -->

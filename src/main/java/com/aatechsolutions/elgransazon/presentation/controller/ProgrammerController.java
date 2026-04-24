@@ -383,32 +383,42 @@ public class ProgrammerController {
     }
 
     /**
-     * Upload system logo image
-     * Uses GlobalSystemConfigService for global system logo
-     * Uploads to Home/SavoryCloud/ folder in Cloudinary
+     * Upload (or set) the global system logo.
+     *
+     * Accepts two modes (Direct Creator Upload is preferred and bypasses this server):
+     *  1. Direct Upload mode (preferred): the JS uploaded the file straight to Cloudflare
+     *     and only sends the resulting {@code imageUrl} string to this endpoint.
+     *  2. Server-side mode (fallback): a legacy {@code systemLogoFile} multipart is sent.
      */
     @PostMapping("/upload-system-logo")
-    public String uploadSystemLogo(@RequestParam("systemLogoFile") MultipartFile file,
+    public String uploadSystemLogo(@RequestParam(value = "systemLogoFile", required = false) MultipartFile file,
+                                    @RequestParam(value = "imageUrl", required = false) String imageUrl,
                                     Authentication authentication,
                                     RedirectAttributes redirectAttributes) {
-        log.info("Processing system logo upload");
+        log.info("Processing system logo upload (directUpload={})", imageUrl != null && !imageUrl.isBlank());
 
-        if (file == null || file.isEmpty()) {
+        boolean hasFile = file != null && !file.isEmpty();
+        boolean hasUrl = imageUrl != null && !imageUrl.isBlank();
+        if (!hasFile && !hasUrl) {
             redirectAttributes.addFlashAttribute("errorMessage", "No se seleccionó ningún archivo");
             return "redirect:/programmer/dashboard";
         }
 
         try {
             GlobalSystemConfig config = globalSystemConfigService.getConfiguration();
-            
-            // Delete old logo if exists
+
+            // Delete old logo if exists (fire-and-forget)
             if (config.getSystemLogoUrl() != null && !config.getSystemLogoUrl().isEmpty()) {
                 imageStorageService.deleteImage(config.getSystemLogoUrl());
             }
 
-            // Upload to global system folder: Home/SavoryCloud/
-            String imageUrl = imageStorageService.saveImage(file, "system-logo", "system-logo");
-            globalSystemConfigService.updateLogoUrl(imageUrl);
+            String finalUrl;
+            if (hasUrl) {
+                finalUrl = imageUrl.trim();
+            } else {
+                finalUrl = imageStorageService.saveImage(file, "system-logo", "system-logo");
+            }
+            globalSystemConfigService.updateLogoUrl(finalUrl);
 
             log.info("System logo uploaded successfully by {}", authentication.getName());
             redirectAttributes.addFlashAttribute("successMessage", "Logo del sistema actualizado exitosamente");
@@ -445,6 +455,56 @@ public class ProgrammerController {
     }
 
     /**
+     * Mint a Direct Upload token for a landing image. The programmer is choosing the
+     * company explicitly, so we set the tenant context manually before delegating
+     * to {@link ImageStorageService#prepareDirectUpload(String, String)}.
+     */
+    @PostMapping("/api/landing-images/upload-token")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> landingUploadToken(
+            @RequestParam Long companyId,
+            @RequestParam String section,
+            @RequestParam int position) {
+        Map<String, Object> body = new HashMap<>();
+        try {
+            Company company = companyService.findById(companyId).orElse(null);
+            if (company == null) {
+                body.put("success", false);
+                body.put("message", "Empresa no encontrada");
+                return ResponseEntity.badRequest().body(body);
+            }
+            LandingImage.Section sec = LandingImage.Section.valueOf(section);
+            if (position < 1 || position > sec.getMaxPositions()) {
+                body.put("success", false);
+                body.put("message", "Posición inválida");
+                return ResponseEntity.badRequest().body(body);
+            }
+
+            com.aatechsolutions.elgransazon.infrastructure.context.CompanyContext.setCurrentCompany(company);
+            try {
+                var token = imageStorageService.prepareDirectUpload(
+                        "landing", section.toLowerCase() + "-" + position);
+                body.put("success", true);
+                body.put("uploadUrl", token.uploadUrl());
+                body.put("imageId", token.imageId());
+                body.put("finalUrl", token.finalUrl());
+                return ResponseEntity.ok(body);
+            } finally {
+                com.aatechsolutions.elgransazon.infrastructure.context.CompanyContext.clear();
+            }
+        } catch (IllegalArgumentException e) {
+            body.put("success", false);
+            body.put("message", "Sección inválida: " + section);
+            return ResponseEntity.badRequest().body(body);
+        } catch (Exception e) {
+            log.error("Error issuing landing upload token: {}", e.getMessage());
+            body.put("success", false);
+            body.put("message", "No se pudo generar el token: " + e.getMessage());
+            return ResponseEntity.status(500).body(body);
+        }
+    }
+
+    /**
      * Upload a landing image for a specific company/section/position (AJAX)
      */
     @PostMapping("/api/landing-images/upload")
@@ -453,7 +513,8 @@ public class ProgrammerController {
             @RequestParam Long companyId,
             @RequestParam String section,
             @RequestParam int position,
-            @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "file", required = false) MultipartFile file,
+            @RequestParam(value = "imageUrl", required = false) String imageUrl,
             Authentication authentication) {
 
         Map<String, Object> response = new HashMap<>();
@@ -472,12 +533,31 @@ public class ProgrammerController {
                 return ResponseEntity.badRequest().body(response);
             }
 
-            LandingImage saved = landingImageService.uploadImage(company, sec, position, file);
+            // Two upload paths supported:
+            //   (a) Direct Upload — browser already pushed the file to Cloudflare; we receive only the URL.
+            //   (b) Server-side fallback — multipart file flowing through this server (legacy).
+            LandingImage saved;
+            if (imageUrl != null && !imageUrl.isBlank()) {
+                saved = landingImageService.saveImageUrl(company, sec, position, imageUrl.trim());
+            } else if (file != null && !file.isEmpty()) {
+                // Tenant context for the per-company subfolder lookup happens inside the service.
+                com.aatechsolutions.elgransazon.infrastructure.context.CompanyContext.setCurrentCompany(company);
+                try {
+                    saved = landingImageService.uploadImage(company, sec, position, file);
+                } finally {
+                    com.aatechsolutions.elgransazon.infrastructure.context.CompanyContext.clear();
+                }
+            } else {
+                response.put("success", false);
+                response.put("message", "No se recibió ni archivo ni URL de imagen");
+                return ResponseEntity.badRequest().body(response);
+            }
+
             response.put("success", true);
             response.put("imageUrl", saved.getImageUrl());
             response.put("message", "Imagen subida exitosamente");
 
-            log.info("Landing image uploaded by {} for company {} section {} position {}",
+            log.info("Landing image saved by {} for company {} section {} position {}",
                     authentication.getName(), company.getSlug(), section, position);
 
             return ResponseEntity.ok(response);

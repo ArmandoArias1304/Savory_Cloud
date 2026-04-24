@@ -28,10 +28,10 @@ services:
       - FROM_EMAIL=${FROM_EMAIL}
       - FROM_NAME=${FROM_NAME}
 
-      # Cloudinary (Imágenes)
-      - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME}
-      - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY}
-      - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}
+      # Cloudflare Images (CDN de imágenes con transformaciones flexibles)
+      - CLOUDFLARE_ACCOUNT_ID=${CLOUDFLARE_ACCOUNT_ID}
+      - CLOUDFLARE_IMAGES_API_TOKEN=${CLOUDFLARE_IMAGES_API_TOKEN}
+      - CLOUDFLARE_IMAGES_HASH=${CLOUDFLARE_IMAGES_HASH}
 
       # Facturama (Facturación electrónica)
       - FACTURAMA_USER=${FACTURAMA_USER}

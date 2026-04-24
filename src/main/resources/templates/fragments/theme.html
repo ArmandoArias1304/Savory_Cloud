@@ -34,16 +34,19 @@
         })();
 
         /**
-         * Utility: Optimize Cloudinary URLs with transformations
-         * @param {string} url - Cloudinary URL
-         * @param {string} transformations - e.g. "w_400,c_fill,q_auto,f_auto"
+         * Utility: Apply Cloudflare Images flexible variant transformations to a delivery URL.
+         * Recognizes both legacy Cloudinary URLs (returned unchanged) and the current
+         * imagedelivery.net format. Replaces the trailing variant segment with the new params.
+         *
+         * @param {string} url - delivery URL (https://imagedelivery.net/{hash}/{id}/{variant})
+         * @param {string} transformations - e.g. "w=400,fit=cover,quality=85,format=auto"
          * @returns {string} transformed URL
          */
         function cloudinaryOptimize(url, transformations) {
-          if (!url || !url.includes('res.cloudinary.com')) return url;
-          var idx = url.indexOf('/upload/');
-          if (idx === -1) return url;
-          return url.substring(0, idx + 8) + transformations + '/' + url.substring(idx + 8);
+          if (!url || !url.includes('imagedelivery.net')) return url;
+          var lastSlash = url.lastIndexOf('/');
+          if (lastSlash === -1) return url;
+          return url.substring(0, lastSlash + 1) + transformations;
         }
       </script>
 

@@ -20,7 +20,7 @@ import java.util.Optional;
 public class LandingImageService {
 
     private final LandingImageRepository landingImageRepository;
-    private final CloudinaryService cloudinaryService;
+    private final ImageStorageService imageStorageService;
 
     public List<LandingImage> findByCompany(Company company) {
         return landingImageRepository.findByCompany(company);
@@ -46,21 +46,22 @@ public class LandingImageService {
     @Transactional
     public LandingImage uploadImage(Company company, LandingImage.Section section, int position,
                                      MultipartFile file) throws Exception {
-        String folder = company.getSlug() + "/landing";
+        // Folder type "landing" is mapped to "{slug}/landing/..." by ImageStorageServiceImpl.
+        // The fileName combines section + position so it is meaningful inside the CDN.
         String fileName = section.name().toLowerCase() + "-" + position;
 
         // Check if image already exists for this slot
         Optional<LandingImage> existing = landingImageRepository
                 .findByCompanyAndSectionAndPosition(company, section, position);
 
-        // Delete old image from Cloudinary if replacing
+        // Delete old image from Cloudflare if replacing (fire-and-forget; safe to call before upload)
         existing.ifPresent(img -> {
-            cloudinaryService.deleteImage(img.getImageUrl());
+            imageStorageService.deleteImage(img.getImageUrl());
             log.info("Deleted old landing image for {}/{}/{}", company.getSlug(), section, position);
         });
 
-        // Upload new image to Cloudinary
-        String imageUrl = cloudinaryService.uploadImage(file, folder, fileName);
+        // Upload new image (server-side fallback path; the JS UI uses direct upload instead).
+        String imageUrl = imageStorageService.saveImage(file, "landing", fileName);
 
         if (existing.isPresent()) {
             LandingImage img = existing.get();
@@ -85,9 +86,42 @@ public class LandingImageService {
                 .findByCompanyAndSectionAndPosition(company, section, position);
 
         existing.ifPresent(img -> {
-            cloudinaryService.deleteImage(img.getImageUrl());
+            imageStorageService.deleteImage(img.getImageUrl());
             landingImageRepository.delete(img);
             log.info("Deleted landing image {}/{}/{}", company.getSlug(), section, position);
         });
+    }
+
+    /**
+     * Direct Upload variant: persist a landing image whose file was already uploaded
+     * to Cloudflare directly by the browser. The {@code imageUrl} returned by the
+     * upload-token flow is stored as-is; no file bytes pass through this server.
+     */
+    @Transactional
+    public LandingImage saveImageUrl(Company company, LandingImage.Section section, int position, String imageUrl) {
+        Optional<LandingImage> existing = landingImageRepository
+                .findByCompanyAndSectionAndPosition(company, section, position);
+
+        // Replace: delete the old image from Cloudflare (fire-and-forget)
+        existing.ifPresent(img -> {
+            if (img.getImageUrl() != null && !img.getImageUrl().equals(imageUrl)) {
+                imageStorageService.deleteImage(img.getImageUrl());
+                log.info("Replaced old landing image for {}/{}/{}", company.getSlug(), section, position);
+            }
+        });
+
+        if (existing.isPresent()) {
+            LandingImage img = existing.get();
+            img.setImageUrl(imageUrl);
+            return landingImageRepository.save(img);
+        } else {
+            LandingImage img = LandingImage.builder()
+                    .company(company)
+                    .section(section)
+                    .position(position)
+                    .imageUrl(imageUrl)
+                    .build();
+            return landingImageRepository.save(img);
+        }
     }
 }

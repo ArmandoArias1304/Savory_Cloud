@@ -35,7 +35,7 @@ public class TicketEscPosService {
     private final SystemConfigurationService systemConfigurationService;
     private final GlobalSystemConfigService globalSystemConfigService;
     private final DateTimeService dateTimeService;
-    private final CloudinaryUrlHelper cloudinaryUrlHelper;
+    private final CloudflareImagesUrlHelper cloudflareImagesUrlHelper;
 
     // Use 32-column layout (58mm Font A) for universal compatibility
     private static final int LINE_WIDTH = 32;
@@ -509,7 +509,7 @@ public class TicketEscPosService {
         if (logoUrl == null || logoUrl.isBlank()) return;
         try {
             // Request a small monochrome-friendly PNG from Cloudinary
-            String pngUrl = cloudinaryUrlHelper.transform(logoUrl, "w_192,h_192,c_fit,f_png,q_85");
+            String pngUrl = cloudflareImagesUrlHelper.transform(logoUrl, "w=192,h=192,fit=contain,format=png,quality=85");
             java.awt.image.BufferedImage img = javax.imageio.ImageIO.read(new java.net.URL(pngUrl));
             if (img == null) return;
 

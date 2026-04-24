@@ -636,6 +636,8 @@
                         </div>
                         <div class="flex-1">
                             <form th:action="@{/programmer/upload-system-logo}" method="post" enctype="multipart/form-data" id="uploadSystemLogoForm">
+                                <!-- Hidden field rellenado por CFDirectUpload con la URL final del CDN. -->
+                                <input type="hidden" id="systemLogoUrl" name="imageUrl" value="" />
                                 <div class="flex items-center gap-2">
                                     <label for="systemLogoFile"
                                            class="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:border-primary cursor-pointer transition-colors">
@@ -645,11 +647,11 @@
                                                accept="image/jpeg,image/png,image/gif,image/webp"
                                                class="hidden"
                                                onchange="
-                                                 if (this.files[0] && this.files[0].size > 5 * 1024 * 1024) {
+                                                 if (this.files[0] && this.files[0].size > 3 * 1024 * 1024) {
                                                    Swal.fire({
                                                      icon: 'warning',
                                                      title: 'Imagen demasiado pesada',
-                                                     html: 'Tu imagen pesa más de <b>5MB</b> 😅<br>Te recomendamos reducir su tamaño o usar un formato más ligero como <b>WEBP</b>.',
+                                                     html: 'Tu imagen pesa más de <b>3MB</b> 😅<br>Te recomendamos reducir su tamaño o usar un formato más ligero como <b>WEBP</b>.',
                                                      confirmButtonText: 'Entendido',
                                                      confirmButtonColor: '#38e07b',
                                                      background: document.documentElement.classList.contains('dark') ? '#1f2937' : '#ffffff',
@@ -673,7 +675,7 @@
                                 </div>
                             </form>
                             <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                                Formatos: JPG, PNG, GIF, WEBP. Máx: 5MB.
+                                Formatos: JPG, PNG, GIF, WEBP. Máx: 3MB.
                             </p>
                         </div>
                     </div>
@@ -693,7 +695,7 @@
                 <p class="text-gray-600 dark:text-gray-400 mb-4">
                     Administra las imágenes que se muestran en la página de inicio de
                     <strong th:text="${selectedCompany.name}" class="text-gray-900 dark:text-white">Empresa</strong>.
-                    Formatos: JPG, PNG, GIF, WEBP. Máx: 5MB por imagen.
+                    Formatos: JPG, PNG, GIF, WEBP. Máx: 3MB por imagen.
                 </p>
                 <input type="hidden" id="landingCompanyId" th:value="${selectedCompany.idCompany}" />
 
@@ -1623,11 +1625,11 @@
         input.accept = 'image/jpeg,image/png,image/gif,image/webp';
         input.onchange = function() {
             if (!this.files[0]) return;
-            if (this.files[0].size > 5 * 1024 * 1024) {
+            if (this.files[0].size > 3 * 1024 * 1024) {
                 Swal.fire({
                     icon: 'warning',
                     title: 'Imagen demasiado pesada',
-                    html: 'La imagen pesa más de <b>5MB</b>.<br>Usa un formato más ligero como <b>WEBP</b>.',
+                    html: 'La imagen pesa más de <b>3MB</b>.<br>Usa un formato más ligero como <b>WEBP</b>.',
                     confirmButtonText: 'Entendido',
                     confirmButtonColor: '#38e07b',
                     background: document.documentElement.classList.contains('dark') ? '#1f2937' : '#ffffff',
@@ -1642,11 +1644,6 @@
 
     function uploadLandingImage(section, position, file) {
         const companyId = landingCompanyIdEl.value;
-        const formData = new FormData();
-        formData.append('companyId', companyId);
-        formData.append('section', section);
-        formData.append('position', position);
-        formData.append('file', file);
 
         Swal.fire({
             title: 'Subiendo imagen...',
@@ -1657,19 +1654,38 @@
             color: document.documentElement.classList.contains('dark') ? '#f3f4f6' : '#1f2937'
         });
 
-        const csrfToken = document.querySelector('meta[name="_csrf"]')?.content;
-        const csrfHeader = document.querySelector('meta[name="_csrf_header"]')?.content;
-        const headers = {};
-        if (csrfToken && csrfHeader) {
-            headers[csrfHeader] = csrfToken;
-        }
+        // 1) Pedir token al backend (que también fija el CompanyContext del programador).
+        const tokenForm = new FormData();
+        tokenForm.append('companyId', companyId);
+        tokenForm.append('section', section);
+        tokenForm.append('position', position);
 
-        fetch('/programmer/api/landing-images/upload', {
+        fetch('/programmer/api/landing-images/upload-token', {
             method: 'POST',
-            headers: headers,
-            body: formData
+            body: tokenForm
         })
         .then(r => r.json())
+        .then(data => {
+            if (!data.success) throw new Error(data.message || 'No se pudo obtener token');
+            // 2) Subir el archivo directamente a Cloudflare con la URL de un solo uso.
+            const cfForm = new FormData();
+            cfForm.append('file', file);
+            return fetch(data.uploadUrl, { method: 'POST', body: cfForm })
+                .then(r => r.json())
+                .then(cf => {
+                    if (!cf.success) throw new Error('Cloudflare rechazó la imagen');
+                    // 3) Notificar al backend para persistir la URL en BD.
+                    const saveForm = new FormData();
+                    saveForm.append('companyId', companyId);
+                    saveForm.append('section', section);
+                    saveForm.append('position', position);
+                    saveForm.append('imageUrl', data.finalUrl);
+                    return fetch('/programmer/api/landing-images/upload', {
+                        method: 'POST',
+                        body: saveForm
+                    }).then(r => r.json());
+                });
+        })
         .then(data => {
             if (data.success) {
                 landingImages[section + '_' + position] = data.imageUrl;
@@ -1691,7 +1707,7 @@
             }
         })
         .catch(err => {
-            Swal.fire({ icon: 'error', title: 'Error', text: 'Error de conexión al subir la imagen',
+            Swal.fire({ icon: 'error', title: 'Error', text: err.message || 'Error de conexión al subir la imagen',
                 background: document.documentElement.classList.contains('dark') ? '#1f2937' : '#ffffff',
                 color: document.documentElement.classList.contains('dark') ? '#f3f4f6' : '#1f2937'
             });
@@ -1752,6 +1768,24 @@
             });
         });
     }
+
+// Cloudflare Direct Upload helper para el form del logo del sistema.
+// (El upload de landing-images se hace de forma manual más arriba en uploadLandingImage()).
+window.addEventListener('load', function () {
+    if (!window.CFDirectUpload) {
+        console.warn('CFDirectUpload no se cargó: el form del system-logo seguirá usando upload tradicional.');
+        return;
+    }
+    if (!document.getElementById('uploadSystemLogoForm')) return;
+    CFDirectUpload.setupForm({
+        formId: 'uploadSystemLogoForm',
+        fileInputId: 'systemLogoFile',
+        urlInputId: 'systemLogoUrl',
+        tokenUrl: '/programmer/api/cf-images/upload-token',
+        kind: 'system-logo',
+        getName: function () { return 'system-logo'; }
+    });
+});
 </script>
-</body>
-</html>
+<!-- Cargado al final para que window.CFDirectUpload exista cuando se dispare 'load'. -->
+<script th:src="@{/js/cf-direct-upload.js}"></script>

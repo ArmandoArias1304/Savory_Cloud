@@ -328,15 +328,23 @@ public class PromotionController {
                 String imageUrl = imageStorageService.saveImage(imageFile, "promotions", promotion.getName());
                 existing.setImageUrl(imageUrl);
             } else {
-                // No new image uploaded — check if user removed the existing image
+                // No new server-side file uploaded. Possible cases:
+                //  (a) empty submittedUrl  → user removed image (delete old)
+                //  (b) same as existing    → no change
+                //  (c) different URL       → Direct Upload replaced the image (delete old)
                 String submittedUrl = promotion.getImageUrl();
                 if (submittedUrl == null || submittedUrl.trim().isEmpty()) {
-                    // User cleared the image → delete old one from Cloudinary
                     if (existing.getImageUrl() != null && !existing.getImageUrl().isEmpty()) {
                         imageStorageService.deleteImage(existing.getImageUrl());
                         log.info("Image removed for promotion ID: {}", id);
                     }
                     existing.setImageUrl(null);
+                } else if (!submittedUrl.equals(existing.getImageUrl())) {
+                    if (existing.getImageUrl() != null && !existing.getImageUrl().isEmpty()) {
+                        imageStorageService.deleteImage(existing.getImageUrl());
+                        log.info("Old image replaced via Direct Upload for promotion ID: {}", id);
+                    }
+                    existing.setImageUrl(submittedUrl);
                 }
                 // else: image not changed — existing keeps its current URL
             }

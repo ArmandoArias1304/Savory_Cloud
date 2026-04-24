@@ -484,10 +484,12 @@ public class ItemMenuController {
                 String imagePath = imageStorageService.saveImage(imageFile, "menu-items", itemMenu.getName());
                 itemMenu.setImageUrl(imagePath);
             } else {
-                // No new image uploaded — check if user removed the existing image
+                // No new server-side file uploaded. The submitted URL may be:
+                //  (a) empty   → user removed the existing image
+                //  (b) same as existing → no change
+                //  (c) different (Direct Upload) → user replaced the image, delete the old one
                 String submittedUrl = itemMenu.getImageUrl();
                 if (submittedUrl == null || submittedUrl.trim().isEmpty()) {
-                    // User cleared the image → delete old one from Cloudinary
                     itemMenuService.findById(id).ifPresent(existing -> {
                         if (existing.getImageUrl() != null && !existing.getImageUrl().isEmpty()) {
                             imageStorageService.deleteImage(existing.getImageUrl());
@@ -496,7 +498,13 @@ public class ItemMenuController {
                     });
                     itemMenu.setImageUrl(null);
                 } else {
-                    // Image not changed — keep the existing URL
+                    itemMenuService.findById(id).ifPresent(existing -> {
+                        if (existing.getImageUrl() != null && !existing.getImageUrl().isEmpty()
+                                && !existing.getImageUrl().equals(submittedUrl)) {
+                            imageStorageService.deleteImage(existing.getImageUrl());
+                            log.info("Old image replaced via Direct Upload for item ID: {}", id);
+                        }
+                    });
                     itemMenu.setImageUrl(submittedUrl);
                 }
             }

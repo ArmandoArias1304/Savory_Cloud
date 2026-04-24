@@ -130,9 +130,9 @@ jobs:
             SENDGRID_API_KEY=${{ secrets.SENDGRID_API_KEY }}
             FROM_EMAIL=${{ secrets.FROM_EMAIL }}
             FROM_NAME=${{ secrets.FROM_NAME }}
-            CLOUDINARY_CLOUD_NAME=${{ secrets.CLOUDINARY_CLOUD_NAME }}
-            CLOUDINARY_API_KEY=${{ secrets.CLOUDINARY_API_KEY }}
-            CLOUDINARY_API_SECRET=${{ secrets.CLOUDINARY_API_SECRET }}
+            CLOUDFLARE_ACCOUNT_ID=${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+            CLOUDFLARE_IMAGES_API_TOKEN=${{ secrets.CLOUDFLARE_IMAGES_API_TOKEN }}
+            CLOUDFLARE_IMAGES_HASH=${{ secrets.CLOUDFLARE_IMAGES_HASH }}
             FACTURAMA_USER=${{ secrets.FACTURAMA_USER }}
             FACTURAMA_PASSWORD=${{ secrets.FACTURAMA_PASSWORD }}
             FACTURAMA_LIVE_MODE=${{ secrets.FACTURAMA_LIVE_MODE }}

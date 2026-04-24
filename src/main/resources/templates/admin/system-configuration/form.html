@@ -519,12 +519,12 @@
                             onchange="
                               if (
                                 this.files[0] &&
-                                this.files[0].size > 5 * 1024 * 1024
+                                this.files[0].size > 3 * 1024 * 1024
                               ) {
                                 Swal.fire({
                                   icon: 'warning',
                                   title: 'Imagen demasiado pesada',
-                                  html: 'Tu imagen pesa más de <b>5MB</b> <br>Te recomendamos reducir su tamaño o usar un formato más ligero como <b>WEBP</b>.',
+                                  html: 'Tu imagen pesa más de <b>3MB</b> <br>Te recomendamos reducir su tamaño o usar un formato más ligero como <b>WEBP</b>.',
                                   confirmButtonText: 'Entendido',
                                   confirmButtonColor: '#38e07b',
                                   background:
@@ -1329,14 +1329,18 @@
                 </div>
               </form>
 
-              <!-- Formulario oculto para subida de logo -->
+              <!-- Formulario oculto para subida de logo. Cuando el JS de Cloudflare
+                   Direct Upload está disponible, el archivo se sube directo al CDN y
+                   solo el campo `imageUrl` viaja a nuestro backend. -->
               <form
                 id="uploadRestaurantLogoForm"
                 th:action="@{/admin/system-configuration/upload-restaurant-logo}"
                 method="post"
                 enctype="multipart/form-data"
                 class="hidden"
-              ></form>
+              >
+                <input type="hidden" id="restaurantLogoUrl" name="imageUrl" value="" />
+              </form>
             </div>
           </div>
 
@@ -1798,7 +1802,7 @@
           target: "#restaurantLogoSection",
           title: "🖼️ Logo del Restaurante",
           description:
-            "Sube el logo de tu restaurante. Selecciona una imagen y presiona 'Subir' para actualizarla. Formatos admitidos: JPG, PNG, GIF, WEBP (máximo 5MB).",
+            "Sube el logo de tu restaurante. Selecciona una imagen y presiona 'Subir' para actualizarla. Formatos admitidos: JPG, PNG, GIF, WEBP (máximo 3MB).",
           position: "bottom",
         },
         {
@@ -2268,6 +2272,22 @@
         </div>
       </div>
     </div>
+
+    <!-- Cloudflare Direct Upload helper + restaurant-logo form integration. -->
+    <script th:src="@{/js/cf-direct-upload.js}" defer></script>
+    <script defer>
+      window.addEventListener("DOMContentLoaded", function () {
+        if (!window.CFDirectUpload) return;
+        CFDirectUpload.setupForm({
+          formId: "uploadRestaurantLogoForm",
+          fileInputId: "restaurantLogoFile",
+          urlInputId: "restaurantLogoUrl",
+          tokenUrl: "/admin/api/cf-images/upload-token",
+          kind: "restaurant-logo",
+          getName: function () { return "restaurant-logo"; },
+        });
+      });
+    </script>
 
     <!-- Script del Sistema de Temas -->
     <div th:replace="~{fragments/theme :: themeScript}"></div>
