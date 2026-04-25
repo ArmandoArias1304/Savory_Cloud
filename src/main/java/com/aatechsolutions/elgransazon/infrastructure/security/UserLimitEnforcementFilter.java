@@ -164,6 +164,7 @@ public class UserLimitEnforcementFilter extends OncePerRequestFilter {
                path.startsWith("/flyers/") ||
                path.startsWith("/.well-known/") ||  // Flyers editor (public static resource)
                path.startsWith("/autofactura/") ||
+               path.startsWith("/qz/") ||
                path.equals("/logout") ||
                path.equals("/perform_login") ||
                path.startsWith("/home") ||

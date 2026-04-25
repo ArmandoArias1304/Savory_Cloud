@@ -74,6 +74,7 @@ public class PackageAccessFilter extends OncePerRequestFilter {
                path.startsWith("/system-landing/") ||
                path.startsWith("/autofactura/") ||
                path.startsWith("/.well-known/") ||
+               path.startsWith("/qz/") ||
                path.equals("/client/login") ||
                path.equals("/client/register") ||
                path.startsWith("/ws") ||

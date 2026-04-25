@@ -42,7 +42,8 @@ public class CompanyContextFilter extends OncePerRequestFilter {
         "/css/", "/js/", "/images/", "/flyers/", "/sounds/", "/system-landing/",
         "/error", "/errores/",
         "/favicon.ico",
-        "/.well-known/"
+        "/.well-known/",
+        "/qz/"
         // Note: /login and /perform_login are NOT excluded because
         // authentication needs company context to validate employees
     );

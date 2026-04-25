@@ -136,6 +136,7 @@ jobs:
             FACTURAMA_USER=${{ secrets.FACTURAMA_USER }}
             FACTURAMA_PASSWORD=${{ secrets.FACTURAMA_PASSWORD }}
             FACTURAMA_LIVE_MODE=${{ secrets.FACTURAMA_LIVE_MODE }}
+            QZ_SIGNING_ENABLED=true
             ENVFILE
 
             # Rebuild y reiniciar contenedores

@@ -62,6 +62,7 @@ public class SecurityConfig {
                                 "/client/verify-email", "/client/forgot-password", "/client/reset-password", 
                                 "/client/password-reset/**", "/help", "/support", "/helpClient", 
                                 "/autofactura/**",
+                                "/qz/**",
                                 "/error", "/errores/**", "/css/**", "/js/**", 
                                 "/images/**", "/flyers/**", "/system-landing/**", "/license-expired", "/favicon.ico",
                                 "/.well-known/**").permitAll()

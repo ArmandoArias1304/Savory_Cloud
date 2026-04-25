@@ -38,6 +38,11 @@ services:
       - FACTURAMA_PASSWORD=${FACTURAMA_PASSWORD}
       - FACTURAMA_LIVE_MODE=${FACTURAMA_LIVE_MODE:-false}
 
+      # QZ Tray Silent Printing (message signing)
+      - QZ_SIGNING_ENABLED=${QZ_SIGNING_ENABLED:-false}
+      - QZ_SIGNING_CERT_PATH=/qz-keys/digital-certificate.txt
+      - QZ_SIGNING_KEY_PATH=/qz-keys/private-key.pem
+
     restart: always
     depends_on:
       mysqldb:
@@ -47,6 +52,9 @@ services:
       # Path must match getBackupDirectory() in BackupServiceImpl:
       # System.getProperty("user.home") + "/elgransazon_backups" = /root/elgransazon_backups
       - backup_data:/root/elgransazon_backups
+      # QZ Tray signing keys (read-only). The host folder must contain
+      # digital-certificate.txt and private-key.pem.
+      - ./qz-keys:/qz-keys:ro
     networks:
       - elgransazon-network
 

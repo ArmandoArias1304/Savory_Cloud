@@ -124,6 +124,7 @@ public class UserValidationFilter extends OncePerRequestFilter {
                path.startsWith("/sounds/") ||  // Notification sounds
                path.startsWith("/flyers/") ||  // Flyers editor (public static resource)
                path.startsWith("/.well-known/") ||
+               path.startsWith("/qz/") ||
                path.equals("/logout") ||
                path.equals("/perform_login") ||
                path.endsWith(".css") ||
