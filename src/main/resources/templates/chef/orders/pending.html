@@ -424,6 +424,16 @@
 
                 <!-- Status Badge -->
                 <span
+                  th:if="${order.status.name() == 'TO_ACCEPT'}"
+                  class="px-4 py-2 rounded-full text-xs font-semibold inline-flex items-center gap-1 bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 ring-1 ring-amber-400/40"
+                  title="Hay items nuevos pendientes de validación por caja/admin"
+                >
+                  <span class="material-symbols-outlined !text-sm"
+                    >hourglass_empty</span
+                  >
+                  Por aceptar
+                </span>
+                <span
                   th:if="${order.status.name() == 'PENDING'}"
                   class="px-4 py-2 rounded-full text-xs font-semibold bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300"
                 >
@@ -551,6 +561,16 @@
 
                       <!-- Item Status Badge -->
                       <div class="mt-1.5">
+                        <span
+                          th:if="${detail.itemStatus != null && detail.itemStatus.name() == 'TO_ACCEPT'}"
+                          class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 ring-1 ring-amber-400/40"
+                          title="Este item está pendiente de validación por caja/admin"
+                        >
+                          <span class="material-symbols-outlined !text-xs"
+                            >hourglass_empty</span
+                          >
+                          Por aceptar
+                        </span>
                         <span
                           th:if="${detail.itemStatus != null && detail.itemStatus.name() == 'PENDING'}"
                           class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300"

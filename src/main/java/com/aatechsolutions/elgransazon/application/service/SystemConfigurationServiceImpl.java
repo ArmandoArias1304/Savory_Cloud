@@ -143,7 +143,11 @@ public class SystemConfigurationServiceImpl implements SystemConfigurationServic
         if (configuration.getDeliveryPaymentMethods() != null) {
             existingConfig.setDeliveryPaymentMethods(configuration.getDeliveryPaymentMethods());
         }
-        
+
+        // Customer-order acceptance toggle (defaults to false when not provided)
+        existingConfig.setRequireCustomerOrderAcceptance(
+                Boolean.TRUE.equals(configuration.getRequireCustomerOrderAcceptance()));
+
         SystemConfiguration saved = configurationRepository.save(existingConfig);
         invalidateConfigCache();
         log.info("System configuration updated successfully");

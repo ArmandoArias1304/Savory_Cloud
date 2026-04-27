@@ -6,6 +6,7 @@ import com.aatechsolutions.elgransazon.infrastructure.context.CompanyContext;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.dao.CannotAcquireLockException;
 import org.springframework.stereotype.Service;
@@ -63,6 +64,13 @@ public class OrderServiceImpl implements OrderService {
     @PersistenceContext
     private EntityManager entityManager;
 
+    // Self-proxy used to invoke @Transactional(REQUIRES_NEW) helpers from within this bean.
+    // Spring AOP only intercepts calls through the proxy, so direct `this.method()` would
+    // bypass the propagation behaviour. @Lazy breaks the obvious self-construction cycle.
+    @Autowired
+    @Lazy
+    private OrderServiceImpl self;
+
     // Constructor with @Lazy for ReservationService to break circular dependency
     public OrderServiceImpl(
             OrderRepository orderRepository,
@@ -102,9 +110,23 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public Order create(Order order, List<OrderDetail> orderDetails) {
-        log.info("Creating new order - Type: {}, Table: {}", 
-                 order.getOrderType(), 
-                 order.getTable() != null ? order.getTable().getTableNumber() : "N/A");
+        return createInternal(order, orderDetails, false);
+    }
+
+    /**
+     * Create a customer order with stock deduction deferred until acceptance.
+     * Used by CustomerOrderServiceImpl when SystemConfiguration.requireCustomerOrderAcceptance is TRUE.
+     * All items are persisted with itemStatus=TO_ACCEPT and stockDeducted=false.
+     */
+    public Order createDeferredAcceptance(Order order, List<OrderDetail> orderDetails) {
+        return createInternal(order, orderDetails, true);
+    }
+
+    private Order createInternal(Order order, List<OrderDetail> orderDetails, boolean deferStockDeduction) {
+        log.info("Creating new order - Type: {}, Table: {}, deferStock: {}",
+                 order.getOrderType(),
+                 order.getTable() != null ? order.getTable().getTableNumber() : "N/A",
+                 deferStockDeduction);
         
         // 0. Set company from context (multi-tenant)
         Company company = CompanyContext.requireCurrentCompany();
@@ -189,52 +211,69 @@ public class OrderServiceImpl implements OrderService {
             }
             detail.setIsNewItem(false); // Initial items are not "new"
             detail.setAddedAt(LocalDateTime.now());
-            
+
             // Auto-advance to READY ONLY if item requires NO preparation at all (neither chef nor barista)
             // Items requiring barista preparation MUST start as PENDING and be changed manually
             // Skip auto-advance for items that already have a status set (e.g., combo items)
             boolean requiresChefPreparation = Boolean.TRUE.equals(item.getRequiresPreparation());
             boolean requiresBaristaPreparation = Boolean.TRUE.equals(item.getRequiresBaristaPreparation());
             boolean isComboParent = Boolean.TRUE.equals(item.getIsCombo());
-            
-            if (isComboParent) {
+
+            if (deferStockDeduction) {
+                // Customer-acceptance flow: every item starts as TO_ACCEPT, regardless of
+                // preparation requirements. Auto-advance to READY/PENDING happens on acceptance.
+                detail.setItemStatus(OrderStatus.TO_ACCEPT);
+                detail.setStockDeducted(false);
+                log.info("Item '{}' set to TO_ACCEPT (deferred acceptance, stock not deducted)", item.getName());
+            } else if (isComboParent) {
                 // Combo parent always stays READY - it's just a price container
                 detail.setItemStatus(OrderStatus.READY);
+                detail.setStockDeducted(true);
                 log.info("Combo parent '{}' set to READY (no preparation needed, children handle preparation)", item.getName());
             } else if (!requiresChefPreparation && !requiresBaristaPreparation) {
                 // Item requires NO preparation (e.g., bottled drinks, pre-packaged items)
                 detail.setItemStatus(OrderStatus.READY);
+                detail.setStockDeducted(true);
                 log.info("Item '{}' auto-advanced to READY (no preparation required)", item.getName());
             } else {
                 // Item requires preparation (chef or barista), starts as PENDING
+                detail.setStockDeducted(true);
                 log.info("Item '{}' set to PENDING (requires {} preparation)", 
                     item.getName(), 
                     requiresBaristaPreparation ? "barista" : "chef");
             }
 
-            // Deduct stock from ingredients (authoritative: runs under PESSIMISTIC_WRITE lock in REQUIRES_NEW)
-            try {
-                deductStockForItem(item, detail.getQuantity());
-            } catch (IllegalStateException ex) {
-                // Stock ran out between the pre-check and the lock; surface as user-friendly message
-                if (ex.getMessage() != null && ex.getMessage().startsWith("Stock insuficiente")) {
-                    throw new IllegalStateException(
-                        "¡Lo sentimos! No tenemos suficiente stock de los siguientes items: " +
-                        item.getName() +
-                        ". ¡Te invitamos a seguir descubriendo las deliciosas opciones de nuestro menú!", ex);
+            if (!deferStockDeduction) {
+                // Deduct stock from ingredients (authoritative: runs under PESSIMISTIC_WRITE lock in REQUIRES_NEW)
+                try {
+                    deductStockForItem(item, detail.getQuantity());
+                } catch (IllegalStateException ex) {
+                    // Stock ran out between the pre-check and the lock; surface as user-friendly message
+                    if (ex.getMessage() != null && ex.getMessage().startsWith("Stock insuficiente")) {
+                        throw new IllegalStateException(
+                            "¡Lo sentimos! No tenemos suficiente stock de los siguientes items: " +
+                            item.getName() +
+                            ". ¡Te invitamos a seguir descubriendo las deliciosas opciones de nuestro menú!", ex);
+                    }
+                    throw ex;
                 }
-                throw ex;
-            }
-            
-            // Deduct stock for selected complements
-            deductStockForComplements(detail);
 
-            // Refresh the item entity so updateAvailability() reads current ingredient
-            // stock from DB rather than stale values from the outer session's 1st-level
-            // cache (which pre-dates the REQUIRES_NEW sub-transactions that just ran).
-            entityManager.refresh(item);
-            item.updateAvailability();
-            itemMenuRepository.save(item);
+                // Deduct stock for selected complements
+                deductStockForComplements(detail);
+
+                // Refresh the item entity so updateAvailability() reads current ingredient
+                // stock from DB rather than stale values from the outer session's 1st-level
+                // cache (which pre-dates the REQUIRES_NEW sub-transactions that just ran).
+                entityManager.refresh(item);
+                item.updateAvailability();
+                itemMenuRepository.save(item);
+            } else {
+                // In deferred mode, keep complement stock_deducted=false too. They'll be
+                // deducted on acceptOrderItems().
+                if (detail.getSelectedComplements() != null) {
+                    detail.getSelectedComplements().forEach(odc -> odc.setStockDeducted(false));
+                }
+            }
 
             // Add to order
             order.addOrderDetail(detail);
@@ -242,6 +281,12 @@ public class OrderServiceImpl implements OrderService {
 
         // 9. Calculate order totals
         order.recalculateAmounts();
+
+        // 9b. Sync order status from items (so deferred-acceptance orders save as TO_ACCEPT
+        // instead of the default PENDING). Safe no-op for non-deferred flows.
+        if (deferStockDeduction) {
+            order.updateStatusFromItems();
+        }
 
         // 10. Occupy table and handle reservation if applicable (only for DINE_IN)
         if (table != null && order.getOrderType() == OrderType.DINE_IN) {
@@ -569,11 +614,31 @@ public class OrderServiceImpl implements OrderService {
         
         // Return stock automatically for eligible items (including complements)
         if (!itemsToReturnAutomatically.isEmpty()) {
+            java.util.Set<Long> itemsToRefresh = new java.util.HashSet<>();
             for (OrderDetail detail : itemsToReturnAutomatically) {
+                // Skip items whose stock was never deducted (TO_ACCEPT in deferred-acceptance flow).
+                // Returning stock for them would incorrectly inflate ingredient inventory.
+                if (Boolean.FALSE.equals(detail.getStockDeducted())
+                        || detail.getItemStatus() == OrderStatus.TO_ACCEPT) {
+                    log.info("Skipping stock return for item '{}' (status={}, stockDeducted={}) - never deducted",
+                            detail.getItemMenu().getName(), detail.getItemStatus(), detail.getStockDeducted());
+                    continue;
+                }
                 ItemMenu item = detail.getItemMenu();
                 returnStockForItem(item, detail.getQuantity());
                 // Also return complement stock for items that qualify for automatic return
                 returnStockForComplements(detail);
+                itemsToRefresh.add(item.getIdItemMenu());
+            }
+            // Refresh availability so a stale `item.available=false` (from when stock hit 0)
+            // doesn't keep blocking new orders / acceptances after stock has been returned.
+            for (Long itemId : itemsToRefresh) {
+                try {
+                    itemMenuService.updateItemAvailability(itemId);
+                } catch (Exception ex) {
+                    log.warn("Failed to refresh availability for item id={} after stock return: {}",
+                            itemId, ex.getMessage());
+                }
             }
             log.info("Stock returned automatically for {} items (including complements) in order: {}", 
                      itemsToReturnAutomatically.size(), order.getOrderNumber());
@@ -810,7 +875,19 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public Order addItemsToExistingOrder(Long orderId, List<OrderDetail> newItems, String username) {
-        log.info("Adding {} new items to order ID: {}", newItems.size(), orderId);
+        return addItemsToExistingOrderInternal(orderId, newItems, username, false);
+    }
+
+    /**
+     * Add items to an existing order with stock deduction deferred until acceptance.
+     * Used by CustomerOrderServiceImpl when SystemConfiguration.requireCustomerOrderAcceptance is TRUE.
+     */
+    public Order addItemsToExistingOrderDeferredAcceptance(Long orderId, List<OrderDetail> newItems, String username) {
+        return addItemsToExistingOrderInternal(orderId, newItems, username, true);
+    }
+
+    private Order addItemsToExistingOrderInternal(Long orderId, List<OrderDetail> newItems, String username, boolean deferStockDeduction) {
+        log.info("Adding {} new items to order ID: {}, deferStock: {}", newItems.size(), orderId, deferStockDeduction);
 
         Order order = findByIdOrThrow(orderId);
 
@@ -864,27 +941,42 @@ public class OrderServiceImpl implements OrderService {
             // Items requiring barista preparation MUST start as PENDING and be changed manually
             boolean requiresChefPreparation = Boolean.TRUE.equals(item.getRequiresPreparation());
             boolean requiresBaristaPreparation = Boolean.TRUE.equals(item.getRequiresBaristaPreparation());
-            
-            if (!requiresChefPreparation && !requiresBaristaPreparation) {
+
+            if (deferStockDeduction) {
+                // Customer-acceptance flow: new items start as TO_ACCEPT, regardless of
+                // preparation requirements. Stock is deducted on acceptance.
+                detail.setItemStatus(OrderStatus.TO_ACCEPT);
+                detail.setStockDeducted(false);
+                log.info("New item '{}' set to TO_ACCEPT (deferred acceptance, stock not deducted)", item.getName());
+            } else if (!requiresChefPreparation && !requiresBaristaPreparation) {
                 // Item requires NO preparation (e.g., bottled drinks, pre-packaged items)
                 detail.setItemStatus(OrderStatus.READY);
+                detail.setStockDeducted(true);
                 log.info("New item '{}' auto-advanced to READY (no preparation required)", item.getName());
             } else {
                 // Item requires preparation (chef or barista), starts as PENDING
+                detail.setStockDeducted(true);
                 log.info("New item '{}' set to PENDING (requires {} preparation)", 
                     item.getName(), 
                     requiresBaristaPreparation ? "barista" : "chef");
             }
 
-            // Deduct stock from ingredients
-            deductStockForItem(item, detail.getQuantity());
-            
-            // Deduct stock for complements
-            deductStockForComplements(detail);
+            if (!deferStockDeduction) {
+                // Deduct stock from ingredients
+                deductStockForItem(item, detail.getQuantity());
+
+                // Deduct stock for complements
+                deductStockForComplements(detail);
+            } else {
+                // In deferred mode, mark complements as not yet deducted
+                if (detail.getSelectedComplements() != null) {
+                    detail.getSelectedComplements().forEach(odc -> odc.setStockDeducted(false));
+                }
+            }
 
             // Set order reference for the owning side of the relationship
             detail.setOrder(order);
-            
+
             // CRITICAL FIX: Explicitly save each new OrderDetail to ensure it gets its own
             // INSERT statement. This avoids issues with Hibernate's PersistentBag collection
             // management where multiple new entities could be deduplicated during flush.
@@ -1035,6 +1127,220 @@ public class OrderServiceImpl implements OrderService {
         }
 
         return savedOrder;
+    }
+
+    @Override
+    @Transactional
+    public Order acceptOrderItems(Long orderId, List<Long> itemDetailIds, String username) {
+        log.info("Accepting items {} for order ID: {} by user: {}", itemDetailIds, orderId, username);
+
+        // Lock order to prevent concurrent acceptance / cancellation
+        Order order = orderRepository.findByIdWithLock(orderId)
+                .orElseThrow(() -> new IllegalArgumentException("Pedido no encontrado con ID: " + orderId));
+
+        // Reject any operation on a finalised order. Without this guard a user could
+        // accept items on a cancelled/paid/delivered order, which would re-deduct stock
+        // that was already returned and corrupt the inventory.
+        OrderStatus currentStatus = order.getStatus();
+        if (currentStatus == OrderStatus.CANCELLED
+                || currentStatus == OrderStatus.PAID
+                || currentStatus == OrderStatus.DELIVERED
+                || currentStatus == OrderStatus.ON_THE_WAY) {
+            throw new IllegalStateException(
+                "No se pueden aceptar items de un pedido en estado " +
+                currentStatus.getDisplayName() + ". El pedido " +
+                order.getOrderNumber() + " ya no puede ser modificado."
+            );
+        }
+
+        // Determine which details to accept
+        List<OrderDetail> targets;
+        if (itemDetailIds == null || itemDetailIds.isEmpty()) {
+            targets = order.getOrderDetails().stream()
+                    .filter(d -> d.getItemStatus() == OrderStatus.TO_ACCEPT)
+                    .collect(Collectors.toList());
+        } else {
+            targets = order.getOrderDetails().stream()
+                    .filter(d -> itemDetailIds.contains(d.getIdOrderDetail()))
+                    .collect(Collectors.toList());
+
+            // All requested IDs must exist in this order
+            if (targets.size() != itemDetailIds.size()) {
+                throw new IllegalArgumentException(
+                    "Algunos items solicitados no pertenecen al pedido " + order.getOrderNumber()
+                );
+            }
+
+            // All requested items must be TO_ACCEPT
+            for (OrderDetail d : targets) {
+                if (d.getItemStatus() != OrderStatus.TO_ACCEPT) {
+                    throw new IllegalStateException(
+                        "El item '" + d.getItemMenu().getName() +
+                        "' no está en estado 'Por aceptar' (estado actual: " +
+                        d.getItemStatus().getDisplayName() + ")"
+                    );
+                }
+            }
+        }
+
+        if (targets.isEmpty()) {
+            throw new IllegalStateException(
+                "No hay items por aceptar en el pedido " + order.getOrderNumber()
+            );
+        }
+
+        // Process each accepted item independently in its own sub-transaction so that
+        // a failure on one item (insufficient stock, schedule unavailable, etc.) does NOT
+        // roll back the items that were already accepted successfully. Each call commits
+        // on its own; failures are accumulated and reported at the end.
+        OrderStatus oldOrderStatus = order.getStatus();
+        List<OrderDetail> accepted = new ArrayList<>();
+        List<String> failures = new ArrayList<>();
+
+        for (OrderDetail detail : targets) {
+            String itemName = detail.getItemMenu() != null ? detail.getItemMenu().getName() : ("#" + detail.getIdOrderDetail());
+            try {
+                OrderDetail acceptedDetail = self.acceptSingleItemInNewTx(detail.getIdOrderDetail(), username);
+                accepted.add(acceptedDetail);
+            } catch (IllegalStateException e) {
+                // The underlying exception message is already descriptive (e.g. "Stock
+                // insuficiente para 'CocaCola 3L'" or "El item 'X' no está disponible...").
+                // Do NOT prepend the item name again, otherwise it appears duplicated.
+                log.warn("Could not accept item '{}' in order {}: {}", itemName, order.getOrderNumber(), e.getMessage());
+                failures.add(e.getMessage());
+            } catch (Exception e) {
+                log.error("Unexpected error accepting item '{}' in order {}", itemName, order.getOrderNumber(), e);
+                failures.add(itemName + ": error inesperado (" + e.getMessage() + ")");
+            }
+        }
+
+        // If nothing could be accepted, surface a single descriptive error so the user
+        // sees a clear message instead of a silent no-op. Failures may come from stock,
+        // schedule availability, or other validation errors — keep the message generic.
+        if (accepted.isEmpty()) {
+            throw new IllegalStateException(
+                "No se pudo aceptar ningún item: " + String.join("; ", failures)
+            );
+        }
+
+        // Sync the in-memory order details with the post-acceptance state returned by
+        // each REQUIRES_NEW sub-transaction. We CANNOT rely on entityManager.refresh()
+        // here because MySQL's REPEATABLE_READ isolation keeps the outer transaction's
+        // snapshot frozen at its start time — any SELECT (refresh included) returns the
+        // pre-acceptance value, so the in-memory `OrderDetail` instances would still
+        // report itemStatus=TO_ACCEPT and updateStatusFromItems() would wrongly leave
+        // the whole order in TO_ACCEPT even when every item was actually advanced.
+        Map<Long, OrderDetail> acceptedById = accepted.stream()
+                .collect(Collectors.toMap(OrderDetail::getIdOrderDetail, d -> d, (a, b) -> a));
+        for (OrderDetail detail : order.getOrderDetails()) {
+            OrderDetail fresh = acceptedById.get(detail.getIdOrderDetail());
+            if (fresh != null) {
+                detail.setItemStatus(fresh.getItemStatus());
+                detail.setStockDeducted(fresh.getStockDeducted());
+            }
+        }
+        order.updateStatusFromItems();
+        OrderStatus newOrderStatus = order.getStatus();
+
+        if (oldOrderStatus != OrderStatus.READY && newOrderStatus == OrderStatus.READY) {
+            order.setPreparedAt(LocalDateTime.now());
+        }
+
+        order.setUpdatedBy(username);
+        order.setUpdatedAt(LocalDateTime.now());
+
+        Order savedOrder = orderRepository.save(order);
+        log.info("Order {} accepted {}/{} items ({} failed). Status: {} -> {}",
+                 savedOrder.getOrderNumber(), accepted.size(), targets.size(), failures.size(),
+                 oldOrderStatus, newOrderStatus);
+
+        // WebSocket notifications — only for items that were actually accepted
+        try {
+            String message;
+            if (failures.isEmpty()) {
+                message = String.format("Pedido #%s: %d item(s) aceptado(s)",
+                        savedOrder.getOrderNumber(), accepted.size());
+            } else {
+                message = String.format("Pedido #%s: %d item(s) aceptado(s), %d no se pudieron aceptar",
+                        savedOrder.getOrderNumber(), accepted.size(), failures.size());
+            }
+            wsNotificationService.notifyOrderStatusChange(savedOrder, message);
+            wsNotificationService.notifyItemsAdded(savedOrder, accepted);
+        } catch (Exception e) {
+            log.error("Failed to send WebSocket notification for accepted items in order: {}",
+                    savedOrder.getOrderNumber(), e);
+        }
+
+        return savedOrder;
+    }
+
+    /**
+     * Accepts a single OrderDetail in its own REQUIRES_NEW transaction.
+     * <p>
+     * Validates stock + schedule availability for this single item, deducts ingredient
+     * and complement stock, marks the detail as stockDeducted=true, and advances the
+     * status to READY (no preparation needed) or PENDING (chef/barista required).
+     * <p>
+     * Throws {@link IllegalStateException} on validation or stock-deduction failure.
+     * Because this runs in REQUIRES_NEW, a failure here only rolls back this single
+     * item — siblings that succeeded keep their committed state.
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public OrderDetail acceptSingleItemInNewTx(Long orderDetailId, String username) {
+        OrderDetail detail = orderDetailRepository.findById(orderDetailId)
+                .orElseThrow(() -> new IllegalStateException("Item no encontrado (ID: " + orderDetailId + ")"));
+
+        if (detail.getItemStatus() != OrderStatus.TO_ACCEPT) {
+            throw new IllegalStateException(
+                "El item ya no está en estado 'Por aceptar' (estado actual: " +
+                detail.getItemStatus().getDisplayName() + ")"
+            );
+        }
+
+        ItemMenu item = detail.getItemMenu();
+        List<OrderDetail> single = List.of(detail);
+
+        // Per-item stock validation
+        Map<Long, String> stockErrors = validateStock(single);
+        if (!stockErrors.isEmpty()) {
+            // validateStock returns the item/complement name as the value. Wrap it in a
+            // descriptive sentence so the final aggregated error message is meaningful.
+            throw new IllegalStateException(
+                "Stock insuficiente para '" + stockErrors.values().iterator().next() + "'"
+            );
+        }
+
+        // Per-item schedule validation (throws IllegalStateException on failure)
+        validateItemsAvailability(single);
+
+        // Deduct stock — these run in their own REQUIRES_NEW sub-transactions and will
+        // throw IllegalStateException("Stock insuficiente...") if exhausted mid-flight.
+        deductStockForItem(item, detail.getQuantity());
+        deductStockForComplements(detail);
+
+        detail.setStockDeducted(true);
+
+        boolean requiresChef = Boolean.TRUE.equals(item.getRequiresPreparation());
+        boolean requiresBarista = Boolean.TRUE.equals(item.getRequiresBaristaPreparation());
+
+        if (!requiresChef && !requiresBarista) {
+            detail.setItemStatus(OrderStatus.READY);
+            log.info("Accepted item '{}' auto-advanced to READY (no preparation required)", item.getName());
+        } else {
+            detail.setItemStatus(OrderStatus.PENDING);
+            log.info("Accepted item '{}' set to PENDING (requires {} preparation)",
+                item.getName(), requiresBarista ? "barista" : "chef");
+        }
+
+        // Refresh item availability after stock deduction
+        try {
+            entityManager.refresh(item);
+            itemMenuService.updateItemAvailability(item.getIdItemMenu());
+        } catch (Exception e) {
+            log.warn("Failed to refresh availability for item '{}': {}", item.getName(), e.getMessage());
+        }
+
+        return orderDetailRepository.save(detail);
     }
 
     @Override
@@ -1557,6 +1863,14 @@ public class OrderServiceImpl implements OrderService {
             return;
         }
 
+        // Skip when any item is awaiting acceptance (deferred customer-acceptance flow).
+        // Those items must remain TO_ACCEPT until an admin/cashier accepts them.
+        boolean hasToAcceptItems = order.getOrderDetails().stream()
+            .anyMatch(detail -> detail.getItemStatus() == OrderStatus.TO_ACCEPT);
+        if (hasToAcceptItems) {
+            return;
+        }
+
         // Check if ALL items don't require ANY preparation (neither chef nor barista)
         // Items requiring barista preparation CANNOT auto-advance
         boolean allItemsReady = order.getOrderDetails().stream()
@@ -1807,30 +2121,39 @@ public class OrderServiceImpl implements OrderService {
             ItemMenu item = detail.getItemMenu();
             
             if (!itemMenuService.isItemAvailableNow(itemId)) {
-                // Build a message showing only today's schedule
-                java.time.DayOfWeek javaDow = dateTimeService.todayLocal().getDayOfWeek();
-                DayOfWeek todayDay = DayOfWeek.valueOf(javaDow.name());
-                String todayName = todayDay.getDisplayName();
-                
-                String scheduleMsg = "";
-                if (item.getAvailabilityDays() != null) {
-                    var todayAvail = item.getAvailabilityDays().stream()
-                        .filter(a -> a.getDayOfWeek() == todayDay)
-                        .findFirst()
-                        .orElse(null);
-                    
+                // The item could be unavailable because (a) it is inactive,
+                // (b) the cached `available` flag is false (typically stock=0), or
+                // (c) it has a custom schedule that excludes the current moment.
+                // Build a message that reflects the actual cause instead of
+                // assuming it is always a schedule problem.
+                String reason;
+                if (Boolean.FALSE.equals(item.getActive())) {
+                    reason = "El item está inactivo.";
+                } else if (Boolean.FALSE.equals(item.getAvailable())) {
+                    reason = "El item no tiene stock disponible.";
+                } else if (Boolean.TRUE.equals(item.getHasCustomSchedule())) {
+                    java.time.DayOfWeek javaDow = dateTimeService.todayLocal().getDayOfWeek();
+                    DayOfWeek todayDay = DayOfWeek.valueOf(javaDow.name());
+                    String todayName = todayDay.getDisplayName();
+                    var todayAvail = item.getAvailabilityDays() == null ? null :
+                        item.getAvailabilityDays().stream()
+                            .filter(a -> a.getDayOfWeek() == todayDay)
+                            .findFirst()
+                            .orElse(null);
                     if (todayAvail != null && todayAvail.getStartTime() != null && todayAvail.getEndTime() != null) {
-                        scheduleMsg = "Hoy (" + todayName + ") disponible de " + todayAvail.getStartTime() + " a " + todayAvail.getEndTime() + ".";
+                        reason = "Hoy (" + todayName + ") disponible de " + todayAvail.getStartTime() + " a " + todayAvail.getEndTime() + ".";
                     } else if (todayAvail != null) {
-                        scheduleMsg = "Hoy (" + todayName + ") está disponible pero fuera de horario.";
+                        reason = "Hoy (" + todayName + ") está disponible pero fuera de horario.";
                     } else {
-                        scheduleMsg = "No disponible hoy (" + todayName + "). Disponible: " + item.getAvailabilityDescription();
+                        reason = "No disponible hoy (" + todayName + "). Disponible: " + item.getAvailabilityDescription();
                     }
+                } else {
+                    reason = "El item no está disponible en este momento.";
                 }
-                
-                log.warn("Blocking order due to item not available now: {} - {}", item.getName(), scheduleMsg);
+
+                log.warn("Blocking order due to item not available now: {} - {}", item.getName(), reason);
                 throw new IllegalStateException(
-                    "El item '" + item.getName() + "' no está disponible en este momento. " + scheduleMsg
+                    "El item '" + item.getName() + "' no está disponible en este momento. " + reason
                 );
             }
         }
@@ -1838,6 +2161,7 @@ public class OrderServiceImpl implements OrderService {
 
     /**
      * Determine if stock should be returned automatically for an item
+     * TO_ACCEPT or stockDeducted=false -> NO return needed (never deducted)
      * PENDING -> automatic return (never touched)
      * READY + NO requires preparation (Chef or Barista) -> automatic return (auto-advanced, never touched)
      * READY + requires preparation -> manual return (chef/barista prepared it, used ingredients)
@@ -1845,7 +2169,13 @@ public class OrderServiceImpl implements OrderService {
      */
     private boolean shouldReturnStockAutomatically(OrderDetail detail) {
         OrderStatus itemStatus = detail.getItemStatus();
-        
+
+        // If stock was never deducted (TO_ACCEPT items in deferred customer-acceptance flow),
+        // there is nothing to return. Treat as "automatic" so caller's branch runs (skip path).
+        if (Boolean.FALSE.equals(detail.getStockDeducted()) || itemStatus == OrderStatus.TO_ACCEPT) {
+            return true;
+        }
+
         // PENDING -> always return automatically (never touched)
         if (itemStatus == OrderStatus.PENDING) {
             return true;
@@ -1939,8 +2269,13 @@ public class OrderServiceImpl implements OrderService {
 
         // Check if stock should be returned automatically
         boolean returnStockAuto = shouldReturnStockAutomatically(itemToDelete);
-        
-        if (returnStockAuto) {
+        boolean stockNeverDeducted = Boolean.FALSE.equals(itemToDelete.getStockDeducted())
+                || itemToDelete.getItemStatus() == OrderStatus.TO_ACCEPT;
+
+        if (stockNeverDeducted) {
+            log.info("Skipping stock return for item '{}' - never deducted (status: {})",
+                    itemToDelete.getItemMenu().getName(), itemToDelete.getItemStatus());
+        } else if (returnStockAuto) {
             // Return stock automatically
             ItemMenu itemMenu = itemToDelete.getItemMenu();
             int quantity = itemToDelete.getQuantity();
@@ -1954,6 +2289,13 @@ public class OrderServiceImpl implements OrderService {
                 // Return stock for complements
                 returnStockForComplements(itemToDelete);
                 
+                // Refresh availability so item.available reflects the new (higher) stock.
+                try {
+                    itemMenuService.updateItemAvailability(itemMenu.getIdItemMenu());
+                } catch (Exception ex) {
+                    log.warn("Failed to refresh availability for item '{}' after stock return: {}",
+                            itemMenu.getName(), ex.getMessage());
+                }
                 log.info("Stock returned successfully for item '{}'", itemMenu.getName());
             } catch (Exception e) {
                 log.error("Error returning stock for item '{}': {}", itemMenu.getName(), e.getMessage());
@@ -1972,8 +2314,10 @@ public class OrderServiceImpl implements OrderService {
         // Remove combo children if this was a combo parent
         if (!comboChildrenToDelete.isEmpty()) {
             for (OrderDetail child : comboChildrenToDelete) {
-                // Return stock for combo children
-                if (shouldReturnStockAutomatically(child)) {
+                boolean childStockNeverDeducted = Boolean.FALSE.equals(child.getStockDeducted())
+                        || child.getItemStatus() == OrderStatus.TO_ACCEPT;
+                // Return stock for combo children (skip if never deducted)
+                if (!childStockNeverDeducted && shouldReturnStockAutomatically(child)) {
                     returnStockForItem(child.getItemMenu(), child.getQuantity());
                     returnStockForComplements(child);
                 }

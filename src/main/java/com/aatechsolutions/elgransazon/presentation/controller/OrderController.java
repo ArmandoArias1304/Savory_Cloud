@@ -1977,6 +1977,46 @@ public class OrderController {
     }
 
     /**
+     * Accept TO_ACCEPT items in a customer-created order (AJAX).
+     * Only ADMIN/MANAGER allowed via this controller; CASHIER uses CashierController endpoint.
+     * If itemDetailIds is null/empty, all TO_ACCEPT items are accepted.
+     */
+    @PostMapping("/{id}/accept-items")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_MANAGER')")
+    @ResponseBody
+    public Map<String, Object> acceptItems(
+            @PathVariable String role,
+            @PathVariable Long id,
+            @RequestParam(value = "itemDetailIds", required = false) List<Long> itemDetailIds,
+            Authentication authentication) {
+
+        String username = authentication.getName();
+        log.info("Accepting TO_ACCEPT items {} in order {} by user: {} (role: {})",
+                 itemDetailIds, id, username, role);
+
+        validateRole(role, authentication);
+        OrderService orderService = getOrderService(role);
+
+        Map<String, Object> response = new HashMap<>();
+        try {
+            Order updated = orderService.acceptOrderItems(id, itemDetailIds, username);
+            response.put("success", true);
+            response.put("message", "Items aceptados correctamente");
+            response.put("order", buildOrderDTO(updated));
+            response.put("orderStatus", updated.getStatus().name());
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            log.warn("Error accepting items in order {}: {}", id, e.getMessage());
+            response.put("success", false);
+            response.put("message", e.getMessage());
+        } catch (Exception e) {
+            log.error("Error accepting items in order {}", id, e);
+            response.put("success", false);
+            response.put("message", "Error al aceptar los items: " + e.getMessage());
+        }
+        return response;
+    }
+
+    /**
      * Change ALL chef items in order to next status (AJAX)
      * This is a convenience endpoint for chef to avoid touching screen many times
      * Only available for CHEF role

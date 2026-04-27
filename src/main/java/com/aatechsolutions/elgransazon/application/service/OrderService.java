@@ -68,6 +68,26 @@ public interface OrderService {
     Order changeItemsStatus(Long orderId, List<Long> itemDetailIds, OrderStatus newStatus, String username);
 
     /**
+     * Accept items currently in TO_ACCEPT state.
+     * Performs the deferred ingredient/complement stock deduction and advances each
+     * item to its initial post-acceptance status (PENDING normally, READY for items
+     * that require no preparation, READY for combo parents).
+     *
+     * Re-validates stock and item availability at acceptance time, since both may have
+     * changed since the customer placed the order.
+     *
+     * Allowed roles: ADMIN, MANAGER, CASHIER. All other roles must throw
+     * UnsupportedOperationException in their implementation.
+     *
+     * @param orderId Order containing the items to accept
+     * @param itemDetailIds Specific OrderDetail IDs to accept; if null/empty, accepts all
+     *                      items currently in TO_ACCEPT state in the order
+     * @param username Username performing the acceptance (for audit fields)
+     * @return Updated order with recalculated overall status
+     */
+    Order acceptOrderItems(Long orderId, List<Long> itemDetailIds, String username);
+
+    /**
      * Delete a specific item from an order
      * Only allows deleting items that are not DELIVERED
      * Returns stock automatically if item is PENDING or (READY and !requiresPreparation)

@@ -124,6 +124,24 @@
                 Información del Pedido
               </h2>
 
+              <!-- TO_ACCEPT Status -->
+              <span
+                th:if="${order.status.name() == 'TO_ACCEPT'}"
+                class="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-bold bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 ring-2 ring-amber-400/40 whitespace-nowrap flex-shrink-0"
+              >
+                <span class="material-symbols-outlined text-base sm:text-lg"
+                  >hourglass_empty</span
+                >
+                <span
+                  class="hidden sm:inline"
+                  th:text="${order.status.displayName}"
+                  >Por aceptar</span
+                >
+                <span class="sm:hidden" th:text="${order.status.displayName}"
+                  >Por aceptar</span
+                >
+              </span>
+
               <!-- PENDING Status -->
               <span
                 th:if="${order.status.name() == 'PENDING'}"
@@ -374,13 +392,13 @@
                           <!-- Case 1: Item does NOT require preparation (chef or barista) - only deletable when READY -->
                           <button
                             th:if="${!detail.itemMenu.requiresPreparation && !detail.itemMenu.requiresBaristaPreparation && !detail.comboChild}"
-                            th:disabled="${detail.itemStatus.name() != 'READY'}"
-                            th:classappend="${detail.itemStatus.name() == 'READY'} ? 'hover:bg-red-50 dark:hover:bg-red-900/20 cursor-pointer' : 'opacity-50 cursor-not-allowed'"
+                            th:disabled="${detail.itemStatus.name() != 'READY' && detail.itemStatus.name() != 'TO_ACCEPT'}"
+                            th:classappend="${detail.itemStatus.name() == 'READY' or detail.itemStatus.name() == 'TO_ACCEPT'} ? 'hover:bg-red-50 dark:hover:bg-red-900/20 cursor-pointer' : 'opacity-50 cursor-not-allowed'"
                             th:data-item-id="${detail.idOrderDetail}"
                             th:data-item-name="${detail.itemMenu.name}"
-                            th:data-can-delete="${detail.itemStatus.name() == 'READY'}"
+                            th:data-can-delete="${detail.itemStatus.name() == 'READY' or detail.itemStatus.name() == 'TO_ACCEPT'}"
                             class="btn-delete-item p-2 rounded-lg text-red-600 dark:text-red-400 transition-colors"
-                            th:title="${detail.itemStatus.name() == 'READY'} ? 'Eliminar item' : 'Solo se puede eliminar cuando esté listo'"
+                            th:title="${detail.itemStatus.name() == 'READY' or detail.itemStatus.name() == 'TO_ACCEPT'} ? 'Eliminar item' : 'Solo se puede eliminar cuando esté listo'"
                           >
                             <span class="material-symbols-outlined text-lg"
                               >delete</span
@@ -390,13 +408,13 @@
                           <!-- Case 2: Item REQUIRES preparation (chef or barista) - only deletable when PENDING -->
                           <button
                             th:if="${(detail.itemMenu.requiresPreparation || detail.itemMenu.requiresBaristaPreparation) && !detail.comboChild}"
-                            th:disabled="${detail.itemStatus.name() != 'PENDING'}"
-                            th:classappend="${detail.itemStatus.name() == 'PENDING'} ? 'hover:bg-red-50 dark:hover:bg-red-900/20 cursor-pointer' : 'opacity-50 cursor-not-allowed'"
+                            th:disabled="${detail.itemStatus.name() != 'PENDING' && detail.itemStatus.name() != 'TO_ACCEPT'}"
+                            th:classappend="${detail.itemStatus.name() == 'PENDING' or detail.itemStatus.name() == 'TO_ACCEPT'} ? 'hover:bg-red-50 dark:hover:bg-red-900/20 cursor-pointer' : 'opacity-50 cursor-not-allowed'"
                             th:data-item-id="${detail.idOrderDetail}"
                             th:data-item-name="${detail.itemMenu.name}"
-                            th:data-can-delete="${detail.itemStatus.name() == 'PENDING'}"
+                            th:data-can-delete="${detail.itemStatus.name() == 'PENDING' or detail.itemStatus.name() == 'TO_ACCEPT'}"
                             class="btn-delete-item p-2 rounded-lg text-red-600 dark:text-red-400 transition-colors"
-                            th:title="${detail.itemStatus.name() == 'PENDING'} ? 'Eliminar item' : 'Solo se puede eliminar cuando esté pendiente (no preparado)'"
+                            th:title="${detail.itemStatus.name() == 'PENDING' or detail.itemStatus.name() == 'TO_ACCEPT'} ? 'Eliminar item' : 'Solo se puede eliminar cuando esté pendiente (no preparado)'"
                           >
                             <span class="material-symbols-outlined text-lg"
                               >delete</span
@@ -421,6 +439,19 @@
                         >
                       </p>
                     </div>
+
+                    <!-- TO_ACCEPT item status (hidden for combo parents) -->
+                    <span
+                      th:if="${detail.itemStatus.name() == 'TO_ACCEPT' && !detail.comboParent}"
+                      class="inline-flex items-center gap-1 px-2 sm:px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 ring-1 ring-amber-400/40 whitespace-nowrap flex-shrink-0"
+                    >
+                      <span class="material-symbols-outlined text-xs"
+                        >hourglass_empty</span
+                      >
+                      <span th:text="${detail.itemStatus.displayName}"
+                        >Por aceptar</span
+                      >
+                    </span>
 
                     <!-- PENDING item status (hidden for combo parents) -->
                     <span
@@ -681,8 +712,10 @@
                             order.status.name() != 'DELIVERED' and 
                             order.status.name() != 'ON_THE_WAY'},
                 allItemsValid=${order.orderDetails.?[
-                  ((itemMenu.requiresPreparation == true or itemMenu.requiresBaristaPreparation == true) and itemStatus.name() != 'PENDING') or
-                  ((itemMenu.requiresPreparation == false and itemMenu.requiresBaristaPreparation == false) and itemStatus.name() != 'READY')
+                  itemStatus.name() != 'TO_ACCEPT' and (
+                    ((itemMenu.requiresPreparation == true or itemMenu.requiresBaristaPreparation == true) and itemStatus.name() != 'PENDING') or
+                    ((itemMenu.requiresPreparation == false and itemMenu.requiresBaristaPreparation == false) and itemStatus.name() != 'READY')
+                  )
                 ].empty}
               "
               >
@@ -890,7 +923,7 @@
               confirmTitle = "¿Cancelar pedido?";
               confirmHtml = `<p>Este es el <strong>último item</strong> del pedido.</p>
                              <p class="mt-2">Al eliminarlo, <strong>el pedido será cancelado</strong> automáticamente.</p>
-                             <p class="mt-2 text-sm text-gray-500">El stock será devuelto y el pedido quedará con estado Cancelado.</p>`;
+                             <p class="mt-2 text-sm text-gray-500"></p>`;
             }
 
             const result = await Swal.fire({

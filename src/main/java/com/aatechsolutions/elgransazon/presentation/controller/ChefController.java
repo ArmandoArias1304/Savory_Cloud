@@ -200,6 +200,20 @@ public class ChefController {
                     return belongsToThisUser;
                 }
                 
+                // CASO 4: Orden TO_ACCEPT que YA fue aceptada antes (preparer != null)
+                // Esto ocurre cuando el cliente agrega nuevos items a una orden ya aceptada:
+                // los nuevos items entran en TO_ACCEPT y elevan el status general de la orden.
+                // Solo es visible para el chef/barista que la aceptó originalmente; no podra
+                // manipular los items TO_ACCEPT hasta que caja/admin los acepte (y pasen a PENDING).
+                if (order.getStatus() == OrderStatus.TO_ACCEPT && preparer != null) {
+                    boolean belongsToThisUser = preparer.getUsername().equalsIgnoreCase(username);
+                    if (belongsToThisUser) {
+                        log.debug("Order {} is TO_ACCEPT but belongs to {} {} (visible, not actionable on TO_ACCEPT items)",
+                            order.getOrderNumber(), roleDisplay, username);
+                    }
+                    return belongsToThisUser;
+                }
+                
                 return false;
             })
             .sorted((o1, o2) -> o1.getCreatedAt().compareTo(o2.getCreatedAt())) // Más antiguo primero (FIFO)

@@ -88,6 +88,11 @@ public class ChefOrderServiceImpl implements OrderService {
     }
 
     @Override
+    public Order acceptOrderItems(Long orderId, List<Long> itemDetailIds, String username) {
+        throw new UnsupportedOperationException("El chef no puede aceptar items de pedidos");
+    }
+
+    @Override
     public Order changeItemsStatus(Long orderId, List<Long> itemDetailIds, OrderStatus newStatus, String username) {
         Order order = findByIdOrThrow(orderId);
         
@@ -219,12 +224,15 @@ public class ChefOrderServiceImpl implements OrderService {
         List<Long> itemsToChange = new ArrayList<>();
         
         // PRIORITY 1: If ANY item is IN_PREPARATION, mark ALL chef items as READY
-        // This allows new PENDING items to "skip" IN_PREPARATION state
+        // This allows new PENDING items to "skip" IN_PREPARATION state.
+        // TO_ACCEPT items are excluded because chef cannot manipulate them
+        // until cashier/admin accepts them and they become PENDING.
         if (inPrepCount > 0) {
             targetStatus = OrderStatus.READY;
-            // Move ALL items that are NOT already READY
+            // Move ALL items that are NOT already READY and NOT TO_ACCEPT
             itemsToChange = chefItems.stream()
-                .filter(d -> d.getItemStatus() != OrderStatus.READY)
+                .filter(d -> d.getItemStatus() != OrderStatus.READY
+                    && d.getItemStatus() != OrderStatus.TO_ACCEPT)
                 .map(OrderDetail::getIdOrderDetail)
                 .collect(Collectors.toList());
             
@@ -309,9 +317,13 @@ public class ChefOrderServiceImpl implements OrderService {
                     return false; // Not a chef item
                 }
                 
-                // Check if item is PENDING or IN_PREPARATION
+                // Check if item is TO_ACCEPT, PENDING or IN_PREPARATION
+                // TO_ACCEPT items are shown so chef stays aware of orders that have new items
+                // pending validation by cashier/admin, but chef cannot manipulate them.
                 OrderStatus itemStatus = detail.getItemStatus();
-                boolean isPending = itemStatus == OrderStatus.PENDING || itemStatus == OrderStatus.IN_PREPARATION;
+                boolean isPending = itemStatus == OrderStatus.TO_ACCEPT
+                    || itemStatus == OrderStatus.PENDING
+                    || itemStatus == OrderStatus.IN_PREPARATION;
                 
                 log.debug("Order {}, Chef Item '{}': status = {}, isPending = {}", 
                     order.getOrderNumber(), 

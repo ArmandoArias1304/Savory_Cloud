@@ -79,9 +79,13 @@ public class BaristaOrderServiceImpl implements OrderService {
                     return false; // Not a barista item
                 }
                 
-                // Check if item is PENDING or IN_PREPARATION
+                // Check if item is TO_ACCEPT, PENDING or IN_PREPARATION
+                // TO_ACCEPT items are shown so barista stays aware of orders that have new items
+                // pending validation by cashier/admin, but barista cannot manipulate them.
                 OrderStatus itemStatus = detail.getItemStatus();
-                boolean isPending = itemStatus == OrderStatus.PENDING || itemStatus == OrderStatus.IN_PREPARATION;
+                boolean isPending = itemStatus == OrderStatus.TO_ACCEPT
+                    || itemStatus == OrderStatus.PENDING
+                    || itemStatus == OrderStatus.IN_PREPARATION;
                 
                 log.debug("Order {}, Barista Item '{}': status = {}, isPending = {}", 
                     order.getOrderNumber(), 
@@ -147,6 +151,11 @@ public class BaristaOrderServiceImpl implements OrderService {
     @Override
     public void delete(Long id) {
         throw new UnsupportedOperationException("El barista no puede eliminar pedidos");
+    }
+
+    @Override
+    public Order acceptOrderItems(Long orderId, List<Long> itemDetailIds, String username) {
+        throw new UnsupportedOperationException("El barista no puede aceptar items de pedidos");
     }
 
     @Override

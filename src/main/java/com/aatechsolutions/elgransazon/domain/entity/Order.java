@@ -657,6 +657,9 @@ public class Order implements Serializable {
         }
 
         // Count items in each status
+        boolean hasToAccept = orderDetails.stream()
+            .anyMatch(detail -> detail.getItemStatus() == OrderStatus.TO_ACCEPT);
+
         boolean hasPending = orderDetails.stream()
             .anyMatch(detail -> detail.getItemStatus() == OrderStatus.PENDING);
         
@@ -673,8 +676,14 @@ public class Order implements Serializable {
         int totalItems = orderDetails.size();
 
         // Order status follows the MINIMUM (lowest) item status
-        // Hierarchy: PENDING < IN_PREPARATION < READY < DELIVERED
-        
+        // Hierarchy: TO_ACCEPT < PENDING < IN_PREPARATION < READY < DELIVERED
+
+        // If ANY item is still TO_ACCEPT (waiting for restaurant acceptance),
+        // the entire order is TO_ACCEPT
+        if (hasToAccept) {
+            return OrderStatus.TO_ACCEPT;
+        }
+
         // If ANY item is still PENDING, entire order is PENDING
         if (hasPending) {
             return OrderStatus.PENDING;
@@ -714,6 +723,33 @@ public class Order implements Serializable {
         return orderDetails.stream()
                 .filter(detail -> detail.getItemStatus() == OrderStatus.PENDING)
                 .count();
+    }
+
+    /**
+     * Get count of items waiting for restaurant acceptance (TO_ACCEPT)
+     */
+    public long getToAcceptItemsCount() {
+        if (orderDetails == null) return 0;
+        return orderDetails.stream()
+                .filter(detail -> detail.getItemStatus() == OrderStatus.TO_ACCEPT)
+                .count();
+    }
+
+    /**
+     * Check if order has any items waiting for acceptance
+     */
+    public boolean hasItemsToAccept() {
+        return getToAcceptItemsCount() > 0;
+    }
+
+    /**
+     * Get items waiting for acceptance
+     */
+    public List<OrderDetail> getToAcceptItems() {
+        if (orderDetails == null) return new ArrayList<>();
+        return orderDetails.stream()
+                .filter(detail -> detail.getItemStatus() == OrderStatus.TO_ACCEPT)
+                .toList();
     }
 
     /**
@@ -777,7 +813,8 @@ public class Order implements Serializable {
         // DINE_IN orders can accept new items until PAID
         // Customers are physically at the restaurant and can keep ordering
         if (this.orderType == OrderType.DINE_IN) {
-            return this.status == OrderStatus.PENDING ||
+            return this.status == OrderStatus.TO_ACCEPT ||
+                   this.status == OrderStatus.PENDING ||
                    this.status == OrderStatus.IN_PREPARATION ||
                    this.status == OrderStatus.READY || 
                    this.status == OrderStatus.DELIVERED;
@@ -786,7 +823,8 @@ public class Order implements Serializable {
         // TAKEOUT orders can accept new items only until READY
         // Once DELIVERED (customer picked it up), they can't add more items
         if (this.orderType == OrderType.TAKEOUT) {
-            return this.status == OrderStatus.PENDING ||
+            return this.status == OrderStatus.TO_ACCEPT ||
+                   this.status == OrderStatus.PENDING ||
                    this.status == OrderStatus.IN_PREPARATION ||
                    this.status == OrderStatus.READY;
         }
@@ -795,7 +833,8 @@ public class Order implements Serializable {
         // Once ON_THE_WAY, the delivery person is already on route
         // and it's not practical to add more items
         if (this.orderType == OrderType.DELIVERY) {
-            return this.status == OrderStatus.PENDING ||
+            return this.status == OrderStatus.TO_ACCEPT ||
+                   this.status == OrderStatus.PENDING ||
                    this.status == OrderStatus.IN_PREPARATION ||
                    this.status == OrderStatus.READY;
         }
@@ -818,7 +857,8 @@ public class Order implements Serializable {
         
         // DELIVERY orders: cannot delete once ON_THE_WAY or superior
         if (this.orderType == OrderType.DELIVERY) {
-            return this.status == OrderStatus.PENDING ||
+            return this.status == OrderStatus.TO_ACCEPT ||
+                   this.status == OrderStatus.PENDING ||
                    this.status == OrderStatus.IN_PREPARATION ||
                    this.status == OrderStatus.READY;
         }

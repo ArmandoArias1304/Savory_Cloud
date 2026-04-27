@@ -116,6 +116,16 @@ public class SystemConfiguration implements Serializable {
     @Builder.Default
     private Integer averageConsumptionTimeMinutes = 120; // Default: 2 hours
 
+    // ========== Customer Order Acceptance ==========
+    // When TRUE, orders created or items added by customers (ROLE_CLIENT) start in TO_ACCEPT
+    // status and ingredient stock is NOT deducted until an admin/manager/cashier accepts them.
+    // When FALSE (default), the legacy behavior applies: items start in PENDING and stock is
+    // deducted immediately on order creation. Backward compatible.
+    @Column(name = "require_customer_order_acceptance", nullable = false,
+            columnDefinition = "boolean not null default false")
+    @Builder.Default
+    private Boolean requireCustomerOrderAcceptance = false;
+
     // Ticket logo intensity (10-100%). Controls how dark/visible the logo prints on thermal tickets.
     // Higher value = darker print (more pixels become black dots). 50% ≈ original threshold.
     // Useful for logos with light colors that don't print well on thermal printers.

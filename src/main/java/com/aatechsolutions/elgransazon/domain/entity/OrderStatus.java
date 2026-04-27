@@ -4,6 +4,7 @@ package com.aatechsolutions.elgransazon.domain.entity;
  * Enum representing the status of an order
  */
 public enum OrderStatus {
+    TO_ACCEPT("Por aceptar"),     // Solo para órdenes de cliente cuando se requiere aceptación manual
     PENDING("Pendiente"),
     IN_PREPARATION("En preparación"),
     READY("Listo"),
@@ -32,7 +33,8 @@ public enum OrderStatus {
 
     /**
      * Check if this status should return stock when cancelled
-     * Only PENDING returns stock automatically
+     * PENDING returns stock automatically (already deducted at creation)
+     * TO_ACCEPT does NOT return stock because it was never deducted
      * For IN_PREPARATION and READY, stock must be returned manually
      */
     public boolean shouldReturnStockOnCancel() {
@@ -48,6 +50,8 @@ public enum OrderStatus {
         }
 
         switch (current) {
+            case TO_ACCEPT:
+                return new OrderStatus[]{PENDING};
             case PENDING:
                 return new OrderStatus[]{IN_PREPARATION};
             case IN_PREPARATION:

@@ -35,6 +35,20 @@ public class CustomerOrderServiceImpl implements OrderService {
     private final com.aatechsolutions.elgransazon.domain.repository.OrderRepository orderRepository;
     private final com.aatechsolutions.elgransazon.domain.repository.CustomerRepository customerRepository;
     private final DateTimeService dateTimeService;
+    private final SystemConfigurationService systemConfigurationService;
+
+    /**
+     * Returns true when the company has enabled "require manual acceptance" of customer orders.
+     */
+    private boolean isCustomerAcceptanceRequired() {
+        try {
+            SystemConfiguration cfg = systemConfigurationService.getConfiguration();
+            return cfg != null && Boolean.TRUE.equals(cfg.getRequireCustomerOrderAcceptance());
+        } catch (Exception e) {
+            log.warn("Failed to read requireCustomerOrderAcceptance flag: {}", e.getMessage());
+            return false;
+        }
+    }
 
     /**
      * Get current authenticated customer email
@@ -110,7 +124,11 @@ public class CustomerOrderServiceImpl implements OrderService {
         // Set createdBy to customer email
         order.setCreatedBy(customerEmail);
         
-        // Delegate to admin service
+        // Delegate to admin service - choose deferred variant when manual acceptance is enabled
+        if (isCustomerAcceptanceRequired()) {
+            log.info("requireCustomerOrderAcceptance=TRUE -> creating order in TO_ACCEPT mode (no stock deduction yet)");
+            return adminOrderService.createDeferredAcceptance(order, orderDetails);
+        }
         return adminOrderService.create(order, orderDetails);
     }
 
@@ -134,7 +152,13 @@ public class CustomerOrderServiceImpl implements OrderService {
         boolean requiresChef = Boolean.TRUE.equals(detail.getItemMenu().getRequiresPreparation());
         boolean requiresBarista = Boolean.TRUE.equals(detail.getItemMenu().getRequiresBaristaPreparation());
         OrderStatus itemStatus = detail.getItemStatus();
-        
+
+        // TO_ACCEPT items have not been accepted by staff and no stock has been deducted -
+        // customers can always cancel them.
+        if (itemStatus == OrderStatus.TO_ACCEPT) {
+            return true;
+        }
+
         if (requiresChef || requiresBarista) {
             // Items with preparation: only cancellable if PENDING (not yet started)
             return itemStatus == OrderStatus.PENDING;
@@ -241,13 +265,22 @@ public class CustomerOrderServiceImpl implements OrderService {
             );
         }
         
-        // Delegate to admin service
+        // Delegate to admin service - choose deferred variant when manual acceptance is enabled
+        if (isCustomerAcceptanceRequired()) {
+            log.info("requireCustomerOrderAcceptance=TRUE -> adding items in TO_ACCEPT mode (no stock deduction yet)");
+            return adminOrderService.addItemsToExistingOrderDeferredAcceptance(orderId, newItems, username);
+        }
         return adminOrderService.addItemsToExistingOrder(orderId, newItems, username);
     }
 
     @Override
     public Order changeItemsStatus(Long orderId, List<Long> itemDetailIds, OrderStatus newStatus, String username) {
         throw new UnsupportedOperationException("Los clientes no pueden cambiar el estado de los items");
+    }
+
+    @Override
+    public Order acceptOrderItems(Long orderId, List<Long> itemDetailIds, String username) {
+        throw new UnsupportedOperationException("Los clientes no pueden aceptar items de pedidos");
     }
 
     @Override

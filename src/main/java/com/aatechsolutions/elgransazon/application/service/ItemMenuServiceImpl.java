@@ -484,10 +484,22 @@ public class ItemMenuServiceImpl implements ItemMenuService {
     }
 
     @Override
-    @Transactional
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
     public void updateItemAvailability(Long itemMenuId) {
         log.debug("Updating availability for menu item ID: {}", itemMenuId);
 
+        // IMPORTANT: This method MUST run in REQUIRES_NEW propagation.
+        //
+        // Stock mutations (deduct/return) are performed in REQUIRES_NEW sub-transactions
+        // by IngredientStockService and commit independently. However, MySQL's default
+        // REPEATABLE_READ isolation means any *outer* transaction that started BEFORE
+        // those sub-tx commits will keep seeing the original snapshot — even after a
+        // JPA refresh — and would therefore recompute `available` against the stale
+        // pre-mutation stock value.
+        //
+        // By starting our own fresh transaction here we get a new snapshot that sees
+        // every committed stock change, so `hasEnoughStock(1)` reflects reality and
+        // `ItemMenu.available` is persisted with the correct value.
         ItemMenu item = findByIdOrThrow(itemMenuId);
         item.updateAvailability(); // Method in entity
         itemMenuRepository.save(item);

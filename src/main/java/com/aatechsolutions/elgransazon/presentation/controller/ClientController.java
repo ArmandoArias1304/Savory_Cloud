@@ -1275,6 +1275,14 @@ public class ClientController {
                 "orderNumber", cancelledOrder.getOrderNumber()
             ));
 
+        } catch (IllegalStateException | IllegalArgumentException e) {
+            // Business-rule violation (e.g. items still in preparation, order already finalized).
+            // Log as WARN — this is a normal validation outcome, not an unexpected error.
+            log.warn("Cannot cancel order {}: {}", orderId, e.getMessage());
+            return ResponseEntity.badRequest().body(Map.of(
+                "success", false,
+                "message", e.getMessage()
+            ));
         } catch (Exception e) {
             log.error("Error cancelling order", e);
             return ResponseEntity.badRequest().body(Map.of(
@@ -1350,7 +1358,9 @@ public class ClientController {
                 }
             }
             
-            log.error("Cannot delete item from order", e);
+            // Business-rule violation (e.g. item already in preparation/ready and customer can't delete).
+            // Log as WARN — this is a normal validation outcome, not an unexpected error.
+            log.warn("Cannot delete item {} from order {}: {}", itemId, orderId, e.getMessage());
             return ResponseEntity.badRequest().body(Map.of(
                 "success", false,
                 "message", e.getMessage()

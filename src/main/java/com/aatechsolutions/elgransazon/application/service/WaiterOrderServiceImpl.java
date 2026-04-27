@@ -336,6 +336,11 @@ public class WaiterOrderServiceImpl implements OrderService {
     }
 
     @Override
+    public Order acceptOrderItems(Long orderId, List<Long> itemDetailIds, String username) {
+        throw new UnsupportedOperationException("El mesero no puede aceptar items de pedidos");
+    }
+
+    @Override
     public OrderDetail deleteOrderItem(Long orderId, Long itemDetailId, String username) {
         Order order = findByIdOrThrow(orderId);
         validateOrderOwnership(order);

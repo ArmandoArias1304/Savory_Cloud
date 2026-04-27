@@ -118,6 +118,22 @@ public class OrderDetail implements Serializable {
     @Builder.Default
     private Boolean isNewItem = false;
 
+    /**
+     * Tracks whether ingredient stock has been deducted for this item.
+     * - TRUE: stock was deducted (default behavior, applies to all legacy items
+     *   and to items created when customer-acceptance toggle is OFF).
+     * - FALSE: stock was NOT yet deducted (item is in TO_ACCEPT, waiting for
+     *   admin/manager/cashier acceptance). Used to skip stock return on cancel/delete.
+     *
+     * Default value at the column level is TRUE so that historical rows behave correctly.
+     * The Java default is also TRUE for backward compatibility; service code explicitly
+     * sets FALSE when creating items in TO_ACCEPT.
+     */
+    @Column(name = "stock_deducted", nullable = false,
+            columnDefinition = "boolean not null default true")
+    @Builder.Default
+    private Boolean stockDeducted = true;
+
     @Column(name = "added_at")
     private LocalDateTime addedAt;
 
@@ -152,6 +168,9 @@ public class OrderDetail implements Serializable {
         }
         if (this.isNewItem == null) {
             this.isNewItem = false;
+        }
+        if (this.stockDeducted == null) {
+            this.stockDeducted = true;
         }
         if (this.addedAt == null) {
             this.addedAt = LocalDateTime.now();

@@ -30,10 +30,18 @@ public class CustomErrorController implements ErrorController {
         
         if (status != null) {
             int statusCode = Integer.parseInt(status.toString());
-            
-            log.error("Error {} occurred. URI: {}", statusCode, 
-                    request.getAttribute(RequestDispatcher.ERROR_REQUEST_URI));
-            
+            Object uri = request.getAttribute(RequestDispatcher.ERROR_REQUEST_URI);
+
+            // 4xx are client-side issues (missing resources, bad requests, unauthenticated probes
+            // like Chrome DevTools' /.well-known/appspecific/com.chrome.devtools.json). Logging
+            // them as ERROR floods the logs with noise that isn't actionable, so we downgrade
+            // 4xx to DEBUG and reserve ERROR for 5xx server failures.
+            if (statusCode >= 400 && statusCode < 500) {
+                log.debug("HTTP {} for URI: {}", statusCode, uri);
+            } else {
+                log.error("Error {} occurred. URI: {}", statusCode, uri);
+            }
+
             // Handle specific error codes
             if (statusCode == HttpStatus.BAD_REQUEST.value()) {
                 // 400 - Bad Request
@@ -60,7 +68,7 @@ public class CustomErrorController implements ErrorController {
         }
         
         // Default error page for unhandled status codes
-        log.error("Unhandled error occurred. Status: {}, URI: {}", 
+        log.warn("Unhandled error occurred. Status: {}, URI: {}",
                 status, request.getAttribute(RequestDispatcher.ERROR_REQUEST_URI));
         return "errores/404"; // Show 404 as default
     }

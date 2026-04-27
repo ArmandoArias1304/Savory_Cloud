@@ -90,12 +90,14 @@ public class CashierOrderServiceImpl implements OrderService {
     public Order cancel(Long id, String username) {
         Order order = findByIdOrThrow(id);
         
-        // Cashier can cancel orders in PENDING, IN_PREPARATION or READY status
-        if (order.getStatus() != OrderStatus.PENDING && 
-            order.getStatus() != OrderStatus.IN_PREPARATION && 
+        // Cashier can cancel orders in TO_ACCEPT, PENDING, IN_PREPARATION or READY status.
+        // TO_ACCEPT is safe because no stock has been deducted yet.
+        if (order.getStatus() != OrderStatus.TO_ACCEPT &&
+            order.getStatus() != OrderStatus.PENDING &&
+            order.getStatus() != OrderStatus.IN_PREPARATION &&
             order.getStatus() != OrderStatus.READY) {
             throw new IllegalStateException(
-                "Los cajeros solo pueden cancelar pedidos en estado PENDIENTE, EN PREPARACIÓN o LISTO. " +
+                "Los cajeros solo pueden cancelar pedidos en estado POR ACEPTAR, PENDIENTE, EN PREPARACIÓN o LISTO. " +
                 "Este pedido está en estado: " + order.getStatus().getDisplayName()
             );
         }
@@ -281,6 +283,13 @@ public class CashierOrderServiceImpl implements OrderService {
         log.info("Cashier {} changing status of {} items in order {} to {}", 
                  getCurrentUsername(), itemDetailIds.size(), orderId, newStatus);
         return adminOrderService.changeItemsStatus(orderId, itemDetailIds, newStatus, username);
+    }
+
+    @Override
+    public Order acceptOrderItems(Long orderId, List<Long> itemDetailIds, String username) {
+        log.info("Cashier {} accepting items {} for order {}",
+                 getCurrentUsername(), itemDetailIds, orderId);
+        return adminOrderService.acceptOrderItems(orderId, itemDetailIds, username);
     }
 
     @Override

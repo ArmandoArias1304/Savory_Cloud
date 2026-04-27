@@ -1110,6 +1110,42 @@
                   </p>
                 </div>
 
+                <!-- Customer Order Acceptance Toggle -->
+                <div id="customerOrderAcceptanceSection">
+                  <label
+                    class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3"
+                  >
+                    Aceptación de Pedidos de Clientes
+                  </label>
+                  <label
+                    class="flex items-start gap-3 p-4 rounded-xl border-2 border-gray-200 dark:border-gray-700 hover:border-primary cursor-pointer transition-colors"
+                  >
+                    <input
+                      type="checkbox"
+                      id="requireCustomerOrderAcceptance"
+                      name="requireCustomerOrderAcceptance"
+                      th:checked="${configuration.requireCustomerOrderAcceptance}"
+                      class="mt-1 w-5 h-5 text-primary border-gray-300 rounded focus:ring-primary"
+                    />
+                    <div>
+                      <span
+                        class="block text-sm font-medium text-gray-900 dark:text-white"
+                      >
+                        Requerir aceptación manual de pedidos de clientes
+                      </span>
+                      <span
+                        class="block mt-1 text-xs text-gray-500 dark:text-gray-400"
+                      >
+                        Cuando está activado, los pedidos creados por clientes
+                        (TAKEOUT/DELIVERY) iniciarán en estado "Por aceptar".
+                        El stock no se descontará hasta que un administrador,
+                        gerente o cajero acepte los items. Si está desactivado,
+                        los pedidos siguen el flujo normal y descuentan stock al crearse.
+                      </span>
+                    </div>
+                  </label>
+                </div>
+
                 <!-- Payment Methods -->
                 <!-- Note: Work days are now managed through Business Hours section (open/closed status) -->
                 <div id="paymentMethodsSection">

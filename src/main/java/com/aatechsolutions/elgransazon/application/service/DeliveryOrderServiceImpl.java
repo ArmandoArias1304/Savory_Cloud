@@ -344,6 +344,11 @@ public class DeliveryOrderServiceImpl implements OrderService {
     }
 
     @Override
+    public Order acceptOrderItems(Long orderId, List<Long> itemDetailIds, String username) {
+        throw new UnsupportedOperationException("El delivery no puede aceptar items de pedidos");
+    }
+
+    @Override
     public OrderDetail deleteOrderItem(Long orderId, Long itemDetailId, String username) {
         throw new UnsupportedOperationException("El delivery no puede eliminar items de pedidos");
     }

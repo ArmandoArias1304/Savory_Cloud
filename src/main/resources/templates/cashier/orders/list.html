@@ -504,12 +504,13 @@
                     <td class="px-6 py-4 whitespace-nowrap">
                       <span
                         class="status-badge px-3 py-1 text-xs rounded-full font-medium"
-                        th:classappend="${order.status.name() == 'PENDING'} ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' : 
+                        th:classappend="${order.status.name() == 'TO_ACCEPT'} ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 ring-2 ring-amber-400/40' :
+                                                     (${order.status.name() == 'PENDING'} ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' : 
                                                      (${order.status.name() == 'IN_PREPARATION'} ? 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400' : 
                                                      (${order.status.name() == 'READY'} ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' :
                                                      (${order.status.name() == 'ON_THE_WAY'} ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400' :
                                                      (${order.status.name() == 'DELIVERED'} ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
-                                                     (${order.status.name() == 'PAID'} ? 'bg-primary/20 text-primary' : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400')))))"
+                                                     (${order.status.name() == 'PAID'} ? 'bg-primary/20 text-primary' : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'))))))"
                         th:text="${order.status.displayName}"
                       >
                       </span>
@@ -594,9 +595,9 @@
                           <i class="fas fa-hand-holding-usd"></i>
                         </a>
 
-                        <!-- Cancel (PENDING, IN_PREPARATION, READY) -->
+                        <!-- Cancel (TO_ACCEPT, PENDING, IN_PREPARATION, READY) -->
                         <button
-                          th:if="${order.status == T(com.aatechsolutions.elgransazon.domain.entity.OrderStatus).PENDING || order.status.name() == 'IN_PREPARATION' || order.status.name() == 'READY'}"
+                          th:if="${order.status.name() == 'TO_ACCEPT' || order.status == T(com.aatechsolutions.elgransazon.domain.entity.OrderStatus).PENDING || order.status.name() == 'IN_PREPARATION' || order.status.name() == 'READY'}"
                           class="btn-cancel-order p-2 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 transition-all"
                           th:data-order-id="${order.idOrder}"
                           th:data-order-number="${order.orderNumber}"
@@ -942,7 +943,8 @@
                     <td class="px-6 py-4 whitespace-nowrap">
                       <span
                         class="status-badge inline-flex items-center gap-1 px-3 py-1 text-xs font-medium rounded-full"
-                        th:classappend="${order.status.name() == 'PENDING' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' :
+                        th:classappend="${order.status.name() == 'TO_ACCEPT' ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 ring-2 ring-amber-400/40' :
+                                      order.status.name() == 'PENDING' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' :
                                       order.status.name() == 'IN_PREPARATION' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400' :
                                       order.status.name() == 'READY' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' :
                                       order.status.name() == 'DELIVERED' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
@@ -1043,9 +1045,9 @@
                           <i class="fas fa-check-circle"></i>
                         </button>
 
-                        <!-- Cancel (PENDING, IN_PREPARATION, READY) -->
+                        <!-- Cancel (TO_ACCEPT, PENDING, IN_PREPARATION, READY) -->
                         <button
-                          th:if="${order.status.name() == 'PENDING' || order.status.name() == 'IN_PREPARATION' || order.status.name() == 'READY'}"
+                          th:if="${order.status.name() == 'TO_ACCEPT' || order.status.name() == 'PENDING' || order.status.name() == 'IN_PREPARATION' || order.status.name() == 'READY'}"
                           class="btn-cancel-order p-2 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 transition-all"
                           th:data-order-id="${order.idOrder}"
                           th:data-order-number="${order.orderNumber}"

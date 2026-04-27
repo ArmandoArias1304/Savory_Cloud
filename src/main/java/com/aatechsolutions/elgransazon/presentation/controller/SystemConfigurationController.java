@@ -105,6 +105,7 @@ public class SystemConfigurationController {
             @RequestParam(value = "deliveryPaymentCreditCard", required = false) Boolean deliveryPaymentCreditCard,
             @RequestParam(value = "deliveryPaymentDebitCard", required = false) Boolean deliveryPaymentDebitCard,
             @RequestParam(value = "deliveryPaymentTransfer", required = false) Boolean deliveryPaymentTransfer,
+            @RequestParam(value = "requireCustomerOrderAcceptance", required = false) Boolean requireCustomerOrderAcceptance,
             RedirectAttributes redirectAttributes,
             Model model) {
 
@@ -150,6 +151,9 @@ public class SystemConfigurationController {
             deliveryPaymentMethods.put(PaymentMethodType.DEBIT_CARD, deliveryPaymentDebitCard != null && deliveryPaymentDebitCard);
             deliveryPaymentMethods.put(PaymentMethodType.TRANSFER, deliveryPaymentTransfer != null && deliveryPaymentTransfer);
             configuration.setDeliveryPaymentMethods(deliveryPaymentMethods);
+
+            // Customer-order acceptance toggle (defaults to false when checkbox is unchecked)
+            configuration.setRequireCustomerOrderAcceptance(Boolean.TRUE.equals(requireCustomerOrderAcceptance));
 
             configurationService.updateConfiguration(configuration);
             
