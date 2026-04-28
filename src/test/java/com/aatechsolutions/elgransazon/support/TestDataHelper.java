@@ -393,7 +393,7 @@ public class TestDataHelper {
         ItemMenu item = ItemMenu.builder()
                 .company(company).category(category).name(name).price(price)
                 .active(true).available(true).requiresPreparation(false)
-                .isBuffet(true) // buffet = no ingredients needed
+                .requiresIngredients(false) // no ingredients needed (e.g. buffet-style)
                 .build();
         return itemMenuRepository.save(item);
     }
@@ -467,7 +467,7 @@ public class TestDataHelper {
         ItemMenu item = ItemMenu.builder()
                 .company(company).category(category).name(name).price(price)
                 .active(true).available(true).requiresPreparation(true)
-                .isBuffet(false)
+                .requiresIngredients(true)
                 .build();
 
         ItemIngredient ii = ItemIngredient.builder()

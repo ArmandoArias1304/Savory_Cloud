@@ -321,6 +321,102 @@
                 </div>
               </div>
 
+              <!-- Encabezado: Configuración del item -->
+              <div class="md:col-span-2 mt-2">
+                <div class="flex items-center gap-2 pb-2 border-b border-gray-200 dark:border-gray-700">
+                  <span class="material-symbols-outlined text-gray-500 dark:text-gray-400">tune</span>
+                  <h3 class="text-sm font-bold uppercase tracking-wide text-gray-700 dark:text-gray-300">
+                    Configuración del item
+                  </h3>
+                </div>
+              </div>
+
+              <!-- ¿Requiere Receta/Ingredientes? -->
+              <div class="md:col-span-2">
+                <div
+                  class="flex items-center gap-3 p-4 rounded-xl bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800"
+                >
+                  <!-- Spring MVC checkbox convention: hidden field with prefix _ -->
+                  <input type="hidden" name="_requiresIngredients" value="on" />
+                  <input
+                    type="checkbox"
+                    id="requiresIngredients"
+                    name="requiresIngredients"
+                    th:checked="${itemMenu.requiresIngredients}"
+                    class="w-5 h-5 text-purple-600 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-purple-500"
+                  />
+                  <div>
+                    <label
+                      for="requiresIngredients"
+                      class="text-sm font-semibold text-gray-900 dark:text-white block"
+                    >
+                      ¿Requiere receta / ingredientes?
+                    </label>
+                    <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                      <span class="font-medium">Marcado:</span> Item con receta;
+                      debe tener al menos un ingrediente y se descontará stock al
+                      aceptar el pedido.
+                      <br />
+                      <span class="font-medium">Desmarcado:</span> Item sin
+                      receta (ej: buffet, pan, productos sin control de stock).
+                      No se descuenta stock al aceptar.
+                      <br />
+                      <span class="text-purple-600 font-medium">Tip:</span> Para
+                      modelar un item tipo <strong>buffet</strong>, desmarca esta
+                      opción y marca "Solo para consumo en establecimiento".
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- ¿Solo para consumo en establecimiento? -->
+              <div class="md:col-span-2">
+                <div
+                  class="flex items-center gap-3 p-4 rounded-xl bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800"
+                >
+                  <!-- Spring MVC checkbox convention: hidden field with prefix _ -->
+                  <input type="hidden" name="_dineInOnly" value="on" />
+                  <input
+                    type="checkbox"
+                    id="dineInOnly"
+                    name="dineInOnly"
+                    th:checked="${itemMenu.dineInOnly}"
+                    class="w-5 h-5 text-rose-600 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-rose-500"
+                  />
+                  <div>
+                    <label
+                      for="dineInOnly"
+                      class="text-sm font-semibold text-gray-900 dark:text-white block"
+                    >
+                      🍽️ ¿Solo para consumo en establecimiento?
+                    </label>
+                    <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                      <span class="font-medium">Marcado:</span> Este item solo
+                      estará disponible para pedidos "Para comer aquí" (en el
+                      restaurante).
+                      <br />
+                      <span class="font-medium">Desmarcado:</span> Item
+                      disponible para todos los tipos de pedido (comer aquí,
+                      para llevar, delivery).
+                      <br />
+                      <span class="text-rose-600 font-medium">Nota:</span> Los
+                      items marcados no aparecerán en el menú para pedidos de
+                      "Para pasar a recoger" ni "Entrega a domicilio".
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Encabezado: Tipo de preparación (exclusión mutua) -->
+              <div class="md:col-span-2 mt-4">
+                <div class="flex items-center gap-2 pb-2 border-b border-gray-200 dark:border-gray-700">
+                  <span class="material-symbols-outlined text-gray-500 dark:text-gray-400">restaurant</span>
+                  <h3 class="text-sm font-bold uppercase tracking-wide text-gray-700 dark:text-gray-300">
+                    Tipo de preparación
+                  </h3>
+                </div>
+              </div>
+
               <!-- Requiere Preparación del Chef -->
               <div class="md:col-span-2">
                 <div
@@ -396,43 +492,6 @@
                 </div>
               </div>
 
-              <!-- ¿Es Buffet? -->
-              <div class="md:col-span-2">
-                <div
-                  class="flex items-center gap-3 p-4 rounded-xl bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800"
-                >
-                  <!-- Spring MVC checkbox convention: hidden field with prefix _ -->
-                  <input type="hidden" name="_isBuffet" value="on" />
-                  <input
-                    type="checkbox"
-                    id="isBuffet"
-                    name="isBuffet"
-                    th:checked="${itemMenu.isBuffet}"
-                    class="w-5 h-5 text-purple-600 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-purple-500"
-                  />
-                  <div>
-                    <label
-                      for="isBuffet"
-                      class="text-sm font-semibold text-gray-900 dark:text-white block"
-                    >
-                      ¿Es buffet?
-                    </label>
-                    <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                      <span class="font-medium">Marcado:</span> Item de buffet,
-                      no requiere ingredientes y solo estará disponible para
-                      pedidos "Para comer aquí".
-                      <br />
-                      <span class="font-medium">Desmarcado:</span> Item regular
-                      que requiere al menos un ingrediente en su receta.
-                      <br />
-                      <span class="text-purple-600 font-medium">Nota:</span> Los
-                      items de buffet no aparecen en el menú para pedidos de
-                      "Para llevar" o "Delivery".
-                    </p>
-                  </div>
-                </div>
-              </div>
-
               <!-- ¿Es Combo? -->
               <div class="md:col-span-2">
                 <div
@@ -471,44 +530,6 @@
                 </div>
               </div>
 
-              <!-- ¿Solo para consumo en establecimiento? -->
-              <div class="md:col-span-2">
-                <div
-                  class="flex items-center gap-3 p-4 rounded-xl bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800"
-                >
-                  <!-- Spring MVC checkbox convention: hidden field with prefix _ -->
-                  <input type="hidden" name="_dineInOnly" value="on" />
-                  <input
-                    type="checkbox"
-                    id="dineInOnly"
-                    name="dineInOnly"
-                    th:checked="${itemMenu.dineInOnly}"
-                    class="w-5 h-5 text-rose-600 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-rose-500"
-                  />
-                  <div>
-                    <label
-                      for="dineInOnly"
-                      class="text-sm font-semibold text-gray-900 dark:text-white block"
-                    >
-                      🍽️ ¿Solo para consumo en establecimiento?
-                    </label>
-                    <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                      <span class="font-medium">Marcado:</span> Este item solo
-                      estará disponible para pedidos "Para comer aquí" (en el
-                      restaurante).
-                      <br />
-                      <span class="font-medium">Desmarcado:</span> Item
-                      disponible para todos los tipos de pedido (comer aquí,
-                      para llevar, delivery).
-                      <br />
-                      <span class="text-rose-600 font-medium">Nota:</span> Los
-                      items marcados no aparecerán en el menú para pedidos de
-                      "Para pasar a recoger" ni "Entrega a domicilio".
-                    </p>
-                  </div>
-                </div>
-              </div>
-
               <!-- Máximo de Salsas -->
               <div class="md:col-span-2">
                 <div
@@ -535,7 +556,7 @@
                           class="sm:hidden material-symbols-outlined text-amber-600 dark:text-amber-400 text-base align-middle"
                           >local_fire_department</span
                         >
-                        Máximo de Salsas Permitidas
+                        Máximo de Salsas y Especialidades Permitidas
                       </span>
                     </div>
                     <span
@@ -561,7 +582,7 @@
                             class="w-28 sm:w-32 px-3 sm:px-4 py-2 rounded-xl border border-amber-300 dark:border-amber-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all text-sm"
                           />
                           <span class="text-sm text-gray-600 dark:text-gray-400"
-                            >salsas</span
+                            >salsas/especialidades</span
                           >
                         </div>
                         <p
@@ -571,49 +592,110 @@
                           de boneless solo permite 2 salsas, ingrese "2".
                           <br />
                           <span class="font-medium">Vacío o 0:</span> Sin límite
-                          de salsas (el cliente puede elegir todas las
+                          de salsas/especialdades (el cliente puede elegir todas las
                           disponibles).
                           <br />
                           <span class="font-medium">Nota:</span> Este límite solo
-                          aplica a complementos marcados como "salsa", no a
+                          aplica a complementos marcados como "salsa o especialidad", no a
                           complementos regulares.
                         </p>
 
-                        <!-- Checkbox para asociar todas las salsas activas -->
+                        <!-- Selector de salsas asociadas -->
                         <div
+                          id="saucesSelectorBlock"
                           class="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-amber-200 dark:border-amber-700"
+                          th:with="sauces=${allActiveSauces}, associatedIds=${associatedSauceIds}"
                         >
-                          <label
-                            class="flex items-start gap-2 sm:gap-3 cursor-pointer group"
+                          <div class="flex items-center justify-between mb-2">
+                            <span
+                              class="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2"
+                            >
+                              🌶️ Salsas y Especialidades asociadas a este item
+                            </span>
+                            <span
+                              id="saucesSelectedCount"
+                              class="text-xs text-amber-700 dark:text-amber-400 font-medium"
+                            ></span>
+                          </div>
+                          <p
+                            class="text-xs text-amber-700 dark:text-amber-400 mb-2 break-words"
                           >
-                            <input
-                              type="checkbox"
-                              name="associateAllSauces"
-                              value="true"
-                              class="mt-1 w-4 h-4 sm:w-5 sm:h-5 rounded border-amber-300 dark:border-amber-600 text-amber-600 focus:ring-amber-500 dark:bg-gray-800 cursor-pointer flex-shrink-0"
-                            />
-                            <div class="min-w-0">
+                            Marca las salsas o especialidades que estarán disponibles cuando el
+                            cliente ordene este item.
+                          </p>
+
+                          <!-- Acciones rápidas -->
+                          <div
+                            class="flex flex-wrap gap-2 mb-2"
+                            th:if="${sauces != null and !sauces.isEmpty()}"
+                          >
+                            <button
+                              type="button"
+                              onclick="selectAllSauces(true)"
+                              class="text-xs px-3 py-1 rounded-lg bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-200 hover:bg-amber-200 dark:hover:bg-amber-900/60 transition-colors"
+                            >
+                              Seleccionar todas
+                            </button>
+                            <button
+                              type="button"
+                              onclick="selectAllSauces(false)"
+                              class="text-xs px-3 py-1 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                            >
+                              Quitar todas
+                            </button>
+                          </div>
+
+                          <!-- Lista scrolleable de salsas -->
+                          <div
+                            id="saucesList"
+                            class="max-h-56 overflow-y-auto rounded-xl border border-amber-200 dark:border-amber-700 bg-white dark:bg-gray-900 divide-y divide-amber-100 dark:divide-amber-800"
+                            th:if="${sauces != null and !sauces.isEmpty()}"
+                          >
+                            <label
+                              th:each="sauce : ${sauces}"
+                              class="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors"
+                            >
+                              <input
+                                type="checkbox"
+                                name="selectedSauceIds"
+                                class="sauce-checkbox w-4 h-4 rounded border-amber-300 dark:border-amber-600 text-amber-600 focus:ring-amber-500 dark:bg-gray-800"
+                                th:value="${sauce.idComplement}"
+                                th:checked="${associatedIds != null and associatedIds.contains(sauce.idComplement)}"
+                              />
                               <span
-                                class="text-sm font-semibold text-gray-900 dark:text-white group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors"
-                              >
-                                🌶️ Asociar todas las salsas activas
-                              </span>
-                              <p
-                                class="text-xs text-amber-700 dark:text-amber-400 mt-1 break-words"
-                              >
-                                Al marcar esta opción, se asociarán
-                                automáticamente todas las salsas activas del
-                                sistema a este item.
-                                <br />
-                                <span class="font-medium">Útil para:</span> Items
-                                como boneless, alitas, nachos que permiten elegir
-                                salsas.
-                                <br />
-                                <span class="font-medium">Nota:</span> Las salsas
-                                ya asociadas no se duplicarán.
-                              </p>
-                            </div>
-                          </label>
+                                class="text-sm text-gray-900 dark:text-gray-100 flex-1 truncate"
+                                th:text="${sauce.name}"
+                              ></span>
+                              <span
+                                th:if="${sauce.extraPrice != null and sauce.extraPrice.signum() > 0}"
+                                class="text-xs text-amber-700 dark:text-amber-400"
+                                th:text="'+ $' + ${#numbers.formatDecimal(sauce.extraPrice, 1, 2)}"
+                              ></span>
+                            </label>
+                          </div>
+
+                          <!-- Mensaje si no hay salsas -->
+                          <div
+                            th:if="${sauces == null or sauces.isEmpty()}"
+                            class="rounded-xl border border-dashed border-amber-300 dark:border-amber-700 px-3 py-4 text-center text-xs text-amber-700 dark:text-amber-400"
+                          >
+                            No hay salsas/especialidades activas registradas. Crea complementos
+                            marcados como "salsa" o "especialidad" para poder asociarlos aquí.
+                          </div>
+
+                          <!-- Hidden flag: el JS lo pone en true solo si la selección cambió -->
+                          <input
+                            type="hidden"
+                            id="saucesSyncEnabled"
+                            name="saucesSyncEnabled"
+                            value="false"
+                          />
+                          <!-- Snapshot inicial (lista de IDs separados por coma) para detectar cambios -->
+                          <input
+                            type="hidden"
+                            id="saucesInitialSnapshot"
+                            th:value="${associatedIds != null ? #strings.listJoin(associatedIds, ',') : ''}"
+                          />
                         </div>
                       </div>
                     </div>
@@ -906,9 +988,9 @@
             </div>
           </div>
 
-          <!-- Buffet Mode Notice (replaces ingredient section when buffet is checked) -->
+          <!-- No-Recipe Notice (replaces ingredient section when requiresIngredients is unchecked) -->
           <div
-            id="buffetNotice"
+            id="noRecipeNotice"
             class="bg-white dark:bg-gray-900 rounded-2xl shadow-lg border-2 border-purple-300 dark:border-purple-700 p-6 hidden"
           >
             <div class="flex items-start gap-4">
@@ -924,22 +1006,23 @@
                 <h3
                   class="text-lg font-bold text-purple-900 dark:text-purple-200 mb-2"
                 >
-                  🍽️ Item de Buffet
+                  Item sin receta
                 </h3>
                 <p class="text-sm text-purple-700 dark:text-purple-300">
-                  Este item está marcado como <strong>buffet</strong>. Los items
-                  de buffet:
+                  Este item está marcado como <strong>sin receta</strong>
+                  (ej: buffet, pan, productos sin control de stock).
                 </p>
                 <ul
                   class="text-sm text-purple-700 dark:text-purple-300 mt-2 space-y-1 list-disc list-inside"
                 >
-                  <li>No requieren ingredientes asociados (receta).</li>
+                  <li>No tiene ingredientes asociados.</li>
                   <li>
-                    Solo estarán disponibles para pedidos
-                    <strong>"Para comer aquí"</strong>.
+                    No se descuenta stock al aceptar el pedido.
                   </li>
                   <li>
-                    No aparecerán en el menú de pedidos para llevar ni delivery.
+                    Si además quieres restringirlo a "Para comer aquí" (modo
+                    buffet), marca también <strong>"Solo para consumo en
+                    establecimiento"</strong>.
                   </li>
                 </ul>
               </div>
@@ -1374,8 +1457,8 @@
         // Inicializar estado del checkbox de horario personalizado
         toggleCustomSchedule();
 
-        // Inicializar estado del checkbox de buffet
-        toggleBuffetMode();
+        // Inicializar estado del checkbox de receta (requiresIngredients)
+        toggleRequiresIngredientsMode();
 
         // Añadir validación de horarios a los campos de tiempo manual
         document.querySelectorAll(".manual-time-input").forEach((timeInput) => {
@@ -1414,10 +1497,17 @@
         chevron.style.transform = isHidden ? "rotate(180deg)" : "";
       }
 
-      // Auto-open if field already has a value (edit mode)
+      // Auto-open if field already has a value (edit mode) o si ya hay salsas asociadas
       document.addEventListener("DOMContentLoaded", function () {
         const maxSaucesInput = document.getElementById("maxSauces");
-        if (maxSaucesInput && maxSaucesInput.value && maxSaucesInput.value !== "0") {
+        const initialSnapshot = document.getElementById("saucesInitialSnapshot");
+        const hasInitialSauces = !!(initialSnapshot && initialSnapshot.value);
+        const hasMaxSauces =
+          maxSaucesInput &&
+          maxSaucesInput.value &&
+          maxSaucesInput.value !== "0";
+
+        if (hasMaxSauces || hasInitialSauces) {
           const content = document.getElementById("maxSaucesContent");
           const chevron = document.getElementById("maxSaucesChevron");
           if (content) content.classList.remove("hidden");
@@ -1425,34 +1515,115 @@
         }
       });
 
-      // ========== Función para Modo Buffet ==========
+      // ========== Selector de Salsas Asociadas ==========
 
       /**
-       * Alterna la visibilidad de la sección de ingredientes según el modo buffet
+       * Marca/desmarca todas las salsas de la lista.
        */
-      function toggleBuffetMode() {
-        const buffetCheckbox = document.getElementById("isBuffet");
+      function selectAllSauces(state) {
+        document
+          .querySelectorAll(".sauce-checkbox")
+          .forEach((cb) => (cb.checked = !!state));
+        updateSaucesSelectedCount();
+      }
+
+      /**
+       * Actualiza el contador "X de Y seleccionadas".
+       */
+      function updateSaucesSelectedCount() {
+        const all = document.querySelectorAll(".sauce-checkbox");
+        const checked = document.querySelectorAll(".sauce-checkbox:checked");
+        const label = document.getElementById("saucesSelectedCount");
+        if (label) {
+          label.textContent = all.length
+            ? `${checked.length} de ${all.length} seleccionadas`
+            : "";
+        }
+      }
+
+      /**
+       * Devuelve la selección actual como string ordenado "id1,id2,id3".
+       */
+      function getCurrentSaucesSelection() {
+        const ids = Array.from(
+          document.querySelectorAll(".sauce-checkbox:checked"),
+        )
+          .map((cb) => cb.value)
+          .sort((a, b) => Number(a) - Number(b));
+        return ids.join(",");
+      }
+
+      /**
+       * Devuelve el snapshot inicial normalizado (ordenado igual que la actual).
+       */
+      function getInitialSaucesSnapshot() {
+        const el = document.getElementById("saucesInitialSnapshot");
+        if (!el || !el.value) return "";
+        return el.value
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean)
+          .sort((a, b) => Number(a) - Number(b))
+          .join(",");
+      }
+
+      // Inicialización del selector de salsas
+      document.addEventListener("DOMContentLoaded", function () {
+        document
+          .querySelectorAll(".sauce-checkbox")
+          .forEach((cb) => cb.addEventListener("change", updateSaucesSelectedCount));
+        updateSaucesSelectedCount();
+
+        // Antes de enviar el form: si la selección no cambió, no enviar nada
+        // de salsas (deshabilitamos los checkboxes y el flag queda en false).
+        // Si cambió, marcamos el flag para que el backend reconcilie.
+        const form = document.querySelector("form");
+        if (form) {
+          form.addEventListener(
+            "submit",
+            function () {
+              const flag = document.getElementById("saucesSyncEnabled");
+              if (!flag) return;
+              const current = getCurrentSaucesSelection();
+              const initial = getInitialSaucesSnapshot();
+              if (current === initial) {
+                // Sin cambios: no enviar selectedSauceIds ni el flag
+                flag.value = "false";
+                document
+                  .querySelectorAll(".sauce-checkbox")
+                  .forEach((cb) => (cb.disabled = true));
+              } else {
+                flag.value = "true";
+              }
+            },
+            true,
+          );
+        }
+      });
+
+      // ========== Función para Modo Sin Receta (requiresIngredients) ==========
+
+      /**
+       * Alterna la visibilidad de la sección de ingredientes según requiresIngredients.
+       * Si requiresIngredients=false (checkbox desmarcado) se oculta la sección de
+       * ingredientes y se muestra el aviso "Item sin receta". El check de dineInOnly
+       * es totalmente independiente.
+       */
+      function toggleRequiresIngredientsMode() {
+        const reqCheckbox = document.getElementById("requiresIngredients");
         const ingredientSection = document.getElementById("ingredientSection");
-        const buffetNotice = document.getElementById("buffetNotice");
-        const dineInOnlyCheckbox = document.getElementById("dineInOnly");
+        const noRecipeNotice = document.getElementById("noRecipeNotice");
 
-        if (!buffetCheckbox || !ingredientSection || !buffetNotice) return;
+        if (!reqCheckbox || !ingredientSection || !noRecipeNotice) return;
 
-        const isBuffet = buffetCheckbox.checked;
+        const requiresIngredients = reqCheckbox.checked;
 
-        if (isBuffet) {
-          // Hide ingredient section, show buffet notice
+        if (!requiresIngredients) {
+          // Hide ingredient section, show no-recipe notice
           ingredientSection.classList.add("hidden");
-          buffetNotice.classList.remove("hidden");
+          noRecipeNotice.classList.remove("hidden");
 
-          // Buffet is inherently dine-in only — uncheck and disable dineInOnly
-          if (dineInOnlyCheckbox) {
-            dineInOnlyCheckbox.checked = false;
-            dineInOnlyCheckbox.disabled = true;
-            dineInOnlyCheckbox.closest('.md\\:col-span-2')?.classList.add("opacity-50");
-          }
-
-          // Clear all ingredient rows when switching to buffet mode
+          // Clear all ingredient rows when switching to no-recipe mode
           const container = document.getElementById("ingredientsContainer");
           if (container) {
             const rows = container.querySelectorAll(
@@ -1461,15 +1632,9 @@
             rows.forEach((row) => row.remove());
           }
         } else {
-          // Show ingredient section, hide buffet notice
+          // Show ingredient section, hide no-recipe notice
           ingredientSection.classList.remove("hidden");
-          buffetNotice.classList.add("hidden");
-
-          // Re-enable dineInOnly checkbox
-          if (dineInOnlyCheckbox) {
-            dineInOnlyCheckbox.disabled = false;
-            dineInOnlyCheckbox.closest('.md\\:col-span-2')?.classList.remove("opacity-50");
-          }
+          noRecipeNotice.classList.add("hidden");
 
           // If no ingredient rows exist, add one default row
           const container = document.getElementById("ingredientsContainer");
@@ -1519,10 +1684,10 @@
           // Load existing combo items if editing
           loadExistingComboItems();
         } else {
-          // Hide combo section, show ingredient section (only if not buffet)
+          // Hide combo section, show ingredient section (only if requiresIngredients=true)
           comboSection.classList.add("hidden");
-          const buffetCheckbox = document.getElementById("isBuffet");
-          if (!buffetCheckbox || !buffetCheckbox.checked) {
+          const reqCheckbox = document.getElementById("requiresIngredients");
+          if (reqCheckbox && reqCheckbox.checked) {
             ingredientSection.classList.remove("hidden");
 
             // If no ingredient rows exist, add one default row
@@ -1599,8 +1764,8 @@
                   let icon = "📦";
                   if (item.requiresPreparation) icon = "👨‍🍳";
                   else if (item.requiresBaristaPreparation) icon = "☕";
-                  else if (item.isBuffet) icon = "🍽️";
                   else if (item.isCombo) icon = "🍱";
+                  else if (item.requiresIngredients === false) icon = "🍽️";
 
                   return `
                   <div
@@ -2649,19 +2814,17 @@
 
       // ========== Inicialización ==========
       window.addEventListener("DOMContentLoaded", function () {
-        // Mutual exclusion logic for Chef vs Barista vs Buffet vs Combo (only one can be selected)
+        // Mutual exclusion logic for Chef vs Barista vs Combo (only one can be selected)
         const chefCheckbox = document.getElementById("requiresPreparation");
         const baristaCheckbox = document.getElementById(
           "requiresBaristaPreparation",
         );
-        const buffetCheckbox = document.getElementById("isBuffet");
         const comboCheckbox = document.getElementById("isCombo");
 
         function updateExclusionState() {
           if (
             !chefCheckbox ||
             !baristaCheckbox ||
-            !buffetCheckbox ||
             !comboCheckbox
           )
             return;
@@ -2669,7 +2832,6 @@
           const allBoxes = [
             chefCheckbox,
             baristaCheckbox,
-            buffetCheckbox,
             comboCheckbox,
           ];
           const anyChecked = allBoxes.some((cb) => cb.checked);
@@ -2696,15 +2858,12 @@
         if (
           chefCheckbox &&
           baristaCheckbox &&
-          buffetCheckbox &&
           comboCheckbox
         ) {
           chefCheckbox.addEventListener("change", function () {
             if (this.checked) {
               baristaCheckbox.checked = false;
-              buffetCheckbox.checked = false;
               comboCheckbox.checked = false;
-              toggleBuffetMode();
               toggleComboMode();
             }
             updateExclusionState();
@@ -2713,22 +2872,9 @@
           baristaCheckbox.addEventListener("change", function () {
             if (this.checked) {
               chefCheckbox.checked = false;
-              buffetCheckbox.checked = false;
-              comboCheckbox.checked = false;
-              toggleBuffetMode();
-              toggleComboMode();
-            }
-            updateExclusionState();
-          });
-
-          buffetCheckbox.addEventListener("change", function () {
-            if (this.checked) {
-              chefCheckbox.checked = false;
-              baristaCheckbox.checked = false;
               comboCheckbox.checked = false;
               toggleComboMode();
             }
-            toggleBuffetMode();
             updateExclusionState();
           });
 
@@ -2736,11 +2882,16 @@
             if (this.checked) {
               chefCheckbox.checked = false;
               baristaCheckbox.checked = false;
-              buffetCheckbox.checked = false;
-              toggleBuffetMode();
+              // Combos no usan receta: forzar requiresIngredients = false
+              const reqCb = document.getElementById("requiresIngredients");
+              if (reqCb && reqCb.checked) {
+                reqCb.checked = false;
+                toggleRequiresIngredientsMode();
+              }
             }
             toggleComboMode();
             updateExclusionState();
+            updateRecipeComboLockState();
           });
 
           // Run on load
@@ -2748,44 +2899,51 @@
           toggleComboMode();
         }
 
-        // Mutual exclusion: dineInOnly vs isBuffet
-        const dineInOnlyCheckbox = document.getElementById("dineInOnly");
-        if (dineInOnlyCheckbox && buffetCheckbox) {
-          dineInOnlyCheckbox.addEventListener("change", function () {
-            if (this.checked) {
-              // dineInOnly checked → disable buffet (and uncheck if checked)
-              if (buffetCheckbox.checked) {
-                buffetCheckbox.checked = false;
-                toggleBuffetMode();
-                updateExclusionState();
-              }
-              buffetCheckbox.disabled = true;
-              buffetCheckbox.parentElement.classList.add("opacity-50");
-            } else {
-              // dineInOnly unchecked → re-enable buffet (if not blocked by exclusion group)
-              // Only re-enable if no other in the group is checked
-              const groupBoxes = [chefCheckbox, baristaCheckbox, buffetCheckbox, comboCheckbox];
-              const anyGroupChecked = groupBoxes.some((cb) => cb && cb.checked);
-              if (!anyGroupChecked) {
-                buffetCheckbox.disabled = false;
-                buffetCheckbox.parentElement.classList.remove("opacity-50");
-              }
-              updateExclusionState();
-            }
-          });
+        // ===== Exclusi\u00f3n mutua entre requiresIngredients y isCombo =====
+        // Un combo no tiene receta propia (sus items hijos s\u00ed). Por eso ambos
+        // checks son mutuamente excluyentes: marcar uno desmarca y deshabilita
+        // visualmente el otro.
+        const reqIngredientsCb = document.getElementById("requiresIngredients");
 
-          // On load: if dineInOnly is checked, disable buffet
-          if (dineInOnlyCheckbox.checked) {
-            buffetCheckbox.disabled = true;
-            buffetCheckbox.parentElement.classList.add("opacity-50");
-          }
-          // On load: if buffet is checked, disable dineInOnly
-          if (buffetCheckbox.checked) {
-            dineInOnlyCheckbox.checked = false;
-            dineInOnlyCheckbox.disabled = true;
-            dineInOnlyCheckbox.closest('.md\\:col-span-2')?.classList.add("opacity-50");
+        function updateRecipeComboLockState() {
+          if (!reqIngredientsCb || !comboCheckbox) return;
+
+          // Si combo est\u00e1 marcado: deshabilitar receta
+          if (comboCheckbox.checked) {
+            reqIngredientsCb.disabled = true;
+            reqIngredientsCb.parentElement.classList.add("opacity-50");
+          } else if (reqIngredientsCb.checked) {
+            // Si receta est\u00e1 marcada: deshabilitar combo
+            comboCheckbox.disabled = true;
+            comboCheckbox.parentElement.classList.add("opacity-50");
+            reqIngredientsCb.disabled = false;
+            reqIngredientsCb.parentElement.classList.remove("opacity-50");
+          } else {
+            // Ninguno marcado: receta habilitada; combo se reactiva si no
+            // está bloqueado por chef/barista (updateExclusionState lo gestiona).
+            reqIngredientsCb.disabled = false;
+            reqIngredientsCb.parentElement.classList.remove("opacity-50");
+            comboCheckbox.disabled = false;
+            comboCheckbox.parentElement.classList.remove("opacity-50");
+            updateExclusionState();
           }
         }
+
+        if (reqIngredientsCb) {
+          reqIngredientsCb.addEventListener("change", function () {
+            if (this.checked && comboCheckbox && comboCheckbox.checked) {
+              // Si por alg\u00fan motivo combo segu\u00eda marcado, desmarcarlo
+              comboCheckbox.checked = false;
+              toggleComboMode();
+              updateExclusionState();
+            }
+            toggleRequiresIngredientsMode();
+            updateRecipeComboLockState();
+          });
+        }
+
+        // Estado inicial del lock receta\u2194combo
+        updateRecipeComboLockState();
 
         const categorySelect = document.getElementById("categorySelect");
         const container = document.getElementById("ingredientsContainer");
@@ -2812,13 +2970,13 @@
         });
 
         // Si no hay ingredientes existentes (modo crear), agregar una fila por defecto
-        // PERO solo si NO está en modo buffet ni modo combo
-        const buffetCheckboxInit = document.getElementById("isBuffet");
+        // PERO solo si requiresIngredients=true Y NO está en modo combo
+        const reqIngredientsInit = document.getElementById("requiresIngredients");
         const comboCheckboxInit = document.getElementById("isCombo");
-        const isBuffetMode = buffetCheckboxInit && buffetCheckboxInit.checked;
+        const requiresIngredientsMode = reqIngredientsInit && reqIngredientsInit.checked;
         const isComboMode = comboCheckboxInit && comboCheckboxInit.checked;
 
-        if (existingRows.length === 0 && !isBuffetMode && !isComboMode) {
+        if (existingRows.length === 0 && requiresIngredientsMode && !isComboMode) {
           addIngredientRow();
         } else if (existingRows.length > 0) {
           // Ocultar mensaje si hay ingredientes
@@ -2833,8 +2991,14 @@
         // Re-enable disabled checkboxes before submit so their values are sent
         const dineInOnlyCb = document.getElementById("dineInOnly");
         if (dineInOnlyCb) dineInOnlyCb.disabled = false;
-        const buffetCb = document.getElementById("isBuffet");
-        if (buffetCb) buffetCb.disabled = false;
+        const reqIngredientsCb = document.getElementById("requiresIngredients");
+        if (reqIngredientsCb) reqIngredientsCb.disabled = false;
+        const chefCb = document.getElementById("requiresPreparation");
+        if (chefCb) chefCb.disabled = false;
+        const baristaCb = document.getElementById("requiresBaristaPreparation");
+        if (baristaCb) baristaCb.disabled = false;
+        const comboCbSubmit = document.getElementById("isCombo");
+        if (comboCbSubmit) comboCbSubmit.disabled = false;
 
         // Si no se cambió la imagen, deshabilitar el file input para que no se envíe
         // Esto evita enviar datos multipart innecesarios cuando solo se editan otros campos
@@ -2913,8 +3077,8 @@
           }
         }
 
-        const buffetCheckbox = document.getElementById("isBuffet");
-        const isBuffet = buffetCheckbox && buffetCheckbox.checked;
+        const reqIngredientsCheckbox = document.getElementById("requiresIngredients");
+        const requiresIngredients = reqIngredientsCheckbox && reqIngredientsCheckbox.checked;
         const comboCheckboxVal = document.getElementById("isCombo");
         const isComboVal = comboCheckboxVal && comboCheckboxVal.checked;
 
@@ -2992,8 +3156,8 @@
           return true;
         }
 
-        // If buffet mode, skip ingredient validation
-        if (isBuffet) {
+        // If item does not require ingredients, skip ingredient validation
+        if (!requiresIngredients) {
           return true;
         }
 

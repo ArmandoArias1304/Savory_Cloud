@@ -635,12 +635,9 @@ public class CashierController {
                        (tableId != null ? "&tableId=" + tableId : "");
             }
 
-            // Validate buffet and dine-in-only items: only allowed for DINE_IN orders
+            // Validate dine-in-only items: only allowed for DINE_IN orders
             if (order.getOrderType() != OrderType.DINE_IN) {
                 for (OrderDetail detail : orderDetails) {
-                    if (Boolean.TRUE.equals(detail.getItemMenu().getIsBuffet())) {
-                        throw new IllegalArgumentException("El item '" + detail.getItemMenu().getName() + "' es de tipo buffet y solo está disponible para pedidos de tipo 'Para comer aquí'.");
-                    }
                     if (Boolean.TRUE.equals(detail.getItemMenu().getDineInOnly())) {
                         throw new IllegalArgumentException("El item '" + detail.getItemMenu().getName() + "' solo está disponible para consumo en el establecimiento.");
                     }
@@ -861,14 +858,9 @@ public class CashierController {
                     redirectAttributes.addFlashAttribute("errorMessage", statusMessage);
                     return "redirect:/cashier/orders/edit/" + id;
                 }
-                // If changing away from DINE_IN, validate no buffet or dine-in-only items exist
+                // If changing away from DINE_IN, validate no dine-in-only items exist
                 if (order.getOrderType() != OrderType.DINE_IN && existingOrder.getOrderDetails() != null) {
                     for (OrderDetail detail : existingOrder.getOrderDetails()) {
-                        if (Boolean.TRUE.equals(detail.getItemMenu().getIsBuffet())) {
-                            redirectAttributes.addFlashAttribute("errorMessage",
-                                "No se puede cambiar el tipo de pedido porque contiene el item buffet '" + detail.getItemMenu().getName() + "' que solo está disponible para 'Para comer aquí'.");
-                            return "redirect:/cashier/orders/edit/" + id;
-                        }
                         if (Boolean.TRUE.equals(detail.getItemMenu().getDineInOnly())) {
                             redirectAttributes.addFlashAttribute("errorMessage",
                                 "No se puede cambiar el tipo de pedido porque contiene el item '" + detail.getItemMenu().getName() + "' que solo está disponible para consumo en el establecimiento.");

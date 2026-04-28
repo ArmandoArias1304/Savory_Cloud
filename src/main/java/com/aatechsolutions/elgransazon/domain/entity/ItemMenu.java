@@ -102,13 +102,17 @@ public class ItemMenu implements Serializable {
     private Boolean requiresBaristaPreparation = false;
 
     /**
-     * Indicates if this item is a buffet item.
-     * TRUE: Buffet items do not have ingredients/recipe and are only available for DINE_IN orders.
-     * FALSE: Regular items that require a recipe with at least one ingredient.
+     * Indicates if this item requires a recipe (ingredient list) for stock management.
+     * TRUE: Item has at least one ingredient; stock is discounted on order accept.
+     * FALSE: Item has no ingredients (e.g., buffet plates, bread, items with no stock tracking).
+     *        No stock discount happens on accept.
+     * Independent of {@link #dineInOnly}: a "buffet" item is modeled as
+     * requiresIngredients=false AND dineInOnly=true.
+     * For combos this flag is always forced to false (combos use child items, not ingredients).
      */
-    @Column(name = "is_buffet", nullable = false)
+    @Column(name = "requires_ingredients", nullable = false)
     @Builder.Default
-    private Boolean isBuffet = false;
+    private Boolean requiresIngredients = true;
 
     /**
      * Indicates if this item is a combo item.
@@ -298,12 +302,12 @@ public class ItemMenu implements Serializable {
      * Get the total count of ingredients for this item.
      * For regular items: returns the count of direct ingredients.
      * For combo items: returns the sum of all ingredients from all child items.
-     * For buffet items: returns 0 (no ingredients).
+     * For items without ingredients (requiresIngredients=false): returns 0.
      * @return Total ingredient count
      */
     public int getTotalIngredientsCount() {
-        // Buffet items have no ingredients
-        if (Boolean.TRUE.equals(isBuffet)) {
+        // Items without recipe have no ingredients
+        if (!Boolean.TRUE.equals(requiresIngredients)) {
             return 0;
         }
         

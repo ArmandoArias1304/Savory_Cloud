@@ -315,7 +315,6 @@
                   th:data-item-available="${item.available}"
                   th:data-schedule-status="${item.scheduleStatus}"
                   th:data-schedule-info="${item.scheduleInfo}"
-                  th:data-is-buffet="${item.isBuffet != null && item.isBuffet}"
                   th:data-is-combo="${item.isCombo != null && item.isCombo}"
                   th:data-dine-in-only="${item.dineInOnly != null && item.dineInOnly}"
                   onclick="openItemModal(this)"
@@ -735,18 +734,18 @@
       // Load promotions when page loads
       loadPromotions();
 
-      // ========== BUFFET & DINE-IN ONLY ITEM FILTERING ==========
-      // Hide buffet and dine-in-only items if order type is not DINE_IN
-      function filterBuffetItems() {
+      // ========== DINE-IN ONLY ITEM FILTERING ==========
+      // Hide dine-in-only items if order type is not DINE_IN
+      function filterDineInOnlyItems() {
         const isDineIn = orderData.orderType === "DINE_IN";
         document.querySelectorAll(".menu-item-card").forEach((card) => {
-          if (card.dataset.isBuffet === "true" || card.dataset.dineInOnly === "true") {
+          if (card.dataset.dineInOnly === "true") {
             card.style.display = isDineIn ? "" : "none";
           }
         });
       }
       // Run on page load
-      document.addEventListener("DOMContentLoaded", filterBuffetItems);
+      document.addEventListener("DOMContentLoaded", filterDineInOnlyItems);
 
       // Debug: Log order data
 
@@ -1012,7 +1011,7 @@
 
         if (!hasSauces && !hasComplements) return "";
 
-        let html = `<div class="grid grid-cols-2 gap-2">`;
+        let html = `<div class="grid grid-cols-1 gap-2">`;
 
         // Sauce button
         if (hasSauces) {
@@ -1021,7 +1020,7 @@
             <button type="button" onclick="openSaucesModal()" class="w-full flex items-center justify-between p-2 rounded-lg border-2 ${isDarkMode ? "border-orange-600 bg-orange-900/20 hover:bg-orange-900/30" : "border-orange-400 bg-orange-50 hover:bg-orange-100"} transition-all">
               <div class="flex items-center gap-1.5">
                 <span class="material-symbols-outlined text-orange-500 text-base">local_fire_department</span>
-                <span class="font-semibold text-xs ${isDarkMode ? "text-white" : "text-gray-900"}">Elegir Salsas</span>
+                <span class="font-semibold text-xs ${isDarkMode ? "text-white" : "text-gray-900"}">Salsa/Especialidad</span>
               </div>
               <div class="flex items-center gap-1.5">
                 <span id="sauces-count-badge" class="px-2 py-0.5 rounded-full text-xs font-bold ${isDarkMode ? "bg-orange-700 text-white" : "bg-orange-200 text-orange-800"}">${selectedSauces.length} ${maxSauces && maxSauces > 0 ? "/ " + maxSauces : ""}</span>
@@ -1042,7 +1041,7 @@
             <button type="button" onclick="openComplementsModal()" class="w-full flex items-center justify-between p-2 rounded-lg border-2 ${isDarkMode ? "border-purple-600 bg-purple-900/20 hover:bg-purple-900/30" : "border-purple-400 bg-purple-50 hover:bg-purple-100"} transition-all">
               <div class="flex items-center gap-1.5">
                 <span class="material-symbols-outlined text-purple-500 text-base">skillet</span>
-                <span class="font-semibold text-xs ${isDarkMode ? "text-white" : "text-gray-900"}">Elegir Complementos</span>
+                <span class="font-semibold text-xs ${isDarkMode ? "text-white" : "text-gray-900"}">Elegir Extras</span>
               </div>
               <div class="flex items-center gap-1.5">
                 <span id="complements-count-badge" class="px-2 py-0.5 rounded-full text-xs font-bold ${isDarkMode ? "bg-purple-700 text-white" : "bg-purple-200 text-purple-800"}">${totalCompsQty}</span>
@@ -1087,7 +1086,7 @@
                 <div class="flex items-center justify-between">
                   <div class="flex items-center gap-2">
                     <span class="material-symbols-outlined text-orange-500 text-2xl">local_fire_department</span>
-                    <h3 class="text-xl font-bold ${isDarkMode ? "text-white" : "text-gray-900"}">Salsas Disponibles</h3>
+                    <h3 class="text-xl font-bold ${isDarkMode ? "text-white" : "text-gray-900"}">Salsas/Especialidades Disponibles</h3>
                   </div>
                   <button onclick="closeSaucesOverlay()" class="${isDarkMode ? "text-gray-400 hover:text-white" : "text-gray-400 hover:text-gray-600"} transition-colors">
                     <span class="material-symbols-outlined text-2xl">close</span>
@@ -1197,7 +1196,7 @@
                 <div class="flex items-center justify-between">
                   <div class="flex items-center gap-2">
                     <span class="material-symbols-outlined text-purple-500 text-2xl">skillet</span>
-                    <h3 class="text-xl font-bold ${isDarkMode ? "text-white" : "text-gray-900"}">Complementos Disponibles</h3>
+                    <h3 class="text-xl font-bold ${isDarkMode ? "text-white" : "text-gray-900"}">Extras Disponibles</h3>
                   </div>
                   <button onclick="closeComplementsOverlay()" class="${isDarkMode ? "text-gray-400 hover:text-white" : "text-gray-400 hover:text-gray-600"} transition-colors">
                     <span class="material-symbols-outlined text-2xl">close</span>
@@ -2526,14 +2525,14 @@
             document.documentElement.classList.contains("dark");
 
           const result = await Swal.fire({
-            title: "¿Sin salsa?",
-            html: `Para el item <b>${currentItem.name}</b> no seleccionaste ninguna salsa, se irá en natural por defecto.<br><br>¿Deseas continuar sin salsa?`,
+            title: "¿Sin salsa o especialidad?",
+            html: `Para el item <b>${currentItem.name}</b> no seleccionaste ninguna salsa o especialidad, se irá natural por defecto.<br><br>¿Deseas continuar sin salsa o especialidad?`,
             icon: "question",
             showCancelButton: true,
             confirmButtonColor: "#38e07b",
             cancelButtonColor: "#f59e0b",
             confirmButtonText: "Sí, continuar",
-            cancelButtonText: "No, elegir salsa",
+            cancelButtonText: "No, elegir salsa o especialidad",
             customClass: {
               popup: isDarkMode ? "swal2-dark" : "",
               title: isDarkMode ? "text-white" : "",

@@ -129,6 +129,9 @@ public class ItemMenuController {
         // Add availability data
         loadAvailabilityFormData(model, itemMenu);
 
+        // Add active sauces (multi-tenant) for the sauces selection list (no item yet → no preselection)
+        loadSaucesFormData(model, null);
+
         return "admin/menu-items/form";
     }
 
@@ -181,7 +184,10 @@ public class ItemMenuController {
                     
                     // Add availability data
                     loadAvailabilityFormData(model, itemMenu);
-                    
+
+                    // Add active sauces (multi-tenant) and currently associated sauce IDs for the selection list
+                    loadSaucesFormData(model, id);
+
                     return "admin/menu-items/form";
                 })
                 .orElseGet(() -> {
@@ -203,12 +209,12 @@ public class ItemMenuController {
             @RequestParam(value = "units", required = false) List<String> units,
             @RequestParam(value = "requiresPreparation", required = false) Boolean requiresPreparationParam,
             @RequestParam(value = "requiresBaristaPreparation", required = false) Boolean requiresBaristaPreparationParam,
-            @RequestParam(value = "isBuffet", required = false) Boolean isBuffetParam,
+            @RequestParam(value = "requiresIngredients", required = false) Boolean requiresIngredientsParam,
             @RequestParam(value = "isCombo", required = false) Boolean isComboParam,
             @RequestParam(value = "dineInOnly", required = false) Boolean dineInOnlyParam,
             @RequestParam(value = "comboItemIds", required = false) List<Long> comboItemIds,
             @RequestParam(value = "comboItemQuantities", required = false) List<Integer> comboItemQuantities,
-            @RequestParam(value = "associateAllSauces", required = false) Boolean associateAllSauces,
+            @RequestParam(value = "selectedSauceIds", required = false) List<Long> selectedSauceIds,
             @RequestParam(value = "hasCustomSchedule", required = false) Boolean hasCustomSchedule,
             @RequestParam Map<String, String> allParams,
             Model model,
@@ -219,8 +225,8 @@ public class ItemMenuController {
         log.info("🔍 requiresPreparation as @RequestParam: {}", requiresPreparationParam);
         log.info("🔍 requiresBaristaPreparation received from form: {}", itemMenu.getRequiresBaristaPreparation());
         log.info("🔍 requiresBaristaPreparation as @RequestParam: {}", requiresBaristaPreparationParam);
-        log.info("🔍 isBuffet: {}", isBuffetParam);
-        log.info("🔍 associateAllSauces: {}", associateAllSauces);
+        log.info("🔍 requiresIngredients: {}", requiresIngredientsParam);
+        log.info("🔍 selectedSauceIds: {}", selectedSauceIds);
         log.info("🔍 hasCustomSchedule: {}", hasCustomSchedule);
         
         // Si el parámetro está presente, usarlo (para debug)
@@ -234,26 +240,29 @@ public class ItemMenuController {
             itemMenu.setRequiresBaristaPreparation(requiresBaristaPreparationParam);
         }
         
-        // Set isBuffet on item
-        itemMenu.setIsBuffet(Boolean.TRUE.equals(isBuffetParam));
-        
         // Set isCombo on item
         itemMenu.setIsCombo(Boolean.TRUE.equals(isComboParam));
         
-        // Set dineInOnly on item
+        // Set requiresIngredients on item (combos always force false)
+        if (Boolean.TRUE.equals(itemMenu.getIsCombo())) {
+            itemMenu.setRequiresIngredients(false);
+        } else {
+            itemMenu.setRequiresIngredients(Boolean.TRUE.equals(requiresIngredientsParam));
+        }
+        
+        // Set dineInOnly on item (independent of requiresIngredients)
         itemMenu.setDineInOnly(Boolean.TRUE.equals(dineInOnlyParam));
         
         // Set hasCustomSchedule on item
         itemMenu.setHasCustomSchedule(Boolean.TRUE.equals(hasCustomSchedule));
 
-        // Validate mutual exclusion: only one of Chef, Barista, Buffet, or Combo can be selected
+        // Validate mutual exclusion: only one of Chef, Barista, or Combo can be selected
         int selectedOptions = 0;
         if (Boolean.TRUE.equals(itemMenu.getRequiresPreparation())) selectedOptions++;
         if (Boolean.TRUE.equals(itemMenu.getRequiresBaristaPreparation())) selectedOptions++;
-        if (Boolean.TRUE.equals(itemMenu.getIsBuffet())) selectedOptions++;
         if (Boolean.TRUE.equals(itemMenu.getIsCombo())) selectedOptions++;
         if (selectedOptions > 1) {
-             model.addAttribute("errorMessage", "Solo puede seleccionar una opción: preparación por Chef, preparación por Barista, Buffet o Combo.");
+             model.addAttribute("errorMessage", "Solo puede seleccionar una opción: preparación por Chef, preparación por Barista o Combo.");
              List<ItemIngredient> recipe = buildRecipe(ingredientIds, quantities, units);
              loadFormData(model, itemMenu, recipe);
              loadAvailabilityFormData(model, itemMenu);
@@ -283,12 +292,12 @@ public class ItemMenuController {
             // Build recipe from form data
             List<ItemIngredient> recipe = buildRecipe(ingredientIds, quantities, units);
 
-            // Validate ingredients based on type flags
-            if (Boolean.TRUE.equals(itemMenu.getIsBuffet()) || Boolean.TRUE.equals(itemMenu.getIsCombo())) {
-                // Buffet and Combo items must NOT have ingredients - force empty recipe
+            // Validate ingredients based on requiresIngredients flag
+            if (!Boolean.TRUE.equals(itemMenu.getRequiresIngredients()) || Boolean.TRUE.equals(itemMenu.getIsCombo())) {
+                // Items without recipe and Combo items must NOT have ingredients - force empty recipe
                 recipe = new ArrayList<>();
             } else {
-                // Non-buffet/non-combo items must have at least one ingredient
+                // Items that require ingredients must have at least one
                 if (recipe.isEmpty()) {
                     model.addAttribute("errorMessage", "Debe agregar al menos un ingrediente a la receta");
                     loadFormData(model, itemMenu, recipe);
@@ -348,16 +357,17 @@ public class ItemMenuController {
                 itemMenuService.clearAvailabilitySchedule(created.getIdItemMenu());
             }
             
-            // Associate all active sauces if checkbox was selected
-            if (Boolean.TRUE.equals(associateAllSauces)) {
-                associateAllActiveSaucesToItem(created.getIdItemMenu());
-                log.info("Associated all active sauces to item: {}", created.getName());
+            // Associate the sauces explicitly selected in the form (if any)
+            int saucesAssociated = 0;
+            if (selectedSauceIds != null && !selectedSauceIds.isEmpty()) {
+                saucesAssociated = syncSaucesForItem(created.getIdItemMenu(), selectedSauceIds);
+                log.info("Associated {} sauces to item: {}", saucesAssociated, created.getName());
             }
 
             log.info("Menu item created successfully with ID: {}", created.getIdItemMenu());
             redirectAttributes.addFlashAttribute("successMessage",
-                    "Item del menú '" + created.getName() + "' creado exitosamente" + 
-                    (Boolean.TRUE.equals(associateAllSauces) ? " (con todas las salsas asociadas)" : ""));
+                    "Item del menú '" + created.getName() + "' creado exitosamente" +
+                    (saucesAssociated > 0 ? " (" + saucesAssociated + " salsas asociadas)" : ""));
             return "redirect:/admin/menu-items";
 
 
@@ -396,12 +406,13 @@ public class ItemMenuController {
             @RequestParam(value = "units", required = false) List<String> units,
             @RequestParam(value = "requiresPreparation", required = false) Boolean requiresPreparationParam,
             @RequestParam(value = "requiresBaristaPreparation", required = false) Boolean requiresBaristaPreparationParam,
-            @RequestParam(value = "isBuffet", required = false) Boolean isBuffetParam,
+            @RequestParam(value = "requiresIngredients", required = false) Boolean requiresIngredientsParam,
             @RequestParam(value = "isCombo", required = false) Boolean isComboParam,
             @RequestParam(value = "dineInOnly", required = false) Boolean dineInOnlyParam,
             @RequestParam(value = "comboItemIds", required = false) List<Long> comboItemIds,
             @RequestParam(value = "comboItemQuantities", required = false) List<Integer> comboItemQuantities,
-            @RequestParam(value = "associateAllSauces", required = false) Boolean associateAllSauces,
+            @RequestParam(value = "selectedSauceIds", required = false) List<Long> selectedSauceIds,
+            @RequestParam(value = "saucesSyncEnabled", required = false) Boolean saucesSyncEnabled,
             @RequestParam(value = "hasCustomSchedule", required = false) Boolean hasCustomSchedule,
             @RequestParam Map<String, String> allParams,
             Model model,
@@ -412,8 +423,8 @@ public class ItemMenuController {
         log.info("🔍 requiresPreparation as @RequestParam: {}", requiresPreparationParam);
         log.info("🔍 requiresBaristaPreparation received from form: {}", itemMenu.getRequiresBaristaPreparation());
         log.info("🔍 requiresBaristaPreparation as @RequestParam: {}", requiresBaristaPreparationParam);
-        log.info("🔍 isBuffet: {}", isBuffetParam);
-        log.info("🔍 associateAllSauces: {}", associateAllSauces);
+        log.info("🔍 requiresIngredients: {}", requiresIngredientsParam);
+        log.info("🔍 saucesSyncEnabled: {} | selectedSauceIds: {}", saucesSyncEnabled, selectedSauceIds);
         log.info("🔍 hasCustomSchedule: {}", hasCustomSchedule);
         
         // Si el parámetro está presente, usarlo (para debug)
@@ -427,27 +438,30 @@ public class ItemMenuController {
             itemMenu.setRequiresBaristaPreparation(requiresBaristaPreparationParam);
         }
         
-        // Set isBuffet on item
-        itemMenu.setIsBuffet(Boolean.TRUE.equals(isBuffetParam));
-        
         // Set isCombo on item
         itemMenu.setIsCombo(Boolean.TRUE.equals(isComboParam));
         log.info("🔍 isCombo: {}", isComboParam);
         
-        // Set dineInOnly on item
+        // Set requiresIngredients on item (combos always force false)
+        if (Boolean.TRUE.equals(itemMenu.getIsCombo())) {
+            itemMenu.setRequiresIngredients(false);
+        } else {
+            itemMenu.setRequiresIngredients(Boolean.TRUE.equals(requiresIngredientsParam));
+        }
+        
+        // Set dineInOnly on item (independent of requiresIngredients)
         itemMenu.setDineInOnly(Boolean.TRUE.equals(dineInOnlyParam));
         
         // Set hasCustomSchedule on item
         itemMenu.setHasCustomSchedule(Boolean.TRUE.equals(hasCustomSchedule));
 
-        // Validate mutual exclusion: only one of Chef, Barista, Buffet, or Combo can be selected
+        // Validate mutual exclusion: only one of Chef, Barista, or Combo can be selected
         int selectedOptions = 0;
         if (Boolean.TRUE.equals(itemMenu.getRequiresPreparation())) selectedOptions++;
         if (Boolean.TRUE.equals(itemMenu.getRequiresBaristaPreparation())) selectedOptions++;
-        if (Boolean.TRUE.equals(itemMenu.getIsBuffet())) selectedOptions++;
         if (Boolean.TRUE.equals(itemMenu.getIsCombo())) selectedOptions++;
         if (selectedOptions > 1) {
-             model.addAttribute("errorMessage", "Solo puede seleccionar una opción: preparación por Chef, preparación por Barista, Buffet o Combo.");
+             model.addAttribute("errorMessage", "Solo puede seleccionar una opción: preparación por Chef, preparación por Barista o Combo.");
              List<BigDecimal> quantitiesBD = convertQuantities(quantities);
              List<ItemIngredient> recipe = buildRecipe(ingredientIds, quantitiesBD, units);
              loadFormData(model, itemMenu, recipe);
@@ -517,13 +531,13 @@ public class ItemMenuController {
                 recipe = buildRecipe(ingredientIds, quantitiesBD, units);
             }
 
-            // Validate ingredients based on type flags
-            if (Boolean.TRUE.equals(itemMenu.getIsBuffet()) || Boolean.TRUE.equals(itemMenu.getIsCombo())) {
-                // Buffet and Combo items must NOT have ingredients - force empty recipe
-                // (silently discard any submitted ingredients when converting to buffet/combo)
+            // Validate ingredients based on requiresIngredients flag
+            if (!Boolean.TRUE.equals(itemMenu.getRequiresIngredients()) || Boolean.TRUE.equals(itemMenu.getIsCombo())) {
+                // Items without recipe and Combo items must NOT have ingredients - force empty recipe
+                // (silently discard any submitted ingredients when converting away from requiresIngredients)
                 recipe = new ArrayList<>();
             } else {
-                // Non-buffet/non-combo items must have at least one ingredient
+                // Items that require ingredients must have at least one
                 if (recipe == null || recipe.isEmpty()) {
                     model.addAttribute("errorMessage", "Debe agregar al menos un ingrediente a la receta");
                     loadFormData(model, itemMenu, itemMenuService.getRecipe(id));
@@ -586,16 +600,21 @@ public class ItemMenuController {
                 itemMenuService.clearAvailabilitySchedule(id);
             }
             
-            // Associate all active sauces if checkbox was selected
-            if (Boolean.TRUE.equals(associateAllSauces)) {
-                int saucesAdded = associateAllActiveSaucesToItem(id);
-                log.info("Associated {} new sauces to item: {}", saucesAdded, updated.getName());
+            // Sync sauces only if the user actually changed the selection (flag set by JS).
+            // If the flag is absent/false we leave the existing sauce associations untouched.
+            String saucesMessage = "";
+            if (Boolean.TRUE.equals(saucesSyncEnabled)) {
+                List<Long> desired = selectedSauceIds != null ? selectedSauceIds : new ArrayList<>();
+                int[] diff = syncSaucesForItemDiff(id, desired);
+                log.info("Synced sauces for item {}: +{} added, -{} removed", updated.getName(), diff[0], diff[1]);
+                if (diff[0] > 0 || diff[1] > 0) {
+                    saucesMessage = " (salsas: +" + diff[0] + " / -" + diff[1] + ")";
+                }
             }
 
             log.info("Menu item updated successfully: {}", updated.getIdItemMenu());
             redirectAttributes.addFlashAttribute("successMessage",
-                    "Item del menú '" + updated.getName() + "' actualizado exitosamente" +
-                    (Boolean.TRUE.equals(associateAllSauces) ? " (salsas asociadas)" : ""));
+                    "Item del menú '" + updated.getName() + "' actualizado exitosamente" + saucesMessage);
             return "redirect:/admin/menu-items";
 
         } catch (IllegalArgumentException e) {
@@ -795,7 +814,7 @@ public class ItemMenuController {
                 dto.put("categoryName", item.getCategory() != null ? item.getCategory().getName() : "");
                 dto.put("requiresPreparation", item.getRequiresPreparation());
                 dto.put("requiresBaristaPreparation", item.getRequiresBaristaPreparation());
-                dto.put("isBuffet", item.getIsBuffet());
+                dto.put("requiresIngredients", item.getRequiresIngredients());
                 dto.put("active", item.getActive());
                 return dto;
             })
@@ -987,6 +1006,9 @@ public class ItemMenuController {
                          (itemMenu.getIdItemMenu() == null || !i.getIdItemMenu().equals(itemMenu.getIdItemMenu())))
             .collect(Collectors.toList());
         model.addAttribute("availableComboChildItems", allNonComboItems);
+
+        // Add active sauces and currently associated sauce IDs (multi-tenant)
+        loadSaucesFormData(model, itemMenu.getIdItemMenu());
     }
 
     /**
@@ -1107,35 +1129,96 @@ public class ItemMenuController {
     }
 
     /**
-     * Associate all active sauces to a menu item (skips already associated ones)
-     * @param itemMenuId The ID of the menu item
+     * Add sauces from the given list that are not already associated to this item.
+     * Used by CREATE: only adds, never removes.
      * @return number of newly associated sauces
      */
-    private int associateAllActiveSaucesToItem(Long itemMenuId) {
-        // Get all active sauces (filtered by company)
-        List<Complement> activeSauces = complementService.findAllActiveSauces();
-        log.info("Found {} active sauces to potentially associate", activeSauces.size());
-        
-        // Get already associated complement IDs for this item
-        List<Long> alreadyAssociatedIds = itemMenuComplementRepository.findByItemMenuIdItemMenu(itemMenuId)
-            .stream()
-            .map(ic -> ic.getComplement().getIdComplement())
-            .collect(Collectors.toList());
-        log.info("Item already has {} complements associated", alreadyAssociatedIds.size());
-        
+    private int syncSaucesForItem(Long itemMenuId, List<Long> selectedSauceIds) {
+        if (selectedSauceIds == null || selectedSauceIds.isEmpty()) return 0;
+
+        // Restrict to sauces that actually belong to this company (security against ID injection).
+        java.util.Set<Long> validSauceIds = complementService.findAllActiveSauces().stream()
+                .map(Complement::getIdComplement)
+                .collect(Collectors.toSet());
+
+        java.util.Set<Long> alreadyAssociated = itemMenuComplementRepository.findByItemMenuIdItemMenu(itemMenuId)
+                .stream()
+                .map(ic -> ic.getComplement().getIdComplement())
+                .collect(Collectors.toSet());
+
         int count = 0;
-        for (Complement sauce : activeSauces) {
-            if (!alreadyAssociatedIds.contains(sauce.getIdComplement())) {
-                // maxQuantity=1 for sauces, minQuantity=0 (optional)
-                complementService.addComplementToItemMenu(itemMenuId, sauce.getIdComplement(), 1, 0);
-                log.debug("Associated sauce '{}' (ID: {}) to item menu ID: {}", 
-                    sauce.getName(), sauce.getIdComplement(), itemMenuId);
-                count++;
+        for (Long sauceId : selectedSauceIds) {
+            if (!validSauceIds.contains(sauceId) || alreadyAssociated.contains(sauceId)) continue;
+            // maxQuantity=1 for sauces, minQuantity=0 (optional)
+            complementService.addComplementToItemMenu(itemMenuId, sauceId, 1, 0);
+            count++;
+        }
+        return count;
+    }
+
+    /**
+     * Reconcile the sauce associations of an item to match the desired selection.
+     * Adds sauces present in the selection but not currently associated, and removes
+     * sauces currently associated that are no longer in the selection. Only sauces
+     * (isSauce=true) belonging to the current company are considered – non-sauce
+     * complements associated to the item are left untouched.
+     * @return int[]{added, removed}
+     */
+    private int[] syncSaucesForItemDiff(Long itemMenuId, List<Long> desiredSauceIds) {
+        // Sauces of the current company only (multi-tenant safety).
+        java.util.Map<Long, Complement> companySauces = complementService.findAllActiveSauces().stream()
+                .collect(Collectors.toMap(Complement::getIdComplement, c -> c));
+
+        // Currently associated sauce IDs for this item (filter by isSauce so we don't touch regular complements).
+        java.util.Set<Long> currentlyAssociatedSauces = itemMenuComplementRepository.findByItemMenuIdItemMenu(itemMenuId)
+                .stream()
+                .map(ic -> ic.getComplement())
+                .filter(c -> Boolean.TRUE.equals(c.getIsSauce()))
+                .map(Complement::getIdComplement)
+                .collect(Collectors.toSet());
+
+        // Desired set, restricted to valid company sauces.
+        java.util.Set<Long> desiredSet = desiredSauceIds.stream()
+                .filter(companySauces::containsKey)
+                .collect(Collectors.toSet());
+
+        int added = 0;
+        for (Long id : desiredSet) {
+            if (!currentlyAssociatedSauces.contains(id)) {
+                complementService.addComplementToItemMenu(itemMenuId, id, 1, 0);
+                added++;
             }
         }
-        
-        log.info("Successfully associated {} new sauces to item menu ID: {}", count, itemMenuId);
-        return count;
+
+        int removed = 0;
+        for (Long id : currentlyAssociatedSauces) {
+            if (!desiredSet.contains(id)) {
+                complementService.removeComplementFromItemMenu(itemMenuId, id);
+                removed++;
+            }
+        }
+        return new int[]{added, removed};
+    }
+
+    /**
+     * Add the available sauces (and the IDs already associated to the item) to the model
+     * so the form can render the scrollable sauce-selection list. Multi-tenant safe.
+     */
+    private void loadSaucesFormData(Model model, Long itemMenuId) {
+        List<Complement> allActiveSauces = complementService.findAllActiveSauces();
+        model.addAttribute("allActiveSauces", allActiveSauces);
+
+        List<Long> associatedSauceIds;
+        if (itemMenuId != null) {
+            associatedSauceIds = itemMenuComplementRepository.findByItemMenuIdItemMenu(itemMenuId).stream()
+                    .map(ic -> ic.getComplement())
+                    .filter(c -> Boolean.TRUE.equals(c.getIsSauce()))
+                    .map(Complement::getIdComplement)
+                    .collect(Collectors.toList());
+        } else {
+            associatedSauceIds = new ArrayList<>();
+        }
+        model.addAttribute("associatedSauceIds", associatedSauceIds);
     }
 
     // ========== Complement Management for ItemMenu ==========

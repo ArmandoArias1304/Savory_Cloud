@@ -159,14 +159,16 @@ public class Complement implements Serializable {
     // ========== Stock Management Methods ==========
 
     /**
-     * Check if there's enough stock of all ingredients for the specified quantity
+     * Check if there's enough stock of all ingredients for the specified quantity.
+     * If the complement has no ingredients defined, it is considered always available
+     * (no stock to track — e.g. "Hielo", "Servilleta extra").
      * @param quantity Number of complement portions to check
-     * @return true if there's enough stock for all ingredients, false if no ingredients defined
+     * @return true if there's enough stock for all ingredients, or if no ingredients are defined
      */
     public boolean hasEnoughStock(int quantity) {
-        // No ingredients = not available (must have at least one ingredient to be valid)
+        // No ingredients = no stock dependency → always available
         if (ingredients == null || ingredients.isEmpty()) {
-            return false;
+            return true;
         }
 
         for (ComplementIngredient ci : ingredients) {
@@ -178,13 +180,14 @@ public class Complement implements Serializable {
     }
 
     /**
-     * Calculate how many portions of this complement can be made with current stock
-     * @return Maximum portions available, or 0 if no ingredients defined
+     * Calculate how many portions of this complement can be made with current stock.
+     * If no ingredients are defined, the complement is considered unlimited.
+     * @return Maximum portions available, or Integer.MAX_VALUE if no ingredients defined
      */
     public int calculateMaxPortions() {
-        // No ingredients = 0 portions available
+        // No ingredients = no stock dependency → unlimited
         if (ingredients == null || ingredients.isEmpty()) {
-            return 0;
+            return Integer.MAX_VALUE;
         }
 
         int minPortions = Integer.MAX_VALUE;

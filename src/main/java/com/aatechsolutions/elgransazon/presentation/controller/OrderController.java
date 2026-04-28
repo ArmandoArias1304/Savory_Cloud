@@ -795,13 +795,10 @@ public class OrderController {
                 return "redirect:/" + role + "/orders/" + orderId + "/add-items";
             }
 
-            // Validate buffet items: only allowed for DINE_IN orders
+            // Validate dine-in-only items: only allowed for DINE_IN orders
             Order existingOrder = orderService.findByIdOrThrow(orderId);
             if (existingOrder.getOrderType() != OrderType.DINE_IN) {
                 for (OrderDetail detail : newOrderDetails) {
-                    if (Boolean.TRUE.equals(detail.getItemMenu().getIsBuffet())) {
-                        throw new IllegalArgumentException("El item '" + detail.getItemMenu().getName() + "' es de tipo buffet y solo está disponible para pedidos de tipo 'Para comer aquí'.");
-                    }
                     if (Boolean.TRUE.equals(detail.getItemMenu().getDineInOnly())) {
                         throw new IllegalArgumentException("El item '" + detail.getItemMenu().getName() + "' solo está disponible para consumo en el establecimiento.");
                     }
@@ -870,13 +867,10 @@ public class OrderController {
                 throw new IllegalArgumentException("Debe agregar al menos un item al pedido");
             }
 
-            // Validate buffet items: only allowed for DINE_IN orders
+            // Validate dine-in-only items: only allowed for DINE_IN orders
             Order existingOrderForValidation = orderService.findByIdOrThrow(orderId);
             if (existingOrderForValidation.getOrderType() != OrderType.DINE_IN) {
                 for (OrderDetail detail : newOrderDetails) {
-                    if (Boolean.TRUE.equals(detail.getItemMenu().getIsBuffet())) {
-                        throw new IllegalArgumentException("El item '" + detail.getItemMenu().getName() + "' es de tipo buffet y solo está disponible para pedidos de tipo 'Para comer aquí'.");
-                    }
                     if (Boolean.TRUE.equals(detail.getItemMenu().getDineInOnly())) {
                         throw new IllegalArgumentException("El item '" + detail.getItemMenu().getName() + "' solo está disponible para consumo en el establecimiento.");
                     }
@@ -1151,12 +1145,9 @@ public class OrderController {
                 throw new IllegalArgumentException("Debe agregar al menos un item al pedido");
             }
             
-            // Validate buffet items are only in DINE_IN orders
+            // Validate dine-in-only items are only in DINE_IN orders
             if (order.getOrderType() != OrderType.DINE_IN) {
                 for (OrderDetail detail : orderDetails) {
-                    if (Boolean.TRUE.equals(detail.getItemMenu().getIsBuffet())) {
-                        throw new IllegalArgumentException("El item '" + detail.getItemMenu().getName() + "' es de buffet y solo está disponible para pedidos 'Para comer aquí'.");
-                    }
                     if (Boolean.TRUE.equals(detail.getItemMenu().getDineInOnly())) {
                         throw new IllegalArgumentException("El item '" + detail.getItemMenu().getName() + "' solo está disponible para consumo en el establecimiento.");
                     }
@@ -1298,14 +1289,9 @@ public class OrderController {
                 return role + "/orders/form";
             }
             
-            // Validate buffet items are only in DINE_IN orders
+            // Validate dine-in-only items are only in DINE_IN orders
             if (order.getOrderType() != OrderType.DINE_IN) {
                 for (OrderDetail detail : orderDetails) {
-                    if (Boolean.TRUE.equals(detail.getItemMenu().getIsBuffet())) {
-                        redirectAttributes.addFlashAttribute("errorMessage", 
-                            "El item '" + detail.getItemMenu().getName() + "' es de buffet y solo está disponible para pedidos 'Para comer aquí'.");
-                        return "redirect:/" + role + "/orders";
-                    }
                     if (Boolean.TRUE.equals(detail.getItemMenu().getDineInOnly())) {
                         redirectAttributes.addFlashAttribute("errorMessage", 
                             "El item '" + detail.getItemMenu().getName() + "' solo está disponible para consumo en el establecimiento.");
@@ -1518,14 +1504,9 @@ public class OrderController {
                     redirectAttributes.addFlashAttribute("errorMessage", statusMessage);
                     return "redirect:/" + role + "/orders/edit/" + id;
                 }
-                // If changing away from DINE_IN, validate no buffet or dine-in-only items exist
+                // If changing away from DINE_IN, validate no dine-in-only items exist
                 if (order.getOrderType() != OrderType.DINE_IN && existingOrder.getOrderDetails() != null) {
                     for (OrderDetail detail : existingOrder.getOrderDetails()) {
-                        if (Boolean.TRUE.equals(detail.getItemMenu().getIsBuffet())) {
-                            redirectAttributes.addFlashAttribute("errorMessage",
-                                "No se puede cambiar el tipo de pedido porque contiene el item buffet '" + detail.getItemMenu().getName() + "' que solo está disponible para 'Para comer aquí'.");
-                            return "redirect:/" + role + "/orders/edit/" + id;
-                        }
                         if (Boolean.TRUE.equals(detail.getItemMenu().getDineInOnly())) {
                             redirectAttributes.addFlashAttribute("errorMessage",
                                 "No se puede cambiar el tipo de pedido porque contiene el item '" + detail.getItemMenu().getName() + "' que solo está disponible para consumo en el establecimiento.");
@@ -1868,13 +1849,6 @@ public class OrderController {
             for (AddItemRequest itemRequest : items) {
                 ItemMenu item = itemMenuService.findById(itemRequest.getIdItemMenu())
                     .orElseThrow(() -> new IllegalArgumentException("Item no encontrado: " + itemRequest.getIdItemMenu()));
-
-                // Validate buffet items: only allowed for DINE_IN orders
-                if (Boolean.TRUE.equals(item.getIsBuffet()) && order.getOrderType() != OrderType.DINE_IN) {
-                    response.put("success", false);
-                    response.put("message", "El item '" + item.getName() + "' es de tipo buffet y solo está disponible para pedidos de tipo 'Para comer aquí'.");
-                    return response;
-                }
 
                 // Validate dine-in-only items: only allowed for DINE_IN orders
                 if (Boolean.TRUE.equals(item.getDineInOnly()) && order.getOrderType() != OrderType.DINE_IN) {

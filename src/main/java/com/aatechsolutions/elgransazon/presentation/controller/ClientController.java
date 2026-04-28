@@ -719,15 +719,9 @@ public class ClientController {
                 orderDetails.add(detail);
             }
             
-            // Validate buffet items: only allowed for DINE_IN orders
+            // Validate dine-in-only items: only allowed for DINE_IN orders
             if (orderType != OrderType.DINE_IN) {
                 for (OrderDetail detail : orderDetails) {
-                    if (Boolean.TRUE.equals(detail.getItemMenu().getIsBuffet())) {
-                        return ResponseEntity.badRequest().body(Map.of(
-                            "success", false,
-                            "message", "El item '" + detail.getItemMenu().getName() + "' es de tipo buffet y solo está disponible para pedidos de tipo 'Para comer aquí'."
-                        ));
-                    }
                     if (Boolean.TRUE.equals(detail.getItemMenu().getDineInOnly())) {
                         return ResponseEntity.badRequest().body(Map.of(
                             "success", false,
@@ -1185,15 +1179,9 @@ public class ClientController {
                 newItems.add(detail);
             }
 
-            // Validate buffet items: only allowed for DINE_IN orders
+            // Validate dine-in-only items: only allowed for DINE_IN orders
             if (order.getOrderType() != OrderType.DINE_IN) {
                 for (OrderDetail detail : newItems) {
-                    if (Boolean.TRUE.equals(detail.getItemMenu().getIsBuffet())) {
-                        return ResponseEntity.badRequest().body(Map.of(
-                            "success", false,
-                            "message", "El item '" + detail.getItemMenu().getName() + "' es de tipo buffet y solo está disponible para pedidos de tipo 'Para comer aquí'."
-                        ));
-                    }
                     if (Boolean.TRUE.equals(detail.getItemMenu().getDineInOnly())) {
                         return ResponseEntity.badRequest().body(Map.of(
                             "success", false,
