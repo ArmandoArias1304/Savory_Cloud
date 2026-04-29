@@ -400,30 +400,95 @@ public class Order implements Serializable {
     }
 
     /**
-     * Get the original subtotal before any promotion discount, without IVA.
-     * This is: sum of (unitPrice × quantity + complementsTotal) for all details / (1 + taxRate/100)
-     * complementsTotal already handles sauce multiplication via OrderDetail.getComplementsTotal()
+     * Tax multiplier (1 + taxRate/100). Returns BigDecimal.ONE when no tax applies.
+     * Used internally to keep full precision in derived calculations.
      */
-    public BigDecimal getOriginalSubtotalWithoutTax() {
+    private BigDecimal getTaxMultiplier() {
+        if (this.taxRate == null || this.taxRate.compareTo(BigDecimal.ZERO) <= 0) {
+            return BigDecimal.ONE;
+        }
+        return BigDecimal.ONE.add(
+                this.taxRate.divide(BigDecimal.valueOf(100), 10, RoundingMode.HALF_UP)
+        );
+    }
+
+    /**
+     * Sum of (unitPrice × quantity + complementsTotal) for all details, BEFORE discount.
+     * Includes IVA (prices stored with tax). Full precision (no rounding).
+     */
+    private BigDecimal getOriginalItemsTotalWithTaxRaw() {
         if (orderDetails == null || orderDetails.isEmpty()) {
             return BigDecimal.ZERO;
         }
-
-        BigDecimal totalWithTax = orderDetails.stream()
+        return orderDetails.stream()
                 .map(d -> {
                     BigDecimal itemTotal = d.getUnitPrice().multiply(BigDecimal.valueOf(d.getQuantity()));
                     BigDecimal compTotal = d.getComplementsTotal();
                     return itemTotal.add(compTotal);
                 })
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
 
-        if (this.taxRate != null && this.taxRate.compareTo(BigDecimal.ZERO) > 0) {
-            BigDecimal taxMultiplier = BigDecimal.ONE.add(
-                    this.taxRate.divide(BigDecimal.valueOf(100), 10, RoundingMode.HALF_UP)
-            );
-            return totalWithTax.divide(taxMultiplier, 2, RoundingMode.HALF_UP);
+    /**
+     * Current items total WITH tax AFTER discount (sum of OrderDetail.getTotalWithComplements()).
+     * Full precision (no rounding).
+     */
+    private BigDecimal getCurrentItemsTotalWithTaxRaw() {
+        if (orderDetails == null || orderDetails.isEmpty()) {
+            return BigDecimal.ZERO;
         }
-        return totalWithTax.setScale(2, RoundingMode.HALF_UP);
+        return orderDetails.stream()
+                .map(OrderDetail::getTotalWithComplements)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    /**
+     * Original items subtotal WITHOUT IVA (before discount). Full precision.
+     */
+    private BigDecimal getOriginalSubtotalWithoutTaxRaw() {
+        BigDecimal totalWithTax = getOriginalItemsTotalWithTaxRaw();
+        BigDecimal mult = getTaxMultiplier();
+        if (mult.compareTo(BigDecimal.ONE) == 0) {
+            return totalWithTax;
+        }
+        return totalWithTax.divide(mult, 10, RoundingMode.HALF_UP);
+    }
+
+    /**
+     * Current items subtotal WITHOUT IVA (after discount, excludes delivery). Full precision.
+     */
+    private BigDecimal getSubtotalWithoutDeliveryRaw() {
+        BigDecimal totalWithTax = getCurrentItemsTotalWithTaxRaw();
+        BigDecimal mult = getTaxMultiplier();
+        if (mult.compareTo(BigDecimal.ONE) == 0) {
+            return totalWithTax;
+        }
+        return totalWithTax.divide(mult, 10, RoundingMode.HALF_UP);
+    }
+
+    /**
+     * Delivery cost WITHOUT IVA. Full precision.
+     */
+    private BigDecimal getDeliveryCostWithoutTaxRaw() {
+        if (this.deliveryCost == null
+                || this.orderType != OrderType.DELIVERY
+                || this.deliveryCost.compareTo(BigDecimal.ZERO) <= 0) {
+            return BigDecimal.ZERO;
+        }
+        BigDecimal mult = getTaxMultiplier();
+        if (mult.compareTo(BigDecimal.ONE) == 0) {
+            return this.deliveryCost;
+        }
+        return this.deliveryCost.divide(mult, 10, RoundingMode.HALF_UP);
+    }
+
+    /**
+     * Get the original subtotal before any promotion discount, without IVA.
+     * This is: sum of (unitPrice × quantity + complementsTotal) for all details / (1 + taxRate/100)
+     * complementsTotal already handles sauce multiplication via OrderDetail.getComplementsTotal()
+     */
+    public BigDecimal getOriginalSubtotalWithoutTax() {
+        return getOriginalSubtotalWithoutTaxRaw().setScale(2, RoundingMode.HALF_UP);
     }
 
     /**
@@ -431,23 +496,12 @@ public class Order implements Serializable {
      * deliveryCost stored in DB already includes IVA.
      */
     public BigDecimal getDeliveryCostWithoutTax() {
-        if (this.deliveryCost == null
-                || this.orderType != OrderType.DELIVERY
-                || this.deliveryCost.compareTo(BigDecimal.ZERO) <= 0) {
-            return BigDecimal.ZERO;
-        }
-        if (this.taxRate == null || this.taxRate.compareTo(BigDecimal.ZERO) <= 0) {
-            return this.deliveryCost.setScale(2, RoundingMode.HALF_UP);
-        }
-        BigDecimal taxMultiplier = BigDecimal.ONE.add(
-                this.taxRate.divide(BigDecimal.valueOf(100), 10, RoundingMode.HALF_UP)
-        );
-        return this.deliveryCost.divide(taxMultiplier, 2, RoundingMode.HALF_UP);
+        return getDeliveryCostWithoutTaxRaw().setScale(2, RoundingMode.HALF_UP);
     }
 
     /**
      * Get the IVA portion of the delivery cost.
-     * = deliveryCost - deliveryCostWithoutTax
+     * = deliveryCost - deliveryCostWithoutTax (computed in full precision, rounded at display).
      */
     public BigDecimal getDeliveryCostTaxAmount() {
         if (this.deliveryCost == null
@@ -455,7 +509,7 @@ public class Order implements Serializable {
                 || this.deliveryCost.compareTo(BigDecimal.ZERO) <= 0) {
             return BigDecimal.ZERO;
         }
-        return this.deliveryCost.subtract(getDeliveryCostWithoutTax())
+        return this.deliveryCost.subtract(getDeliveryCostWithoutTaxRaw())
                 .setScale(2, RoundingMode.HALF_UP);
     }
 
@@ -464,27 +518,27 @@ public class Order implements Serializable {
      * For display: lets the user see the items charge separated from envío.
      */
     public BigDecimal getSubtotalWithoutDelivery() {
-        BigDecimal sub = this.subtotal != null ? this.subtotal : BigDecimal.ZERO;
-        return sub.subtract(getDeliveryCostWithoutTax()).setScale(2, RoundingMode.HALF_UP);
+        return getSubtotalWithoutDeliveryRaw().setScale(2, RoundingMode.HALF_UP);
     }
 
     /**
      * Get the items-only tax amount (excludes delivery's IVA portion).
+     * Computed as currentItemsTotalWithTax - currentItemsSubtotalWithoutTax (full precision).
      */
     public BigDecimal getTaxAmountWithoutDelivery() {
-        BigDecimal tax = this.taxAmount != null ? this.taxAmount : BigDecimal.ZERO;
-        return tax.subtract(getDeliveryCostTaxAmount()).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal itemsWithTax = getCurrentItemsTotalWithTaxRaw();
+        BigDecimal itemsWithoutTax = getSubtotalWithoutDeliveryRaw();
+        return itemsWithTax.subtract(itemsWithoutTax).setScale(2, RoundingMode.HALF_UP);
     }
 
     /**
      * Get the promotion discount amount without IVA.
-     * Discount = originalSubtotalWithoutTax - subtotalWithoutDelivery
-     * (subtracting deliveryCostWithoutTax so the promo is reported standalone).
+     * Discount = originalSubtotalWithoutTax - subtotalWithoutDelivery (full precision).
      */
     public BigDecimal getDiscountWithoutTax() {
-        BigDecimal original = getOriginalSubtotalWithoutTax();
-        BigDecimal current = getSubtotalWithoutDelivery();
-        BigDecimal discount = original.subtract(current);
+        BigDecimal original = getOriginalSubtotalWithoutTaxRaw();
+        BigDecimal current = getSubtotalWithoutDeliveryRaw();
+        BigDecimal discount = original.subtract(current).setScale(2, RoundingMode.HALF_UP);
         return discount.compareTo(BigDecimal.ZERO) > 0 ? discount : BigDecimal.ZERO;
     }
 

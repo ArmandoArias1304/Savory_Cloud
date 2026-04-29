@@ -378,7 +378,7 @@
                     <p
                       class="text-sm font-bold flex-shrink-0"
                       th:classappend="${detail.comboChild} ? 'text-gray-400 dark:text-gray-600' : 'text-gray-900 dark:text-white'"
-                      th:text="${detail.formattedSubtotal}"
+                      th:text="'$' + ${#numbers.formatDecimal(detail.unitPrice.multiply(T(java.math.BigDecimal).valueOf(detail.quantity.longValue())), 1, 2)}"
                     ></p>
                   </div>
                 </div>
@@ -388,7 +388,28 @@
               <div
                 class="mt-4 pt-4 border-t-2 border-gray-200 dark:border-gray-700"
               >
-                <div class="flex justify-between items-center mb-2">
+                <!-- Desglose con descuento -->
+                <div th:if="${order.hasDiscount()}" class="mb-2">
+                  <div class="flex justify-between items-center mb-2">
+                    <span class="text-sm text-gray-600 dark:text-gray-400"
+                      >Subtotal:</span
+                    >
+                    <span
+                      class="text-sm font-semibold text-gray-900 dark:text-white"
+                      th:text="${order.formattedOriginalSubtotalWithoutTax}"
+                    ></span>
+                  </div>
+                  <div class="flex justify-between items-center mb-2">
+                    <span class="text-sm text-green-600 dark:text-green-400"
+                      >Descuento:</span
+                    >
+                    <span
+                      class="text-sm font-semibold text-green-600 dark:text-green-400"
+                      th:text="${order.formattedDiscountWithoutTax}"
+                    ></span>
+                  </div>
+                </div>
+                <div th:unless="${order.hasDiscount()}" class="flex justify-between items-center mb-2">
                   <span class="text-sm text-gray-600 dark:text-gray-400"
                     >Subtotal:</span
                   >
