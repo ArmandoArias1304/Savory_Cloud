@@ -463,34 +463,12 @@
             <div
               class="px-3 py-2 space-y-1.5 border-b border-slate-200/50 dark:border-slate-700/50"
             >
-              <!-- Subtotal (sin IVA) -->
+              <!-- Subtotal (ya incluye envío y descuento por promoción, consistente con CFDI) -->
               <div
                 class="flex justify-between text-xs text-gray-600 dark:text-gray-400"
               >
                 <span>Subtotal</span>
                 <span id="cartSubtotal" class="font-semibold">$0.00</span>
-              </div>
-
-              <!-- Descuento (solo se muestra cuando hay promoción) -->
-              <div
-                id="cartDiscountContainer"
-                class="hidden flex justify-between items-center bg-green-50 dark:bg-green-900/20 rounded px-2 py-1 border border-green-200 dark:border-green-800"
-              >
-                <div class="flex items-center gap-1.5">
-                  <span
-                    class="material-symbols-outlined text-green-600 dark:text-green-400 text-sm"
-                    >local_offer</span
-                  >
-                  <span
-                    class="text-xs font-semibold text-green-800 dark:text-green-300"
-                    >Descuento</span
-                  >
-                </div>
-                <span
-                  id="cartDiscount"
-                  class="text-green-600 dark:text-green-400 font-bold text-sm"
-                  >-$0.00</span
-                >
               </div>
 
               <!-- IVA -->
@@ -501,19 +479,7 @@
                 <span id="cartIVA" class="font-semibold">$0.00</span>
               </div>
 
-              <!-- Costo de Envío (solo DELIVERY) -->
-              <div
-                id="cartDeliveryContainer"
-                class="hidden flex justify-between text-xs text-gray-600 dark:text-gray-400"
-              >
-                <span class="flex items-center gap-1">
-                  <span class="material-symbols-outlined text-base">local_shipping</span>
-                  Envío a domicilio
-                </span>
-                <span id="cartDelivery" class="font-semibold">$0.00</span>
-              </div>
-
-              <!-- Total - Prominent -->
+              <!-- Total - Prominent (incluye envío cuando aplica) -->
               <div
                 class="flex justify-between items-center bg-primary/10 rounded-lg px-3 py-2"
               >
@@ -523,6 +489,24 @@
                 <span id="cartTotal" class="text-primary text-xl font-black"
                   >$0.00</span
                 >
+              </div>
+
+              <!-- Nota informativa de descuento por promoción (incluido en subtotal e IVA) -->
+              <div
+                id="cartDescuentoNote"
+                class="hidden flex items-start gap-1.5 text-xs italic text-gray-500 dark:text-gray-400 px-1"
+              >
+                <span class="material-symbols-outlined text-sm">local_offer</span>
+                <span>Incluye descuento por promoción de <span id="cartDescuentoAmount">$0.00</span></span>
+              </div>
+
+              <!-- Nota informativa de envío (incluido en subtotal e IVA) -->
+              <div
+                id="cartEnvioNote"
+                class="hidden flex items-start gap-1.5 text-xs italic text-gray-500 dark:text-gray-400 px-1"
+              >
+                <span class="material-symbols-outlined text-sm">local_shipping</span>
+                <span>Incluye <span id="cartEnvioAmount">$0.00</span> de envío a domicilio</span>
               </div>
             </div>
 
@@ -3065,29 +3049,35 @@
         const deliveryCostNum = Number(window.DEFAULT_DELIVERY_COST) || 0;
         const showDelivery =
           currentOrderTypeForDelivery === "DELIVERY" && deliveryCostNum > 0;
+        const envioSinIVA = showDelivery
+          ? deliveryCostNum / (1 + taxMultiplier)
+          : 0;
+        const envioIVA = showDelivery ? deliveryCostNum - envioSinIVA : 0;
         const totalConEnvio = showDelivery
           ? totalConPromocion + deliveryCostNum
           : totalConPromocion;
 
+        // Subtotal e IVA mostrados incluyen el envío Y el descuento por promoción (consistente con ticket/CFDI/vista de pedido)
+        const subtotalSinIVAConEnvio = baseImponible + envioSinIVA;
+        const ivaConEnvio = iva + envioIVA;
+
         // Redondear a 2 decimales (consistente con view.html)
-        cartSubtotalEl.textContent = `$${round2(subtotalSinIVA).toFixed(2)}`;
-        cartIVAEl.textContent = `$${round2(iva).toFixed(2)}`;
+        cartSubtotalEl.textContent = `$${round2(subtotalSinIVAConEnvio).toFixed(2)}`;
+        cartIVAEl.textContent = `$${round2(ivaConEnvio).toFixed(2)}`;
         cartTotalEl.textContent =
           totalConEnvio === 0
             ? "GRATIS"
             : `$${round2(totalConEnvio).toFixed(2)}`;
 
-        // Actualizar fila de Costo de Envío
-        const deliveryContainer = document.getElementById(
-          "cartDeliveryContainer",
-        );
-        const deliveryElement = document.getElementById("cartDelivery");
-        if (deliveryContainer && deliveryElement) {
+        // Actualizar nota informativa de envío (debajo del Total)
+        const envioNoteEl = document.getElementById("cartEnvioNote");
+        const envioAmountEl = document.getElementById("cartEnvioAmount");
+        if (envioNoteEl && envioAmountEl) {
           if (showDelivery) {
-            deliveryElement.textContent = `$${round2(deliveryCostNum).toFixed(2)}`;
-            deliveryContainer.classList.remove("hidden");
+            envioAmountEl.textContent = `$${round2(deliveryCostNum).toFixed(2)}`;
+            envioNoteEl.classList.remove("hidden");
           } else {
-            deliveryContainer.classList.add("hidden");
+            envioNoteEl.classList.add("hidden");
           }
         }
 
@@ -3096,11 +3086,20 @@
         );
         const discountElement = document.getElementById("cartDiscount");
         if (discountContainer && discountElement) {
-          if (hayPromocion && descuentoTotalSinIVA > 0.001) {
-            discountElement.textContent = `-$${descuentoTotalSinIVA.toFixed(2)}`;
-            discountContainer.classList.remove("hidden");
+          // El desglose detallado de descuento se eliminó; ahora se muestra como nota informativa.
+          discountContainer.classList.add("hidden");
+        }
+
+        // Actualizar nota informativa de descuento por promoción (debajo del Total)
+        const descuentoNoteEl = document.getElementById("cartDescuentoNote");
+        const descuentoAmountEl = document.getElementById("cartDescuentoAmount");
+        if (descuentoNoteEl && descuentoAmountEl) {
+          const descuentoConIVA = round2(descuentoTotalSinIVA * (1 + taxMultiplier));
+          if (hayPromocion && descuentoConIVA > 0.001) {
+            descuentoAmountEl.textContent = `$${descuentoConIVA.toFixed(2)}`;
+            descuentoNoteEl.classList.remove("hidden");
           } else {
-            discountContainer.classList.add("hidden");
+            descuentoNoteEl.classList.add("hidden");
           }
         }
 

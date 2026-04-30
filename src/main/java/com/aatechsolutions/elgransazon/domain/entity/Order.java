@@ -550,10 +550,28 @@ public class Order implements Serializable {
     }
 
     /**
-     * Get formatted original subtotal without tax (before discount)
+     * Get formatted original subtotal without tax (before discount), items only.
      */
     public String getFormattedOriginalSubtotalWithoutTax() {
         return String.format("$%.2f", getOriginalSubtotalWithoutTax());
+    }
+
+    /**
+     * Original subtotal WITHOUT IVA, INCLUDING delivery cost (before discount).
+     * Used in views/tickets where the subtotal row should reflect the same scope as the CFDI
+     * (i.e. items + envío sin IVA, antes de descuento).
+     */
+    public BigDecimal getOriginalSubtotalWithoutTaxIncludingDelivery() {
+        return getOriginalSubtotalWithoutTaxRaw()
+                .add(getDeliveryCostWithoutTaxRaw())
+                .setScale(2, RoundingMode.HALF_UP);
+    }
+
+    /**
+     * Get formatted original subtotal without tax INCLUDING delivery (before discount).
+     */
+    public String getFormattedOriginalSubtotalWithoutTaxIncludingDelivery() {
+        return String.format("$%.2f", getOriginalSubtotalWithoutTaxIncludingDelivery());
     }
 
     /**
@@ -561,6 +579,25 @@ public class Order implements Serializable {
      */
     public String getFormattedDiscountWithoutTax() {
         return String.format("-$%.2f", getDiscountWithoutTax());
+    }
+
+    /**
+     * Get the promotion discount amount WITH IVA included (total savings as seen by customer).
+     * = originalItemsTotalWithTax - currentItemsTotalWithTax (full precision, rounded at the end).
+     */
+    public BigDecimal getDiscountWithTax() {
+        BigDecimal original = getOriginalItemsTotalWithTaxRaw();
+        BigDecimal current = getCurrentItemsTotalWithTaxRaw();
+        BigDecimal discount = original.subtract(current).setScale(2, RoundingMode.HALF_UP);
+        return discount.compareTo(BigDecimal.ZERO) > 0 ? discount : BigDecimal.ZERO;
+    }
+
+    /**
+     * Get formatted promotion discount WITH IVA (positive amount, no minus sign).
+     * Used in informative notes like "Incluye descuento por promoción de $X.XX".
+     */
+    public String getFormattedDiscountWithTax() {
+        return String.format("$%.2f", getDiscountWithTax());
     }
 
     /**

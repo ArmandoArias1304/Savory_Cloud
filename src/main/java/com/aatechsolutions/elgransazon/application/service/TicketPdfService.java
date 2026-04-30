@@ -403,27 +403,11 @@ public class TicketPdfService {
                 .setMarginTop(3)
                 .setMarginBottom(3));
 
-        // Calcular subtotal original sin IVA (antes de descuento) - INCLUYENDO COMPLEMENTOS
-        BigDecimal taxMultiplier = order.getTaxRate().divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP);
-        BigDecimal onePlusTax = BigDecimal.ONE.add(taxMultiplier);
-        
-        // Subtotal de items (precio original × cantidad) sin IVA
-        BigDecimal subtotalItemsSinIVA = order.getOrderDetails().stream()
-                .map(d -> d.getUnitPrice().multiply(BigDecimal.valueOf(d.getQuantity()))
-                        .divide(onePlusTax, 10, RoundingMode.HALF_UP))
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        
-        // Subtotal de complementos sin IVA (using getComplementsTotal which correctly handles sauce × quantity)
-        BigDecimal subtotalComplementosSinIVA = order.getOrderDetails().stream()
-                .map(d -> d.getComplementsTotal().divide(onePlusTax, 10, RoundingMode.HALF_UP))
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        
-        // Subtotal original total sin IVA (items + complementos, antes de descuento)
-        BigDecimal subtotalOriginalSinIVA = subtotalItemsSinIVA.add(subtotalComplementosSinIVA);
-
-        // IVA shown on the ticket excludes the delivery's IVA portion so the rows sum to total
-        // (the envío row, printed below, shows the gross delivery cost which already includes its own IVA).
-        BigDecimal taxAmount = order.getTaxAmountWithoutDelivery();
+        // Subtotal e IVA INCLUYEN el costo de envío Y descuento por promoción (consistente con el CFDI).
+        // - order.getSubtotal()  = subtotal sin IVA, incluyendo envío, después de descuento
+        // - order.getTaxAmount() = IVA total, incluyendo el IVA del envío, después de descuento
+        // El envío y el descuento se muestran como notas informativas después del TOTAL.
+        BigDecimal taxAmount = order.getTaxAmount();
         BigDecimal total = order.getTotal();
 
                 // Totals table
@@ -431,28 +415,11 @@ public class TicketPdfService {
                 totalsTable.setWidth(UnitValue.createPercentValue(100));
                 totalsTable.setBorder(Border.NO_BORDER);
 
-                // Subtotal (mostrar subtotal original sin IVA incluyendo complementos, antes de descuento)
-                // Redondear a dos decimales con HALF_UP (consistente con Order.subtotal)
-                BigDecimal subtotalRounded = subtotalOriginalSinIVA.setScale(2, RoundingMode.HALF_UP);
-                addTotalRow(totalsTable, "Subtotal:", "$" + subtotalRounded.toPlainString(), normalFont, boldFont, false);
+                // Subtotal: ya incluye envío y descuento (= order.getSubtotal()).
+                addTotalRow(totalsTable, "Subtotal:", order.getFormattedSubtotal(), normalFont, boldFont, false);
 
-                // Fila de descuento (solo por promociones, no incluye complementos)
-                // Usar Order.getDiscountWithoutTax() para consistencia con view.html
-                if (order.hasDiscount()) {
-                        BigDecimal descuentoValue = order.getDiscountWithoutTax();
-                        addTotalRowColored(totalsTable, "Descuento:", "-$" + descuentoValue.toPlainString(), normalFont, boldFont, false, ColorConstants.RED);
-                }
-
-                // IVA (ya calculado sobre el subtotal real)
+                // IVA total (incluye IVA de envío, post-descuento)
                 addTotalRow(totalsTable, "IVA (" + order.getTaxRate() + "%):", "$" + taxAmount.toString(), normalFont, boldFont, false);
-
-                // Delivery cost (gross, IVA included) so rows sum: subtotal - desc + iva_items + envío = total
-                if (order.getOrderType() == OrderType.DELIVERY
-                        && order.getDeliveryCost() != null
-                        && order.getDeliveryCost().compareTo(BigDecimal.ZERO) > 0) {
-                    BigDecimal envioGross = order.getDeliveryCost().setScale(2, RoundingMode.HALF_UP);
-                    addTotalRow(totalsTable, "Envío:", "$" + envioGross.toPlainString(), normalFont, boldFont, false);
-                }
 
                 // Total (bold) - sin propina
                 addTotalRow(totalsTable, "TOTAL:", "$" + total.setScale(2, RoundingMode.HALF_UP).toString(), boldFont, boldFont, true);
@@ -472,6 +439,29 @@ public class TicketPdfService {
                 .setMarginTop(2)
                 .setMarginBottom(3);
         document.add(totalEnLetraParagraph);
+
+        // Nota informativa: descuento por promoción (incluido en subtotal/IVA)
+        if (order.hasDiscount()) {
+            Paragraph descuentoNote = new Paragraph("Incluye descuento por promoción de " + order.getFormattedDiscountWithTax())
+                    .setFont(normalFont)
+                    .setFontSize(7)
+                    .setTextAlignment(TextAlignment.CENTER)
+                    .setMarginTop(2);
+            document.add(descuentoNote);
+        }
+
+        // Nota informativa: del total, cuánto fue envío (DELIVERY only)
+        if (order.getOrderType() == OrderType.DELIVERY
+                && order.getDeliveryCost() != null
+                && order.getDeliveryCost().compareTo(BigDecimal.ZERO) > 0) {
+            BigDecimal envioGross = order.getDeliveryCost().setScale(2, RoundingMode.HALF_UP);
+            Paragraph envioNote = new Paragraph("Incluye $" + envioGross.toPlainString() + " de envío a domicilio")
+                    .setFont(normalFont)
+                    .setFontSize(7)
+                    .setTextAlignment(TextAlignment.CENTER)
+                    .setMarginTop(2);
+            document.add(envioNote);
+        }
 
         // Order type and payment method in one line
         Paragraph orderInfoParagraph = new Paragraph()

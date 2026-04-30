@@ -769,88 +769,25 @@
             </h3>
 
             <div class="space-y-3">
-              <!-- Mostrar desglose detallado solo si hay descuentos -->
-              <div th:if="${order.hasDiscount()}">
-                <!-- Subtotal sin descuento -->
-                <div class="flex items-center justify-between">
-                  <span class="text-gray-600 dark:text-gray-400"
-                    >Subtotal sin descuento</span
-                  >
-                  <span
-                    class="font-semibold text-gray-900 dark:text-white"
-                    th:text="${order.formattedOriginalSubtotalWithoutTax}"
-                  >
-                    $0.00
-                  </span>
-                </div>
-
-                <!-- Descuento -->
-                <div class="flex items-center justify-between">
-                  <span class="text-green-600 dark:text-green-400"
-                    >Descuento</span
-                  >
-                  <span
-                    class="font-semibold text-green-600 dark:text-green-400"
-                    th:text="${order.formattedDiscountWithoutTax}"
-                  >
-                    $0.00
-                  </span>
-                </div>
-
-                <!-- Subtotal con descuento -->
-                <div
-                  class="flex items-center justify-between pt-3 border-t border-gray-200 dark:border-gray-800"
+              <!-- Subtotal (ya incluye envío y descuento por promoción, consistente con CFDI) -->
+              <div class="flex items-center justify-between">
+                <span class="text-gray-600 dark:text-gray-400">Subtotal</span>
+                <span
+                  class="font-semibold text-gray-900 dark:text-white"
+                  th:text="${order.formattedSubtotal}"
                 >
-                  <span class="text-gray-600 dark:text-gray-400"
-                    >Subtotal con descuento</span
-                  >
-                  <span
-                    class="font-semibold text-gray-900 dark:text-white"
-                    th:text="'$' + ${#numbers.formatDecimal(order.subtotalWithoutDelivery, 1, 2)}"
-                  >
-                    $0.00
-                  </span>
-                </div>
+                  $0.00
+                </span>
               </div>
 
-              <!-- Mostrar solo subtotal si NO hay descuentos -->
-              <div th:unless="${order.hasDiscount()}">
-                <div class="flex items-center justify-between">
-                  <span class="text-gray-600 dark:text-gray-400">Subtotal</span>
-                  <span
-                    class="font-semibold text-gray-900 dark:text-white"
-                    th:text="'$' + ${#numbers.formatDecimal(order.subtotalWithoutDelivery, 1, 2)}"
-                  >
-                    $0.00
-                  </span>
-                </div>
-              </div>
-
-              <!-- Tax -->
+              <!-- Tax (incluye IVA del envío) -->
               <div class="flex items-center justify-between">
                 <span class="text-gray-600 dark:text-gray-400">
                   IVA (<span th:text="${order.taxRate}">16</span>%)
                 </span>
                 <span
                   class="font-semibold text-gray-900 dark:text-white"
-                  th:text="'$' + ${#numbers.formatDecimal(order.taxAmountWithoutDelivery, 1, 2)}"
-                >
-                  $0.00
-                </span>
-              </div>
-
-              <!-- Envío a domicilio (solo DELIVERY con costo) -->
-              <div
-                th:if="${order.orderType != null and order.orderType.name() == 'DELIVERY' and order.deliveryCost != null and order.deliveryCost.compareTo(T(java.math.BigDecimal).ZERO) > 0}"
-                class="flex items-center justify-between"
-              >
-                <span class="text-gray-600 dark:text-gray-400 flex items-center gap-1">
-                  <span class="material-symbols-outlined text-base">local_shipping</span>
-                  Envío a domicilio
-                </span>
-                <span
-                  class="font-semibold text-gray-900 dark:text-white"
-                  th:text="'$' + ${#numbers.formatDecimal(order.deliveryCost, 1, 2)}"
+                  th:text="'$' + ${#numbers.formatDecimal(order.taxAmount, 1, 2)}"
                 >
                   $0.00
                 </span>
@@ -869,6 +806,27 @@
                 >
                   $0.00
                 </span>
+              </div>
+
+              <!-- Nota informativa de descuento por promoción (después del TOTAL) -->
+              <div
+                th:if="${order.hasDiscount()}"
+                class="flex justify-end items-center gap-1 text-xs text-gray-500 dark:text-gray-400 italic"
+              >
+                <span class="material-symbols-outlined text-sm">local_offer</span>
+                <span>Incluye descuento por promoción de </span>
+                <span th:text="${order.formattedDiscountWithTax}">$0.00</span>
+              </div>
+
+              <!-- Nota informativa de envío (después del TOTAL) -->
+              <div
+                th:if="${order.orderType != null and order.orderType.name() == 'DELIVERY' and order.deliveryCost != null and order.deliveryCost.compareTo(T(java.math.BigDecimal).ZERO) > 0}"
+                class="flex justify-end items-center gap-1 text-xs text-gray-500 dark:text-gray-400 italic"
+              >
+                <span class="material-symbols-outlined text-sm">local_shipping</span>
+                <span>Incluye </span>
+                <span th:text="'$' + ${#numbers.formatDecimal(order.deliveryCost, 1, 2)}">$0.00</span>
+                <span> de envío a domicilio</span>
               </div>
             </div>
           </div>

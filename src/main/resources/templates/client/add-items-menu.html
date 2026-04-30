@@ -480,26 +480,12 @@
             class="sticky bottom-0 z-20 border-t border-slate-200/80 bg-white dark:border-slate-800/80 dark:bg-slate-900/70 p-4 shadow-lg"
           >
             <div class="space-y-2.5">
-              <!-- Subtotal (sin IVA) -->
+              <!-- Subtotal (ya incluye descuento por promoción, consistente con CFDI) -->
               <div
                 class="flex justify-between text-sm font-semibold text-gray-600 dark:text-gray-400"
               >
                 <span>Subtotal</span>
                 <span id="cartSubtotal">$0.00</span>
-              </div>
-
-              <!-- Descuento (solo se muestra cuando hay promoción) -->
-              <div
-                id="cartDiscountContainer"
-                class="hidden flex justify-between text-sm font-semibold text-green-600 dark:text-green-400"
-              >
-                <span class="flex items-center gap-1">
-                  <span class="material-symbols-outlined text-sm"
-                    >local_offer</span
-                  >
-                  Descuento
-                </span>
-                <span id="cartDiscount">-$0.00</span>
               </div>
 
               <!-- IVA -->
@@ -516,6 +502,15 @@
               >
                 <span class="text-gray-900 dark:text-white">Total</span>
                 <span id="cartTotal" class="text-primary text-2xl">$0.00</span>
+              </div>
+
+              <!-- Nota informativa de descuento por promoción (incluido en subtotal e IVA) -->
+              <div
+                id="cartDescuentoNote"
+                class="hidden flex items-start gap-1.5 text-xs italic text-gray-500 dark:text-gray-400 px-1"
+              >
+                <span class="material-symbols-outlined text-sm">local_offer</span>
+                <span>Incluye descuento por promoción de <span id="cartDescuentoAmount">$0.00</span></span>
               </div>
 
               <!-- Action Buttons -->
@@ -2585,7 +2580,8 @@
           round2(subtotalSinIVA) - round2(baseImponible);
 
         // Redondear a 2 decimales (consistente con view.html)
-        cartSubtotalEl.textContent = `$${round2(subtotalSinIVA).toFixed(2)}`;
+        // Subtotal mostrado = base imponible post-descuento (consistente con ticket/CFDI/vista de pedido)
+        cartSubtotalEl.textContent = `$${round2(baseImponible).toFixed(2)}`;
         cartIVAEl.textContent = `$${round2(iva).toFixed(2)}`;
         cartTotalEl.textContent =
           totalConPromocion === 0
@@ -2597,11 +2593,20 @@
         );
         const discountElement = document.getElementById("cartDiscount");
         if (discountContainer && discountElement) {
-          if (hayPromocion && descuentoTotalSinIVA > 0.001) {
-            discountElement.textContent = `-$${descuentoTotalSinIVA.toFixed(2)}`;
-            discountContainer.classList.remove("hidden");
+          // El desglose detallado de descuento se eliminó; ahora se muestra como nota informativa.
+          discountContainer.classList.add("hidden");
+        }
+
+        // Actualizar nota informativa de descuento por promoción (debajo del Total)
+        const descuentoNoteEl = document.getElementById("cartDescuentoNote");
+        const descuentoAmountEl = document.getElementById("cartDescuentoAmount");
+        if (descuentoNoteEl && descuentoAmountEl) {
+          const descuentoConIVA = round2(descuentoTotalSinIVA * (1 + taxMultiplier));
+          if (hayPromocion && descuentoConIVA > 0.001) {
+            descuentoAmountEl.textContent = `$${descuentoConIVA.toFixed(2)}`;
+            descuentoNoteEl.classList.remove("hidden");
           } else {
-            discountContainer.classList.add("hidden");
+            descuentoNoteEl.classList.add("hidden");
           }
         }
 
