@@ -207,20 +207,25 @@ public class FacturamaService {
             // Items — each OrderDetail and each complement becomes its own CFDI line.
             // No merging: combos, items with complements, and simple items all stay
             // as individual lines to preserve the exact detail of the order.
-            ArrayNode items = objectMapper.createArrayNode();
+            //
+            // Two-pass build:
+            //   1) Collect all candidate lines with their tax-included totals (pre-discount).
+            //   2) If order.hasOrderDiscount(), distribute the discount pro-rata across the
+            //      lines (with last-line residual absorption) and emit Concepto.Descuento per
+            //      line — required by SAT CFDI 4.0, which validates
+            //      Comprobante.Discount == Σ Concepto.Descuento and disallows negative concepts.
+            List<CfdiLine> candidateLines = new ArrayList<>();
 
             for (OrderDetail detail : order.getOrderDetails()) {
                 // Use the authoritative line subtotal stored on the OrderDetail
                 // (it already reflects any promotion: PERCENTAGE_DISCOUNT,
                 // FIXED_AMOUNT_DISCOUNT, BUY_X_PAY_Y, combo, etc.).
-                // Recalculating from promotionAppliedPrice × quantity can lose
-                // ±1 cent when the subtotal is not divisible exactly by quantity.
                 BigDecimal lineSubtotal = detail.getSubtotal();
 
                 // Add the item only if subtotal > 0 (skip combo sub-items at $0)
                 if (lineSubtotal != null && lineSubtotal.compareTo(BigDecimal.ZERO) > 0) {
-                    addCfdiItem(items, detail.getItemMenu().getName(), detail.getQuantity(), lineSubtotal,
-                            PROD_CODE_RESTAURANT);
+                    candidateLines.add(new CfdiLine(detail.getItemMenu().getName(),
+                            detail.getQuantity(), lineSubtotal, PROD_CODE_RESTAURANT));
                 }
 
                 // Always check complements — even zero-price items can have paid complements
@@ -235,10 +240,9 @@ public class FacturamaService {
                         if (Boolean.TRUE.equals(comp.getComplement().getIsSauce())) {
                             effectiveQty = effectiveQty * detail.getQuantity();
                         }
-                        // Pass the exact tax-included line total for the complement
                         BigDecimal compLineTotal = compPrice.multiply(BigDecimal.valueOf(effectiveQty));
-                        addCfdiItem(items, "Complemento - " + comp.getComplement().getName(),
-                                effectiveQty, compLineTotal, PROD_CODE_RESTAURANT);
+                        candidateLines.add(new CfdiLine("Complemento - " + comp.getComplement().getName(),
+                                effectiveQty, compLineTotal, PROD_CODE_RESTAURANT));
                     }
                 }
             }
@@ -248,11 +252,61 @@ public class FacturamaService {
             if (order.getOrderType() == OrderType.DELIVERY
                     && order.getDeliveryCost() != null
                     && order.getDeliveryCost().compareTo(BigDecimal.ZERO) > 0) {
-                addCfdiItem(items, "Costo de envío a domicilio", 1, order.getDeliveryCost(),
-                        PROD_CODE_DELIVERY);
+                candidateLines.add(new CfdiLine("Costo de envío a domicilio", 1,
+                        order.getDeliveryCost(), PROD_CODE_DELIVERY));
+            }
+
+            // Pro-rata distribution of orderDiscount across line totals (con IVA).
+            // After distribution, Σ adjustedLineTotal == order.getTotal() exactly
+            // (the last line absorbs any rounding residual). When no discount,
+            // adjustedLineTotal[i] == lineTotalConIva[i].
+            BigDecimal[] adjustedLineTotal = new BigDecimal[candidateLines.size()];
+            BigDecimal sumLineTotalConIva = candidateLines.stream()
+                    .map(l -> l.lineTotalConIva)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add)
+                    .setScale(2, RoundingMode.HALF_UP);
+
+            if (order.hasOrderDiscount() && sumLineTotalConIva.compareTo(BigDecimal.ZERO) > 0) {
+                BigDecimal orderDiscountConIva = order.getOrderDiscount().setScale(2, RoundingMode.HALF_UP);
+                BigDecimal expectedTotalConIva = sumLineTotalConIva.subtract(orderDiscountConIva);
+                BigDecimal accumulated = BigDecimal.ZERO;
+                for (int i = 0; i < candidateLines.size(); i++) {
+                    if (i == candidateLines.size() - 1) {
+                        // Last line absorbs the residual so Σ matches expectedTotalConIva exactly
+                        adjustedLineTotal[i] = expectedTotalConIva.subtract(accumulated)
+                                .setScale(2, RoundingMode.HALF_UP);
+                    } else {
+                        BigDecimal share = candidateLines.get(i).lineTotalConIva
+                                .multiply(expectedTotalConIva)
+                                .divide(sumLineTotalConIva, 10, RoundingMode.HALF_UP)
+                                .setScale(2, RoundingMode.HALF_UP);
+                        adjustedLineTotal[i] = share;
+                        accumulated = accumulated.add(share);
+                    }
+                }
+            } else {
+                for (int i = 0; i < candidateLines.size(); i++) {
+                    adjustedLineTotal[i] = candidateLines.get(i).lineTotalConIva
+                            .setScale(2, RoundingMode.HALF_UP);
+                }
+            }
+
+            // Emit CFDI items and accumulate Comprobante-level discount (sin IVA).
+            ArrayNode items = objectMapper.createArrayNode();
+            BigDecimal sumConceptDiscount = BigDecimal.ZERO;
+            for (int i = 0; i < candidateLines.size(); i++) {
+                CfdiLine cl = candidateLines.get(i);
+                BigDecimal conceptDiscount = addCfdiItem(items, cl.description, cl.quantity,
+                        cl.lineTotalConIva, adjustedLineTotal[i], cl.productCode);
+                sumConceptDiscount = sumConceptDiscount.add(conceptDiscount);
             }
 
             body.set("Items", items);
+
+            // Comprobante.Discount must equal Σ Concepto.Descuento (sin IVA), per CFDI 4.0 spec.
+            if (sumConceptDiscount.compareTo(BigDecimal.ZERO) > 0) {
+                body.put("Discount", sumConceptDiscount.toPlainString());
+            }
 
             HttpHeaders headers = authHeaders(defaultLiveMode);
             headers.setContentType(MediaType.APPLICATION_JSON);
@@ -417,33 +471,50 @@ public class FacturamaService {
     }
 
     /**
-     * Add a CFDI line item with IVA 16% (desglosado from a tax-included LINE total).
+     * Add a CFDI line item with IVA 16% (desglosado) supporting per-line discount.
      *
-     * IMPORTANT: the caller passes the exact tax-included total for the line
-     * (e.g. detail.getSubtotal() — the authoritative value stored in the DB),
-     * NOT a unit price. The unit price sin IVA is derived from that total so
-     * that Σ item.Total === order.getTotal() with no ±1 cent drift caused by
-     * rounding promotionAppliedPrice and re-multiplying.
+     * The caller passes:
+     *   - {@code lineTotalConIva}: ORIGINAL tax-included total of the line (pre-discount).
+     *     Used to declare Concepto.Subtotal (Importe) and UnitPrice — these reflect the
+     *     full price of the line BEFORE the order-level discount is applied.
+     *   - {@code lineTotalConIvaAfterDiscount}: tax-included total AFTER the pro-rata
+     *     share of the order-level discount has been subtracted. Drives Base / IVA / Total
+     *     so that {@code Σ Concepto.Total == order.getTotal()} exactly (last line absorbs
+     *     residual upstream).
      *
-     * Tax = expectedTotal - subtotal (NOT subtotal * 0.16) so subtotal + tax
-     * equals the line total exactly.
+     * Per-concept invariants enforced here:
+     *   Subtotal − Discount + Tax.Total == Total           (exact)
+     *   Base == Subtotal − Discount                         (exact)
+     *   Tax.Total == Total − Base                           (exact, NOT base × 0.16)
+     *   |UnitPrice × Quantity − Subtotal| ≤ 0.01            (6-decimal UnitPrice keeps tolerance)
+     *
+     * @return the per-line Discount (sin IVA) emitted, so the caller can sum it for
+     *         Comprobante.Discount (which SAT requires == Σ Concepto.Descuento).
      */
-    private void addCfdiItem(ArrayNode items, String description, int quantity,
-                             BigDecimal taxIncludedLineTotal, String productCode) {
+    private BigDecimal addCfdiItem(ArrayNode items, String description, int quantity,
+                                   BigDecimal lineTotalConIva,
+                                   BigDecimal lineTotalConIvaAfterDiscount,
+                                   String productCode) {
         ObjectNode item = objectMapper.createObjectNode();
 
-        // Snap the line total to 2 decimals (it should already be, but be safe)
-        BigDecimal total = taxIncludedLineTotal.setScale(2, RoundingMode.HALF_UP);
-        // UnitPrice sin IVA: derive per-unit con IVA first (high precision), then strip IVA.
-        // This preserves the original per-unit menu price (e.g. $69.57 -> $59.97) and avoids
-        // the artifact of rounding the line subtotal to 2 decimals before dividing by quantity
-        // (which would turn $59.975 into $59.98).
-        BigDecimal unitPriceConIva = total.divide(BigDecimal.valueOf(quantity), 6, RoundingMode.HALF_UP);
+        // Snap both totals to 2 decimals defensively
+        BigDecimal totalOriginal = lineTotalConIva.setScale(2, RoundingMode.HALF_UP);
+        BigDecimal totalAfter = lineTotalConIvaAfterDiscount.setScale(2, RoundingMode.HALF_UP);
+
+        // UnitPrice sin IVA: derived from the ORIGINAL (pre-discount) per-unit price,
+        // 6 decimals so |UnitPrice × Quantity − Subtotal| ≤ 1¢ for any quantity.
+        BigDecimal unitPriceConIva = totalOriginal.divide(BigDecimal.valueOf(quantity), 6, RoundingMode.HALF_UP);
         BigDecimal unitPriceSinIva = unitPriceConIva.divide(BigDecimal.valueOf(1.16), 6, RoundingMode.HALF_UP);
-        // Subtotal sin IVA derived from the exact line total (independent of unit price rounding)
-        BigDecimal subtotal = total.divide(BigDecimal.valueOf(1.16), 2, RoundingMode.HALF_UP);
-        // Derive tax from the exact tax-included total so subtotal + tax = total exactly
-        BigDecimal taxAmount = total.subtract(subtotal);
+
+        // Concepto.Subtotal (Importe) — sin IVA, BEFORE discount
+        BigDecimal subtotal = totalOriginal.divide(BigDecimal.valueOf(1.16), 2, RoundingMode.HALF_UP);
+
+        // Base imponible (after discount) and IVA — derived from POST-discount total
+        BigDecimal base = totalAfter.divide(BigDecimal.valueOf(1.16), 2, RoundingMode.HALF_UP);
+        BigDecimal taxAmount = totalAfter.subtract(base);
+
+        // Concepto.Descuento = Subtotal − Base, so Subtotal − Discount + Tax = Total exactly
+        BigDecimal discount = subtotal.subtract(base);
 
         item.put("ProductCode", productCode);
         item.put("Description", description);
@@ -452,21 +523,43 @@ public class FacturamaService {
         item.put("UnitPrice", unitPriceSinIva.doubleValue());
         item.put("Quantity", quantity);
         item.put("Subtotal", subtotal.doubleValue());
+        if (discount.compareTo(BigDecimal.ZERO) > 0) {
+            item.put("Discount", discount.doubleValue());
+        }
         item.put("TaxObject", "02"); // Sí objeto de impuesto
-        item.put("Total", total.doubleValue());
+        item.put("Total", totalAfter.doubleValue());
 
         // IVA 16%
         ArrayNode taxes = objectMapper.createArrayNode();
         ObjectNode tax = objectMapper.createObjectNode();
         tax.put("Name", "IVA");
         tax.put("Rate", 0.16);
-        tax.put("Base", subtotal.doubleValue());
+        tax.put("Base", base.doubleValue());
         tax.put("Total", taxAmount.doubleValue());
         tax.put("IsRetention", false);
         taxes.add(tax);
 
         item.set("Taxes", taxes);
         items.add(item);
+
+        return discount;
+    }
+
+    /**
+     * Internal candidate line used during the two-pass CFDI build (collect → distribute discount → emit).
+     */
+    private static final class CfdiLine {
+        final String description;
+        final int quantity;
+        final BigDecimal lineTotalConIva;
+        final String productCode;
+
+        CfdiLine(String description, int quantity, BigDecimal lineTotalConIva, String productCode) {
+            this.description = description;
+            this.quantity = quantity;
+            this.lineTotalConIva = lineTotalConIva;
+            this.productCode = productCode;
+        }
     }
 
     /**

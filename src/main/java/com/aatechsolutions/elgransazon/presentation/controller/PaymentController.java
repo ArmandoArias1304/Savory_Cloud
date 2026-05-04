@@ -126,6 +126,7 @@ public class PaymentController {
             @PathVariable Long orderId,
             @RequestParam PaymentMethodType paymentMethod,
             @RequestParam(required = false, defaultValue = "0") BigDecimal tip,
+            @RequestParam(required = false, defaultValue = "0") BigDecimal orderDiscount,
             Authentication authentication,
             Model model,
             RedirectAttributes redirectAttributes,
@@ -133,11 +134,16 @@ public class PaymentController {
         
         String username = authentication.getName();
         log.info("Processing payment for order ID: {} by user: {}", orderId, username);
-        log.info("Payment method: {}, Tip: {}", paymentMethod, tip);
+        log.info("Payment method: {}, Tip: {}, Order discount: {}", paymentMethod, tip, orderDiscount);
 
         // Check if user is a waiter
         boolean isWaiter = authentication.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_WAITER"));
+
+        // Waiters cannot apply order-level discount; force to zero regardless of submitted value.
+        if (isWaiter) {
+            orderDiscount = BigDecimal.ZERO;
+        }
 
         try {
             // Find the order
@@ -213,9 +219,35 @@ public class PaymentController {
                 throw new IllegalArgumentException("La propina solo permite hasta 2 decimales");
             }
 
+            // Validate order discount (descuento sobre el total de la orden, incluye IVA).
+            if (orderDiscount == null) {
+                orderDiscount = BigDecimal.ZERO;
+            }
+            if (orderDiscount.compareTo(BigDecimal.ZERO) < 0) {
+                throw new IllegalArgumentException("El descuento sobre el total no puede ser negativo");
+            }
+            if (orderDiscount.compareTo(new BigDecimal("999999.99")) > 0) {
+                throw new IllegalArgumentException("El descuento sobre el total no puede ser mayor a $999,999.99");
+            }
+            if (orderDiscount.scale() > 2) {
+                throw new IllegalArgumentException("El descuento sobre el total solo permite hasta 2 decimales");
+            }
+            // Cap to current order total (gross, includes envío). Cannot exceed what client owes.
+            BigDecimal currentTotal = order.getTotal() != null ? order.getTotal() : BigDecimal.ZERO;
+            if (orderDiscount.compareTo(currentTotal) > 0) {
+                throw new IllegalArgumentException(
+                        "El descuento (" + String.format("$%.2f", orderDiscount)
+                                + ") no puede ser mayor al total de la orden ("
+                                + String.format("$%.2f", currentTotal) + ")");
+            }
+
             // Get current employee who is collecting the payment
             Employee currentEmployee = employeeService.findByUsername(username)
                     .orElseThrow(() -> new IllegalStateException("Empleado no encontrado"));
+
+            // Apply order discount and recompute totals BEFORE setting tip/payment metadata.
+            order.setOrderDiscount(orderDiscount);
+            order.recalculateAmounts();
 
             // Set tip, payment method, and paidBy
             order.setTip(tip);

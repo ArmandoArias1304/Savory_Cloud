@@ -182,6 +182,18 @@ public class Order implements Serializable {
     @Builder.Default
     private BigDecimal deliveryCost = BigDecimal.ZERO;
 
+    // ========== Order Discount (descuento aplicado al total de la orden por admin/cashier al cobrar) ==========
+    // Includes IVA. Independent and additive to per-item promotion discounts.
+    // Validated by service layer: 0 <= orderDiscount <= (itemsTotal + deliveryCost).
+
+    @NotNull(message = "El descuento sobre el total es requerido")
+    @DecimalMin(value = "0.0", message = "El descuento sobre el total no puede ser negativo")
+    @DecimalMax(value = "999999.99", message = "El descuento sobre el total no puede ser mayor a $999,999.99")
+    @Digits(integer = 6, fraction = 2, message = "El descuento sobre el total solo permite hasta 2 decimales")
+    @Column(name = "order_discount", precision = 8, scale = 2, nullable = false)
+    @Builder.Default
+    private BigDecimal orderDiscount = BigDecimal.ZERO;
+
     // ========== Audit Fields ==========
 
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -320,7 +332,20 @@ public class Order implements Serializable {
                 ? this.deliveryCost
                 : BigDecimal.ZERO;
 
-        this.total = itemsTotal.add(effectiveDeliveryCost).setScale(2, RoundingMode.HALF_UP);
+        // Subtract order-level discount (gross, includes IVA). Clamp to [0, itemsTotal+envío]
+        // so a malformed value can never push total below 0.
+        BigDecimal grossBeforeDiscount = itemsTotal.add(effectiveDeliveryCost);
+        BigDecimal effectiveOrderDiscount = (this.orderDiscount != null)
+                ? this.orderDiscount
+                : BigDecimal.ZERO;
+        if (effectiveOrderDiscount.compareTo(BigDecimal.ZERO) < 0) {
+            effectiveOrderDiscount = BigDecimal.ZERO;
+        }
+        if (effectiveOrderDiscount.compareTo(grossBeforeDiscount) > 0) {
+            effectiveOrderDiscount = grossBeforeDiscount;
+        }
+
+        this.total = grossBeforeDiscount.subtract(effectiveOrderDiscount).setScale(2, RoundingMode.HALF_UP);
         
         // Step 2: Calculate subtotal (price without IVA) from total
         // subtotal = total / (1 + taxRate/100)
@@ -629,6 +654,82 @@ public class Order implements Serializable {
      */
     public String getFormattedDeliveryCostWithoutTax() {
         return String.format("$%.2f", getDeliveryCostWithoutTax());
+    }
+
+    // ========== Order Discount Helpers (descuento sobre el total, incluye IVA) ==========
+
+    /**
+     * @return true if this order has an order-level discount applied (> 0).
+     */
+    public boolean hasOrderDiscount() {
+        return orderDiscount != null && orderDiscount.compareTo(BigDecimal.ZERO) > 0;
+    }
+
+    /**
+     * Order discount amount WITHOUT IVA (raw, unrounded).
+     * orderDiscount is stored gross (includes IVA), so the net amount is
+     * orderDiscount / (1 + taxRate/100).
+     */
+    public BigDecimal getOrderDiscountWithoutTaxRaw() {
+        if (orderDiscount == null || orderDiscount.compareTo(BigDecimal.ZERO) <= 0) {
+            return BigDecimal.ZERO;
+        }
+        if (taxRate == null || taxRate.compareTo(BigDecimal.ZERO) <= 0) {
+            return orderDiscount;
+        }
+        BigDecimal taxMultiplier = BigDecimal.ONE.add(
+                taxRate.divide(BigDecimal.valueOf(100), 10, RoundingMode.HALF_UP)
+        );
+        return orderDiscount.divide(taxMultiplier, 10, RoundingMode.HALF_UP);
+    }
+
+    /**
+     * Order discount amount WITHOUT IVA, rounded to 2 decimals.
+     */
+    public BigDecimal getOrderDiscountWithoutTax() {
+        return getOrderDiscountWithoutTaxRaw().setScale(2, RoundingMode.HALF_UP);
+    }
+
+    /**
+     * IVA portion of the order discount (rounded to 2 decimals).
+     */
+    public BigDecimal getOrderDiscountTaxAmount() {
+        if (orderDiscount == null || orderDiscount.compareTo(BigDecimal.ZERO) <= 0) {
+            return BigDecimal.ZERO;
+        }
+        return orderDiscount.subtract(getOrderDiscountWithoutTax()).setScale(2, RoundingMode.HALF_UP);
+    }
+
+    /**
+     * Formatted order discount WITH IVA, e.g. "$12.34". Always positive.
+     */
+    public String getFormattedOrderDiscount() {
+        BigDecimal value = orderDiscount != null ? orderDiscount : BigDecimal.ZERO;
+        return String.format("$%.2f", value);
+    }
+
+    /**
+     * Formatted order discount WITHOUT IVA, e.g. "$10.64". Always positive.
+     */
+    public String getFormattedOrderDiscountWithoutTax() {
+        return String.format("$%.2f", getOrderDiscountWithoutTax());
+    }
+
+    /**
+     * Subtotal sin IVA "antes" del descuento de orden, para mostrar en tickets/vistas.
+     * = order.subtotal + orderDiscountSinIVA.
+     * Cuando no hay orderDiscount, equivale a order.subtotal.
+     */
+    public BigDecimal getDisplaySubtotal() {
+        BigDecimal sub = subtotal != null ? subtotal : BigDecimal.ZERO;
+        return sub.add(getOrderDiscountWithoutTax()).setScale(2, RoundingMode.HALF_UP);
+    }
+
+    /**
+     * Formatted display subtotal (sin IVA, antes del descuento de orden).
+     */
+    public String getFormattedDisplaySubtotal() {
+        return String.format("$%.2f", getDisplaySubtotal());
     }
 
     /**

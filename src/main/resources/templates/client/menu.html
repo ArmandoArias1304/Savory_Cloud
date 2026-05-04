@@ -491,6 +491,15 @@
                 >
               </div>
 
+              <!-- Nota informativa de envío (incluido en subtotal e IVA) -->
+              <div
+                id="cartEnvioNote"
+                class="hidden flex items-start gap-1.5 text-xs italic text-gray-500 dark:text-gray-400 px-1"
+              >
+                <span class="material-symbols-outlined text-sm">local_shipping</span>
+                <span>Incluye costo de envío de <span id="cartEnvioAmount">$0.00</span></span>
+              </div>
+
               <!-- Nota informativa de descuento por promoción (incluido en subtotal e IVA) -->
               <div
                 id="cartDescuentoNote"
@@ -498,15 +507,6 @@
               >
                 <span class="material-symbols-outlined text-sm">local_offer</span>
                 <span>Incluye descuento por promoción de <span id="cartDescuentoAmount">$0.00</span></span>
-              </div>
-
-              <!-- Nota informativa de envío (incluido en subtotal e IVA) -->
-              <div
-                id="cartEnvioNote"
-                class="hidden flex items-start gap-1.5 text-xs italic text-gray-500 dark:text-gray-400 px-1"
-              >
-                <span class="material-symbols-outlined text-sm">local_shipping</span>
-                <span>Incluye <span id="cartEnvioAmount">$0.00</span> de envío a domicilio</span>
               </div>
             </div>
 
@@ -3094,7 +3094,16 @@
         const descuentoNoteEl = document.getElementById("cartDescuentoNote");
         const descuentoAmountEl = document.getElementById("cartDescuentoAmount");
         if (descuentoNoteEl && descuentoAmountEl) {
-          const descuentoConIVA = round2(descuentoTotalSinIVA * (1 + taxMultiplier));
+          // Calcular descuento con IVA directamente desde el carrito para evitar errores
+          // de redondeo (sumar/restar centavos): original_con_IVA - total_aplicado_con_IVA
+          let originalConIVA = 0;
+          cart.forEach((item) => {
+            originalConIVA += item.price * item.quantity;
+            if (item.complementsTotal && item.complementsTotal > 0) {
+              originalConIVA += item.complementsTotal;
+            }
+          });
+          const descuentoConIVA = round2(originalConIVA - totalConPromocion);
           if (hayPromocion && descuentoConIVA > 0.001) {
             descuentoAmountEl.textContent = `$${descuentoConIVA.toFixed(2)}`;
             descuentoNoteEl.classList.remove("hidden");

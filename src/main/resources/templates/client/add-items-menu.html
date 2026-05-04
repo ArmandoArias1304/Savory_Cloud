@@ -2601,7 +2601,16 @@
         const descuentoNoteEl = document.getElementById("cartDescuentoNote");
         const descuentoAmountEl = document.getElementById("cartDescuentoAmount");
         if (descuentoNoteEl && descuentoAmountEl) {
-          const descuentoConIVA = round2(descuentoTotalSinIVA * (1 + taxMultiplier));
+          // Calcular descuento con IVA directamente desde el carrito para evitar errores
+          // de redondeo (sumar/restar centavos): original_con_IVA - total_aplicado_con_IVA
+          let originalConIVA = 0;
+          cart.forEach((item) => {
+            originalConIVA += item.price * item.quantity;
+            if (item.complementsTotal && item.complementsTotal > 0) {
+              originalConIVA += item.complementsTotal;
+            }
+          });
+          const descuentoConIVA = round2(originalConIVA - totalConPromocion);
           if (hayPromocion && descuentoConIVA > 0.001) {
             descuentoAmountEl.textContent = `$${descuentoConIVA.toFixed(2)}`;
             descuentoNoteEl.classList.remove("hidden");

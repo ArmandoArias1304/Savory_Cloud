@@ -167,6 +167,22 @@
           </div>
 
           <div class="border-t border-gray-200 dark:border-gray-700 mt-3 pt-3">
+            <!-- Costo de envío con IVA (antes del TOTAL) -->
+            <div
+              th:if="${order.orderType != null and order.orderType.name() == 'DELIVERY' and order.deliveryCost != null and order.deliveryCost.compareTo(T(java.math.BigDecimal).ZERO) > 0}"
+              class="flex justify-between items-center text-sm text-gray-600 dark:text-gray-400 mb-1"
+            >
+              <span>Costo de envío</span>
+              <span th:text="'$' + ${#numbers.formatDecimal(order.deliveryCost, 1, 2)}">$0.00</span>
+            </div>
+            <!-- Descuento de orden con IVA (antes del TOTAL, después del envío) -->
+            <div
+              th:if="${order.hasOrderDiscount()}"
+              class="flex justify-between items-center text-sm text-red-600 dark:text-red-400 mb-1"
+            >
+              <span>Descuento de orden</span>
+              <span th:text="'-' + ${order.formattedOrderDiscount}">-$0.00</span>
+            </div>
             <div class="flex justify-between items-center">
               <span class="font-bold text-gray-900 dark:text-white">Total</span>
               <span class="font-bold text-xl text-primary" th:text="'$' + ${#numbers.formatDecimal(order.total, 1, 2)}"></span>
@@ -179,16 +195,6 @@
               <span class="material-symbols-outlined text-sm">local_offer</span>
               <span>Incluye descuento por promoción de </span>
               <span th:text="${order.formattedDiscountWithTax}">$0.00</span>
-            </div>
-            <!-- Nota informativa de envío (después del TOTAL) -->
-            <div
-              th:if="${order.orderType != null and order.orderType.name() == 'DELIVERY' and order.deliveryCost != null and order.deliveryCost.compareTo(T(java.math.BigDecimal).ZERO) > 0}"
-              class="flex justify-end items-center gap-1 text-xs text-gray-500 dark:text-gray-400 italic mt-2"
-            >
-              <span class="material-symbols-outlined text-sm">local_shipping</span>
-              <span>Incluye </span>
-              <span th:text="'$' + ${#numbers.formatDecimal(order.deliveryCost, 1, 2)}">$0.00</span>
-              <span> de envío a domicilio</span>
             </div>
           </div>
         </div>

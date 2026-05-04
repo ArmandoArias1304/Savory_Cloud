@@ -499,6 +499,49 @@
                     </div>
                   </div>
 
+                  <!-- Order Discount Section (descuento sobre el total, incluye IVA) -->
+                  <div class="space-y-4">
+                    <h3
+                      class="text-lg font-bold text-gray-900 dark:text-white"
+                    >
+                      Descuento sobre el total
+                      <span class="text-xs font-normal text-gray-500 dark:text-gray-400">
+                        (opcional, incluye IVA)
+                      </span>
+                    </h3>
+                    <div>
+                      <label
+                        class="block text-sm font-semibold text-gray-600 dark:text-gray-400 mb-2"
+                      >
+                        Monto a descontar
+                      </label>
+                      <div class="relative">
+                        <span
+                          class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-gray-400 text-xl font-bold"
+                          >$</span
+                        >
+                        <input
+                          type="number"
+                          name="orderDiscount"
+                          id="orderDiscount"
+                          step="0.01"
+                          min="0"
+                          th:max="${order.total}"
+                          value="0.00"
+                          data-prev="0.00"
+                          class="input-field w-full rounded-xl border-2 border-gray-300 bg-white dark:bg-gray-700 p-4 pl-11 text-xl font-bold text-gray-900 dark:text-white focus:outline-none"
+                          placeholder="0.00"
+                          oninput="onOrderDiscountInput(this)"
+                        />
+                      </div>
+                      <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                        Máximo:
+                        <span th:text="${order.formattedTotal}">$0.00</span>
+                        (total de la orden).
+                      </p>
+                    </div>
+                  </div>
+
                   <!-- Tip Section -->
                   <div class="space-y-4">
                     <h3
@@ -762,12 +805,20 @@
 
             <!-- Summary -->
             <div class="border-t-2 border-gray-200 pt-4 space-y-3">
-              <!-- Subtotal (ya incluye envío y descuento por promoción, consistente con CFDI) -->
+              <!-- Subtotal sin IVA, ANTES del descuento de orden (incluye envío sin IVA y descuento por promoción) -->
               <div
                 class="flex justify-between text-base font-medium text-gray-600 dark:text-gray-400"
               >
                 <span>Subtotal</span>
-                <span th:text="${order.formattedSubtotal}"></span>
+                <span th:text="${order.formattedDisplaySubtotal}"></span>
+              </div>
+              <!-- Descuento de orden sin IVA (debajo del Subtotal) -->
+              <div th:if="${order.hasOrderDiscount()}"
+                class="flex justify-between text-base font-medium text-gray-600 dark:text-gray-400"
+              >
+                <span>Descuento de orden</span>
+                <span class="text-red-600 dark:text-red-400"
+                      th:text="'-' + ${order.formattedOrderDiscountWithoutTax}"></span>
               </div>
               <div
                 class="flex justify-between text-base font-medium text-gray-600 dark:text-gray-400 dark:text-gray-400"
@@ -776,6 +827,14 @@
                   >Impuestos (<span th:text="${order.taxRate}">0</span>%)</span
                 >
                 <span th:text="${order.formattedTaxAmount}"></span>
+              </div>
+              <div
+                class="flex justify-between text-base font-medium text-gray-600 dark:text-gray-400 dark:text-gray-400"
+                id="order-discount-line"
+                style="display: none"
+              >
+                <span>Descuento aplicado</span>
+                <span class="text-red-600 dark:text-red-400" id="order-discount-summary">-$0.00</span>
               </div>
               <div
                 class="flex justify-between text-base font-medium text-gray-600 dark:text-gray-400 dark:text-gray-400"
@@ -794,6 +853,15 @@
                   th:text="${order.formattedTotal}"
                 ></span>
               </div>
+              <!-- Nota informativa de envío (después del TOTAL) -->
+              <div
+                th:if="${order.orderType != null and order.orderType.name() == 'DELIVERY' and order.deliveryCost != null and order.deliveryCost.compareTo(T(java.math.BigDecimal).ZERO) > 0}"
+                class="flex justify-end items-center gap-1 text-xs text-gray-500 dark:text-gray-400 italic"
+              >
+                <span class="material-symbols-outlined text-sm">local_shipping</span>
+                <span>Incluye costo de envío de </span>
+                <span th:text="'$' + ${#numbers.formatDecimal(order.deliveryCost, 1, 2)}">$0.00</span>
+              </div>
               <!-- Nota informativa de descuento por promoción (después del TOTAL) -->
               <div
                 th:if="${order.hasDiscount()}"
@@ -803,15 +871,14 @@
                 <span>Incluye descuento por promoción de </span>
                 <span th:text="${order.formattedDiscountWithTax}">$0.00</span>
               </div>
-              <!-- Nota informativa de envío (después del TOTAL) -->
+              <!-- Nota informativa de descuento aplicado al total (incluye IVA) -->
               <div
-                th:if="${order.orderType != null and order.orderType.name() == 'DELIVERY' and order.deliveryCost != null and order.deliveryCost.compareTo(T(java.math.BigDecimal).ZERO) > 0}"
+                th:if="${order.hasOrderDiscount()}"
                 class="flex justify-end items-center gap-1 text-xs text-gray-500 dark:text-gray-400 italic"
               >
-                <span class="material-symbols-outlined text-sm">local_shipping</span>
-                <span>Incluye </span>
-                <span th:text="'$' + ${#numbers.formatDecimal(order.deliveryCost, 1, 2)}">$0.00</span>
-                <span> de envío a domicilio</span>
+                <span class="material-symbols-outlined text-sm">sell</span>
+                <span>Descuento aplicado de </span>
+                <span th:text="${order.formattedOrderDiscount}">$0.00</span>
               </div>
             </div>
 
@@ -882,10 +949,18 @@
         orderSubtotal = parseFloat(window.ORDER_DATA.subtotal) || 0;
       }
 
+      // Helper: returns total after subtracting (and clamping) the entered order discount.
+      function getEffectiveOrderTotal() {
+        const discount =
+          parseFloat(document.getElementById("orderDiscount").value) || 0;
+        const safeDiscount = Math.min(Math.max(0, discount), orderTotal);
+        return Math.max(0, orderTotal - safeDiscount);
+      }
+
       // Update split count
       function updateSplit(delta) {
         const tip = parseFloat(document.getElementById("tip").value) || 0;
-        const totalWithTip = orderTotal + tip;
+        const totalWithTip = getEffectiveOrderTotal() + tip;
 
         splitCount = Math.max(1, Math.min(10, splitCount + delta));
         document.getElementById("split-count").textContent = splitCount;
@@ -898,7 +973,7 @@
       // Calculate change
       function calculateChange() {
         const tip = parseFloat(document.getElementById("tip").value) || 0;
-        const totalWithTip = orderTotal + tip;
+        const totalWithTip = getEffectiveOrderTotal() + tip;
         const received =
           parseFloat(document.getElementById("amount-received").value) || 0;
         const change = Math.max(0, received - totalWithTip);
@@ -922,9 +997,9 @@
         document.getElementById("paymentMethodInput").value = method;
       }
 
-      // Set tip percentage
+      // Set tip percentage (calculated on the EFFECTIVE total, post-discount)
       function setTipPercentage(event, percentage) {
-        const tipAmount = (orderTotal * percentage) / 100;
+        const tipAmount = (getEffectiveOrderTotal() * percentage) / 100;
         document.getElementById("tip").value = tipAmount.toFixed(2);
 
         // Update button states
@@ -944,6 +1019,28 @@
         }
       }
 
+      // Sanitize and clamp the order discount input, then refresh totals.
+      function onOrderDiscountInput(input) {
+        if (input.value.includes(".")) {
+          const parts = input.value.split(".");
+          if (parts[1].length > 2) {
+            input.value = parts[0] + "." + parts[1].slice(0, 2);
+          }
+        }
+        let value = parseFloat(input.value);
+        if (isNaN(value) || value < 0) {
+          value = 0;
+          input.value = "0";
+        }
+        const max = Math.min(orderTotal, 999999.99);
+        if (value > max) {
+          value = max;
+          input.value = max.toFixed(2);
+        }
+        input.dataset.prev = input.value;
+        calculateTotalWithTip();
+      }
+
       function calculateTotalWithTip() {
         const tipInput = document.getElementById("tip");
         const tip = parseFloat(tipInput.value) || 0;
@@ -953,7 +1050,11 @@
           return;
         }
 
-        const totalWithTip = orderTotal + tip;
+        const discountInput = document.getElementById("orderDiscount");
+        const discountRaw = parseFloat(discountInput.value) || 0;
+        const discount = Math.min(Math.max(0, discountRaw), orderTotal);
+        const effectiveTotal = Math.max(0, orderTotal - discount);
+        const totalWithTip = effectiveTotal + tip;
 
         // Update all displays
         const totalText = "$" + totalWithTip.toFixed(2);
@@ -965,6 +1066,21 @@
         updateElementText("tip-amount", tipText);
         updateElementText("tipDisplay", tipText);
         updateElementText("tip-summary", tipText);
+
+        // Discount line in summary
+        const discountLine = document.getElementById("order-discount-line");
+        const discountSummary = document.getElementById(
+          "order-discount-summary"
+        );
+        if (discountLine && discountSummary) {
+          if (discount > 0) {
+            discountLine.style.display = "";
+            discountSummary.textContent = "-$" + discount.toFixed(2);
+          } else {
+            discountLine.style.display = "none";
+            discountSummary.textContent = "-$0.00";
+          }
+        }
 
         // Update split amount
         const perPerson = (totalWithTip / splitCount).toFixed(2);
@@ -1002,7 +1118,14 @@
           // Confirm payment
           e.preventDefault();
           const tip = parseFloat(document.getElementById("tip").value) || 0;
-          const totalWithTip = orderTotal + tip;
+          const orderDiscountVal =
+            parseFloat(document.getElementById("orderDiscount").value) || 0;
+          const safeOrderDiscount = Math.min(
+            Math.max(0, orderDiscountVal),
+            orderTotal,
+          );
+          const effectiveTotal = Math.max(0, orderTotal - safeOrderDiscount);
+          const totalWithTip = effectiveTotal + tip;
 
           // Get payment method name (extract only text, ignore icon)
           const paymentMethodBtn = document.querySelector(
@@ -1025,6 +1148,13 @@
               <p class="text-base"><strong>Total del pedido:</strong> $${orderTotal.toFixed(
                 2,
               )}</p>
+              ${
+                safeOrderDiscount > 0
+                  ? `<p class="text-base text-orange-600"><strong>Descuento aplicado:</strong> -$${safeOrderDiscount.toFixed(
+                      2,
+                    )}</p>`
+                  : ""
+              }
               ${
                 tip > 0
                   ? `<p class="text-base"><strong>Propina:</strong> $${tip.toFixed(

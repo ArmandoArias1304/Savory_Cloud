@@ -249,7 +249,11 @@ public class TicketEscPosService {
         BigDecimal total = order.getTotal();
 
         out.write(ALIGN_RIGHT);
-        printTotalLine(out, "Subtotal:", order.getFormattedSubtotal(), false);
+        printTotalLine(out, "Subtotal:", order.getFormattedDisplaySubtotal(), false);
+
+        if (order.hasOrderDiscount()) {
+            printTotalLine(out, "Descuento de orden:", "-" + order.getFormattedOrderDiscountWithoutTax(), false);
+        }
 
         printTotalLine(out, "IVA (" + order.getTaxRate() + "%):", "$" + taxAmount.toString(), false);
 
@@ -268,17 +272,22 @@ public class TicketEscPosService {
         out.write(FONT_B);
         printLine(out, totalEnLetra(total));
 
-        // Nota informativa: descuento por promoción (incluido en subtotal/IVA)
-        if (order.hasDiscount()) {
-            printLine(out, "Incluye descuento por promocion de " + order.getFormattedDiscountWithTax());
-        }
-
-        // Nota informativa: del total, cuánto fue envío (DELIVERY only)
+        // Nota informativa: del total, cuánto fue envío (DELIVERY only) — primer lugar
         if (order.getOrderType() == OrderType.DELIVERY
                 && order.getDeliveryCost() != null
                 && order.getDeliveryCost().compareTo(BigDecimal.ZERO) > 0) {
             BigDecimal envioGross = order.getDeliveryCost().setScale(2, RoundingMode.HALF_UP);
-            printLine(out, "Incluye $" + envioGross.toPlainString() + " de envio a domicilio");
+            printLine(out, "Incluye costo de envio de $" + envioGross.toPlainString());
+        }
+
+        // Nota informativa: descuento por promoción (incluido en subtotal/IVA) — segundo lugar
+        if (order.hasDiscount()) {
+            printLine(out, "Incluye descuento por promocion de " + order.getFormattedDiscountWithTax());
+        }
+
+        // Nota informativa: descuento aplicado al total de la orden (incluye IVA)
+        if (order.hasOrderDiscount()) {
+            printLine(out, "Descuento aplicado de " + order.getFormattedOrderDiscount());
         }
         out.write(FONT_A);
 

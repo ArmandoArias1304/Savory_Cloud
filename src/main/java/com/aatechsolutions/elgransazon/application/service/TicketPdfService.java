@@ -415,10 +415,15 @@ public class TicketPdfService {
                 totalsTable.setWidth(UnitValue.createPercentValue(100));
                 totalsTable.setBorder(Border.NO_BORDER);
 
-                // Subtotal: ya incluye envío y descuento (= order.getSubtotal()).
-                addTotalRow(totalsTable, "Subtotal:", order.getFormattedSubtotal(), normalFont, boldFont, false);
+                // Subtotal: sin IVA, ANTES del descuento de orden (incluye envío sin IVA y descuento por promoción).
+                addTotalRow(totalsTable, "Subtotal:", order.getFormattedDisplaySubtotal(), normalFont, boldFont, false);
 
-                // IVA total (incluye IVA de envío, post-descuento)
+                // Descuento de orden sin IVA (cuando aplica). Aparece debajo del Subtotal y por encima del IVA.
+                if (order.hasOrderDiscount()) {
+                    addTotalRow(totalsTable, "Descuento de orden:", "-" + order.getFormattedOrderDiscountWithoutTax(), normalFont, boldFont, false);
+                }
+
+                // IVA total (incluye IVA de envío y el IVA del descuento de orden permanece dentro de esta línea)
                 addTotalRow(totalsTable, "IVA (" + order.getTaxRate() + "%):", "$" + taxAmount.toString(), normalFont, boldFont, false);
 
                 // Total (bold) - sin propina
@@ -440,7 +445,20 @@ public class TicketPdfService {
                 .setMarginBottom(3);
         document.add(totalEnLetraParagraph);
 
-        // Nota informativa: descuento por promoción (incluido en subtotal/IVA)
+        // Nota informativa: del total, cuánto fue envío (DELIVERY only) — primer lugar
+        if (order.getOrderType() == OrderType.DELIVERY
+                && order.getDeliveryCost() != null
+                && order.getDeliveryCost().compareTo(BigDecimal.ZERO) > 0) {
+            BigDecimal envioGross = order.getDeliveryCost().setScale(2, RoundingMode.HALF_UP);
+            Paragraph envioNote = new Paragraph("Incluye costo de envío de $" + envioGross.toPlainString())
+                    .setFont(normalFont)
+                    .setFontSize(7)
+                    .setTextAlignment(TextAlignment.CENTER)
+                    .setMarginTop(2);
+            document.add(envioNote);
+        }
+
+        // Nota informativa: descuento por promoción (incluido en subtotal/IVA) — segundo lugar
         if (order.hasDiscount()) {
             Paragraph descuentoNote = new Paragraph("Incluye descuento por promoción de " + order.getFormattedDiscountWithTax())
                     .setFont(normalFont)
@@ -450,17 +468,14 @@ public class TicketPdfService {
             document.add(descuentoNote);
         }
 
-        // Nota informativa: del total, cuánto fue envío (DELIVERY only)
-        if (order.getOrderType() == OrderType.DELIVERY
-                && order.getDeliveryCost() != null
-                && order.getDeliveryCost().compareTo(BigDecimal.ZERO) > 0) {
-            BigDecimal envioGross = order.getDeliveryCost().setScale(2, RoundingMode.HALF_UP);
-            Paragraph envioNote = new Paragraph("Incluye $" + envioGross.toPlainString() + " de envío a domicilio")
+        // Nota informativa: descuento aplicado al total de la orden (incluye IVA)
+        if (order.hasOrderDiscount()) {
+            Paragraph orderDiscountNote = new Paragraph("Descuento aplicado de " + order.getFormattedOrderDiscount())
                     .setFont(normalFont)
                     .setFontSize(7)
                     .setTextAlignment(TextAlignment.CENTER)
                     .setMarginTop(2);
-            document.add(envioNote);
+            document.add(orderDiscountNote);
         }
 
         // Order type and payment method in one line

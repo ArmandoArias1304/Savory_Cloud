@@ -692,18 +692,25 @@
             </div>
 
             <div class="space-y-3">
-              <!-- Subtotal (ya incluye envío y descuento por promoción, consistente con CFDI) -->
+              <!-- Subtotal sin IVA, ANTES del descuento de orden (incluye envío sin IVA y descuento por promoción) -->
               <div class="flex justify-between items-center">
                 <span class="text-sm text-gray-600 dark:text-gray-400"
                   >Subtotal:</span
                 >
                 <span
                   class="font-semibold text-gray-900 dark:text-white"
-                  th:text="${order.getFormattedSubtotal()}"
+                  th:text="${order.getFormattedDisplaySubtotal()}"
                 ></span>
               </div>
 
-              <!-- IVA (incluye IVA del envío) -->
+              <!-- Descuento de orden sin IVA (debajo del Subtotal) -->
+              <div th:if="${order.hasOrderDiscount()}" class="flex justify-between items-center">
+                <span class="text-sm text-gray-600 dark:text-gray-400">Descuento de orden:</span>
+                <span class="font-semibold text-red-600 dark:text-red-400"
+                      th:text="'-' + ${order.getFormattedOrderDiscountWithoutTax()}"></span>
+              </div>
+
+              <!-- IVA (incluye IVA del envío y el IVA del descuento de orden permanece dentro de esta línea) -->
               <div class="flex justify-between items-center">
                 <span class="text-sm text-gray-600 dark:text-gray-400">
                   Impuesto (<span th:text="${order.taxRate}">0</span>%):
@@ -727,6 +734,16 @@
                 ></span>
               </div>
 
+              <!-- Nota informativa de envío (después del TOTAL) -->
+              <div
+                th:if="${order.orderType != null and order.orderType.name() == 'DELIVERY' and order.deliveryCost != null and order.deliveryCost.compareTo(T(java.math.BigDecimal).ZERO) > 0}"
+                class="flex justify-end items-center gap-1 text-xs text-gray-500 dark:text-gray-400 italic"
+              >
+                <span class="material-symbols-outlined text-sm">local_shipping</span>
+                <span>Incluye costo de envío de </span>
+                <span th:text="'$' + ${#numbers.formatDecimal(order.deliveryCost, 1, 2)}">$0.00</span>
+              </div>
+
               <!-- Nota informativa de descuento por promoción (después del TOTAL) -->
               <div
                 th:if="${order.hasDiscount()}"
@@ -737,15 +754,14 @@
                 <span th:text="${order.formattedDiscountWithTax}">$0.00</span>
               </div>
 
-              <!-- Nota informativa de envío (después del TOTAL) -->
+              <!-- Nota informativa de descuento aplicado al total (incluye IVA) -->
               <div
-                th:if="${order.orderType != null and order.orderType.name() == 'DELIVERY' and order.deliveryCost != null and order.deliveryCost.compareTo(T(java.math.BigDecimal).ZERO) > 0}"
+                th:if="${order.hasOrderDiscount()}"
                 class="flex justify-end items-center gap-1 text-xs text-gray-500 dark:text-gray-400 italic"
               >
-                <span class="material-symbols-outlined text-sm">local_shipping</span>
-                <span>Incluye </span>
-                <span th:text="'$' + ${#numbers.formatDecimal(order.deliveryCost, 1, 2)}">$0.00</span>
-                <span> de envío a domicilio</span>
+                <span class="material-symbols-outlined text-sm">sell</span>
+                <span>Descuento aplicado de </span>
+                <span th:text="${order.formattedOrderDiscount}">$0.00</span>
               </div>
             </div>
           </div>
