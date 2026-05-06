@@ -842,8 +842,8 @@ public class ClientController {
                 return "redirect:/client/orders";
             }
 
-            // Validate order can accept new items
-            if (!order.canAcceptNewItems()) {
+            // Validate order can accept new items (customer-side rules)
+            if (!order.canCustomerAcceptNewItems()) {
                 redirectAttributes.addFlashAttribute("errorMessage", 
                     String.format("No se pueden agregar items a este pedido. Tipo: %s, Estado: %s",
                         order.getOrderType().getDisplayName(),
@@ -948,8 +948,8 @@ public class ClientController {
                 ));
             }
 
-            // Validate order can accept new items
-            if (!order.canAcceptNewItems()) {
+            // Validate order can accept new items (customer-side rules)
+            if (!order.canCustomerAcceptNewItems()) {
                 return ResponseEntity.badRequest().body(Map.of(
                     "success", false,
                     "message", String.format("No se pueden agregar items a este pedido. Tipo: %s, Estado: %s",

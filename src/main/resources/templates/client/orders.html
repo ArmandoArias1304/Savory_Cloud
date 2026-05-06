@@ -486,7 +486,7 @@
 
                     <!-- Agregar Items (only for DINE_IN and TAKEOUT orders that can accept new items) -->
                     <a
-                      th:if="${order.canAcceptNewItems()}"
+                      th:if="${order.canCustomerAcceptNewItems()}"
                       th:href="@{/client/orders/{id}/add-items(id=${order.idOrder})}"
                       class="inline-flex items-center gap-1 px-4 py-2 bg-orange-100 hover:bg-orange-200 dark:bg-orange-900/30 dark:hover:bg-orange-900/50 text-orange-700 dark:text-orange-300 rounded-lg font-semibold transition-all text-sm"
                       title="Agregar más items al pedido"

@@ -256,8 +256,9 @@ public class CustomerOrderServiceImpl implements OrderService {
         Order order = findByIdOrThrow(orderId);
         validateOrderOwnership(order);
         
-        // Validate order can accept new items (uses canAcceptNewItems() which checks order type and status)
-        if (!order.canAcceptNewItems()) {
+        // Validate order can accept new items - customers have stricter rules than staff
+        // (e.g. TAKEOUT cannot accept new items once DELIVERED on the customer side).
+        if (!order.canCustomerAcceptNewItems()) {
             throw new IllegalStateException(
                 String.format("No se pueden agregar items a este pedido. Tipo: %s, Estado: %s",
                     order.getOrderType().getDisplayName(),

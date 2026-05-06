@@ -691,7 +691,7 @@
             <div class="space-y-3">
               <!-- Add Items Button (only for DINE_IN and TAKEOUT orders that can accept new items) -->
               <a
-                th:if="${order.canAcceptNewItems()}"
+                th:if="${order.canCustomerAcceptNewItems()}"
                 th:href="@{/client/orders/{id}/add-items(id=${order.idOrder})}"
                 class="flex items-center justify-center gap-2 w-full px-4 py-3 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold transition-all shadow-md hover:shadow-lg"
               >

@@ -1012,13 +1012,15 @@ public class Order implements Serializable {
                    this.status == OrderStatus.DELIVERED;
         }
         
-        // TAKEOUT orders can accept new items only until READY
-        // Once DELIVERED (customer picked it up), they can't add more items
+        // TAKEOUT orders (staff perspective): can accept new items even after DELIVERED.
+        // The customer may return to the counter and request additional items before paying.
+        // Customer-side restriction (cannot add once DELIVERED) lives in canCustomerAcceptNewItems().
         if (this.orderType == OrderType.TAKEOUT) {
             return this.status == OrderStatus.TO_ACCEPT ||
                    this.status == OrderStatus.PENDING ||
                    this.status == OrderStatus.IN_PREPARATION ||
-                   this.status == OrderStatus.READY;
+                   this.status == OrderStatus.READY ||
+                   this.status == OrderStatus.DELIVERED;
         }
         
         // DELIVERY orders can accept new items only until READY
@@ -1032,6 +1034,22 @@ public class Order implements Serializable {
         }
         
         return false;
+    }
+
+    /**
+     * Customer-side variant of {@link #canAcceptNewItems()}.
+     * Stricter than the staff method: for TAKEOUT, customers cannot add more items
+     * once the order has been DELIVERED (they already picked it up). All other rules
+     * are the same as {@link #canAcceptNewItems()}.
+     */
+    public boolean canCustomerAcceptNewItems() {
+        if (this.orderType == OrderType.TAKEOUT) {
+            return this.status == OrderStatus.TO_ACCEPT ||
+                   this.status == OrderStatus.PENDING ||
+                   this.status == OrderStatus.IN_PREPARATION ||
+                   this.status == OrderStatus.READY;
+        }
+        return canAcceptNewItems();
     }
 
     /**
