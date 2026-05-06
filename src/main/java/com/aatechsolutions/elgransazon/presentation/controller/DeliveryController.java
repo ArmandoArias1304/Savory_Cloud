@@ -539,13 +539,13 @@ public class DeliveryController {
             java.time.LocalDateTime startOfDay = today.atStartOfDay();
             java.time.LocalDateTime endOfDay = today.atTime(java.time.LocalTime.MAX);
             
-            // Today's orders
+            // Today's orders (filter by deliveredAt: when this delivery actually completed it)
             List<Order> todaysOrders = allOrders.stream()
                     .filter(order -> {
-                        java.time.LocalDateTime createdAt = order.getCreatedAt();
-                        return createdAt != null && 
-                               !createdAt.isBefore(startOfDay) && 
-                               !createdAt.isAfter(endOfDay);
+                        java.time.LocalDateTime deliveredAt = order.getDeliveredAt();
+                        return deliveredAt != null &&
+                               !deliveredAt.isBefore(startOfDay) &&
+                               !deliveredAt.isAfter(endOfDay);
                     })
                     .collect(Collectors.toList());
             
@@ -600,9 +600,11 @@ public class DeliveryController {
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
             
             // Last 7 days statistics
-            java.util.Map<String, Long> last7DaysOrders = new java.util.HashMap<>();
-            java.util.Map<String, BigDecimal> last7DaysRevenue = new java.util.HashMap<>();
-            java.util.Map<String, BigDecimal> last7DaysTips = new java.util.HashMap<>();
+            // LinkedHashMap preserves insertion order so the chart labels/data stay
+            // chronological (oldest -> today) instead of being shuffled by HashMap.
+            java.util.Map<String, Long> last7DaysOrders = new java.util.LinkedHashMap<>();
+            java.util.Map<String, BigDecimal> last7DaysRevenue = new java.util.LinkedHashMap<>();
+            java.util.Map<String, BigDecimal> last7DaysTips = new java.util.LinkedHashMap<>();
             
             java.time.format.DateTimeFormatter formatter = java.time.format.DateTimeFormatter.ofPattern("dd/MM");
             
@@ -615,10 +617,10 @@ public class DeliveryController {
                 
                 List<Order> dayOrders = allOrders.stream()
                         .filter(order -> {
-                            java.time.LocalDateTime createdAt = order.getCreatedAt();
-                            return createdAt != null && 
-                                   !createdAt.isBefore(dayStart) && 
-                                   !createdAt.isAfter(dayEnd);
+                            java.time.LocalDateTime deliveredAt = order.getDeliveredAt();
+                            return deliveredAt != null &&
+                                   !deliveredAt.isBefore(dayStart) &&
+                                   !deliveredAt.isAfter(dayEnd);
                         })
                         .collect(Collectors.toList());
                 

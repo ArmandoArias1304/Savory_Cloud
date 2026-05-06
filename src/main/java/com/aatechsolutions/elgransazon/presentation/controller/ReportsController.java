@@ -122,6 +122,17 @@ public class ReportsController {
             .reduce(BigDecimal.ZERO, BigDecimal::add);
         long totalDeliveryOrders = deliveryOrders.size();
 
+        // Order discount totals (orders with orderDiscount > 0)
+        // orderDiscount already includes IVA (applied to total at payment time)
+        List<Order> discountedOrders = paidOrders.stream()
+            .filter(o -> o.getOrderDiscount() != null
+                && o.getOrderDiscount().compareTo(BigDecimal.ZERO) > 0)
+            .collect(Collectors.toList());
+        BigDecimal totalOrderDiscount = discountedOrders.stream()
+            .map(Order::getOrderDiscount)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+        long totalDiscountedOrders = discountedOrders.size();
+
         // Total item-only sales (sum of category sales, excludes complements)
         BigDecimal totalItemSales = salesByCategory.values().stream()
             .reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -137,6 +148,8 @@ public class ReportsController {
         model.addAttribute("totalComplementsSales", totalComplementsSales);
         model.addAttribute("totalDeliveryCost", totalDeliveryCost);
         model.addAttribute("totalDeliveryOrders", totalDeliveryOrders);
+        model.addAttribute("totalOrderDiscount", totalOrderDiscount);
+        model.addAttribute("totalDiscountedOrders", totalDiscountedOrders);
         model.addAttribute("startDate", startDate);
         model.addAttribute("endDate", endDate);
 
@@ -546,18 +559,15 @@ public class ReportsController {
                 paidOrders = filterByDateRange(paidOrders, startDate, endDate);
             }
 
-            // Exclude customer-created orders (web orders)
-            List<Order> employeeOrders = paidOrders.stream()
-                .filter(o -> o.getEmployee() != null && o.getCustomer() == null)
-                .collect(Collectors.toList());
-
-            // Calculate statistics (excluding web orders)
-            BigDecimal totalSales = calculateTotalSales(employeeOrders);
-            List<Map<String, Object>> salesByEmployee = calculateSalesByEmployee(employeeOrders);
+            // Include ALL paid orders (employee-created AND customer-created/web orders).
+            // Customer orders are still cobradas by admin/cashier and prepared/delivered by
+            // chef/barista/delivery employees, so they must be counted in the report.
+            BigDecimal totalSales = calculateTotalSales(paidOrders);
+            List<Map<String, Object>> salesByEmployee = calculateSalesByEmployee(paidOrders);
 
             // Generate PDF
             byte[] pdfBytes = reportPdfService.generateEmployeesReport(
-                employeeOrders, startDate, endDate, salesByEmployee, totalSales
+                paidOrders, startDate, endDate, salesByEmployee, totalSales
             );
 
             // Prepare response

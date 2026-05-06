@@ -288,30 +288,10 @@
 
       <!-- CHARTS SECTION -->
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 mb-8">
-        <!-- ORDERS STATUS CHART (Donut) -->
-        <div
-          class="rounded-3xl bg-white dark:bg-gray-900 shadow-xl p-6 sm:p-8 border border-gray-200 dark:border-gray-800 animate-fadeInUp"
-          style="animation-delay: 0.3s"
-        >
-          <div class="mb-6">
-            <h2
-              class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-2"
-            >
-              Estado de Pedidos (Total)
-            </h2>
-            <p class="text-sm text-gray-600 dark:text-gray-400">
-              Distribución por estado de todos tus pedidos
-            </p>
-          </div>
-          <div class="chart-container">
-            <canvas id="ordersStatusChart"></canvas>
-          </div>
-        </div>
-
         <!-- TODAY ORDERS STATUS CHART (Donut) -->
         <div
           class="rounded-3xl bg-white dark:bg-gray-900 shadow-xl p-6 sm:p-8 border border-gray-200 dark:border-gray-800 animate-fadeInUp"
-          style="animation-delay: 0.35s"
+          style="animation-delay: 0.3s"
         >
           <div class="mb-6">
             <h2
@@ -325,6 +305,26 @@
           </div>
           <div class="chart-container">
             <canvas id="todayOrdersStatusChart"></canvas>
+          </div>
+        </div>
+
+        <!-- ORDERS STATUS CHART (Donut) -->
+        <div
+          class="rounded-3xl bg-white dark:bg-gray-900 shadow-xl p-6 sm:p-8 border border-gray-200 dark:border-gray-800 animate-fadeInUp"
+          style="animation-delay: 0.35s"
+        >
+          <div class="mb-6">
+            <h2
+              class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-2"
+            >
+              Estado de Pedidos (Total)
+            </h2>
+            <p class="text-sm text-gray-600 dark:text-gray-400">
+              Distribución por estado de todos tus pedidos
+            </p>
+          </div>
+          <div class="chart-container">
+            <canvas id="ordersStatusChart"></canvas>
           </div>
         </div>
 

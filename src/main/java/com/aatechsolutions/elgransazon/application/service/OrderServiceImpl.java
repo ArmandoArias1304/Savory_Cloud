@@ -580,7 +580,7 @@ public class OrderServiceImpl implements OrderService {
         if (!order.getStatus().canBeCancelled()) {
             throw new IllegalStateException(
                 String.format("No se puede cancelar un pedido con estado: %s. " +
-                             "Solo se pueden cancelar pedidos en estados: PENDING, IN_PREPARATION, READY",
+                             "Solo se pueden cancelar pedidos en estados: POR ACEPTAR, PENDIENTE, EN PREPARACIÓN O LISTO",
                               order.getStatus().getDisplayName())
             );
         }
@@ -991,7 +991,14 @@ public class OrderServiceImpl implements OrderService {
         order.recalculateAmounts();
 
         // Update order status based on items
+        OrderStatus oldOrderStatus = order.getStatus();
         order.updateStatusFromItems();
+        // Track timestamp if adding items pushes the whole order into READY
+        // (e.g., all new items are no-prep and existing items were already READY).
+        if (oldOrderStatus != OrderStatus.READY && order.getStatus() == OrderStatus.READY
+                && order.getPreparedAt() == null) {
+            order.setPreparedAt(LocalDateTime.now());
+        }
 
         // Set audit fields
         order.setUpdatedBy(username);
@@ -1086,6 +1093,13 @@ public class OrderServiceImpl implements OrderService {
         // Track timestamp when order becomes READY
         if (oldOrderStatus != OrderStatus.READY && newOrderStatus == OrderStatus.READY) {
             order.setPreparedAt(LocalDateTime.now());
+        }
+
+        // Track timestamp when order becomes DELIVERED (e.g., waiter/cashier marks the
+        // last remaining item as DELIVERED and the whole order auto-transitions).
+        if (oldOrderStatus != OrderStatus.DELIVERED && newOrderStatus == OrderStatus.DELIVERED
+                && order.getDeliveredAt() == null) {
+            order.setDeliveredAt(LocalDateTime.now());
         }
 
         // Set audit fields
@@ -2336,8 +2350,21 @@ public class OrderServiceImpl implements OrderService {
 
         // Recalculate order status based on remaining items
         if (!order.getOrderDetails().isEmpty()) {
+            OrderStatus oldOrderStatus = order.getStatus();
             OrderStatus newOrderStatus = order.calculateStatusFromItems();
             order.setStatus(newOrderStatus);
+            // Track timestamp when order transitions to READY as a side effect of
+            // deleting items that were holding it back (e.g., last PENDING item removed).
+            if (oldOrderStatus != OrderStatus.READY && newOrderStatus == OrderStatus.READY
+                    && order.getPreparedAt() == null) {
+                order.setPreparedAt(LocalDateTime.now());
+            }
+            // Same protection for DELIVERED: deleting the last non-DELIVERED item can
+            // promote the order to DELIVERED without going through changeStatus().
+            if (oldOrderStatus != OrderStatus.DELIVERED && newOrderStatus == OrderStatus.DELIVERED
+                    && order.getDeliveredAt() == null) {
+                order.setDeliveredAt(LocalDateTime.now());
+            }
             log.info("Order status recalculated to: {}", newOrderStatus);
         } else {
             log.warn("Order {} now has no items after deletion", orderId);

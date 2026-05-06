@@ -448,12 +448,15 @@ public class ChefController {
             LocalDateTime endOfDay = dateTimeService.endOfDayUtc(today);
             
             // Today's orders prepared by this chef/barista
+            // Filter by preparedAt (when the order was actually marked READY) so the
+            // dashboard reflects the chef/barista's real workload for the day,
+            // regardless of when the order was originally created.
             List<Order> todaysOrders = allOrders.stream()
                     .filter(order -> {
-                        LocalDateTime createdAt = order.getCreatedAt();
-                        return createdAt != null && 
-                               !createdAt.isBefore(startOfDay) && 
-                               !createdAt.isAfter(endOfDay);
+                        LocalDateTime preparedAt = order.getPreparedAt();
+                        return preparedAt != null &&
+                               !preparedAt.isBefore(startOfDay) &&
+                               !preparedAt.isAfter(endOfDay);
                     })
                     .toList();
             
@@ -486,10 +489,10 @@ public class ChefController {
                 
                 long dayOrders = allOrders.stream()
                         .filter(order -> {
-                            LocalDateTime createdAt = order.getCreatedAt();
-                            return createdAt != null && 
-                                   !createdAt.isBefore(dayStart) && 
-                                   !createdAt.isAfter(dayEnd);
+                            LocalDateTime preparedAt = order.getPreparedAt();
+                            return preparedAt != null &&
+                                   !preparedAt.isBefore(dayStart) &&
+                                   !preparedAt.isAfter(dayEnd);
                         })
                         .count();
                 

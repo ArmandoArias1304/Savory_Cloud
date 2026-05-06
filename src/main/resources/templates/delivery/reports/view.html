@@ -189,14 +189,14 @@
               Panel de Reportes
             </h1>
             <p class="text-sm sm:text-base text-gray-600 dark:text-gray-400">
-              Estadísticas y análisis de tu desempeño
+              Análisis y estadísticas de tu desempeño
             </p>
           </div>
         </div>
       </div>
 
       <!-- STATISTICS CARDS -->
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 mb-8">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 mb-8">
         <!-- Today Orders -->
         <div
           class="stat-card rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg p-6 animate-fadeInUp"
@@ -216,28 +216,6 @@
               0
             </p>
             <p class="text-white/80 text-sm">Pedidos</p>
-          </div>
-        </div>
-
-        <!-- Today Revenue -->
-        <div
-          class="stat-card rounded-2xl bg-gradient-to-br from-green-500 to-green-600 shadow-lg p-6 animate-fadeInUp"
-          style="animation-delay: 0.15s"
-        >
-          <div class="flex flex-col">
-            <div class="flex items-center justify-between mb-3">
-              <span class="material-symbols-outlined text-white/80 text-3xl">
-                payments
-              </span>
-              <span class="text-white/80 text-xs font-medium">HOY</span>
-            </div>
-            <p
-              class="text-2xl sm:text-3xl font-bold text-white mb-1"
-              th:text="${#numbers.formatCurrency(todayRevenue)}"
-            >
-              $0.00
-            </p>
-            <p class="text-white/80 text-sm">Ingresos</p>
           </div>
         </div>
 
@@ -262,56 +240,14 @@
             <p class="text-white/80 text-sm">Pedidos</p>
           </div>
         </div>
-
-        <!-- Total Revenue -->
-        <div
-          class="stat-card rounded-2xl bg-gradient-to-br from-primary to-primary-dark shadow-lg p-6 animate-fadeInUp"
-          style="animation-delay: 0.25s"
-        >
-          <div class="flex flex-col">
-            <div class="flex items-center justify-between mb-3">
-              <span class="material-symbols-outlined text-white/80 text-3xl">
-                account_balance_wallet
-              </span>
-              <span class="text-white/80 text-xs font-medium">TOTAL</span>
-            </div>
-            <p
-              class="text-2xl sm:text-3xl font-bold text-white mb-1"
-              th:text="${#numbers.formatCurrency(totalRevenue)}"
-            >
-              $0.00
-            </p>
-            <p class="text-white/80 text-sm">Ingresos</p>
-          </div>
-        </div>
       </div>
 
       <!-- CHARTS SECTION -->
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 mb-8">
-        <!-- ORDERS STATUS CHART (Donut) -->
-        <div
-          class="rounded-3xl bg-white dark:bg-gray-900 shadow-xl p-6 sm:p-8 border border-gray-200 dark:border-gray-800 animate-fadeInUp"
-          style="animation-delay: 0.3s"
-        >
-          <div class="mb-6">
-            <h2
-              class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-2"
-            >
-              Estado de Pedidos (Total)
-            </h2>
-            <p class="text-sm text-gray-600 dark:text-gray-400">
-              Distribución por estado de todos tus pedidos
-            </p>
-          </div>
-          <div class="chart-container">
-            <canvas id="ordersStatusChart"></canvas>
-          </div>
-        </div>
-
         <!-- TODAY ORDERS STATUS CHART (Donut) -->
         <div
           class="rounded-3xl bg-white dark:bg-gray-900 shadow-xl p-6 sm:p-8 border border-gray-200 dark:border-gray-800 animate-fadeInUp"
-          style="animation-delay: 0.35s"
+          style="animation-delay: 0.3s"
         >
           <div class="mb-6">
             <h2
@@ -325,6 +261,26 @@
           </div>
           <div class="chart-container">
             <canvas id="todayOrdersStatusChart"></canvas>
+          </div>
+        </div>
+
+        <!-- ORDERS STATUS CHART (Donut) -->
+        <div
+          class="rounded-3xl bg-white dark:bg-gray-900 shadow-xl p-6 sm:p-8 border border-gray-200 dark:border-gray-800 animate-fadeInUp"
+          style="animation-delay: 0.35s"
+        >
+          <div class="mb-6">
+            <h2
+              class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-2"
+            >
+              Estado de Pedidos (Total)
+            </h2>
+            <p class="text-sm text-gray-600 dark:text-gray-400">
+              Distribución por estado de todos tus pedidos
+            </p>
+          </div>
+          <div class="chart-container">
+            <canvas id="ordersStatusChart"></canvas>
           </div>
         </div>
 
@@ -348,29 +304,9 @@
           </div>
         </div>
 
-        <!-- LAST 7 DAYS REVENUE (Bar Chart) -->
-        <div
-          class="rounded-3xl bg-white dark:bg-gray-900 shadow-xl p-6 sm:p-8 border border-gray-200 dark:border-gray-800 animate-fadeInUp"
-          style="animation-delay: 0.45s"
-        >
-          <div class="mb-6">
-            <h2
-              class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-2"
-            >
-              Ingresos Últimos 7 Días
-            </h2>
-            <p class="text-sm text-gray-600 dark:text-gray-400">
-              Comparativa de ingresos diarios
-            </p>
-          </div>
-          <div class="chart-container">
-            <canvas id="last7DaysRevenueChart"></canvas>
-          </div>
-        </div>
-
         <!-- TIPS CHART (Bar Chart) -->
         <div
-          class="rounded-3xl bg-white dark:bg-gray-900 shadow-xl p-6 sm:p-8 border border-gray-200 dark:border-gray-800 animate-fadeInUp lg:col-span-2"
+          class="rounded-3xl bg-white dark:bg-gray-900 shadow-xl p-6 sm:p-8 border border-gray-200 dark:border-gray-800 animate-fadeInUp"
           style="animation-delay: 0.5s"
         >
           <div class="mb-6">
@@ -400,24 +336,6 @@
             Promedios por Pedido
           </h3>
           <div class="space-y-4">
-            <div
-              class="flex items-center justify-between p-4 rounded-xl bg-gray-50 dark:bg-gray-800"
-            >
-              <div class="flex items-center gap-3">
-                <span class="material-symbols-outlined text-primary text-2xl">
-                  monetization_on
-                </span>
-                <span class="text-gray-700 dark:text-gray-300 font-medium"
-                  >Ingreso Promedio</span
-                >
-              </div>
-              <span
-                class="text-xl font-bold text-gray-900 dark:text-white"
-                th:text="${#numbers.formatCurrency(averageRevenue)}"
-              >
-                $0.00
-              </span>
-            </div>
             <div
               class="flex items-center justify-between p-4 rounded-xl bg-gray-50 dark:bg-gray-800"
             >
@@ -694,53 +612,6 @@
               beginAtZero: true,
               ticks: {
                 stepSize: 1,
-              },
-            },
-          },
-        },
-      });
-
-      // Last 7 Days Revenue Chart (Bar)
-      const last7DaysRevenueCtx = document
-        .getElementById("last7DaysRevenueChart")
-        .getContext("2d");
-      new Chart(last7DaysRevenueCtx, {
-        type: "bar",
-        data: {
-          labels: last7DaysLabels,
-          datasets: [
-            {
-              label: "Ingresos",
-              data: last7DaysRevenueData,
-              backgroundColor: "rgba(34, 197, 94, 0.8)",
-              borderColor: "#22c55e",
-              borderWidth: 1,
-              borderRadius: 8,
-            },
-          ],
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              display: false,
-            },
-            tooltip: {
-              callbacks: {
-                label: function (context) {
-                  return "Ingresos: $" + context.parsed.y.toFixed(2);
-                },
-              },
-            },
-          },
-          scales: {
-            y: {
-              beginAtZero: true,
-              ticks: {
-                callback: function (value) {
-                  return "$" + value.toFixed(2);
-                },
               },
             },
           },

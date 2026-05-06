@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="es" xmlns:th="http://www.thymeleaf.org">
   <head>
     <meta charset="utf-8" />
@@ -277,10 +277,9 @@
                 Detalles del Pedido:
               </h4>
               <div class="space-y-1">
-                <!-- FILTER: Chef sees items with requiresPreparation, Barista sees items with requiresBaristaPreparation -->
+                <!-- Show all items in the order (history view) -->
                 <div
                   th:each="detail : ${order.orderDetails}"
-                  th:if="${isBarista ? (detail.itemMenu.requiresBaristaPreparation == true) : (detail.itemMenu.requiresPreparation == true)}"
                   class="py-4 border-b border-gray-100 dark:border-gray-700 flex flex-col gap-2 last:border-b-0"
                 >
                   <div class="flex items-center justify-between w-full gap-2">
