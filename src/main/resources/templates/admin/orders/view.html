@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="es" xmlns:th="http://www.thymeleaf.org">
   <head>
     <meta charset="utf-8" />
@@ -542,7 +542,7 @@
                       <td class="py-2 px-3 text-center">
                         <span
                           class="inline-flex items-center justify-center w-8 h-8 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 rounded-full font-medium text-xs"
-                          th:text="${comp.complement.isSauce != null && comp.complement.isSauce ? comp.quantity * detail.quantity : comp.quantity}"
+                          th:text="${comp.quantity}"
                         >
                         </span>
                       </td>
@@ -555,7 +555,7 @@
                       </td>
                       <td
                         class="py-2 px-3 text-right text-sm font-medium text-purple-700 dark:text-purple-300"
-                        th:text="${comp.complement.isSauce != null && comp.complement.isSauce ? '$' + #numbers.formatDecimal(comp.subtotal * detail.quantity, 1, 2) : comp.getFormattedSubtotal()}"
+                        th:text="${comp.getFormattedSubtotal()}"
                       ></td>
                       <td class="py-2 px-3 text-center no-print">
                         <!-- Delete Complement Button (same restrictions as item) -->

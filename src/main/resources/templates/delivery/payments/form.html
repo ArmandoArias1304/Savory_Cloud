@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html xmlns:th="http://www.thymeleaf.org" lang="es">
   <head>
     <meta charset="UTF-8" />
@@ -694,12 +694,12 @@
                     <span class="material-symbols-outlined text-xs">add_circle</span>
                     <span class="text-xs" th:text="${comp.complement.name}"></span>
                     <span class="text-gray-500 dark:text-gray-400 text-xs ml-1">
-                      x<span th:text="${comp.complement.isSauce != null && comp.complement.isSauce ? comp.quantity * detail.quantity : comp.quantity}"></span>
+                      x<span th:text="${comp.quantity}"></span>
                     </span>
                   </div>
                   <span
                     class="text-xs font-medium text-purple-600 dark:text-purple-400"
-                    th:text="${comp.complement.isSauce != null && comp.complement.isSauce ? '$' + #numbers.formatDecimal(comp.subtotal * detail.quantity, 1, 2) : comp.getFormattedSubtotal()}"
+                    th:text="${comp.getFormattedSubtotal()}"
                   ></span>
                 </div>
               </div>

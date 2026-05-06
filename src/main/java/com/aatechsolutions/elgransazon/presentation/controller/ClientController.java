@@ -684,21 +684,21 @@ public class ClientController {
                                 ") para el item '" + itemMenu.getName() + "'.");
                         }
                         
-                        // Validate stock - for sauces, multiply by item quantity (per-serving)
-                        // For non-sauces, use complement quantity as-is
-                        int totalComplementQuantity = Boolean.TRUE.equals(complement.getIsSauce())
+                        // Compute effective qty (sauce → per-serving × item qty; non-sauce → as-is)
+                        // and persist that effective value so stored quantity is the real total.
+                        int effectiveCompQty = Boolean.TRUE.equals(complement.getIsSauce())
                             ? compQuantity * quantity
                             : compQuantity;
-                        if (!complement.hasEnoughStock(totalComplementQuantity)) {
+                        if (!complement.hasEnoughStock(effectiveCompQty)) {
                             throw new IllegalStateException(
                                 "Stock insuficiente para el complemento '" + complement.getName() + "'");
                         }
                         
-                        // Create OrderDetailComplement
+                        // Create OrderDetailComplement with effective qty
                         OrderDetailComplement odc = OrderDetailComplement.builder()
                             .orderDetail(detail)
                             .complement(complement)
-                            .quantity(compQuantity)
+                            .quantity(effectiveCompQty)
                             .unitPrice(complement.getExtraPrice())
                             .stockDeducted(false)
                             .build();
@@ -706,8 +706,8 @@ public class ClientController {
                         
                         orderDetailComplements.add(odc);
                         
-                        log.debug("Added complement '{}' x{} to item '{}' - unit price: {}, subtotal: {}", 
-                            complement.getName(), compQuantity, itemMenu.getName(), 
+                        log.debug("Added complement '{}' x{} (effective: {}) to item '{}' - unit price: {}, subtotal: {}",
+                            complement.getName(), compQuantity, effectiveCompQty, itemMenu.getName(),
                             odc.getUnitPrice(), odc.getSubtotal());
                     }
                     
@@ -1144,21 +1144,21 @@ public class ClientController {
                                 ") para el item '" + itemMenu.getName() + "'.");
                         }
                         
-                        // Validate stock - for sauces, multiply by item quantity (per-serving)
-                        // For non-sauces, use complement quantity as-is
-                        int totalComplementQuantity = Boolean.TRUE.equals(complement.getIsSauce())
+                        // Compute effective qty (sauce → per-serving × item qty; non-sauce → as-is)
+                        // and persist that effective value so stored quantity is the real total.
+                        int effectiveCompQty = Boolean.TRUE.equals(complement.getIsSauce())
                             ? compQuantity * quantity
                             : compQuantity;
-                        if (!complement.hasEnoughStock(totalComplementQuantity)) {
+                        if (!complement.hasEnoughStock(effectiveCompQty)) {
                             throw new IllegalStateException(
                                 "Stock insuficiente para el complemento '" + complement.getName() + "'");
                         }
                         
-                        // Create OrderDetailComplement
+                        // Create OrderDetailComplement with effective qty
                         OrderDetailComplement odc = OrderDetailComplement.builder()
                             .orderDetail(detail)
                             .complement(complement)
-                            .quantity(compQuantity)
+                            .quantity(effectiveCompQty)
                             .unitPrice(complement.getExtraPrice())
                             .stockDeducted(false)
                             .build();
@@ -1166,8 +1166,8 @@ public class ClientController {
                         
                         orderDetailComplements.add(odc);
                         
-                        log.debug("Added complement '{}' x{} to item '{}' - unit price: {}, subtotal: {}", 
-                            complement.getName(), compQuantity, itemMenu.getName(), 
+                        log.debug("Added complement '{}' x{} (effective: {}) to item '{}' - unit price: {}, subtotal: {}",
+                            complement.getName(), compQuantity, effectiveCompQty, itemMenu.getName(),
                             odc.getUnitPrice(), odc.getSubtotal());
                     }
                     
@@ -2175,12 +2175,12 @@ public class ClientController {
                                         ") para el item '" + childItem.getName() + "'.");
                                 }
                                 
-                                // Validate stock - for sauces, multiply by child qty (per-serving)
-                                // For non-sauces, use complement quantity as-is
-                                int totalComplementQty = Boolean.TRUE.equals(complement.getIsSauce())
+                                // Compute effective qty (sauce → per-serving × child qty; non-sauce → as-is)
+                                // and persist that effective value as the real total.
+                                int effectiveCompQty = Boolean.TRUE.equals(complement.getIsSauce())
                                     ? compQuantity * childQty
                                     : compQuantity;
-                                if (!complement.hasEnoughStock(totalComplementQty)) {
+                                if (!complement.hasEnoughStock(effectiveCompQty)) {
                                     throw new IllegalStateException(
                                         "Stock insuficiente para el complemento '" + complement.getName() + "'.");
                                 }
@@ -2188,7 +2188,7 @@ public class ClientController {
                                 OrderDetailComplement odc = OrderDetailComplement.builder()
                                         .orderDetail(childDetail)
                                         .complement(complement)
-                                        .quantity(compQuantity)
+                                        .quantity(effectiveCompQty)
                                         .unitPrice(complement.getExtraPrice())
                                         .stockDeducted(false)
                                         .build();

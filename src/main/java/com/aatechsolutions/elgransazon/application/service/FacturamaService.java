@@ -235,12 +235,10 @@ public class FacturamaService {
                         if (compPrice == null || compPrice.compareTo(BigDecimal.ZERO) <= 0) {
                             continue;
                         }
-                        // For sauces, quantity is per-serving; multiply by item qty for effective total
+                        // OrderDetailComplement.quantity is already the effective qty
+                        // (sauces are pre-multiplied by item qty at insert time).
                         int effectiveQty = comp.getQuantity();
-                        if (Boolean.TRUE.equals(comp.getComplement().getIsSauce())) {
-                            effectiveQty = effectiveQty * detail.getQuantity();
-                        }
-                        BigDecimal compLineTotal = compPrice.multiply(BigDecimal.valueOf(effectiveQty));
+                        BigDecimal compLineTotal = comp.getSubtotal();
                         candidateLines.add(new CfdiLine("Complemento - " + comp.getComplement().getName(),
                                 effectiveQty, compLineTotal, PROD_CODE_RESTAURANT));
                     }

@@ -2775,19 +2775,24 @@ public class OrderController {
                                 ") para el item '" + item.getName() + "'.");
                         }
                         
-                        // Validate stock availability for complement (multiply by item quantity)
-                        int totalComplementQuantity = compQuantity * quantity;
-                        if (!complement.hasEnoughStock(totalComplementQuantity)) {
+                        // Compute effective quantity: sauces are per-serving (×item quantity),
+                        // non-sauces are absolute. We persist the EFFECTIVE quantity so the stored
+                        // value is the real total of complement portions consumed by the customer.
+                        // This decouples historical orders from later toggles of Complement.isSauce.
+                        int effectiveCompQty = Boolean.TRUE.equals(complement.getIsSauce())
+                            ? compQuantity * quantity
+                            : compQuantity;
+                        if (!complement.hasEnoughStock(effectiveCompQty)) {
                             throw new IllegalStateException(
                                 "Stock insuficiente para el complemento '" + complement.getName() + 
-                                "'. Se requieren " + totalComplementQuantity + " porciones.");
+                                "'. Se requieren " + effectiveCompQty + " porciones.");
                         }
                         
-                        // Create OrderDetailComplement
+                        // Create OrderDetailComplement with effective quantity (subtotal computed from it)
                         OrderDetailComplement odc = OrderDetailComplement.builder()
                             .orderDetail(detail)
                             .complement(complement)
-                            .quantity(compQuantity)
+                            .quantity(effectiveCompQty)
                             .unitPrice(complement.getExtraPrice())
                             .stockDeducted(false)
                             .build();
@@ -2795,13 +2800,11 @@ public class OrderController {
                         
                         orderDetailComplements.add(odc);
                         
-                        // Add to total (multiplied by item quantity)
-                        complementsTotal = complementsTotal.add(
-                            odc.getSubtotal().multiply(BigDecimal.valueOf(quantity))
-                        );
+                        // Subtotal is already the real total — no further multiplication needed
+                        complementsTotal = complementsTotal.add(odc.getSubtotal());
                         
-                        log.debug("Added complement '{}' x{} to item '{}' - unit price: {}, subtotal: {}", 
-                            complement.getName(), compQuantity, item.getName(), 
+                        log.debug("Added complement '{}' x{} (effective: {}) to item '{}' - unit price: {}, subtotal: {}",
+                            complement.getName(), compQuantity, effectiveCompQty, item.getName(),
                             odc.getUnitPrice(), odc.getSubtotal());
                     }
                     
@@ -2894,19 +2897,21 @@ public class OrderController {
                     ") para el item '" + item.getName() + "'.");
             }
             
-            // For sauces, multiply by item quantity (sauces are per-serving)
-            // For non-sauces, use complement quantity as-is
-            int totalComplementQty = Boolean.TRUE.equals(complement.getIsSauce()) 
-                ? compQuantity * itemQuantity 
+            // Compute effective quantity: sauces are per-serving (×item quantity),
+            // non-sauces are absolute. We persist the EFFECTIVE quantity so storage already
+            // represents the real total of complement portions. This keeps stock, totals,
+            // tickets and reports independent of any later toggle of Complement.isSauce.
+            int effectiveCompQty = Boolean.TRUE.equals(complement.getIsSauce())
+                ? compQuantity * itemQuantity
                 : compQuantity;
-            if (!complement.hasEnoughStock(totalComplementQty)) {
+            if (!complement.hasEnoughStock(effectiveCompQty)) {
                 throw new IllegalStateException("Stock insuficiente para el complemento '" + complement.getName() + "'.");
             }
             
             OrderDetailComplement odc = OrderDetailComplement.builder()
                 .orderDetail(detail)
                 .complement(complement)
-                .quantity(compQuantity)
+                .quantity(effectiveCompQty)
                 .unitPrice(complement.getExtraPrice())
                 .stockDeducted(false)
                 .build();

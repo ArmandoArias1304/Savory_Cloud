@@ -218,15 +218,8 @@ public class TicketEscPosService {
             if (detail.getSelectedComplements() != null && !detail.getSelectedComplements().isEmpty()) {
                 for (OrderDetailComplement odc : detail.getSelectedComplements()) {
                     String compName = "+ " + odc.getComplement().getName();
-                    // For sauces, multiply by parent item quantity
-                    int effectiveQty = odc.getQuantity();
-                    BigDecimal effectiveTotal = odc.getSubtotal();
-                    if (Boolean.TRUE.equals(odc.getComplement().getIsSauce())) {
-                        effectiveQty = effectiveQty * detail.getQuantity();
-                        effectiveTotal = effectiveTotal.multiply(BigDecimal.valueOf(detail.getQuantity()));
-                    }
-                    String compQty = String.valueOf(effectiveQty);
-                    String compTotal = "$" + effectiveTotal.setScale(2, RoundingMode.HALF_UP).toPlainString();
+                    String compQty = String.valueOf(odc.getQuantity());
+                    String compTotal = "$" + odc.getSubtotal().setScale(2, RoundingMode.HALF_UP).toPlainString();
 
                     String indent = isComboChild ? "    " : "  ";
                     if (hasPromotions) {

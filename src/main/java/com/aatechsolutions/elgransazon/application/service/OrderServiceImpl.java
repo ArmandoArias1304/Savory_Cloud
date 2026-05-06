@@ -1491,12 +1491,9 @@ public class OrderServiceImpl implements OrderService {
                 for (OrderDetailComplement odc : detail.getSelectedComplements()) {
                     Complement complement = odc.getComplement();
                     if (complement != null) {
-                        // For sauces, multiply by parent item quantity (sauces are per-serving)
-                        int effectiveQty = odc.getQuantity();
-                        if (Boolean.TRUE.equals(complement.getIsSauce())) {
-                            effectiveQty = odc.getQuantity() * detail.getQuantity();
-                        }
-                        if (!complement.hasEnoughStock(effectiveQty)) {
+                        // Stored quantity is already the real total (sauce multiplication
+                        // applied at insert time), so use it directly.
+                        if (!complement.hasEnoughStock(odc.getQuantity())) {
                             // Use negative ID to distinguish complement errors from item errors
                             errors.put(-complement.getIdComplement(), complement.getName());
                         }
@@ -1712,15 +1709,11 @@ public class OrderServiceImpl implements OrderService {
                 // Use the service with pessimistic locking for each ingredient
                 Complement complement = odc.getComplement();
                 if (complement.getIngredients() != null && !complement.getIngredients().isEmpty()) {
-                    // For sauces, multiply by parent item quantity (sauces are per-serving)
-                    // For non-sauces, use the complement quantity as-is
-                    int effectiveQty = odc.getQuantity();
-                    if (Boolean.TRUE.equals(complement.getIsSauce())) {
-                        effectiveQty = odc.getQuantity() * detail.getQuantity();
-                    }
+                    // Stored quantity is already the real total (sauce multiplication
+                    // was applied at insert time). Use it directly for stock deduction.
                     complementStockService.deductStockForComplement(
                         new ArrayList<>(complement.getIngredients()), 
-                        effectiveQty
+                        odc.getQuantity()
                     );
                 }
                 
@@ -1734,9 +1727,8 @@ public class OrderServiceImpl implements OrderService {
                 complement.updateAvailability();
                 complementRepository.save(complement);
                 
-                log.debug("Stock deducted for complement: {} (quantity: {}, effective: {})", 
-                         complement.getName(), odc.getQuantity(),
-                         Boolean.TRUE.equals(complement.getIsSauce()) ? odc.getQuantity() * detail.getQuantity() : odc.getQuantity());
+                log.debug("Stock deducted for complement: {} (quantity: {})",
+                         complement.getName(), odc.getQuantity());
             } catch (IllegalStateException e) {
                 log.error("Error deducting stock for complement {}: {}", 
                          odc.getComplement().getName(), e.getMessage());
@@ -1822,15 +1814,10 @@ public class OrderServiceImpl implements OrderService {
                 // Use the service with pessimistic locking for each ingredient
                 Complement complement = odc.getComplement();
                 if (complement.getIngredients() != null && !complement.getIngredients().isEmpty()) {
-                    // For sauces, multiply by parent item quantity (sauces are per-serving)
-                    // For non-sauces, use the complement quantity as-is
-                    int effectiveQty = odc.getQuantity();
-                    if (Boolean.TRUE.equals(complement.getIsSauce())) {
-                        effectiveQty = odc.getQuantity() * detail.getQuantity();
-                    }
+                    // Stored quantity is already the real total — use it directly
                     complementStockService.returnStockForComplement(
                         new ArrayList<>(complement.getIngredients()), 
-                        effectiveQty
+                        odc.getQuantity()
                     );
                 }
                 
@@ -1842,9 +1829,8 @@ public class OrderServiceImpl implements OrderService {
                 complement.updateAvailability();
                 complementRepository.save(complement);
                 
-                log.debug("Stock returned for complement: {} (quantity: {}, effective: {})", 
-                         complement.getName(), odc.getQuantity(),
-                         Boolean.TRUE.equals(complement.getIsSauce()) ? odc.getQuantity() * detail.getQuantity() : odc.getQuantity());
+                log.debug("Stock returned for complement: {} (quantity: {})",
+                         complement.getName(), odc.getQuantity());
             } catch (IllegalStateException e) {
                 log.error("Error returning stock for complement {}: {}", 
                          odc.getComplement().getName(), e.getMessage());
@@ -2484,14 +2470,10 @@ public class OrderServiceImpl implements OrderService {
                 if (Boolean.TRUE.equals(complementToDelete.getStockDeducted())) {
                     Complement complement = complementToDelete.getComplement();
                     if (complement.getIngredients() != null && !complement.getIngredients().isEmpty()) {
-                        // For sauces, multiply by parent item quantity (sauces are per-serving)
-                        int effectiveQty = complementToDelete.getQuantity();
-                        if (Boolean.TRUE.equals(complement.getIsSauce())) {
-                            effectiveQty = complementToDelete.getQuantity() * itemDetail.getQuantity();
-                        }
+                        // Stored quantity is already the real total — use it directly
                         complementStockService.returnStockForComplement(
                             new ArrayList<>(complement.getIngredients()), 
-                            effectiveQty
+                            complementToDelete.getQuantity()
                         );
                     }
                     
@@ -2499,9 +2481,8 @@ public class OrderServiceImpl implements OrderService {
                     complement.updateAvailability();
                     complementRepository.save(complement);
                     
-                    log.info("Stock returned automatically for complement '{}' (quantity: {}, effective: {})", 
-                            complement.getName(), complementToDelete.getQuantity(),
-                            Boolean.TRUE.equals(complement.getIsSauce()) ? complementToDelete.getQuantity() * itemDetail.getQuantity() : complementToDelete.getQuantity());
+                    log.info("Stock returned automatically for complement '{}' (quantity: {})",
+                            complement.getName(), complementToDelete.getQuantity());
                 }
             } catch (Exception e) {
                 log.error("Error returning stock for complement '{}': {}", 

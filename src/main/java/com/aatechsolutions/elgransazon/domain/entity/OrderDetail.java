@@ -368,27 +368,18 @@ public class OrderDetail implements Serializable {
     }
 
     /**
-     * Calculate total price of all selected complements
-     * For sauce complements (isSauce=true), subtotal is multiplied by item quantity
-     * since sauces are per-serving (one sauce per each unit of the item)
-     * @return Sum of all complement subtotals (with sauce multiplication)
+     * Calculate total price of all selected complements.
+     * The stored {@link OrderDetailComplement#getSubtotal()} is already the real
+     * monetary subtotal for the line (sauce multiplication is performed at insert
+     * time, not at read time), so we simply sum.
+     * @return Sum of all complement subtotals
      */
     public BigDecimal getComplementsTotal() {
         if (selectedComplements == null || selectedComplements.isEmpty()) {
             return BigDecimal.ZERO;
         }
-
-        int itemQty = this.quantity != null ? this.quantity : 1;
-
         return selectedComplements.stream()
-                .map(odc -> {
-                    BigDecimal compSubtotal = odc.getSubtotal() != null ? odc.getSubtotal() : BigDecimal.ZERO;
-                    // For sauces, multiply by item quantity (sauces are per-serving)
-                    if (odc.getComplement() != null && Boolean.TRUE.equals(odc.getComplement().getIsSauce())) {
-                        compSubtotal = compSubtotal.multiply(BigDecimal.valueOf(itemQty));
-                    }
-                    return compSubtotal;
-                })
+                .map(odc -> odc.getSubtotal() != null ? odc.getSubtotal() : BigDecimal.ZERO)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 

@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="es" xmlns:th="http://www.thymeleaf.org">
   <head>
     <meta charset="utf-8" />
@@ -570,7 +570,7 @@
                         <div class="flex items-center gap-2">
                           <span
                             class="inline-flex items-center justify-center w-6 h-6 bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 rounded-full text-xs font-bold"
-                            th:text="${comp.complement.isSauce != null && comp.complement.isSauce ? comp.quantity * detail.quantity : comp.quantity}"
+                            th:text="${comp.quantity}"
                             >1</span
                           >
                           <span
@@ -582,7 +582,7 @@
                         <div class="flex items-center gap-3">
                           <span
                             class="text-sm font-semibold text-purple-600 dark:text-purple-400"
-                            th:text="${comp.complement.isSauce != null && comp.complement.isSauce ? '$' + #numbers.formatDecimal(comp.subtotal * detail.quantity, 1, 2) : '$' + #numbers.formatDecimal(comp.subtotal, 1, 2)}"
+                            th:text="${'$' + #numbers.formatDecimal(comp.subtotal, 1, 2)}"
                             >$0.00</span
                           >
                           <!-- Delete complement button -->
@@ -593,7 +593,7 @@
                             th:data-item-id="${detail.idOrderDetail}"
                             th:data-complement-id="${comp.idOrderDetailComplement}"
                             th:data-complement-name="${comp.complement.name}"
-                            th:data-complement-quantity="${comp.complement.isSauce != null && comp.complement.isSauce ? comp.quantity * detail.quantity : comp.quantity}"
+                            th:data-complement-quantity="${comp.quantity}"
                             title="Eliminar complemento"
                           >
                             <span class="material-symbols-outlined text-base"

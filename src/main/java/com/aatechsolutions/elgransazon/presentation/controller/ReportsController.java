@@ -347,9 +347,8 @@ public class ReportsController {
      * Groups all OrderDetailComplements by complement name, sums quantities and subtotals
      * Includes complements from ALL order details (including combo children)
      * NOTE: Complement prices already include IVA
-     * NOTE: Sauce complements (isSauce=true) have their stored subtotal and quantity
-     *       multiplied by the OrderDetail.quantity (item quantity) because sauces are per-serving.
-     *       Example: Combo qty=2 → Hamburguesa child qty=4 → sauce stored qty=1, real qty=1×4=4
+     * NOTE: Stored quantity and subtotal are already the real totals — sauce multiplication
+     *       is applied at insert time, not here.
      */
     private List<Map<String, Object>> calculateTopSellingComplements(List<Order> orders, int limit) {
         Map<Long, Map<String, Object>> complementSales = new HashMap<>();
@@ -359,7 +358,6 @@ public class ReportsController {
                 if (detail.getSelectedComplements() == null) {
                     continue;
                 }
-                int itemQty = detail.getQuantity() != null ? detail.getQuantity() : 1;
 
                 for (OrderDetailComplement odc : detail.getSelectedComplements()) {
                     Long complementId = odc.getComplement().getIdComplement();
@@ -377,12 +375,6 @@ public class ReportsController {
                     int compQty = odc.getQuantity();
                     BigDecimal compSubtotal = odc.getSubtotal() != null ? odc.getSubtotal() : BigDecimal.ZERO;
                     BigDecimal unitPrice = odc.getUnitPrice() != null ? odc.getUnitPrice() : BigDecimal.ZERO;
-
-                    // Sauces are per-serving: multiply by item quantity
-                    if (odc.getComplement() != null && Boolean.TRUE.equals(odc.getComplement().getIsSauce())) {
-                        compQty = compQty * itemQty;
-                        compSubtotal = compSubtotal.multiply(BigDecimal.valueOf(itemQty));
-                    }
 
                     int currentQty = (int) data.get("quantity");
                     data.put("quantity", currentQty + compQty);
@@ -410,9 +402,9 @@ public class ReportsController {
     }
 
     /**
-     * Calculate total complement sales across all orders
-     * Uses the same sauce multiplication logic as getComplementsTotal():
-     * sauce subtotal × item quantity, non-sauce subtotal as-is
+     * Calculate total complement sales across all orders.
+     * Stored subtotal is already the real monetary value (sauce multiplication
+     * applied at insert time), so we simply sum.
      * NOTE: Complement prices already include IVA
      */
     private BigDecimal calculateTotalComplementsSales(List<Order> orders) {
@@ -422,14 +414,8 @@ public class ReportsController {
                 if (detail.getSelectedComplements() == null) {
                     continue;
                 }
-                int itemQty = detail.getQuantity() != null ? detail.getQuantity() : 1;
-
                 for (OrderDetailComplement odc : detail.getSelectedComplements()) {
                     BigDecimal compSubtotal = odc.getSubtotal() != null ? odc.getSubtotal() : BigDecimal.ZERO;
-                    // Sauces are per-serving: multiply by item quantity
-                    if (odc.getComplement() != null && Boolean.TRUE.equals(odc.getComplement().getIsSauce())) {
-                        compSubtotal = compSubtotal.multiply(BigDecimal.valueOf(itemQty));
-                    }
                     total = total.add(compSubtotal);
                 }
             }

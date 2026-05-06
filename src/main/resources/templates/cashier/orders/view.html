@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="es" xmlns:th="http://www.thymeleaf.org">
   <head>
     <meta charset="utf-8" />
@@ -540,16 +540,12 @@
                         </div>
                       </td>
                       <td class="py-2 px-3 text-center">
-                        <span
-                          class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300"
-                        >
-                          Complemento
-                        </span>
+                        <span class="text-gray-400 dark:text-gray-600">-</span>
                       </td>
                       <td class="py-2 px-3 text-center">
                         <span
                           class="inline-flex items-center justify-center w-8 h-8 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 rounded-full font-semibold text-xs"
-                          th:text="${comp.complement.isSauce != null && comp.complement.isSauce ? comp.quantity * detail.quantity : comp.quantity}"
+                          th:text="${comp.quantity}"
                         ></span>
                       </td>
                       <td
@@ -563,7 +559,7 @@
                       </td>
                       <td
                         class="py-2 px-3 text-right text-sm font-medium text-purple-700 dark:text-purple-300"
-                        th:text="${comp.complement.isSauce != null && comp.complement.isSauce ? '$' + #numbers.formatDecimal(comp.subtotal * detail.quantity, 1, 2) : '$' + #numbers.formatDecimal(comp.subtotal, 1, 2)}"
+                        th:text="'$' + ${#numbers.formatDecimal(comp.subtotal, 1, 2)}"
                       ></td>
                       <td class="py-2 px-3 text-center no-print">
                         <button
@@ -574,7 +570,7 @@
                           th:data-item-id="${detail.idOrderDetail}"
                           th:data-complement-id="${comp.idOrderDetailComplement}"
                           th:data-complement-name="${comp.complement.name}"
-                          th:data-complement-quantity="${comp.complement.isSauce != null && comp.complement.isSauce ? comp.quantity * detail.quantity : comp.quantity}"
+                          th:data-complement-quantity="${comp.quantity}"
                           title="Eliminar complemento"
                         >
                           <i class="fas fa-times text-xs"></i>

@@ -338,13 +338,8 @@ public class TicketPdfService {
                 for (OrderDetailComplement odc : detail.getSelectedComplements()) {
                     String complementName = "  + " + odc.getComplement().getName();
                     Integer compQuantity = odc.getQuantity();
-                    BigDecimal compTotal = odc.getSubtotal(); // unitPrice × quantity
-                    // For sauces, multiply by parent item quantity
-                    if (Boolean.TRUE.equals(odc.getComplement().getIsSauce())) {
-                        compQuantity = compQuantity * detail.getQuantity();
-                        compTotal = compTotal.multiply(BigDecimal.valueOf(detail.getQuantity()));
-                    }
-                    
+                    BigDecimal compTotal = odc.getSubtotal();
+
                     // Complement name cell (indented, extra for combo children)
                     Cell compNameCell = new Cell()
                             .add(new Paragraph(complementName)
@@ -654,7 +649,7 @@ public class TicketPdfService {
     /**
      * Add a row to the totals table with a specific color
      */
-    private void addTotalRowColored(Table table, String label, String value, PdfFont valueFont, PdfFont labelFont, boolean isBold, com.itextpdf.kernel.colors.Color color) {
+    /*private void addTotalRowColored(Table table, String label, String value, PdfFont valueFont, PdfFont labelFont, boolean isBold, com.itextpdf.kernel.colors.Color color) {
         int fontSize = isBold ? 10 : 8;
         
         Cell labelCell = new Cell()
@@ -677,7 +672,7 @@ public class TicketPdfService {
         
         table.addCell(labelCell);
         table.addCell(valueCell);
-    }
+    }*/
 
     /**
      * Convert a BigDecimal amount to Mexican legal text format.

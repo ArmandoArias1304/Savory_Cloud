@@ -75,9 +75,33 @@ public class ComplementService {
         existing.setDescription(updated.getDescription());
         existing.setExtraPrice(updated.getExtraPrice());
         existing.setActive(updated.getActive());
-        existing.setIsSauce(updated.getIsSauce() != null ? updated.getIsSauce() : false);
-        
-        log.info("Updated complement '{}' - isSauce: {}", existing.getName(), existing.getIsSauce());
+
+        boolean wasSauce = Boolean.TRUE.equals(existing.getIsSauce());
+        boolean nowSauce = updated.getIsSauce() != null && updated.getIsSauce();
+        existing.setIsSauce(nowSauce);
+
+        log.info("Updated complement '{}' - isSauce: {} (was: {})", existing.getName(), nowSauce, wasSauce);
+
+        // When a complement transitions to sauce, force maxQuantity = 1 on every
+        // ItemMenuComplement association. Sauces are per-serving (1 portion per item
+        // unit), so allowing maxQuantity > 1 would let the customer pick invalid
+        // multiples of the same sauce per item.
+        if (nowSauce && !wasSauce) {
+            List<ItemMenuComplement> associations = itemMenuComplementRepository
+                    .findByComplementIdComplement(existing.getIdComplement());
+            int clamped = 0;
+            for (ItemMenuComplement imc : associations) {
+                if (imc.getMaxQuantity() == null || imc.getMaxQuantity() > 1) {
+                    imc.setMaxQuantity(1);
+                    itemMenuComplementRepository.save(imc);
+                    clamped++;
+                }
+            }
+            if (clamped > 0) {
+                log.info("Clamped maxQuantity to 1 on {} item-menu association(s) after marking complement '{}' as sauce",
+                        clamped, existing.getName());
+            }
+        }
         
         // Update availability based on ingredient stock
         existing.updateAvailability();
@@ -430,6 +454,14 @@ public class ComplementService {
         if (maxQuantity != null) {
             if (maxQuantity < 1) {
                 throw new IllegalArgumentException("La cantidad máxima debe ser al menos 1");
+            }
+            // Sauces are per-serving — only one portion of each sauce per item unit.
+            if (imc.getComplement() != null
+                    && Boolean.TRUE.equals(imc.getComplement().getIsSauce())
+                    && maxQuantity > 1) {
+                log.info("Forcing maxQuantity to 1 for sauce complement '{}' (was {})",
+                        imc.getComplement().getName(), maxQuantity);
+                maxQuantity = 1;
             }
             imc.setMaxQuantity(maxQuantity);
         }

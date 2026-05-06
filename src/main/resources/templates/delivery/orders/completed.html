@@ -301,6 +301,64 @@
                         >Comentarios</span
                       >
                     </p>
+                    <!-- Complements and Sauces -->
+                    <div
+                      th:if="${detail.selectedComplements != null && !detail.selectedComplements.isEmpty()}"
+                      class="mt-1 space-y-0.5"
+                    >
+                      <!-- Sauces -->
+                      <th:block th:each="comp : ${detail.selectedComplements}">
+                        <div
+                          th:if="${comp.complement.isSauce != null && comp.complement.isSauce}"
+                          class="flex items-center gap-1"
+                        >
+                          <span
+                            class="material-symbols-outlined text-blue-500 dark:text-blue-400"
+                            style="font-size: 0.625rem"
+                            >add_circle</span
+                          >
+                          <span
+                            class="text-[10px] text-blue-700 dark:text-blue-300 font-medium"
+                            th:text="${comp.complement.name}"
+                          ></span>
+                          <span
+                            class="text-[10px] text-gray-500 dark:text-gray-400"
+                            th:text="'x' + ${comp.quantity}"
+                          ></span>
+                          <span
+                            th:if="${comp.subtotal != null and comp.subtotal.compareTo(T(java.math.BigDecimal).ZERO) > 0}"
+                            class="text-[10px] text-gray-500 dark:text-gray-400"
+                            th:text="'(' + ${#numbers.formatCurrency(comp.subtotal)} + ')'"
+                          ></span>
+                        </div>
+                      </th:block>
+                      <!-- Regular Complements -->
+                      <th:block th:each="comp : ${detail.selectedComplements}">
+                        <div
+                          th:if="${comp.complement.isSauce == null || !comp.complement.isSauce}"
+                          class="flex items-center gap-1"
+                        >
+                          <span
+                            class="material-symbols-outlined text-purple-500 dark:text-purple-400"
+                            style="font-size: 0.625rem"
+                            >add_circle</span
+                          >
+                          <span
+                            class="text-[10px] text-purple-700 dark:text-purple-300 font-medium"
+                            th:text="${comp.complement.name}"
+                          ></span>
+                          <span
+                            class="text-[10px] text-gray-500 dark:text-gray-400"
+                            th:text="'x' + ${comp.quantity}"
+                          ></span>
+                          <span
+                            th:if="${comp.subtotal != null and comp.subtotal.compareTo(T(java.math.BigDecimal).ZERO) > 0}"
+                            class="text-[10px] text-gray-500 dark:text-gray-400"
+                            th:text="'(' + ${#numbers.formatCurrency(comp.subtotal)} + ')'"
+                          ></span>
+                        </div>
+                      </th:block>
+                    </div>
                   </div>
                   <span
                     class="text-xs font-bold flex-shrink-0"
