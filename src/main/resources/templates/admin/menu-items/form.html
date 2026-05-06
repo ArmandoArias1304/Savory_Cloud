@@ -571,32 +571,51 @@
                     <div class="flex items-start gap-3 sm:gap-4">
                       <div class="hidden sm:block w-10 flex-shrink-0"></div>
                       <div class="flex-1 min-w-0">
-                        <div class="flex items-center gap-3 mb-2">
-                          <input
-                            type="number"
-                            id="maxSauces"
-                            th:field="*{maxSauces}"
-                            min="0"
-                            max="20"
-                            placeholder="Sin límite"
-                            class="w-28 sm:w-32 px-3 sm:px-4 py-2 rounded-xl border border-amber-300 dark:border-amber-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all text-sm"
-                          />
-                          <span class="text-sm text-gray-600 dark:text-gray-400"
+                        <div class="flex flex-wrap items-end gap-3 mb-2">
+                          <div class="flex flex-col">
+                            <label for="minSauces" class="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Mínimo</label>
+                            <input
+                              type="number"
+                              id="minSauces"
+                              th:field="*{minSauces}"
+                              min="0"
+                              max="20"
+                              placeholder="0"
+                              class="w-24 sm:w-28 px-3 sm:px-4 py-2 rounded-xl border border-amber-300 dark:border-amber-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all text-sm"
+                            />
+                          </div>
+                          <div class="flex flex-col">
+                            <label for="maxSauces" class="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Máximo</label>
+                            <input
+                              type="number"
+                              id="maxSauces"
+                              th:field="*{maxSauces}"
+                              min="0"
+                              max="20"
+                              placeholder="Sin límite"
+                              class="w-24 sm:w-28 px-3 sm:px-4 py-2 rounded-xl border border-amber-300 dark:border-amber-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all text-sm"
+                            />
+                          </div>
+                          <span class="text-sm text-gray-600 dark:text-gray-400 pb-2"
                             >salsas/especialidades</span
                           >
                         </div>
+                        <p id="saucesRangeError" class="hidden text-xs text-red-600 dark:text-red-400 font-medium mb-1">
+                          El mínimo no puede ser mayor al máximo.
+                        </p>
                         <p
                           class="text-xs text-amber-700 dark:text-amber-400 mt-2 break-words"
                         >
                           <span class="font-medium">Ejemplo:</span> Si un platillo
-                          de boneless solo permite 2 salsas, ingrese "2".
+                          de boneless solo permite 2 salsas, ingrese "2" en máximo.
                           <br />
                           <span class="font-medium">Vacío o 0:</span> Sin límite
-                          de salsas/especialdades (el cliente puede elegir todas las
-                          disponibles).
+                          (máx) o sin mínimo requerido (mín).
                           <br />
-                          <span class="font-medium">Nota:</span> Este límite solo
-                          aplica a complementos marcados como "salsa o especialidad", no a
+                          <span class="font-medium">Regla:</span> El mínimo no puede ser mayor al máximo cuando ambos son mayores a 0.
+                          <br />
+                          <span class="font-medium">Nota:</span> Estos límites solo
+                          aplican a complementos marcados como "salsa o especialidad", no a
                           complementos regulares.
                         </p>
 
@@ -1500,19 +1519,68 @@
       // Auto-open if field already has a value (edit mode) o si ya hay salsas asociadas
       document.addEventListener("DOMContentLoaded", function () {
         const maxSaucesInput = document.getElementById("maxSauces");
+        const minSaucesInput = document.getElementById("minSauces");
         const initialSnapshot = document.getElementById("saucesInitialSnapshot");
         const hasInitialSauces = !!(initialSnapshot && initialSnapshot.value);
         const hasMaxSauces =
           maxSaucesInput &&
           maxSaucesInput.value &&
           maxSaucesInput.value !== "0";
+        const hasMinSauces =
+          minSaucesInput &&
+          minSaucesInput.value &&
+          minSaucesInput.value !== "0";
 
-        if (hasMaxSauces || hasInitialSauces) {
+        if (hasMaxSauces || hasMinSauces || hasInitialSauces) {
           const content = document.getElementById("maxSaucesContent");
           const chevron = document.getElementById("maxSaucesChevron");
           if (content) content.classList.remove("hidden");
           if (chevron) chevron.style.transform = "rotate(180deg)";
         }
+
+        // ===== Validación frontend: minSauces no puede ser mayor a maxSauces =====
+        const errorEl = document.getElementById("saucesRangeError");
+        function validateSaucesRange() {
+          if (!minSaucesInput || !maxSaucesInput) return true;
+          const minVal = parseInt(minSaucesInput.value, 10);
+          const maxVal = parseInt(maxSaucesInput.value, 10);
+          const minDefined = !isNaN(minVal) && minVal > 0;
+          const maxDefined = !isNaN(maxVal) && maxVal > 0;
+          const invalid = minDefined && maxDefined && minVal > maxVal;
+          if (errorEl) errorEl.classList.toggle("hidden", !invalid);
+          [minSaucesInput, maxSaucesInput].forEach((el) => {
+            el.classList.toggle("border-red-500", invalid);
+            el.classList.toggle("dark:border-red-500", invalid);
+          });
+          if (invalid) {
+            minSaucesInput.setCustomValidity(
+              "El mínimo no puede ser mayor al máximo."
+            );
+          } else {
+            minSaucesInput.setCustomValidity("");
+          }
+          return !invalid;
+        }
+        if (minSaucesInput) minSaucesInput.addEventListener("input", validateSaucesRange);
+        if (maxSaucesInput) maxSaucesInput.addEventListener("input", validateSaucesRange);
+        // Hook into form submit to block invalid combinations
+        const form = (minSaucesInput && minSaucesInput.form) || (maxSaucesInput && maxSaucesInput.form);
+        if (form) {
+          form.addEventListener("submit", function (e) {
+            if (!validateSaucesRange()) {
+              e.preventDefault();
+              if (typeof Swal !== "undefined") {
+                Swal.fire({
+                  icon: "error",
+                  title: "Rango inválido",
+                  text: "El número mínimo de salsas no puede ser mayor al máximo.",
+                });
+              }
+              minSaucesInput && minSaucesInput.focus();
+            }
+          });
+        }
+        validateSaucesRange();
       });
 
       // ========== Selector de Salsas Asociadas ==========

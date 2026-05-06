@@ -640,7 +640,32 @@ public class ClientController {
                 
                 if (itemComplements != null && !itemComplements.isEmpty()) {
                     List<OrderDetailComplement> orderDetailComplements = new ArrayList<>();
-                    
+
+                    // BACKEND VALIDATION: Count selected sauces and validate against min/maxSauces
+                    Integer maxSauces = itemMenu.getMaxSauces();
+                    Integer minSauces = itemMenu.getMinSauces();
+                    int selectedSaucesCount = 0;
+                    for (Map<String, Object> compData : itemComplements) {
+                        if (compData.get("id") == null) continue;
+                        Long cId = Long.valueOf(compData.get("id").toString());
+                        Complement tempComplement = complementRepository.findById(cId).orElse(null);
+                        if (tempComplement != null && Boolean.TRUE.equals(tempComplement.getIsSauce())) {
+                            selectedSaucesCount++;
+                        }
+                    }
+                    if (maxSauces != null && maxSauces > 0 && selectedSaucesCount > maxSauces) {
+                        throw new IllegalArgumentException(
+                            "El item '" + itemMenu.getName() + "' permite máximo " + maxSauces +
+                            " salsa(s) o especialidad(es), pero se seleccionaron " + selectedSaucesCount + ".");
+                    }
+                    if (minSauces != null && minSauces > 0 && selectedSaucesCount < minSauces) {
+                        throw new IllegalArgumentException(
+                            "El item '" + itemMenu.getName() + "' requiere al menos " + minSauces +
+                            " salsa(s) o especialidad(es), pero se seleccionaron " + selectedSaucesCount + ".");
+                    }
+                    log.info("Item '{}' - minSauces: {}, maxSauces: {}, selectedSauces: {}",
+                        itemMenu.getName(), minSauces, maxSauces, selectedSaucesCount);
+
                     for (Map<String, Object> compData : itemComplements) {
                         Long complementId = Long.valueOf(compData.get("id").toString());
                         Integer compQuantity = Integer.valueOf(compData.get("quantity").toString());
@@ -1100,7 +1125,32 @@ public class ClientController {
                 
                 if (itemComplements != null && !itemComplements.isEmpty()) {
                     List<OrderDetailComplement> orderDetailComplements = new ArrayList<>();
-                    
+
+                    // BACKEND VALIDATION: Count selected sauces and validate against min/maxSauces
+                    Integer maxSauces = itemMenu.getMaxSauces();
+                    Integer minSauces = itemMenu.getMinSauces();
+                    int selectedSaucesCount = 0;
+                    for (Map<String, Object> compData : itemComplements) {
+                        if (compData.get("id") == null) continue;
+                        Long cId = Long.valueOf(compData.get("id").toString());
+                        Complement tempComplement = complementRepository.findById(cId).orElse(null);
+                        if (tempComplement != null && Boolean.TRUE.equals(tempComplement.getIsSauce())) {
+                            selectedSaucesCount++;
+                        }
+                    }
+                    if (maxSauces != null && maxSauces > 0 && selectedSaucesCount > maxSauces) {
+                        throw new IllegalArgumentException(
+                            "El item '" + itemMenu.getName() + "' permite máximo " + maxSauces +
+                            " salsa(s) o especialidad(es), pero se seleccionaron " + selectedSaucesCount + ".");
+                    }
+                    if (minSauces != null && minSauces > 0 && selectedSaucesCount < minSauces) {
+                        throw new IllegalArgumentException(
+                            "El item '" + itemMenu.getName() + "' requiere al menos " + minSauces +
+                            " salsa(s) o especialidad(es), pero se seleccionaron " + selectedSaucesCount + ".");
+                    }
+                    log.info("Item '{}' - minSauces: {}, maxSauces: {}, selectedSauces: {}",
+                        itemMenu.getName(), minSauces, maxSauces, selectedSaucesCount);
+
                     for (Map<String, Object> compData : itemComplements) {
                         Long complementId = Long.valueOf(compData.get("id").toString());
                         Integer compQuantity = Integer.valueOf(compData.get("quantity").toString());
@@ -2116,6 +2166,7 @@ public class ClientController {
                         if (childComps != null && !childComps.isEmpty()) {
                             // Validate maxSauces count
                             Integer maxSauces = childItem.getMaxSauces();
+                            Integer minSauces = childItem.getMinSauces();
                             int selectedSaucesCount = 0;
                             for (Map<String, Object> compData : childComps) {
                                 if (compData.get("id") == null) continue;
@@ -2129,6 +2180,11 @@ public class ClientController {
                                 throw new IllegalArgumentException(
                                     "El item '" + childItem.getName() + "' permite máximo " + maxSauces +
                                     " salsa(s), pero se seleccionaron " + selectedSaucesCount + ".");
+                            }
+                            if (minSauces != null && minSauces > 0 && selectedSaucesCount < minSauces) {
+                                throw new IllegalArgumentException(
+                                    "El item '" + childItem.getName() + "' requiere al menos " + minSauces +
+                                    " salsa(s) o especialidad(es), pero se seleccionaron " + selectedSaucesCount + ".");
                             }
                             
                             List<OrderDetailComplement> orderDetailComplements = new ArrayList<>();

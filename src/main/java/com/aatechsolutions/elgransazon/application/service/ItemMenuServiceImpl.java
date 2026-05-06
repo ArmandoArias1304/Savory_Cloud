@@ -42,6 +42,19 @@ public class ItemMenuServiceImpl implements ItemMenuService {
     @PersistenceContext
     private EntityManager entityManager;
 
+    /**
+     * Validates that minSauces does not exceed maxSauces (when both are defined and > 0).
+     * Throws IllegalArgumentException if the range is inconsistent.
+     */
+    private void validateSaucesRange(Integer minSauces, Integer maxSauces) {
+        if (minSauces != null && maxSauces != null
+                && minSauces > 0 && maxSauces > 0
+                && minSauces > maxSauces) {
+            throw new IllegalArgumentException(
+                "El número mínimo de salsas (" + minSauces + ") no puede ser mayor al máximo (" + maxSauces + ").");
+        }
+    }
+
     @Override
     public List<ItemMenu> findAll() {
         log.debug("Fetching all menu items");
@@ -188,6 +201,9 @@ public class ItemMenuServiceImpl implements ItemMenuService {
             item.setAvailable(true);
         }
 
+        // Validate sauces range (min cannot exceed max)
+        validateSaucesRange(item.getMinSauces(), item.getMaxSauces());
+
         // Save the item first
         ItemMenu saved = itemMenuRepository.save(item);
         log.info("Menu item created with ID: {}", saved.getIdItemMenu());
@@ -267,6 +283,8 @@ public class ItemMenuServiceImpl implements ItemMenuService {
         existing.setIsCombo(item.getIsCombo());
         existing.setDineInOnly(item.getDineInOnly());
         existing.setMaxSauces(item.getMaxSauces());
+        existing.setMinSauces(item.getMinSauces());
+        validateSaucesRange(existing.getMinSauces(), existing.getMaxSauces());
         existing.setUpdatedAt(LocalDateTime.now());
 
         // If switching FROM combo to another type, clear combo items

@@ -145,6 +145,16 @@ public class ItemMenu implements Serializable {
     @Column(name = "max_sauces")
     private Integer maxSauces;
 
+    /**
+     * Minimum number of sauces that must be selected for this item.
+     * NULL or 0: No minimum required (the customer can skip sauces).
+     * > 0: The customer must select at least this number of sauces/specialties.
+     * Must be less than or equal to {@link #maxSauces} when maxSauces > 0.
+     */
+    @Min(value = 0, message = "El número mínimo de salsas no puede ser negativo")
+    @Column(name = "min_sauces")
+    private Integer minSauces;
+
     // ========== Availability Schedule ==========
 
     /**

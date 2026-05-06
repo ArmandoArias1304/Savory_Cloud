@@ -2705,8 +2705,9 @@ public class OrderController {
                     BigDecimal complementsTotal = BigDecimal.ZERO;
                     List<OrderDetailComplement> orderDetailComplements = new ArrayList<>();
                     
-                    // BACKEND VALIDATION: Count selected sauces and validate against maxSauces
+                    // BACKEND VALIDATION: Count selected sauces and validate against min/maxSauces
                     Integer maxSauces = item.getMaxSauces();
+                    Integer minSauces = item.getMinSauces();
                     int selectedSaucesCount = 0;
                     
                     // First pass: count sauces to validate limit
@@ -2728,8 +2729,15 @@ public class OrderController {
                             " salsa(s), pero se seleccionaron " + selectedSaucesCount + ".");
                     }
                     
-                    log.info("Item '{}' - maxSauces: {}, selectedSauces: {}", 
-                        item.getName(), maxSauces, selectedSaucesCount);
+                    // Validate sauces count against minSauces limit
+                    if (minSauces != null && minSauces > 0 && selectedSaucesCount < minSauces) {
+                        throw new IllegalArgumentException(
+                            "El item '" + item.getName() + "' requiere al menos " + minSauces + 
+                            " salsa(s) o especialidad(es), pero se seleccionaron " + selectedSaucesCount + ".");
+                    }
+                    
+                    log.info("Item '{}' - minSauces: {}, maxSauces: {}, selectedSauces: {}", 
+                        item.getName(), minSauces, maxSauces, selectedSaucesCount);
                     
                     for (Map<String, Object> compData : selectedComplements) {
                         if (compData.get("id") == null) continue; // skip malformed entries
@@ -2841,6 +2849,7 @@ public class OrderController {
         
         // Count sauces for validation
         Integer maxSauces = item.getMaxSauces();
+        Integer minSauces = item.getMinSauces();
         int selectedSaucesCount = 0;
         
         for (Map<String, Object> compData : selectedComplements) {
@@ -2856,6 +2865,11 @@ public class OrderController {
             throw new IllegalArgumentException(
                 "El item '" + item.getName() + "' permite máximo " + maxSauces + 
                 " salsa(s), pero se seleccionaron " + selectedSaucesCount + ".");
+        }
+        if (minSauces != null && minSauces > 0 && selectedSaucesCount < minSauces) {
+            throw new IllegalArgumentException(
+                "El item '" + item.getName() + "' requiere al menos " + minSauces + 
+                " salsa(s) o especialidad(es), pero se seleccionaron " + selectedSaucesCount + ".");
         }
         
         for (Map<String, Object> compData : selectedComplements) {

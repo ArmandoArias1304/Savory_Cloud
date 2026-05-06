@@ -18,6 +18,7 @@ import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
@@ -289,22 +290,24 @@ public class ComplementController {
         
         // Get maxSauces from ItemMenu
         Integer maxSauces = null;
+        Integer minSauces = null;
         try {
-            maxSauces = itemMenuService.findById(itemMenuId)
-                    .map(ItemMenu::getMaxSauces)
-                    .orElse(null);
+            Optional<ItemMenu> itemOpt = itemMenuService.findById(itemMenuId);
+            maxSauces = itemOpt.map(ItemMenu::getMaxSauces).orElse(null);
+            minSauces = itemOpt.map(ItemMenu::getMinSauces).orElse(null);
         } catch (Exception e) {
-            log.warn("Could not get maxSauces for item {}: {}", itemMenuId, e.getMessage());
+            log.warn("Could not get maxSauces/minSauces for item {}: {}", itemMenuId, e.getMessage());
         }
         
         Map<String, Object> response = new HashMap<>();
         response.put("sauces", sauces);
         response.put("complements", regularComplements);
         response.put("maxSauces", maxSauces);
+        response.put("minSauces", minSauces);
         response.put("totalSaucesAvailable", sauces.size());
         
-        log.info("Item {} has {} sauces and {} regular complements, maxSauces={}", 
-                itemMenuId, sauces.size(), regularComplements.size(), maxSauces);
+        log.info("Item {} has {} sauces and {} regular complements, maxSauces={}, minSauces={}", 
+                itemMenuId, sauces.size(), regularComplements.size(), maxSauces, minSauces);
         
         return ResponseEntity.ok(response);
     }

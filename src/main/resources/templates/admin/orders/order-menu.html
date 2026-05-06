@@ -866,6 +866,7 @@
       // Selected complements for current item in modal
       let selectedComplements = [];
       let currentItemMaxSauces = null; // Limit of sauces for current item
+      let currentItemMinSauces = null; // Minimum required sauces for current item
       let selectedSaucesCount = 0; // Counter for selected sauces
 
       /**
@@ -890,6 +891,7 @@
               sauces: data.sauces || [],
               complements: data.complements || [],
               maxSauces: data.maxSauces,
+              minSauces: data.minSauces,
               totalSaucesAvailable: data.totalSaucesAvailable || 0,
             };
             itemComplementsCache.set(parseInt(itemId), result);
@@ -899,6 +901,7 @@
             sauces: [],
             complements: [],
             maxSauces: null,
+            minSauces: null,
             totalSaucesAvailable: 0,
           };
         } catch (error) {
@@ -906,6 +909,7 @@
             sauces: [],
             complements: [],
             maxSauces: null,
+            minSauces: null,
             totalSaucesAvailable: 0,
           };
         }
@@ -1056,11 +1060,12 @@
 
         const isDarkMode = document.documentElement.classList.contains("dark");
         const itemComplements = await fetchItemComplements(currentItem.id);
-        const { sauces, maxSauces } = itemComplements;
+        const { sauces, maxSauces, minSauces } = itemComplements;
 
         if (!sauces || sauces.length === 0) return;
 
         currentItemMaxSauces = maxSauces;
+        currentItemMinSauces = minSauces;
         selectedSaucesCount = selectedComplements.filter(
           (c) => c.isSauce,
         ).length;
@@ -1316,9 +1321,10 @@
         // Detect dark mode
         const isDarkMode = document.documentElement.classList.contains("dark");
 
-        const { sauces, complements, maxSauces, totalSaucesAvailable } =
+        const { sauces, complements, maxSauces, minSauces, totalSaucesAvailable } =
           complementsData;
         currentItemMaxSauces = maxSauces;
+        currentItemMinSauces = minSauces;
         selectedSaucesCount = 0;
 
         const hasSauces = sauces && sauces.length > 0;
@@ -2354,6 +2360,34 @@
       }
 
       // Add to cart
+      /**
+       * Validates that the user selected at least minSauces sauces.
+       * Returns true if the operation should be aborted (validation failed),
+       * false if it should continue.
+       */
+      async function validateMinSauces(itemComplements, quantity, comments, selectedPromotionId) {
+        const minSauces = itemComplements && itemComplements.minSauces;
+        if (!minSauces || minSauces <= 0) return false;
+        const selectedSaucesNow = selectedComplements.filter((c) => c.isSauce).length;
+        if (selectedSaucesNow >= minSauces) return false;
+        const isDarkMode = document.documentElement.classList.contains("dark");
+        await Swal.fire({
+          icon: "warning",
+          title: "Salsas/Especialidades requeridas",
+          html: `Para el item <b>${currentItem.name}</b> debes seleccionar al menos <b>${minSauces}</b> salsa(s)/especialidad(es). Has seleccionado <b>${selectedSaucesNow}</b>.`,
+          confirmButtonColor: "#f59e0b",
+          background: isDarkMode ? "#1F2937" : "#FFFFFF",
+          color: isDarkMode ? "#F3F4F6" : "#1F2937",
+        });
+        const savedQuantity = window.modalQuantity || quantity || 1;
+        const savedComments = comments || "";
+        const savedComplements = [...selectedComplements];
+        if (typeof reopenItemModal === "function") {
+          reopenItemModal(savedQuantity, savedComments, selectedPromotionId, savedComplements);
+        }
+        return true;
+      }
+
       async function addToCart(quantity, comments, selectedPromotionId = null) {
         if (!currentItem) return;
 
@@ -2361,6 +2395,19 @@
 
         // Check if item has sauces available and none selected
         const itemComplements = await fetchItemComplements(currentItem.id);
+
+        // Validate minimum sauces required
+        if (
+          await validateMinSauces(
+            itemComplements,
+            quantity,
+            comments,
+            selectedPromotionId,
+          )
+        ) {
+          return;
+        }
+
         const hasSaucesAvailable =
           itemComplements.sauces && itemComplements.sauces.length > 0;
         const selectedSauces = selectedComplements.filter((c) => c.isSauce);
