@@ -2554,19 +2554,46 @@ public class OrderController {
                         .build();
                     childDetail.calculateSubtotal();
                     
-                    // Process per-child complements if provided
+                    // Locate this child's complements payload (may be null/empty if user skipped sauce selection)
+                    List<Map<String, Object>> childComps = null;
                     if (childComplementsFromFrontend != null) {
                         for (Map<String, Object> compEntry : childComplementsFromFrontend) {
-                            Long targetChildId = compEntry.get("childItemId") != null ? 
+                            Long targetChildId = compEntry.get("childItemId") != null ?
                                 Long.valueOf(compEntry.get("childItemId").toString()) : null;
                             if (targetChildId != null && targetChildId.equals(childItem.getIdItemMenu())) {
                                 @SuppressWarnings("unchecked")
-                                List<Map<String, Object>> childComps = (List<Map<String, Object>>) compEntry.get("complements");
-                                if (childComps != null && !childComps.isEmpty()) {
-                                    processComplementsForDetail(childDetail, childItem, childComps, childQty);
+                                List<Map<String, Object>> tmp = (List<Map<String, Object>>) compEntry.get("complements");
+                                childComps = tmp;
+                                break;
+                            }
+                        }
+                    }
+                    
+                    // BACKEND VALIDATION: Always enforce minSauces for the child item, even if no complements were sent
+                    Integer childMinSauces = childItem.getMinSauces();
+                    if (childMinSauces != null && childMinSauces > 0) {
+                        int selectedSaucesForChild = 0;
+                        if (childComps != null) {
+                            for (Map<String, Object> compData : childComps) {
+                                if (compData.get("id") == null) continue;
+                                Long cId = ((Number) compData.get("id")).longValue();
+                                Complement tempComp = complementRepository.findById(cId).orElse(null);
+                                if (tempComp != null && Boolean.TRUE.equals(tempComp.getIsSauce())) {
+                                    selectedSaucesForChild++;
                                 }
                             }
                         }
+                        if (selectedSaucesForChild < childMinSauces) {
+                            throw new IllegalArgumentException(
+                                "El item '" + childItem.getName() + "' del combo '" + item.getName() +
+                                "' requiere al menos " + childMinSauces +
+                                " salsa(s) o especialidad(es), pero se seleccionaron " + selectedSaucesForChild + ".");
+                        }
+                    }
+                    
+                    // Process per-child complements if provided (also re-validates min/max + per-complement bounds)
+                    if (childComps != null && !childComps.isEmpty()) {
+                        processComplementsForDetail(childDetail, childItem, childComps, childQty);
                     }
                     
                     orderDetails.add(childDetail);
@@ -3281,8 +3308,9 @@ public class OrderController {
         int manualItems = 0;
 
         for (OrderDetail detail : order.getOrderDetails()) {
-            // Skip combo parent items - they are grouping entities, not actual stock items
-            if (detail.isComboParent()) {
+            // Skip combo child items - they are part of a combo and should not be
+            // counted individually. The combo parent represents the combo as a whole.
+            if (detail.isComboChild()) {
                 continue;
             }
             

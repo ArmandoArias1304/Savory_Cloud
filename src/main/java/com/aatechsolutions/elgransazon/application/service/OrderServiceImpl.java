@@ -2390,9 +2390,10 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional(readOnly = true)
     public Map<String, BigDecimal> getIncomeByCategory() {
-        log.info("Getting income grouped by menu category");
-        
-        List<Object[]> results = orderDetailRepository.getIncomeByMenuCategory();
+        Company company = CompanyContext.requireCurrentCompany();
+        log.info("Getting income grouped by menu category (company: {})", company.getIdCompany());
+
+        List<Object[]> results = orderDetailRepository.getIncomeByMenuCategory(company);
         Map<String, BigDecimal> incomeMap = new java.util.LinkedHashMap<>();
 
         for (Object[] row : results) {
@@ -2407,8 +2408,9 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional(readOnly = true)
     public List<Object[]> getItemSalesByCategory(Long categoryId) {
-        log.info("Getting items sold for category ID: {}", categoryId);
-        return orderDetailRepository.getItemSalesByCategory(categoryId);
+        Company company = CompanyContext.requireCurrentCompany();
+        log.info("Getting items sold for category ID: {} (company: {})", categoryId, company.getIdCompany());
+        return orderDetailRepository.getItemSalesByCategory(categoryId, company);
     }
 
     /**

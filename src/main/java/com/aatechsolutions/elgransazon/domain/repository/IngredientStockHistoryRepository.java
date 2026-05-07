@@ -1,5 +1,6 @@
 package com.aatechsolutions.elgransazon.domain.repository;
 
+import com.aatechsolutions.elgransazon.domain.entity.Company;
 import com.aatechsolutions.elgransazon.domain.entity.Ingredient;
 import com.aatechsolutions.elgransazon.domain.entity.IngredientStockHistory;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -46,10 +47,10 @@ public interface IngredientStockHistoryRepository extends JpaRepository<Ingredie
     );
 
     /**
-     * Calcular gasto total de todos los ingredientes
+     * Calcular gasto total de todos los ingredientes de una empresa (multi-tenant)
      */
-    @Query("SELECT SUM(h.totalCost) FROM IngredientStockHistory h")
-    BigDecimal getTotalExpenses();
+    @Query("SELECT SUM(h.totalCost) FROM IngredientStockHistory h WHERE h.ingredient.company = :company")
+    BigDecimal getTotalExpensesByCompany(@Param("company") Company company);
 
     /**
      * Calcular gasto total en un rango de fechas
@@ -61,11 +62,12 @@ public interface IngredientStockHistoryRepository extends JpaRepository<Ingredie
     );
 
     /**
-     * Obtener gastos agrupados por categoría
+     * Obtener gastos agrupados por categoría para una empresa (multi-tenant)
      */
     @Query("SELECT h.ingredient.category.name, SUM(h.totalCost) FROM IngredientStockHistory h " +
+            "WHERE h.ingredient.company = :company " +
             "GROUP BY h.ingredient.category.id, h.ingredient.category.name ORDER BY SUM(h.totalCost) DESC")
-    List<Object[]> getExpensesByCategory();
+    List<Object[]> getExpensesByCategory(@Param("company") Company company);
 
     /**
      * Obtener gastos agrupados por ingrediente (todos)
@@ -88,13 +90,15 @@ public interface IngredientStockHistoryRepository extends JpaRepository<Ingredie
     );
 
     /**
-     * Obtener gastos detallados por categoría específica
+     * Obtener gastos detallados por categoría específica para una empresa (multi-tenant)
      * Returns: [ingredientName, totalQuantityPurchased, totalExpense]
      */
     @Query("SELECT h.ingredient.name, SUM(h.quantityAdded), COALESCE(SUM(h.totalCost), 0) " +
             "FROM IngredientStockHistory h " +
-            "WHERE h.ingredient.category.idCategory = :categoryId " +
+            "WHERE h.ingredient.company = :company " +
+            "AND h.ingredient.category.idCategory = :categoryId " +
             "GROUP BY h.ingredient.idIngredient, h.ingredient.name " +
             "ORDER BY SUM(h.totalCost) DESC")
-    List<Object[]> getExpensesByIngredient(@Param("categoryId") Long categoryId);
+    List<Object[]> getExpensesByIngredient(@Param("categoryId") Long categoryId,
+                                           @Param("company") Company company);
 }

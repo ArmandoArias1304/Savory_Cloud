@@ -436,18 +436,20 @@ public class IngredientServiceImpl implements IngredientService {
     @Override
     @Transactional(readOnly = true)
     public BigDecimal getTotalExpenses() {
-        log.info("Calculating total expenses for all ingredients");
+        Company company = CompanyContext.requireCurrentCompany();
+        log.info("Calculating total expenses for all ingredients (company: {})", company.getIdCompany());
 
-        BigDecimal totalExpenses = stockHistoryRepository.getTotalExpenses();
+        BigDecimal totalExpenses = stockHistoryRepository.getTotalExpensesByCompany(company);
         return totalExpenses != null ? totalExpenses : BigDecimal.ZERO;
     }
 
     @Override
     @Transactional(readOnly = true)
     public Map<String, BigDecimal> getExpensesByCategory() {
-        log.info("Getting expenses grouped by category");
+        Company company = CompanyContext.requireCurrentCompany();
+        log.info("Getting expenses grouped by category (company: {})", company.getIdCompany());
 
-        List<Object[]> results = stockHistoryRepository.getExpensesByCategory();
+        List<Object[]> results = stockHistoryRepository.getExpensesByCategory(company);
         Map<String, BigDecimal> expenseMap = new java.util.LinkedHashMap<>();
 
         for (Object[] row : results) {
@@ -462,9 +464,10 @@ public class IngredientServiceImpl implements IngredientService {
     @Override
     @Transactional(readOnly = true)
     public List<Object[]> getExpenseDetailsByCategory(Long categoryId) {
-        log.info("Getting expense details for category ID: {}", categoryId);
+        Company company = CompanyContext.requireCurrentCompany();
+        log.info("Getting expense details for category ID: {} (company: {})", categoryId, company.getIdCompany());
 
-        return stockHistoryRepository.getExpensesByIngredient(categoryId);
+        return stockHistoryRepository.getExpensesByIngredient(categoryId, company);
     }
 
     @Override

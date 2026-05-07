@@ -1,5 +1,6 @@
 package com.aatechsolutions.elgransazon.domain.repository;
 
+import com.aatechsolutions.elgransazon.domain.entity.Company;
 import com.aatechsolutions.elgransazon.domain.entity.OrderDetail;
 import com.aatechsolutions.elgransazon.domain.entity.Order;
 import com.aatechsolutions.elgransazon.domain.entity.ItemMenu;
@@ -44,28 +45,31 @@ public interface OrderDetailRepository extends JpaRepository<OrderDetail, Long> 
     void deleteByOrder(Order order);
 
     /**
-     * Get income grouped by menu category (only PAID orders)
+     * Get income grouped by menu category (only PAID orders) for a company (multi-tenant)
      * Returns: [categoryId, categoryName, totalSales]
      */
     @Query("SELECT im.category.idCategory, im.category.name, COALESCE(SUM(od.subtotal), 0) " +
            "FROM OrderDetail od " +
            "JOIN od.itemMenu im " +
            "WHERE od.order.status = 'PAID' " +
+           "AND od.order.company = :company " +
            "GROUP BY im.category.idCategory, im.category.name " +
            "ORDER BY SUM(od.subtotal) DESC")
-    List<Object[]> getIncomeByMenuCategory();
+    List<Object[]> getIncomeByMenuCategory(@Param("company") Company company);
 
     /**
-     * Get items sold by category (only PAID orders)
+     * Get items sold by category (only PAID orders) for a company (multi-tenant)
      * Returns: [itemName, totalQuantity, totalSales]
      */
     @Query("SELECT od.itemMenu.name, SUM(od.quantity), COALESCE(SUM(od.subtotal), 0) " +
            "FROM OrderDetail od " +
            "WHERE od.order.status = 'PAID' " +
+           "AND od.order.company = :company " +
            "AND od.itemMenu.category.idCategory = :categoryId " +
            "GROUP BY od.itemMenu.idItemMenu, od.itemMenu.name " +
            "ORDER BY SUM(od.quantity) DESC")
-    List<Object[]> getItemSalesByCategory(@Param("categoryId") Long categoryId);
+    List<Object[]> getItemSalesByCategory(@Param("categoryId") Long categoryId,
+                                          @Param("company") Company company);
 
     /**
      * Check if any order detail references a specific menu item

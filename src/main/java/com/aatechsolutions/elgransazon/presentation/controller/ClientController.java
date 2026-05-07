@@ -2156,6 +2156,41 @@ public class ClientController {
                     .build();
             childDetail.calculateSubtotal();
             
+            // Locate this child's complements payload (may be null/empty if user skipped sauce selection)
+            List<Map<String, Object>> childCompsForMinCheck = null;
+            if (perChildComplements != null) {
+                for (Map<String, Object> compEntry : perChildComplements) {
+                    Long targetChildId = compEntry.get("childItemId") != null ?
+                            Long.valueOf(compEntry.get("childItemId").toString()) : null;
+                    if (targetChildId != null && targetChildId.equals(childItem.getIdItemMenu())) {
+                        childCompsForMinCheck = (List<Map<String, Object>>) compEntry.get("complements");
+                        break;
+                    }
+                }
+            }
+            
+            // BACKEND VALIDATION: Always enforce minSauces for the child item, even if no complements were sent
+            Integer childMinSaucesCheck = childItem.getMinSauces();
+            if (childMinSaucesCheck != null && childMinSaucesCheck > 0) {
+                int selectedSaucesForChild = 0;
+                if (childCompsForMinCheck != null) {
+                    for (Map<String, Object> compData : childCompsForMinCheck) {
+                        if (compData.get("id") == null) continue;
+                        Long cId = Long.valueOf(compData.get("id").toString());
+                        Complement tempComp = complementRepository.findById(cId).orElse(null);
+                        if (tempComp != null && Boolean.TRUE.equals(tempComp.getIsSauce())) {
+                            selectedSaucesForChild++;
+                        }
+                    }
+                }
+                if (selectedSaucesForChild < childMinSaucesCheck) {
+                    throw new IllegalArgumentException(
+                        "El item '" + childItem.getName() + "' del combo '" + comboItem.getName() +
+                        "' requiere al menos " + childMinSaucesCheck +
+                        " salsa(s) o especialidad(es), pero se seleccionaron " + selectedSaucesForChild + ".");
+                }
+            }
+            
             // Process per-child complements with full validation (matching OrderController logic)
             if (perChildComplements != null) {
                 for (Map<String, Object> compEntry : perChildComplements) {
