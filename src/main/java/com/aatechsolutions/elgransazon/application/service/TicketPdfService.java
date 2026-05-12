@@ -201,38 +201,9 @@ public class TicketPdfService {
                     .setBorder(Border.NO_BORDER).setPadding(1));
         }
 
-        // Pre-process: Group identical non-combo items without complements
-        // so e.g. 3 separate "Coca Cola" lines become one "Coca Cola x5"
-        List<OrderDetail> rawDetails = order.getOrderDetails();
-        Map<String, int[]> mergedQty = new LinkedHashMap<>();        // itemMenuId_price -> [totalQuantity]
-        Map<String, BigDecimal[]> mergedTotals = new LinkedHashMap<>(); // itemMenuId_price -> [originalTotal, finalTotal]
-        List<OrderDetail> ticketOrder = new ArrayList<>();
-
-        for (OrderDetail detail : rawDetails) {
-            boolean canMerge = !detail.isComboParent() && !detail.isComboChild()
-                    && (detail.getSelectedComplements() == null || detail.getSelectedComplements().isEmpty());
-            String mergeKey = detail.getItemMenu().getIdItemMenu() + "_" + detail.getUnitPrice().toPlainString();
-            BigDecimal lineOriginal = detail.getUnitPrice()
-                    .multiply(BigDecimal.valueOf(detail.getQuantity()));
-
-            if (canMerge && mergedQty.containsKey(mergeKey)) {
-                mergedQty.get(mergeKey)[0] += detail.getQuantity();
-                mergedTotals.get(mergeKey)[0] = mergedTotals.get(mergeKey)[0].add(lineOriginal);
-                mergedTotals.get(mergeKey)[1] = mergedTotals.get(mergeKey)[1].add(detail.getSubtotal());
-            } else {
-                if (canMerge) {
-                    mergedQty.put(mergeKey, new int[]{detail.getQuantity()});
-                    mergedTotals.put(mergeKey, new BigDecimal[]{lineOriginal, detail.getSubtotal()});
-                }
-                ticketOrder.add(detail);
-            }
-        }
+        List<OrderDetail> ticketOrder = order.getOrderDetails();
 
         for (OrderDetail detail : ticketOrder) {
-            boolean isMerged = !detail.isComboParent() && !detail.isComboChild()
-                    && (detail.getSelectedComplements() == null || detail.getSelectedComplements().isEmpty());
-            String mergeKey = detail.getItemMenu().getIdItemMenu() + "_" + detail.getUnitPrice().toPlainString();
-
             // Item name and quantity - with combo grouping
             String itemName = detail.getItemMenu().getName();
             boolean isComboParent = detail.isComboParent();
@@ -243,20 +214,11 @@ public class TicketPdfService {
                 itemName = "  \u21B3 " + itemName;
             }
 
-            // Use merged values for grouped items, original values otherwise
-            Integer quantity;
-            BigDecimal precioOriginalConIVA;
-            BigDecimal precioFinalConIVA;
-            if (isMerged && mergedQty.containsKey(mergeKey)) {
-                quantity = mergedQty.get(mergeKey)[0];
-                precioOriginalConIVA = mergedTotals.get(mergeKey)[0].setScale(2, RoundingMode.HALF_UP);
-                precioFinalConIVA = mergedTotals.get(mergeKey)[1];
-            } else {
-                quantity = detail.getQuantity();
-                precioOriginalConIVA = detail.getUnitPrice().multiply(BigDecimal.valueOf(quantity))
-                        .setScale(2, RoundingMode.HALF_UP);
-                precioFinalConIVA = detail.getSubtotal();
-            }
+            // Use original values
+            Integer quantity = detail.getQuantity();
+            BigDecimal precioOriginalConIVA = detail.getUnitPrice().multiply(BigDecimal.valueOf(quantity))
+                    .setScale(2, RoundingMode.HALF_UP);
+            BigDecimal precioFinalConIVA = detail.getSubtotal();
             
             Cell nameCell = new Cell()
                     .add(new Paragraph(itemName)
@@ -303,7 +265,7 @@ public class TicketPdfService {
                     }
                     textColor = new DeviceRgb(22, 163, 74); // green-600 (darker green)
                 } else {
-                    finalPriceText = "-";
+                    finalPriceText = "$" + precioOriginalConIVA.toString();
                     textColor = ColorConstants.BLACK;
                 }
                 
@@ -361,8 +323,9 @@ public class TicketPdfService {
                             .setPadding(1);
                     
                     // Complement total cell
+                    String compTotalStr = "$" + compTotal.setScale(2, RoundingMode.HALF_UP).toString();
                     Cell compTotalCell = new Cell()
-                            .add(new Paragraph("$" + compTotal.setScale(2, RoundingMode.HALF_UP).toString())
+                            .add(new Paragraph(compTotalStr)
                                     .setFont(normalFont)
                                     .setFontSize(6)
                                     .setFontColor(ColorConstants.DARK_GRAY)
@@ -374,10 +337,10 @@ public class TicketPdfService {
                     itemsTable.addCell(compQtyCell);
                     itemsTable.addCell(compTotalCell);
                     
-                    // If has promotions, add "-" for T. Final column (complements don't have discounts)
+                    // If has promotions, add the repeated total for T. Final column (complements don't have discounts)
                     if (hasPromotions) {
                         Cell compFinalCell = new Cell()
-                                .add(new Paragraph("-")
+                                .add(new Paragraph(compTotalStr)
                                         .setFont(normalFont)
                                         .setFontSize(6)
                                         .setFontColor(ColorConstants.DARK_GRAY)
@@ -424,10 +387,10 @@ public class TicketPdfService {
                 // Total (bold) - sin propina
                 addTotalRow(totalsTable, "TOTAL:", "$" + total.setScale(2, RoundingMode.HALF_UP).toString(), boldFont, boldFont, true);
 
-                // Tip below total (if any)
+                /* Tip below total (if any)
                 if (order.getTip() != null && order.getTip().compareTo(BigDecimal.ZERO) > 0) {
                         addTotalRow(totalsTable, "Propina:", "$" + order.getTip().toString(), normalFont, boldFont, false);
-                }
+                }*/
 
                 document.add(totalsTable);
 
