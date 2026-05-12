@@ -451,7 +451,6 @@
             <!-- Card Body - Order Details -->
             <div
               class="p-5 flex-1 overflow-y-auto overflow-x-hidden relative z-[2]"
-              th:classappend="${order.status.name() == 'PENDING'} ? 'brightness-150' : ''"
             >
               <h4
                 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 uppercase tracking-wide"
@@ -468,13 +467,12 @@
                   <div class="flex items-start justify-between w-full gap-2">
                     <div class="flex-1">
                       <p
-                        class="text-base font-semibold text-gray-900 dark:text-white"
+                        class="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-1.5 flex-wrap"
                       >
-                        <span th:text="${detail.quantity} + 'x'"></span>
                         <span th:text="${detail.itemMenu.name}"></span>
                         <span
                           th:if="${detail.comboChild}"
-                          class="inline-flex items-center px-1.5 py-0.5 text-[10px] font-bold bg-teal-100 dark:bg-teal-900/40 text-teal-700 dark:text-teal-300 rounded ml-1"
+                          class="inline-flex items-center px-1.5 py-0.5 text-[10px] font-bold bg-teal-100 dark:bg-teal-900/40 text-teal-700 dark:text-teal-300 rounded"
                         >
                           <span
                             class="material-symbols-outlined !text-[10px] mr-0.5"
@@ -482,6 +480,7 @@
                           >
                           COMBO
                         </span>
+                        <span class="text-sm font-bold text-primary" th:text="'x' + ${detail.quantity}"></span>
                       </p>
 
                       <!-- NEW ITEM Badge - Improved Design -->

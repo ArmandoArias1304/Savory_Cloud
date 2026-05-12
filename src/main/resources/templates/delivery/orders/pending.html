@@ -349,13 +349,10 @@
                   <div class="flex justify-between items-start">
                     <div class="flex-1">
                       <p
-                        class="text-sm font-semibold text-gray-900 dark:text-white"
+                        class="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-1.5 flex-wrap"
                       >
-                        <span
-                          th:text="${detail.quantity} + 'x'"
-                          class="text-primary font-bold"
-                        ></span>
                         <span th:text="${detail.itemMenu.name}"></span>
+                        <span class="text-sm font-bold text-primary" th:text="'x' + ${detail.quantity}"></span>
                       </p>
                       <span
                         th:if="${detail.comboParent}"

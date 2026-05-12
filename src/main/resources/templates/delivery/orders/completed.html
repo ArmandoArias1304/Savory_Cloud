@@ -146,7 +146,7 @@
         <!-- Orders Grid -->
         <div
           th:if="${!orders.isEmpty()}"
-          class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+          class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3"
         >
           <!-- ORDER CARD -->
           <div
@@ -271,10 +271,10 @@
                 >
                   <div class="flex-1 min-w-0">
                     <p
-                      class="text-xs font-semibold text-gray-900 dark:text-white"
+                      class="text-xs font-semibold text-gray-900 dark:text-white flex items-center gap-1 flex-wrap"
                     >
-                      <span th:text="${detail.quantity}">1</span>x
                       <span th:text="${detail.itemMenu.name}">Item</span>
+                      <span class="font-bold text-primary" th:text="'x' + ${detail.quantity}">x1</span>
                     </p>
                     <span
                       th:if="${detail.comboParent}"
