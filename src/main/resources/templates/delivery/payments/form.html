@@ -95,7 +95,6 @@
       }
 
       .payment-method-btn:disabled {
-        border-color: #e5e7eb;
         pointer-events: none;
       }
 
@@ -242,76 +241,50 @@
                 <div class="space-y-6">
                   <!-- Total Amount -->
                   <div
-                    class="text-center bg-gradient-to-br from-primary/10 to-primary-dark/10 rounded-2xl p-6"
+                    class="text-center bg-gradient-to-br from-primary/10 to-primary-dark/10 dark:from-primary/20 dark:to-primary-dark/20 rounded-2xl p-6"
                   >
                     <p class="text-base text-gray-600 dark:text-gray-400 font-medium">
                       Total a Pagar
                     </p>
                     <h2
-                      class="text-6xl sm:text-7xl font-black text-gray-900 dark:text-white tracking-tighter mt-2"
+                      class="text-6xl sm:text-7xl font-black text-primary tracking-tighter mt-2"
                       id="displayTotal"
                       th:text="${order.formattedTotal}"
                     ></h2>
                   </div>
 
-                  <!-- Payment Methods (Enabled for Delivery) -->
                   <!-- Payment Method (Fixed - from order) -->
                   <div class="space-y-4">
                     <h3 class="text-lg font-bold text-gray-900 dark:text-white">
-                      Método de Pago del Pedido
+                      Método de Pago
                     </h3>
-
-                    <!-- Show the order's payment method -->
-                    <div
-                      th:class="${#lists.contains(enabledPaymentMethodNames, order.paymentMethod.name())} 
-                        ? 'flex items-center gap-4 p-5 rounded-xl border-2 border-primary bg-primary/10' 
-                        : 'flex items-center gap-4 p-5 rounded-xl border-2 border-red-300 bg-red-50'"
-                    >
-                      <!-- Icon based on payment method -->
-                      <div
-                        th:class="${#lists.contains(enabledPaymentMethodNames, order.paymentMethod.name())} 
-                          ? 'w-14 h-14 rounded-xl bg-primary/20 flex items-center justify-center' 
-                          : 'w-14 h-14 rounded-xl bg-red-100 flex items-center justify-center'"
+                    <div class="grid grid-cols-3 gap-3">
+                      <button
+                        type="button"
+                        th:data-method="${order.paymentMethod.name()}"
+                        class="payment-method-btn active flex flex-col items-center justify-center gap-2 rounded-xl p-4"
+                        disabled
                       >
+                        <span class="material-symbols-outlined text-3xl">
+                          <th:block th:switch="${order.paymentMethod.name()}">
+                            <th:block th:case="'CASH'">payments</th:block>
+                            <th:block th:case="'CREDIT_CARD'"
+                              >credit_card</th:block
+                            >
+                            <th:block th:case="'DEBIT_CARD'"
+                              >credit_card</th:block
+                            >
+                            <th:block th:case="'TRANSFER'"
+                              >account_balance</th:block
+                            >
+                            <th:block th:case="*">payment</th:block>
+                          </th:block>
+                        </span>
                         <span
-                          th:class="${#lists.contains(enabledPaymentMethodNames, order.paymentMethod.name())} 
-                            ? 'material-symbols-outlined text-3xl text-primary' 
-                            : 'material-symbols-outlined text-3xl text-red-500'"
-                          th:text="${order.paymentMethod.name() == 'CASH'} ? 'payments' : 
-                                   (${order.paymentMethod.name() == 'CREDIT_CARD'} ? 'credit_card' : 
-                                   (${order.paymentMethod.name() == 'DEBIT_CARD'} ? 'credit_card' : 'account_balance'))"
-                        ></span>
-                      </div>
-
-                      <!-- Payment method info -->
-                      <div class="flex-1">
-                        <p
-                          th:class="${#lists.contains(enabledPaymentMethodNames, order.paymentMethod.name())} 
-                            ? 'text-xl font-bold text-gray-900' 
-                            : 'text-xl font-bold text-red-700'"
+                          class="font-semibold text-sm"
                           th:text="${order.paymentMethod.displayName}"
-                        ></p>
-
-                        <!-- Status badge -->
-                        <span
-                          th:if="${#lists.contains(enabledPaymentMethodNames, order.paymentMethod.name())}"
-                          class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-primary/20 text-primary-dark mt-1"
-                        >
-                          <span class="material-symbols-outlined text-sm"
-                            >check_circle</span
-                          >
-                          Habilitado para Delivery
-                        </span>
-                        <span
-                          th:unless="${#lists.contains(enabledPaymentMethodNames, order.paymentMethod.name())}"
-                          class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-700 mt-1"
-                        >
-                          <span class="material-symbols-outlined text-sm"
-                            >block</span
-                          >
-                          Deshabilitado para Delivery
-                        </span>
-                      </div>
+                        ></span>
+                      </button>
                     </div>
 
                     <!-- Hidden input with order's payment method -->

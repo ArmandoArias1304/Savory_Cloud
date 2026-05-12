@@ -1731,13 +1731,16 @@ public class OrderController {
             
             // Get the order to check current state
             Order order = orderService.findByIdOrThrow(id);
-            
-            // Validate payment method restrictions for waiters
-            if (status == OrderStatus.PAID && 
-                "waiter".equalsIgnoreCase(role) && 
-                order.getPaymentMethod() == PaymentMethodType.CASH) {
+
+            // SECURITY: Disallow marking an order as PAID via the generic change-status endpoint.
+            // Cobrar (pasar a PAID) DEBE hacerse a través de los controladores de pago dedicados
+            // (WaiterPaymentController, CashierPaymentController, PaymentController, DeliveryController.processPayment),
+            // los cuales aplican las validaciones específicas por rol: método de pago habilitado,
+            // restricciones por rol (waiter no efectivo, etc.), propina, descuento de orden, y
+            // generación de autofactura. Permitir PAID aquí saltaba esas validaciones.
+            if (status == OrderStatus.PAID) {
                 response.put("success", false);
-                response.put("message", "Los meseros no pueden cobrar órdenes en efectivo. Solo el cajero puede hacerlo.");
+                response.put("message", "Para cobrar una orden debes usar el formulario de pago. No se puede marcar como PAGADO desde aquí.");
                 return response;
             }
             
@@ -1756,15 +1759,6 @@ public class OrderController {
                     orderRepository.save(order);
                     log.info("Setting preparedByBarista to: {} for order {}", username, id);
                 }
-            }
-            
-            // Set paidBy BEFORE changing status (when order is marked as PAID)
-            // ALWAYS update paidBy to reflect who is actually collecting the payment
-            if (status == OrderStatus.PAID) {
-                // Update the paidBy field directly in the repository
-                order.setPaidBy(currentEmployee);
-                orderRepository.save(order);
-                log.info("Setting paidBy to: {} (role: {}) for order {}", username, role, id);
             }
             
             // Now change the status
@@ -2231,35 +2225,30 @@ public class OrderController {
                     validStatuses.add(OrderStatus.READY);
                 }
             } else if ("waiter".equalsIgnoreCase(role)) {
-                // Waiter can only mark as DELIVERED if status is READY
+                // Waiter can only mark as DELIVERED if status is READY.
+                // PAID is intentionally NOT offered here: cobrar debe pasar SIEMPRE por
+                // WaiterPaymentController para aplicar todas las validaciones (método de pago, etc.).
                 if (order.getStatus() == OrderStatus.READY) {
                     validStatuses.add(OrderStatus.DELIVERED);
-                }
-                // Waiter can mark as PAID if status is DELIVERED and payment method is not CASH
-                if (order.getStatus() == OrderStatus.DELIVERED && 
-                    order.getPaymentMethod() != PaymentMethodType.CASH && 
-                    order.getPaymentMethod() != PaymentMethodType.TRANSFER) {
-                    validStatuses.add(OrderStatus.PAID);
                 }
             } else if ("admin".equalsIgnoreCase(role) || "manager".equalsIgnoreCase(role)) {
-                // Admin/Manager restricted similar to Waiter:
-                // 1. Ready -> Delivered
-                // 2. Delivered -> Paid (All payment methods allowed)
-                
+                // Admin/Manager can mark Ready -> Delivered. PAID se excluye del select:
+                // el cobro DEBE hacerse a través de PaymentController (form de pago).
                 if (order.getStatus() == OrderStatus.READY) {
                     validStatuses.add(OrderStatus.DELIVERED);
                 }
-                
-                if (order.getStatus() == OrderStatus.DELIVERED) {
-                    validStatuses.add(OrderStatus.PAID);
-                }
             } else {
-                // Other roles (e.g. Cashier) - use default behavior
+                // Other roles (e.g. Cashier, Delivery) — use default transitions, but
+                // remove PAID: el cobro debe pasar por su respectivo PaymentController.
                 OrderStatus[] allValidStatuses = OrderStatus.getValidNextStatuses(
                     order.getStatus(), 
                     order.getOrderType()
                 );
-                validStatuses = Arrays.asList(allValidStatuses);
+                for (OrderStatus s : allValidStatuses) {
+                    if (s != OrderStatus.PAID) {
+                        validStatuses.add(s);
+                    }
+                }
             }
             
             List<Map<String, String>> statusList = new ArrayList<>();

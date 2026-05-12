@@ -572,9 +572,9 @@
                           <i class="fas fa-edit"></i>
                         </a>
 
-                        <!-- Change Status (not CANCELLED, PAID or DELIVERED) -->
+                        <!-- Change Status (only READY non-DELIVERY: cashier marks as DELIVERED) -->
                         <button
-                          th:if="${order.status.name() != 'CANCELLED' && order.status.name() != 'PAID' && order.status.name() != 'DELIVERED'}"
+                          th:if="${order.status.name() == 'READY' && order.orderType.name() != 'DELIVERY'}"
                           class="btn-change-status p-2 rounded-lg bg-primary/10 dark:bg-primary/20 text-primary hover:bg-primary/20 dark:hover:bg-primary/30 transition-all"
                           th:data-order-id="${order.idOrder}"
                           th:data-order-number="${order.orderNumber}"
@@ -592,7 +592,7 @@
                           class="p-2 rounded-lg bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/40 transition-all"
                           title="Cobrar pedido"
                         >
-                          <i class="fas fa-hand-holding-usd"></i>
+                          <i class="fas fa-dollar-sign"></i>
                         </a>
 
                         <!-- Cancel (TO_ACCEPT, PENDING, IN_PREPARATION, READY) -->
@@ -904,7 +904,7 @@
                         <span class="material-symbols-outlined text-sm"
                           >local_shipping</span
                         >
-                        Domicilio
+                        Entrega a domicilio
                       </span>
                     </td>
 
@@ -1011,9 +1011,9 @@
                           <i class="fas fa-edit"></i>
                         </a>
 
-                        <!-- Change Status (not CANCELLED, PAID or DELIVERED) -->
+                        <!-- Change Status (only READY non-DELIVERY: cashier marks as DELIVERED) -->
                         <button
-                          th:if="${order.status.name() != 'CANCELLED' && order.status.name() != 'PAID' && order.status.name() != 'DELIVERED'}"
+                          th:if="${order.status.name() == 'READY' && order.orderType.name() != 'DELIVERY'}"
                           class="btn-change-status p-2 rounded-lg bg-primary/10 dark:bg-primary/20 text-primary hover:bg-primary/20 dark:hover:bg-primary/30 transition-all"
                           th:data-order-id="${order.idOrder}"
                           th:data-order-number="${order.orderNumber}"
@@ -1031,7 +1031,7 @@
                           class="p-2 rounded-lg bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/40 transition-all"
                           title="Cobrar pedido"
                         >
-                          <i class="fas fa-hand-holding-usd"></i>
+                          <i class="fas fa-dollar-sign"></i>
                         </a>
 
                         <!-- Mark as Delivered (only for READY status AND TAKEOUT/DINE_IN orders) -->
@@ -1423,12 +1423,8 @@
               optionsHtml += `<option value="${status.value}">${status.label}</option>`;
             });
 
-            // Add warning for CASH payments if PAID status is not available
+            // No extra warning needed: PAID is never offered via this modal
             let warningHtml = "";
-            if (paymentMethod === "CASH" && !data.canMarkAsPaid) {
-              warningHtml =
-                '<div class="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-800"><i class="fas fa-exclamation-triangle mr-2"></i>Los pagos en efectivo solo pueden ser procesados por el cajero</div>';
-            }
 
             // Show modal
             const isDark = document.documentElement.classList.contains("dark");
