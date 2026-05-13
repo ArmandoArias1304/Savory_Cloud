@@ -469,7 +469,7 @@
                       <p
                         class="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-1.5 flex-wrap"
                       >
-                        <span th:text="${detail.itemMenu.name}"></span>
+                        <span th:text="${detail.displayName}"></span>
                         <span
                           th:if="${detail.comboChild}"
                           class="inline-flex items-center px-1.5 py-0.5 text-[10px] font-bold bg-teal-100 dark:bg-teal-900/40 text-teal-700 dark:text-teal-300 rounded"
@@ -528,7 +528,7 @@
                             >
                             <span
                               class="text-sm text-blue-700 dark:text-blue-300 font-medium"
-                              th:text="${comp.complement.name}"
+                              th:text="${comp.complementName}"
                             ></span>
                             <span
                               class="text-xs text-gray-500 dark:text-gray-400"
@@ -548,7 +548,7 @@
                             >
                             <span
                               class="text-sm text-purple-700 dark:text-purple-300 font-medium"
-                              th:text="${comp.complement.name}"
+                              th:text="${comp.complementName}"
                             ></span>
                             <span
                               class="text-xs text-gray-500 dark:text-gray-400"
@@ -614,7 +614,7 @@
                         <div
                           th:if="${detail.itemStatus != null && detail.itemStatus.name() == 'PENDING'}"
                           class="slide-confirm slide-sm"
-                          th:attr="data-action='accept-item', data-order-id=${order.idOrder}, data-item-id=${detail.idOrderDetail}, data-item-name=${detail.itemMenu.name}"
+                          th:attr="data-action='accept-item', data-order-id=${order.idOrder}, data-item-id=${detail.idOrderDetail}, data-item-name=${detail.displayName}"
                         >
                           <div
                             class="slide-confirm-track bg-gradient-to-r from-blue-600 to-blue-500"
@@ -645,7 +645,7 @@
                         <div
                           th:if="${detail.itemStatus != null && detail.itemStatus.name() == 'IN_PREPARATION'}"
                           class="slide-confirm slide-sm"
-                          th:attr="data-action='ready-item', data-order-id=${order.idOrder}, data-item-id=${detail.idOrderDetail}, data-item-name=${detail.itemMenu.name}"
+                          th:attr="data-action='ready-item', data-order-id=${order.idOrder}, data-item-id=${detail.idOrderDetail}, data-item-name=${detail.displayName}"
                         >
                           <div
                             class="slide-confirm-track bg-gradient-to-r from-primary-dark to-primary"

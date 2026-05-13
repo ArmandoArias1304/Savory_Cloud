@@ -224,7 +224,7 @@ public class FacturamaService {
 
                 // Add the item only if subtotal > 0 (skip combo sub-items at $0)
                 if (lineSubtotal != null && lineSubtotal.compareTo(BigDecimal.ZERO) > 0) {
-                    candidateLines.add(new CfdiLine(detail.getItemMenu().getName(),
+                    candidateLines.add(new CfdiLine(detail.getDisplayName(),
                             detail.getQuantity(), lineSubtotal, PROD_CODE_RESTAURANT));
                 }
 
@@ -239,7 +239,7 @@ public class FacturamaService {
                         // (sauces are pre-multiplied by item qty at insert time).
                         int effectiveQty = comp.getQuantity();
                         BigDecimal compLineTotal = comp.getSubtotal();
-                        candidateLines.add(new CfdiLine("Complemento - " + comp.getComplement().getName(),
+                        candidateLines.add(new CfdiLine("Complemento - " + comp.getComplementName(),
                                 effectiveQty, compLineTotal, PROD_CODE_RESTAURANT));
                     }
                 }

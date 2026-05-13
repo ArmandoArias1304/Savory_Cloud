@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="es" xmlns:th="http://www.thymeleaf.org">
   <head>
     <meta charset="utf-8" />
@@ -351,7 +351,7 @@
                       <p
                         class="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-1.5 flex-wrap"
                       >
-                        <span th:text="${detail.itemMenu.name}"></span>
+                        <span th:text="${detail.displayName}"></span>
                         <span class="text-sm font-bold text-primary" th:text="'x' + ${detail.quantity}"></span>
                       </p>
                       <span
@@ -395,7 +395,7 @@
                         >
                         <span
                           class="text-sm text-blue-700 dark:text-blue-300 font-medium"
-                          th:text="${comp.complement.name}"
+                          th:text="${comp.complementName}"
                         ></span>
                         <span
                           class="text-xs text-gray-500 dark:text-gray-400"
@@ -420,7 +420,7 @@
                         >
                         <span
                           class="text-sm text-purple-700 dark:text-purple-300 font-medium"
-                          th:text="${comp.complement.name}"
+                          th:text="${comp.complementName}"
                         ></span>
                         <span
                           class="text-xs text-gray-500 dark:text-gray-400"

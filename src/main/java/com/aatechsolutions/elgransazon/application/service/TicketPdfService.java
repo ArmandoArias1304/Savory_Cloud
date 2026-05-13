@@ -203,7 +203,7 @@ public class TicketPdfService {
 
         for (OrderDetail detail : ticketOrder) {
             // Item name and quantity - with combo grouping
-            String itemName = detail.getItemMenu().getName();
+            String itemName = detail.getDisplayName();
             boolean isComboParent = detail.isComboParent();
             boolean isComboChild = detail.isComboChild();
             if (isComboParent) {
@@ -296,7 +296,7 @@ public class TicketPdfService {
             // Add complements if any
             if (detail.getSelectedComplements() != null && !detail.getSelectedComplements().isEmpty()) {
                 for (OrderDetailComplement odc : detail.getSelectedComplements()) {
-                    String complementName = "  + " + odc.getComplement().getName();
+                    String complementName = "  + " + odc.getComplementName();
                     Integer compQuantity = odc.getQuantity();
                     BigDecimal compTotal = odc.getSubtotal();
 

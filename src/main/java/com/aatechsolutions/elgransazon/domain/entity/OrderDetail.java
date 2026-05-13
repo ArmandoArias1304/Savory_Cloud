@@ -56,6 +56,15 @@ public class OrderDetail implements Serializable {
     @JoinColumn(name = "id_item_menu", nullable = false)
     private ItemMenu itemMenu;
 
+    /**
+     * Snapshot of the item name at the time the order was placed.
+     * Null for legacy records created before this field was added.
+     * Use {@link #getDisplayName()} to get the name with automatic fallback.
+     */
+    @Size(max = 200)
+    @Column(name = "item_name", length = 200)
+    private String itemName;
+
     // ========== Quantity and Pricing ==========
 
     @NotNull(message = "La cantidad es requerida")
@@ -231,6 +240,18 @@ public class OrderDetail implements Serializable {
      */
     public boolean hasPromotionApplied() {
         return promotionAppliedPrice != null && appliedPromotionId != null;
+    }
+
+    /**
+     * Get the item name to display.
+     * Returns the snapshot {@link #itemName} if present (new records),
+     * or falls back to the live {@link ItemMenu#getName()} for legacy records.
+     */
+    public String getDisplayName() {
+        if (itemName != null && !itemName.isBlank()) {
+            return itemName;
+        }
+        return itemMenu != null ? itemMenu.getName() : "N/A";
     }
 
     /**

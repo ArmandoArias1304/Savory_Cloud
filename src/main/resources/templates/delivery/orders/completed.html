@@ -273,7 +273,7 @@
                     <p
                       class="text-xs font-semibold text-gray-900 dark:text-white flex items-center gap-1 flex-wrap"
                     >
-                      <span th:text="${detail.itemMenu.name}">Item</span>
+                      <span th:text="${detail.displayName}">Item</span>
                       <span class="font-bold text-primary" th:text="'x' + ${detail.quantity}">x1</span>
                     </p>
                     <span
@@ -319,7 +319,7 @@
                           >
                           <span
                             class="text-[10px] text-blue-700 dark:text-blue-300 font-medium"
-                            th:text="${comp.complement.name}"
+                            th:text="${comp.complementName}"
                           ></span>
                           <span
                             class="text-[10px] text-gray-500 dark:text-gray-400"
@@ -345,7 +345,7 @@
                           >
                           <span
                             class="text-[10px] text-purple-700 dark:text-purple-300 font-medium"
-                            th:text="${comp.complement.name}"
+                            th:text="${comp.complementName}"
                           ></span>
                           <span
                             class="text-[10px] text-gray-500 dark:text-gray-400"

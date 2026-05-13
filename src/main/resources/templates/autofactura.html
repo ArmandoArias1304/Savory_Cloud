@@ -144,7 +144,7 @@
                   <span th:if="${detail.comboParent}" class="text-primary font-semibold">[COMBO] </span>
                   <span th:if="${detail.comboChild}" class="text-gray-400 dark:text-gray-500">↳ </span>
                   <span th:text="${detail.quantity}"></span>x
-                  <span th:text="${detail.itemMenu.name}"></span>
+                  <span th:text="${detail.displayName}"></span>
                 </span>
                 <span class="font-semibold text-gray-900 dark:text-white"
                       th:text="'$' + ${#numbers.formatDecimal(detail.subtotal, 1, 2)}"></span>
@@ -155,7 +155,7 @@
                      class="flex justify-between text-xs pl-4"
                      th:classappend="${detail.comboChild ? 'pl-8' : ''}">
                   <span class="text-gray-400 dark:text-gray-500">
-                    + <span th:text="${comp.complement.name}"></span>
+                    + <span th:text="${comp.complementName}"></span>
                     <span th:if="${(comp.quantity) > 1}"
                           th:text="' x' + ${comp.quantity}"></span>
                   </span>

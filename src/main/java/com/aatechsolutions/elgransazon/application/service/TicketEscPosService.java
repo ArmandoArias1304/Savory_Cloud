@@ -136,7 +136,7 @@ public class TicketEscPosService {
         List<OrderDetail> ticketOrder = order.getOrderDetails();
 
         for (OrderDetail detail : ticketOrder) {
-            String itemName = detail.getItemMenu().getName();
+            String itemName = detail.getDisplayName();
             boolean isComboParent = detail.isComboParent();
             boolean isComboChild = detail.isComboChild();
             if (isComboParent) {
@@ -177,7 +177,7 @@ public class TicketEscPosService {
             // Complements
             if (detail.getSelectedComplements() != null && !detail.getSelectedComplements().isEmpty()) {
                 for (OrderDetailComplement odc : detail.getSelectedComplements()) {
-                    String compName = "+ " + odc.getComplement().getName();
+                    String compName = "+  " + odc.getComplementName();
                     String compQty = String.valueOf(odc.getQuantity());
                     String compTotal = "$" + odc.getSubtotal().setScale(2, RoundingMode.HALF_UP).toPlainString();
 

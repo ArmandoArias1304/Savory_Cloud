@@ -1853,6 +1853,7 @@ public class OrderController {
 
                 OrderDetail detail = OrderDetail.builder()
                     .itemMenu(item)
+                    .itemName(item.getName())
                     .quantity(itemRequest.getQuantity())
                     .unitPrice(item.getPrice())
                     .comments(itemRequest.getComments())
@@ -2473,6 +2474,7 @@ public class OrderController {
                 // 1. Create PARENT OrderDetail (combo item itself - holds the price)
                 OrderDetail comboParent = OrderDetail.builder()
                     .itemMenu(item)
+                    .itemName(item.getName())
                     .quantity(quantity)
                     .unitPrice(item.getPrice())
                     .comments(comment)
@@ -2535,6 +2537,7 @@ public class OrderController {
                     
                     OrderDetail childDetail = OrderDetail.builder()
                         .itemMenu(childItem)
+                        .itemName(childItem.getName())
                         .quantity(childQty)
                         .unitPrice(BigDecimal.ZERO) // Children have $0 price (combo price is on parent)
                         .comments(comment)
@@ -2598,6 +2601,7 @@ public class OrderController {
 
             OrderDetail.OrderDetailBuilder detailBuilder = OrderDetail.builder()
                 .itemMenu(item)
+                .itemName(item.getName())
                 .quantity(quantity)
                 .unitPrice(item.getPrice())
                 .comments(comment);
@@ -2816,6 +2820,7 @@ public class OrderController {
                         OrderDetailComplement odc = OrderDetailComplement.builder()
                             .orderDetail(detail)
                             .complement(complement)
+                            .complementName(complement.getName())
                             .quantity(effectiveCompQty)
                             .unitPrice(complement.getExtraPrice())
                             .stockDeducted(false)
@@ -2941,6 +2946,7 @@ public class OrderController {
             OrderDetailComplement odc = OrderDetailComplement.builder()
                 .orderDetail(detail)
                 .complement(complement)
+                .complementName(complement.getName())
                 .quantity(effectiveCompQty)
                 .unitPrice(complement.getExtraPrice())
                 .stockDeducted(false)

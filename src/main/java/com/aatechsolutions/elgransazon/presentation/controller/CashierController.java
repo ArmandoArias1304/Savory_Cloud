@@ -1443,6 +1443,7 @@ public class CashierController {
 
                 OrderDetail.OrderDetailBuilder detailBuilder = OrderDetail.builder()
                         .itemMenu(item)
+                        .itemName(item.getName())
                         .quantity(quantity)
                         .unitPrice(item.getPrice())
                         .comments(comment);

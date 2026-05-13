@@ -466,7 +466,8 @@
                     <td class="px-6 py-4 whitespace-nowrap">
                       <span
                         th:class="'px-3 py-1 rounded-full text-xs font-bold ' + 
-                                      ${order.status.name() == 'PENDING' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' : 
+                                      ${order.status.name() == 'TO_ACCEPT' ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 ring-2 ring-amber-400/40' :
+                                       order.status.name() == 'PENDING' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' : 
                                        order.status.name() == 'IN_PREPARATION' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400' : 
                                        order.status.name() == 'READY' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : 
                                        order.status.name() == 'ON_THE_WAY' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400' : 

@@ -447,29 +447,72 @@
                   >
                     Items del pedido:
                   </p>
-                  <div class="space-y-1.5 max-h-32 overflow-y-auto">
+                  <div class="space-y-1.5 max-h-48 overflow-y-auto">
                     <div
                       th:each="detail : ${order.orderDetails}"
-                      class="flex items-center justify-between text-sm bg-gray-50 dark:bg-gray-700/50 px-2 py-1.5 rounded-lg"
+                      class="text-sm bg-gray-50 dark:bg-gray-700/50 px-2 py-1.5 rounded-lg"
+                      th:classappend="${detail.comboParent} ? 'border-l-2 border-l-teal-400 dark:border-l-teal-600 pl-2' : (${detail.comboChild} ? 'ml-5' : '')"
                     >
-                      <span class="flex items-center gap-1.5 flex-1 min-w-0">
+                      <div class="flex items-center justify-between">
+                        <span class="flex items-center gap-1.5 flex-1 min-w-0">
+                          <span
+                            class="w-6 h-6 bg-primary/20 rounded-full flex items-center justify-center text-primary font-bold text-xs flex-shrink-0"
+                            th:text="${detail.quantity}"
+                            >2</span
+                          >
+                          <span
+                            class="text-gray-700 dark:text-gray-300 truncate"
+                            th:text="${detail.displayName}"
+                            >Item</span
+                          >
+                        </span>
                         <span
-                          class="w-6 h-6 bg-primary/20 rounded-full flex items-center justify-center text-primary font-bold text-xs flex-shrink-0"
-                          th:text="${detail.quantity}"
-                          >2</span
+                          th:if="${detail.itemMenu.requiresPreparation}"
+                          class="material-symbols-outlined text-orange-500 text-sm ml-2 flex-shrink-0"
+                          title="Requiere preparación"
+                          >restaurant</span
                         >
-                        <span
-                          class="text-gray-700 dark:text-gray-300 truncate"
-                          th:text="${detail.itemMenu.name}"
-                          >Item</span
-                        >
+                      </div>
+                      <!-- Combo / child badges -->
+                      <span
+                        th:if="${detail.comboParent}"
+                        class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300 mt-1"
+                      >
+                        <span class="material-symbols-outlined" style="font-size: 0.625rem">inventory_2</span>
+                        COMBO
                       </span>
                       <span
-                        th:if="${detail.itemMenu.requiresPreparation}"
-                        class="material-symbols-outlined text-orange-500 text-sm ml-2 flex-shrink-0"
-                        title="Requiere preparación"
-                        >restaurant</span
+                        th:if="${detail.comboChild}"
+                        class="block text-[10px] text-teal-600 dark:text-teal-400 font-medium mt-0.5"
+                      >&#8627; parte del combo</span>
+                      <!-- Complements and Sauces -->
+                      <div
+                        th:if="${detail.selectedComplements != null && !detail.selectedComplements.isEmpty()}"
+                        class="pl-7 mt-1 space-y-0.5"
                       >
+                        <!-- Sauces -->
+                        <th:block th:each="comp : ${detail.selectedComplements}">
+                          <div
+                            th:if="${comp.complement.isSauce != null && comp.complement.isSauce}"
+                            class="flex items-center gap-1"
+                          >
+                            <span class="material-symbols-outlined text-blue-500 dark:text-blue-400 !text-xs">add_circle</span>
+                            <span class="text-xs text-blue-700 dark:text-blue-300 font-medium" th:text="${comp.complementName}"></span>
+                            <span class="text-[10px] text-gray-500 dark:text-gray-400" th:text="'x' + ${comp.quantity}"></span>
+                          </div>
+                        </th:block>
+                        <!-- Regular Complements -->
+                        <th:block th:each="comp : ${detail.selectedComplements}">
+                          <div
+                            th:if="${comp.complement.isSauce == null || !comp.complement.isSauce}"
+                            class="flex items-center gap-1"
+                          >
+                            <span class="material-symbols-outlined text-purple-500 dark:text-purple-400 !text-xs">add_circle</span>
+                            <span class="text-xs text-purple-700 dark:text-purple-300 font-medium" th:text="${comp.complementName}"></span>
+                            <span class="text-[10px] text-gray-500 dark:text-gray-400" th:text="'x' + ${comp.quantity}"></span>
+                          </div>
+                        </th:block>
+                      </div>
                     </div>
                   </div>
                 </div>

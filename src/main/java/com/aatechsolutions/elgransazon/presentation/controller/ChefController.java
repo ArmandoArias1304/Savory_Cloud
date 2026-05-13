@@ -333,8 +333,9 @@ public class ChefController {
         
         log.info("Found {} completed orders prepared by {} {}", completedOrders.size(), roleDisplay, username);
         
-        // Sort order details by status for each order
-        completedOrders.forEach(this::sortOrderDetailsByStatus);
+        // NOTE: NO sort by status here - we want to preserve insertion order (by idOrderDetail)
+        // so combo parent and its children stay grouped together in the view.
+        completedOrders.forEach(this::sortOrderDetailsByInsertionOrder);
         
         // Contar por estados
         long readyCount = completedOrders.stream()
@@ -705,6 +706,24 @@ public class ChefController {
                 int priority1 = getItemStatusPriority(d1.getItemStatus());
                 int priority2 = getItemStatusPriority(d2.getItemStatus());
                 return Integer.compare(priority1, priority2);
+            });
+        }
+    }
+
+    /**
+     * Sort order details preserving insertion order (by idOrderDetail ASC).
+     * This keeps combo parent immediately followed by its combo children,
+     * matching the order in which items were added to the order.
+     */
+    private void sortOrderDetailsByInsertionOrder(Order order) {
+        if (order.getOrderDetails() != null && !order.getOrderDetails().isEmpty()) {
+            order.getOrderDetails().sort((d1, d2) -> {
+                Long id1 = d1.getIdOrderDetail();
+                Long id2 = d2.getIdOrderDetail();
+                if (id1 == null && id2 == null) return 0;
+                if (id1 == null) return 1;
+                if (id2 == null) return -1;
+                return Long.compare(id1, id2);
             });
         }
     }

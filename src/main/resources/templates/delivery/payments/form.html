@@ -639,7 +639,7 @@
                   <div class="flex-1">
                     <span
                       class="text-gray-700 dark:text-gray-300 font-medium"
-                      th:text="${detail.itemMenu.name}"
+                      th:text="${detail.displayName}"
                     ></span>
                     <span class="text-gray-600 dark:text-gray-400 text-sm ml-2">
                       x<span th:text="${detail.quantity}"></span>
@@ -665,7 +665,7 @@
                 >
                   <div class="flex items-center gap-1 text-purple-600 dark:text-purple-400">
                     <span class="material-symbols-outlined text-xs">add_circle</span>
-                    <span class="text-xs" th:text="${comp.complement.name}"></span>
+                    <span class="text-xs" th:text="${comp.complementName}"></span>
                     <span class="text-gray-500 dark:text-gray-400 text-xs ml-1">
                       x<span th:text="${comp.quantity}"></span>
                     </span>

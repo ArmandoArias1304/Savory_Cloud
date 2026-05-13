@@ -67,6 +67,15 @@ public class OrderDetailComplement implements Serializable {
     @JoinColumn(name = "id_complement", nullable = false)
     private Complement complement;
 
+    /**
+     * Snapshot of the complement name at the time the order was placed.
+     * Null for legacy records created before this field was added.
+     * Use {@link #getComplementName()} which applies automatic fallback.
+     */
+    @Size(max = 100)
+    @Column(name = "complement_name", length = 100)
+    private String complementName;
+
     // ========== Quantity and Pricing ==========
 
     /**
@@ -140,6 +149,7 @@ public class OrderDetailComplement implements Serializable {
      */
     public void initializeFromComplement(Complement complement, int quantity) {
         this.complement = complement;
+        this.complementName = complement.getName();
         this.quantity = quantity;
         this.unitPrice = complement.getExtraPrice();
         calculateSubtotal();
@@ -187,9 +197,14 @@ public class OrderDetailComplement implements Serializable {
     // ========== Helper Methods ==========
 
     /**
-     * Get complement name safely
+     * Get complement name safely.
+     * Returns the snapshot {@link #complementName} if present (new records),
+     * or falls back to the live {@link Complement#getName()} for legacy records.
      */
     public String getComplementName() {
+        if (complementName != null && !complementName.isBlank()) {
+            return complementName;
+        }
         return complement != null ? complement.getName() : "N/A";
     }
 

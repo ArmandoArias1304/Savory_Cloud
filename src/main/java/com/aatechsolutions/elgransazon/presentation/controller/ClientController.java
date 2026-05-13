@@ -614,6 +614,7 @@ public class ClientController {
                 // Build the order detail with recalculated values
                 OrderDetail.OrderDetailBuilder detailBuilder = OrderDetail.builder()
                         .itemMenu(itemMenu)
+                        .itemName(itemMenu.getName())
                         .quantity(quantity)
                         .unitPrice(unitPrice)
                         .promotionAppliedPrice(promotionAppliedPrice)
@@ -723,6 +724,7 @@ public class ClientController {
                         OrderDetailComplement odc = OrderDetailComplement.builder()
                             .orderDetail(detail)
                             .complement(complement)
+                            .complementName(complement.getName())
                             .quantity(effectiveCompQty)
                             .unitPrice(complement.getExtraPrice())
                             .stockDeducted(false)
@@ -1099,6 +1101,7 @@ public class ClientController {
                 // Build the order detail with recalculated values
                 OrderDetail.OrderDetailBuilder detailBuilder = OrderDetail.builder()
                         .itemMenu(itemMenu)
+                        .itemName(itemMenu.getName())
                         .quantity(quantity)
                         .unitPrice(unitPrice)
                         .promotionAppliedPrice(promotionAppliedPrice)
@@ -1208,6 +1211,7 @@ public class ClientController {
                         OrderDetailComplement odc = OrderDetailComplement.builder()
                             .orderDetail(detail)
                             .complement(complement)
+                            .complementName(complement.getName())
                             .quantity(effectiveCompQty)
                             .unitPrice(complement.getExtraPrice())
                             .stockDeducted(false)
@@ -2112,6 +2116,7 @@ public class ClientController {
         
         OrderDetail comboParent = OrderDetail.builder()
                 .itemMenu(comboItem)
+                .itemName(comboItem.getName())
                 .quantity(quantity)
                 .unitPrice(unitPrice)
                 .promotionAppliedPrice(promotionAppliedPrice)
@@ -2148,6 +2153,7 @@ public class ClientController {
             
             OrderDetail childDetail = OrderDetail.builder()
                     .itemMenu(childItem)
+                    .itemName(childItem.getName())
                     .quantity(childQty)
                     .unitPrice(BigDecimal.ZERO)
                     .comments(comments)
@@ -2279,6 +2285,7 @@ public class ClientController {
                                 OrderDetailComplement odc = OrderDetailComplement.builder()
                                         .orderDetail(childDetail)
                                         .complement(complement)
+                                        .complementName(complement.getName())
                                         .quantity(effectiveCompQty)
                                         .unitPrice(complement.getExtraPrice())
                                         .stockDeducted(false)
