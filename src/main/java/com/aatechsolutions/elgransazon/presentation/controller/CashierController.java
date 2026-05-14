@@ -106,10 +106,6 @@ public class CashierController {
             @RequestParam(required = false) OrderStatus status,
             @RequestParam(required = false) OrderType orderType,
             @RequestParam(required = false) String date,
-            @RequestParam(required = false) Long globalTableId,
-            @RequestParam(required = false) OrderStatus globalStatus,
-            @RequestParam(required = false) OrderType globalOrderType,
-            @RequestParam(required = false) String globalDate,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "1") int globalPage,
             Authentication authentication,
@@ -119,56 +115,51 @@ public class CashierController {
         log.debug("Cashier {} displaying orders list with filters - table: {}, status: {}, type: {}, date: {}", 
                   username, tableId, status, orderType, date);
 
-        // Get orders created by current cashier (like waiter)
+        // ========== Resolve date range for table filter (optional) ==========
+        LocalDateTime filterStartDate = null;
+        LocalDateTime filterEndDate = null;
+        if (date != null && !date.isEmpty()) {
+            filterStartDate = dateTimeService.startOfDayUtc(LocalDate.parse(date));
+            filterEndDate = dateTimeService.endOfDayUtc(LocalDate.parse(date));
+        }
+        final LocalDateTime fStart = filterStartDate;
+        final LocalDateTime fEnd = filterEndDate;
+
+        // ========== My Orders (created by current cashier) ==========
         List<Order> myOrders = cashierOrderService.findOrdersByCurrentEmployee();
 
-        // Apply filters to myOrders
-        if (date != null && !date.isEmpty()) {
-            LocalDateTime startDate = dateTimeService.startOfDayUtc(LocalDate.parse(date));
-            LocalDateTime endDate = dateTimeService.endOfDayUtc(LocalDate.parse(date));
+        if (fStart != null) {
             myOrders = myOrders.stream()
-                .filter(order -> order.getCreatedAt().isAfter(startDate) && order.getCreatedAt().isBefore(endDate))
+                .filter(o -> o.getCreatedAt().isAfter(fStart) && o.getCreatedAt().isBefore(fEnd))
                 .collect(Collectors.toList());
         }
-
         if (tableId != null) {
-            Long finalTableId = tableId;
+            final Long finalTableId = tableId;
             myOrders = myOrders.stream()
-                .filter(order -> order.getTable() != null && order.getTable().getId().equals(finalTableId))
+                .filter(o -> o.getTable() != null && o.getTable().getId().equals(finalTableId))
                 .collect(Collectors.toList());
         }
-
         if (status != null) {
             myOrders = myOrders.stream()
-                .filter(order -> order.getStatus() == status)
+                .filter(o -> o.getStatus() == status)
                 .collect(Collectors.toList());
         }
-
         if (orderType != null) {
             myOrders = myOrders.stream()
-                .filter(order -> order.getOrderType() == orderType)
+                .filter(o -> o.getOrderType() == orderType)
                 .collect(Collectors.toList());
         }
-
-        // Sort by creation date (most recent first)
         myOrders = myOrders.stream()
             .sorted((o1, o2) -> o2.getCreatedAt().compareTo(o1.getCreatedAt()))
             .collect(Collectors.toList());
 
-        // Get global orders (PENDING to PAID) - includes PAID as history
-        // Use adminOrderService to get ALL orders (not filtered by employee)
-        // EXCLUDE orders created by current cashier (those are already in first table)
-        // For PAID orders, only show those collected by current cashier
+        // ========== Global Orders (NOT created by current cashier) ==========
+        // PAID is only shown if collected by current cashier.
         List<Order> unpaidOrders = adminOrderService.findAll().stream()
             .filter(o -> {
-                // EXCLUDE orders created by current cashier
                 if (o.getCreatedBy() != null && o.getCreatedBy().equals(username)) {
                     return false;
                 }
-                
-                // Show all non-PAID orders (created by others), including TO_ACCEPT so
-                // the cashier can review and accept pending customer orders that were
-                // placed under "manual customer order acceptance" mode.
                 if (o.getStatus() == OrderStatus.TO_ACCEPT ||
                     o.getStatus() == OrderStatus.PENDING ||
                     o.getStatus() == OrderStatus.IN_PREPARATION ||
@@ -176,83 +167,71 @@ public class CashierController {
                     o.getStatus() == OrderStatus.DELIVERED) {
                     return true;
                 }
-                
-                // For PAID orders, only show if current cashier collected payment
-                // (but not created by them - already excluded above)
                 if (o.getStatus() == OrderStatus.PAID) {
                     return o.getPaidBy() != null && o.getPaidBy().getUsername().equals(username);
                 }
-                
                 return false;
             })
             .sorted((o1, o2) -> o2.getCreatedAt().compareTo(o1.getCreatedAt()))
             .collect(Collectors.toList());
 
-        // Apply filters to unpaidOrders (Global filters)
-        if (globalDate != null && !globalDate.isEmpty()) {
-            LocalDateTime startDate = dateTimeService.startOfDayUtc(LocalDate.parse(globalDate));
-            LocalDateTime endDate = dateTimeService.endOfDayUtc(LocalDate.parse(globalDate));
+        // Apply the SAME filters to global orders
+        if (fStart != null) {
             unpaidOrders = unpaidOrders.stream()
-                .filter(order -> order.getCreatedAt().isAfter(startDate) && order.getCreatedAt().isBefore(endDate))
+                .filter(o -> o.getCreatedAt().isAfter(fStart) && o.getCreatedAt().isBefore(fEnd))
+                .collect(Collectors.toList());
+        }
+        if (tableId != null) {
+            final Long finalTableId = tableId;
+            unpaidOrders = unpaidOrders.stream()
+                .filter(o -> o.getTable() != null && o.getTable().getId().equals(finalTableId))
+                .collect(Collectors.toList());
+        }
+        if (status != null) {
+            unpaidOrders = unpaidOrders.stream()
+                .filter(o -> o.getStatus() == status)
+                .collect(Collectors.toList());
+        }
+        if (orderType != null) {
+            unpaidOrders = unpaidOrders.stream()
+                .filter(o -> o.getOrderType() == orderType)
                 .collect(Collectors.toList());
         }
 
-        if (globalTableId != null) {
-            Long finalGlobalTableId = globalTableId;
-            unpaidOrders = unpaidOrders.stream()
-                .filter(order -> order.getTable() != null && order.getTable().getId().equals(finalGlobalTableId))
-                .collect(Collectors.toList());
-        }
-
-        if (globalStatus != null) {
-            unpaidOrders = unpaidOrders.stream()
-                .filter(order -> order.getStatus() == globalStatus)
-                .collect(Collectors.toList());
-        }
-
-        if (globalOrderType != null) {
-            unpaidOrders = unpaidOrders.stream()
-                .filter(order -> order.getOrderType() == globalOrderType)
-                .collect(Collectors.toList());
-        }
-
-        // ========== Calculate date range for statistics ==========
-        // If date filter is applied, use that date; otherwise use today
+        // ========== Stats date range (always applies; defaults to today) ==========
         LocalDateTime statsStartDate;
         LocalDateTime statsEndDate;
-        if (date != null && !date.isEmpty()) {
-            statsStartDate = dateTimeService.startOfDayUtc(LocalDate.parse(date));
-            statsEndDate = dateTimeService.endOfDayUtc(LocalDate.parse(date));
+        if (fStart != null) {
+            statsStartDate = fStart;
+            statsEndDate = fEnd;
         } else {
             statsStartDate = dateTimeService.startOfDayUtc(dateTimeService.todayLocal());
             statsEndDate = dateTimeService.endOfDayUtc(dateTimeService.todayLocal());
         }
 
-        // ========== Calculate statistics (dynamic based on date filter) ==========
-        // paidCount: Count of PAID orders collected by current cashier in selected date range
+        // ========== Cards (always restricted to stats date range) ==========
+        // Pedidos Cobrados: count of PAID orders collected by current cashier in date range (global, across tables)
         long paidCount = cashierOrderService.countPaidOrdersByUsernameAndDateRange(username, statsStartDate, statsEndDate);
-        
-        // Revenue: All orders PAID in date range where paidBy = current cashier (En Caja Hoy)
-        // This is what the cashier has collected - regardless of who created the orders
+
+        // Ingresos: total revenue collected by current cashier in date range (paidBy = cashier; both tables)
         BigDecimal myTodayRevenue = cashierOrderService.getRevenueByUsernameAndDateRange(username, statsStartDate, statsEndDate);
-        
-        long myPendingCount = myOrders.stream()
+
+        // Pendientes / En Preparación: globales (ambas tablas) en el rango de fechas, por createdAt
+        final LocalDateTime sStart = statsStartDate;
+        final LocalDateTime sEnd = statsEndDate;
+        List<Order> allOrdersInStatsRange = adminOrderService.findAll().stream()
+            .filter(o -> o.getCreatedAt() != null
+                      && o.getCreatedAt().isAfter(sStart)
+                      && o.getCreatedAt().isBefore(sEnd))
+            .collect(Collectors.toList());
+        long myPendingCount = allOrdersInStatsRange.stream()
             .filter(o -> o.getStatus() == OrderStatus.PENDING)
             .count();
-        
-        long myPaidCount = myOrders.stream()
-            .filter(o -> o.getStatus() == OrderStatus.PAID)
-            .count();
-        
-        long inPreparationCount = myOrders.stream()
+        long inPreparationCount = allOrdersInStatsRange.stream()
             .filter(o -> o.getStatus() == OrderStatus.IN_PREPARATION)
             .count();
-        
-        // My Own Revenue: Orders CREATED AND PAID by current cashier in selected date range (Ingresos Propios)
-        // This is orders the cashier created AND also collected payment for
-        BigDecimal myOwnRevenue = cashierOrderService.getRevenueCreatedAndPaidBySameUserAndDateRange(username, statsStartDate, statsEndDate);
-        
-        // Statistics for unpaid orders (global) - exclude PAID from total
+
+        // ========== Global table summary header counters ==========
         long unpaidCount = unpaidOrders.stream()
             .filter(o -> o.getStatus() != OrderStatus.PAID)
             .count();
@@ -260,18 +239,16 @@ public class CashierController {
             .filter(o -> o.getStatus() != OrderStatus.PAID)
             .map(Order::getTotal)
             .reduce(BigDecimal.ZERO, BigDecimal::add);
-        
-        // Count of PAID orders (history)
         long paidOrdersCount = unpaidOrders.stream()
             .filter(o -> o.getStatus() == OrderStatus.PAID)
             .count();
 
-        // Get filter data
+        // Filter dropdown data
         List<RestaurantTable> tables = restaurantTableService.findAllOrderByTableNumber();
         OrderStatus[] statuses = OrderStatus.values();
         OrderType[] orderTypes = OrderType.values();
 
-        // Server-side pagination for myOrders
+        // ========== Pagination ==========
         int pageSize = 15;
         int myTotalElements = myOrders.size();
         int myTotalPages = (int) Math.ceil((double) myTotalElements / pageSize);
@@ -281,7 +258,6 @@ public class CashierController {
         int myEndIdx = Math.min(myStartIdx + pageSize, myTotalElements);
         List<Order> pagedMyOrders = myTotalElements > 0 ? myOrders.subList(myStartIdx, myEndIdx) : myOrders;
 
-        // Server-side pagination for unpaidOrders (global)
         int globalTotalElements = unpaidOrders.size();
         int globalTotalPages = (int) Math.ceil((double) globalTotalElements / pageSize);
         if (globalTotalPages == 0) globalTotalPages = 1;
@@ -293,13 +269,11 @@ public class CashierController {
         model.addAttribute("myOrders", pagedMyOrders);
         model.addAttribute("unpaidOrders", pagedUnpaidOrders);
 
-        // Pagination metadata for myOrders
         model.addAttribute("currentPage", page);
         model.addAttribute("totalPages", myTotalPages);
         model.addAttribute("totalElements", myTotalElements);
         model.addAttribute("pageSize", pageSize);
 
-        // Pagination metadata for global orders
         model.addAttribute("globalCurrentPage", globalPage);
         model.addAttribute("globalTotalPages", globalTotalPages);
         model.addAttribute("globalTotalElements", globalTotalElements);
@@ -310,9 +284,7 @@ public class CashierController {
         model.addAttribute("paidCount", paidCount);
         model.addAttribute("todayRevenue", myTodayRevenue);
         model.addAttribute("myPendingCount", myPendingCount);
-        model.addAttribute("myPaidCount", myPaidCount);
         model.addAttribute("inPreparationCount", inPreparationCount);
-        model.addAttribute("myOwnRevenue", myOwnRevenue);
         model.addAttribute("unpaidCount", unpaidCount);
         model.addAttribute("unpaidTotal", unpaidTotal);
         model.addAttribute("paidOrdersCount", paidOrdersCount);
@@ -320,12 +292,7 @@ public class CashierController {
         model.addAttribute("selectedStatus", status);
         model.addAttribute("selectedOrderType", orderType);
         model.addAttribute("selectedDate", date);
-        
-        model.addAttribute("selectedGlobalTableId", globalTableId);
-        model.addAttribute("selectedGlobalStatus", globalStatus);
-        model.addAttribute("selectedGlobalOrderType", globalOrderType);
-        model.addAttribute("selectedGlobalDate", globalDate);
-        
+
         model.addAttribute("currentRole", "cashier");
 
         return "cashier/orders/list";
@@ -1385,29 +1352,15 @@ public class CashierController {
             model.addAttribute("todayAverageOrderValue", todayAverageOrderValue);
             model.addAttribute("averageTip", averageTip);
             model.addAttribute("todayAverageTip", todayAverageTip);
+            // Aliases expected by the cashier reports template
+            model.addAttribute("averageRevenue", averageOrderValue);
             
             // Chart data
             model.addAttribute("last7DaysLabels", last7DaysLabels);
             model.addAttribute("last7DaysOrdersData", last7DaysOrdersData);
             model.addAttribute("last7DaysRevenueData", last7DaysRevenueData);
             model.addAttribute("last7DaysTipsData", last7DaysTipsData);
-            
-            // Status counts - For cashier, we don't track status by employee
-            // Set all to 0 since cashier doesn't create orders with different statuses
-            model.addAttribute("totalPending", 0);
-            model.addAttribute("totalInPreparation", 0);
-            model.addAttribute("totalReady", 0);
-            model.addAttribute("totalDelivered", 0);
-            model.addAttribute("totalPaid", (long) totalOrders);
-            model.addAttribute("totalCancelled", 0);
-            
-            model.addAttribute("todayPending", 0);
-            model.addAttribute("todayInPreparation", 0);
-            model.addAttribute("todayReady", 0);
-            model.addAttribute("todayDelivered", 0);
-            model.addAttribute("todayPaid", (long) todayOrders);
-            model.addAttribute("todayCancelled", 0);
-            
+
             return "cashier/reports/view";
             
         } catch (Exception e) {
@@ -1777,20 +1730,20 @@ public class CashierController {
                             .anyMatch(role -> role.getNombreRol().equals("ROLE_CASHIER")))
                     .toList();
             
-            // Calculate sales for each cashier (TODAY ONLY) - using paidBy
+            // Calculate sales for each cashier (TODAY ONLY) - using paidBy + paidAt
             List<Map<String, Object>> cashierSales = allCashiers.stream()
                     .map(cashier -> {
-                        // Get all PAID orders collected by this cashier TODAY
-                        // MULTI-TENANT: Use service instead of repository to filter by company
+                        // MULTI-TENANT: adminOrderService.findByStatus filters by company.
+                        // SCOPE: orders paid (paidBy) by this cashier in today's [startOfDay, endOfDay] (by paidAt).
                         List<Order> todayPaidOrders = adminOrderService.findByStatus(OrderStatus.PAID)
                                 .stream()
                                 .filter(order -> {
-                                    LocalDateTime paidDate = order.getPaidAt() != null ? order.getPaidAt() : (order.getUpdatedAt() != null ? order.getUpdatedAt() : order.getCreatedAt());
+                                    LocalDateTime paidAt = order.getPaidAt() != null ? order.getPaidAt() : (order.getUpdatedAt() != null ? order.getUpdatedAt() : order.getCreatedAt());
                                     return order.getPaidBy() != null &&
                                            order.getPaidBy().getIdEmpleado().equals(cashier.getIdEmpleado()) &&
-                                           paidDate != null && 
-                                           !paidDate.isBefore(startOfDay) && 
-                                           !paidDate.isAfter(endOfDay);
+                                           paidAt != null &&
+                                           !paidAt.isBefore(startOfDay) &&
+                                           !paidAt.isAfter(endOfDay);
                                 })
                                 .toList();
                         

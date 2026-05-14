@@ -7,12 +7,14 @@ import com.aatechsolutions.elgransazon.application.service.EmployeeService;
 import com.aatechsolutions.elgransazon.application.service.ItemMenuService;
 import com.aatechsolutions.elgransazon.application.service.SystemConfigurationService;
 import com.aatechsolutions.elgransazon.domain.entity.Category;
+import com.aatechsolutions.elgransazon.domain.entity.Company;
 import com.aatechsolutions.elgransazon.domain.entity.Employee;
 import com.aatechsolutions.elgransazon.domain.entity.ItemMenu;
 import com.aatechsolutions.elgransazon.domain.entity.Order;
 import com.aatechsolutions.elgransazon.domain.entity.OrderStatus;
 import com.aatechsolutions.elgransazon.domain.entity.SystemConfiguration;
 import com.aatechsolutions.elgransazon.domain.repository.OrderRepository;
+import com.aatechsolutions.elgransazon.infrastructure.context.CompanyContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
@@ -25,7 +27,6 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -202,176 +203,124 @@ public class WaiterController {
         try {
             Employee employee = employeeService.findByUsername(username)
                     .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
-            
-            // Get all orders for this employee
-            List<Order> allOrders = orderRepository.findByEmployeeId(employee.getIdEmpleado());
-            
-            // Filter paid orders
-            List<Order> paidOrders = allOrders.stream()
+
+            // MULTI-TENANT: Filter orders by company
+            Company company = CompanyContext.requireCurrentCompany();
+
+            // Scope PERSONAL: all PAID orders collected by this waiter (paidBy = waiter)
+            // within the current company. Mirrors the cashier reports model.
+            List<Order> collectedOrders = orderRepository.findByCompany(company).stream()
                     .filter(order -> order.getStatus() == OrderStatus.PAID)
+                    .filter(order -> order.getPaidBy() != null
+                            && order.getPaidBy().getIdEmpleado().equals(employee.getIdEmpleado()))
                     .toList();
-            
-            // Get today's date
+
+            // Today's date range in company timezone
             LocalDate today = dateTimeService.todayLocal();
             LocalDateTime startOfDay = dateTimeService.startOfDayUtc(today);
             LocalDateTime endOfDay = dateTimeService.endOfDayUtc(today);
-            
-            // Today's orders
-            List<Order> todaysOrders = allOrders.stream()
+
+            // Today's collected orders (by authoritative paidAt; fallback to updatedAt/createdAt)
+            List<Order> todaysCollectedOrders = collectedOrders.stream()
                     .filter(order -> {
-                        LocalDateTime createdAt = order.getCreatedAt();
-                        return createdAt != null && 
-                               !createdAt.isBefore(startOfDay) && 
-                               !createdAt.isAfter(endOfDay);
+                        LocalDateTime paidAt = order.getPaidAt() != null ? order.getPaidAt()
+                                : (order.getUpdatedAt() != null ? order.getUpdatedAt() : order.getCreatedAt());
+                        return paidAt != null && !paidAt.isBefore(startOfDay) && !paidAt.isAfter(endOfDay);
                     })
                     .toList();
-            
-            // Calculate statistics
-            // Total orders by status
-            long totalPending = allOrders.stream().filter(o -> o.getStatus() == OrderStatus.PENDING).count();
-            long totalInPreparation = allOrders.stream().filter(o -> o.getStatus() == OrderStatus.IN_PREPARATION).count();
-            long totalReady = allOrders.stream().filter(o -> o.getStatus() == OrderStatus.READY).count();
-            long totalDelivered = allOrders.stream().filter(o -> o.getStatus() == OrderStatus.DELIVERED).count();
-            long totalPaid = paidOrders.size();
-            long totalCancelled = allOrders.stream().filter(o -> o.getStatus() == OrderStatus.CANCELLED).count();
-            
-            // Today's orders by status
-            long todayPending = todaysOrders.stream().filter(o -> o.getStatus() == OrderStatus.PENDING).count();
-            long todayInPreparation = todaysOrders.stream().filter(o -> o.getStatus() == OrderStatus.IN_PREPARATION).count();
-            long todayReady = todaysOrders.stream().filter(o -> o.getStatus() == OrderStatus.READY).count();
-            long todayDelivered = todaysOrders.stream().filter(o -> o.getStatus() == OrderStatus.DELIVERED).count();
-            long todayPaid = paidOrders.stream()
-                    .filter(order -> {
-                        LocalDateTime paidAt = order.getPaidAt() != null ? order.getPaidAt()
-                                : (order.getUpdatedAt() != null ? order.getUpdatedAt() : order.getCreatedAt());
-                        return paidAt != null && !paidAt.isBefore(startOfDay) && !paidAt.isAfter(endOfDay);
-                    })
-                    .count();
-            long todayCancelled = todaysOrders.stream().filter(o -> o.getStatus() == OrderStatus.CANCELLED).count();
-            
-            // Calculate revenue and tips
-            BigDecimal totalRevenue = paidOrders.stream()
+
+            // Revenue & tips
+            BigDecimal totalRevenue = collectedOrders.stream()
                     .map(order -> order.getTotal() != null ? order.getTotal() : BigDecimal.ZERO)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
-            
-            BigDecimal totalTips = paidOrders.stream()
-                    .map(order -> order.getTip() != null ? order.getTip() : BigDecimal.ZERO)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-            
-            BigDecimal todayRevenue = paidOrders.stream()
-                    .filter(order -> {
-                        LocalDateTime paidAt = order.getPaidAt() != null ? order.getPaidAt()
-                                : (order.getUpdatedAt() != null ? order.getUpdatedAt() : order.getCreatedAt());
-                        return paidAt != null && !paidAt.isBefore(startOfDay) && !paidAt.isAfter(endOfDay);
-                    })
+
+            BigDecimal todayRevenue = todaysCollectedOrders.stream()
                     .map(order -> order.getTotal() != null ? order.getTotal() : BigDecimal.ZERO)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
-            
-            BigDecimal todayTips = paidOrders.stream()
-                    .filter(order -> {
-                        LocalDateTime paidAt = order.getPaidAt() != null ? order.getPaidAt()
-                                : (order.getUpdatedAt() != null ? order.getUpdatedAt() : order.getCreatedAt());
-                        return paidAt != null && !paidAt.isBefore(startOfDay) && !paidAt.isAfter(endOfDay);
-                    })
+
+            BigDecimal totalTips = collectedOrders.stream()
                     .map(order -> order.getTip() != null ? order.getTip() : BigDecimal.ZERO)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
-            
-            // Last 7 days statistics
-            // LinkedHashMap preserves insertion order so the chart labels/data stay
-            // chronological (oldest -> today) instead of being shuffled by HashMap.
+
+            BigDecimal todayTips = todaysCollectedOrders.stream()
+                    .map(order -> order.getTip() != null ? order.getTip() : BigDecimal.ZERO)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            // Last 7 days (chronological), all filtered by paidAt of collectedOrders
             Map<String, Long> last7DaysOrders = new LinkedHashMap<>();
             Map<String, BigDecimal> last7DaysRevenue = new LinkedHashMap<>();
             Map<String, BigDecimal> last7DaysTips = new LinkedHashMap<>();
-            
+
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM");
-            
+
             for (int i = 6; i >= 0; i--) {
                 LocalDate date = today.minusDays(i);
                 LocalDateTime dayStart = dateTimeService.startOfDayUtc(date);
                 LocalDateTime dayEnd = dateTimeService.endOfDayUtc(date);
-                
+
                 String dateKey = date.format(formatter);
-                
-                List<Order> dayOrders = allOrders.stream()
+
+                List<Order> dayOrders = collectedOrders.stream()
                         .filter(order -> {
-                            LocalDateTime createdAt = order.getCreatedAt();
-                            return createdAt != null && 
-                                   !createdAt.isBefore(dayStart) && 
-                                   !createdAt.isAfter(dayEnd);
+                            LocalDateTime paidAt = order.getPaidAt() != null ? order.getPaidAt()
+                                    : (order.getUpdatedAt() != null ? order.getUpdatedAt() : order.getCreatedAt());
+                            return paidAt != null && !paidAt.isBefore(dayStart) && !paidAt.isAfter(dayEnd);
                         })
                         .toList();
-                
+
                 long dayOrderCount = dayOrders.size();
-                
-                BigDecimal dayRevenue = paidOrders.stream()
-                        .filter(order -> {
-                            LocalDateTime paidAt = order.getPaidAt() != null ? order.getPaidAt()
-                                    : (order.getUpdatedAt() != null ? order.getUpdatedAt() : order.getCreatedAt());
-                            return paidAt != null && !paidAt.isBefore(dayStart) && !paidAt.isAfter(dayEnd);
-                        })
+
+                BigDecimal dayRevenue = dayOrders.stream()
                         .map(order -> order.getTotal() != null ? order.getTotal() : BigDecimal.ZERO)
                         .reduce(BigDecimal.ZERO, BigDecimal::add);
-                
-                BigDecimal dayTips = paidOrders.stream()
-                        .filter(order -> {
-                            LocalDateTime paidAt = order.getPaidAt() != null ? order.getPaidAt()
-                                    : (order.getUpdatedAt() != null ? order.getUpdatedAt() : order.getCreatedAt());
-                            return paidAt != null && !paidAt.isBefore(dayStart) && !paidAt.isAfter(dayEnd);
-                        })
+
+                BigDecimal dayTips = dayOrders.stream()
                         .map(order -> order.getTip() != null ? order.getTip() : BigDecimal.ZERO)
                         .reduce(BigDecimal.ZERO, BigDecimal::add);
-                
+
                 last7DaysOrders.put(dateKey, dayOrderCount);
                 last7DaysRevenue.put(dateKey, dayRevenue);
                 last7DaysTips.put(dateKey, dayTips);
             }
-            
-            // Average per order
-            BigDecimal averageRevenue = paidOrders.size() > 0 
-                    ? totalRevenue.divide(BigDecimal.valueOf(paidOrders.size()), 2, java.math.RoundingMode.HALF_UP)
+
+            // Averages per collected order
+            BigDecimal averageRevenue = !collectedOrders.isEmpty()
+                    ? totalRevenue.divide(BigDecimal.valueOf(collectedOrders.size()), 2, java.math.RoundingMode.HALF_UP)
                     : BigDecimal.ZERO;
-            
-            BigDecimal averageTip = paidOrders.size() > 0
-                    ? totalTips.divide(BigDecimal.valueOf(paidOrders.size()), 2, java.math.RoundingMode.HALF_UP)
+
+            BigDecimal averageTip = !collectedOrders.isEmpty()
+                    ? totalTips.divide(BigDecimal.valueOf(collectedOrders.size()), 2, java.math.RoundingMode.HALF_UP)
                     : BigDecimal.ZERO;
-            
+
+            // Counts
+            int totalOrders = collectedOrders.size();
+            int todayOrders = todaysCollectedOrders.size();
+
             // Add to model
             model.addAttribute("employee", employee);
-            
-            // Totals
-            model.addAttribute("totalOrders", allOrders.size());
-            model.addAttribute("totalPending", totalPending);
-            model.addAttribute("totalInPreparation", totalInPreparation);
-            model.addAttribute("totalReady", totalReady);
-            model.addAttribute("totalDelivered", totalDelivered);
-            model.addAttribute("totalPaid", totalPaid);
-            model.addAttribute("totalCancelled", totalCancelled);
+
+            // Totals (scope = paid by this waiter, all time)
+            model.addAttribute("totalOrders", totalOrders);
             model.addAttribute("totalRevenue", totalRevenue);
             model.addAttribute("totalTips", totalTips);
-            
-            // Today
-            model.addAttribute("todayOrders", todaysOrders.size());
-            model.addAttribute("todayPending", todayPending);
-            model.addAttribute("todayInPreparation", todayInPreparation);
-            model.addAttribute("todayReady", todayReady);
-            model.addAttribute("todayDelivered", todayDelivered);
-            model.addAttribute("todayPaid", todayPaid);
-            model.addAttribute("todayCancelled", todayCancelled);
+
+            // Today (scope = paid by this waiter, today)
+            model.addAttribute("todayOrders", todayOrders);
             model.addAttribute("todayRevenue", todayRevenue);
             model.addAttribute("todayTips", todayTips);
-            
+
             // Averages
             model.addAttribute("averageRevenue", averageRevenue);
             model.addAttribute("averageTip", averageTip);
-            
-            // Last 7 days (as JSON strings for JavaScript)
-            model.addAttribute("last7DaysLabels", last7DaysOrders.keySet().stream().collect(Collectors.toList()));
-            model.addAttribute("last7DaysOrdersData", last7DaysOrders.values().stream().collect(Collectors.toList()));
-            model.addAttribute("last7DaysRevenueData", last7DaysRevenue.values().stream().collect(Collectors.toList()));
-            model.addAttribute("last7DaysTipsData", last7DaysTips.values().stream().collect(Collectors.toList()));
-            
+
+            // Last 7 days (chronological)
+            model.addAttribute("last7DaysLabels", new java.util.ArrayList<>(last7DaysOrders.keySet()));
+            model.addAttribute("last7DaysOrdersData", new java.util.ArrayList<>(last7DaysOrders.values()));
+            model.addAttribute("last7DaysRevenueData", new java.util.ArrayList<>(last7DaysRevenue.values()));
+            model.addAttribute("last7DaysTipsData", new java.util.ArrayList<>(last7DaysTips.values()));
+
             return "waiter/reports/view";
-            
+
         } catch (Exception e) {
             log.error("Error loading reports for user {}: {}", username, e.getMessage(), e);
             redirectAttributes.addFlashAttribute("errorMessage", "Error al cargar los reportes");
@@ -434,29 +383,34 @@ public class WaiterController {
             // Get system configuration
             SystemConfiguration config = configurationService.getConfiguration();
             
-            // Get today's date range
+            // Get today's date range (TIMEZONE: use company-aware UTC bounds)
             LocalDate today = dateTimeService.todayLocal();
-            LocalDateTime startOfDay = today.atStartOfDay();
-            LocalDateTime endOfDay = today.atTime(LocalTime.MAX);
-            
-            // Get all employees with WAITER role
+            LocalDateTime startOfDay = dateTimeService.startOfDayUtc(today);
+            LocalDateTime endOfDay = dateTimeService.endOfDayUtc(today);
+
+            // MULTI-TENANT: resolve current company once and fetch its orders.
+            Company company = CompanyContext.requireCurrentCompany();
+            List<Order> companyOrders = orderRepository.findByCompany(company);
+
+            // Get all employees with WAITER role (employeeService.findAll() is multi-tenant)
             List<Employee> allWaiters = employeeService.findAll().stream()
                     .filter(emp -> emp.getRoles().stream()
                             .anyMatch(role -> role.getNombreRol().equals("ROLE_WAITER")))
                     .toList();
             
-            // Calculate sales for each waiter (TODAY ONLY)
+            // Calculate sales for each waiter (TODAY ONLY, by paidAt).
+            // SCOPE PERSONAL: only count orders actually collected (paidBy) by this waiter,
+            // not orders the waiter created but were paid by someone else.
             List<Map<String, Object>> waiterSales = allWaiters.stream()
                     .map(waiter -> {
-                        // Get all PAID orders for this waiter TODAY
-                        List<Order> todayPaidOrders = orderRepository.findByEmployeeId(waiter.getIdEmpleado())
-                                .stream()
+                        List<Order> todayPaidOrders = companyOrders.stream()
+                                .filter(order -> order.getStatus() == OrderStatus.PAID)
                                 .filter(order -> {
-                                    if (order.getStatus() != OrderStatus.PAID) return false;
-                                    LocalDateTime paidAt = order.getPaidAt() != null ? order.getPaidAt()
-                                            : (order.getUpdatedAt() != null ? order.getUpdatedAt() : order.getCreatedAt());
-                                    return paidAt != null &&
-                                           !paidAt.isBefore(startOfDay) && 
+                                    LocalDateTime paidAt = order.getPaidAt();
+                                    return order.getPaidBy() != null &&
+                                           order.getPaidBy().getIdEmpleado().equals(waiter.getIdEmpleado()) &&
+                                           paidAt != null &&
+                                           !paidAt.isBefore(startOfDay) &&
                                            !paidAt.isAfter(endOfDay);
                                 })
                                 .toList();

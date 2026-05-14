@@ -245,9 +245,34 @@ public class OrderController {
         // Revenue for the selected date range (global)
         BigDecimal todayRevenue = orderService.getRevenueByDateRange(statsStartDate, statsEndDate);
         
-        // Pending and In Preparation counts (these remain global/today for operational awareness)
-        long pendingCount = orderService.countByStatus(OrderStatus.PENDING);
-        long inPreparationCount = orderService.countByStatus(OrderStatus.IN_PREPARATION);
+        // Pending and In Preparation counts
+        // - Admin: global counts within stats date range (by createdAt)
+        // - Waiter: scoped to waiter's own orders (createdBy = waiter) within stats date range (by createdAt)
+        // - Other roles: keep all-time global counts (operational awareness, unchanged behavior)
+        long pendingCount;
+        long inPreparationCount;
+        if ("waiter".equals(role)) {
+            final LocalDateTime sStart = statsStartDate;
+            final LocalDateTime sEnd = statsEndDate;
+            // orderService.findAll() for waiter is already filtered by createdBy=waiter
+            List<Order> myOrdersInStatsRange = orderService.findAll().stream()
+                .filter(o -> o.getCreatedAt() != null
+                          && o.getCreatedAt().isAfter(sStart)
+                          && o.getCreatedAt().isBefore(sEnd))
+                .collect(Collectors.toList());
+            pendingCount = myOrdersInStatsRange.stream()
+                .filter(o -> o.getStatus() == OrderStatus.PENDING)
+                .count();
+            inPreparationCount = myOrdersInStatsRange.stream()
+                .filter(o -> o.getStatus() == OrderStatus.IN_PREPARATION)
+                .count();
+        } else if ("admin".equals(role)) {
+            pendingCount = orderService.countByStatusAndDateRange(OrderStatus.PENDING, statsStartDate, statsEndDate);
+            inPreparationCount = orderService.countByStatusAndDateRange(OrderStatus.IN_PREPARATION, statsStartDate, statsEndDate);
+        } else {
+            pendingCount = orderService.countByStatus(OrderStatus.PENDING);
+            inPreparationCount = orderService.countByStatus(OrderStatus.IN_PREPARATION);
+        }
         
         // My Collected Revenue: Orders paid by current user in selected date range (regardless of who created them)
         // Used by Admin for "Ingresos Hoy Cobrados"

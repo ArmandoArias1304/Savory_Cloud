@@ -3,8 +3,8 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title th:text="${globalSystemConfig.systemName + ' - Ranking de Chefs'}">
-      El Gran Sazón - Ranking de Chefs
+    <title th:text="${globalSystemConfig.systemName + ' - Ranking'}">
+      El Gran Sazón - Ranking
     </title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -189,7 +189,7 @@
         <div class="flex-1 min-w-0">
           <h1
             class="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white truncate"
-            th:text="${globalSystemConfig.systemName != null and !globalSystemConfig.systemName.isEmpty()} ? ${globalSystemConfig.systemName} + ' - Ranking de ' + ${role} + 's' : 'Ranking de ' + ${role} + 's'"
+            th:text="${globalSystemConfig.systemName != null and !globalSystemConfig.systemName.isEmpty()} ? ${globalSystemConfig.systemName} + ' - Ranking'"
           >
             Ranking de Chefs
           </h1>
@@ -257,7 +257,7 @@
                   <p
                     class="text-base sm:text-lg font-bold text-yellow-700 dark:text-yellow-400 mb-6"
                   >
-                    🏆 Chef Más Productivo
+                    🏆 Más Productivo
                   </p>
 
                   <!-- Stats -->

@@ -215,7 +215,7 @@
             >
               0
             </p>
-            <p class="text-white/80 text-sm">Pedidos</p>
+            <p class="text-white/80 text-sm">Pedidos Cobrados</p>
           </div>
         </div>
 
@@ -259,7 +259,7 @@
             >
               0
             </p>
-            <p class="text-white/80 text-sm">Pedidos</p>
+            <p class="text-white/80 text-sm">Pedidos Cobrados</p>
           </div>
         </div>
 
@@ -288,46 +288,6 @@
 
       <!-- CHARTS SECTION -->
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 mb-8">
-        <!-- TODAY ORDERS STATUS CHART (Donut) -->
-        <div
-          class="rounded-3xl bg-white dark:bg-gray-900 shadow-xl p-6 sm:p-8 border border-gray-200 dark:border-gray-800 animate-fadeInUp"
-          style="animation-delay: 0.3s"
-        >
-          <div class="mb-6">
-            <h2
-              class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-2"
-            >
-              Estado de Pedidos (Hoy)
-            </h2>
-            <p class="text-sm text-gray-600 dark:text-gray-400">
-              Distribución de pedidos del día de hoy
-            </p>
-          </div>
-          <div class="chart-container">
-            <canvas id="todayOrdersStatusChart"></canvas>
-          </div>
-        </div>
-
-        <!-- ORDERS STATUS CHART (Donut) -->
-        <div
-          class="rounded-3xl bg-white dark:bg-gray-900 shadow-xl p-6 sm:p-8 border border-gray-200 dark:border-gray-800 animate-fadeInUp"
-          style="animation-delay: 0.35s"
-        >
-          <div class="mb-6">
-            <h2
-              class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-2"
-            >
-              Estado de Pedidos (Total)
-            </h2>
-            <p class="text-sm text-gray-600 dark:text-gray-400">
-              Distribución por estado de todos tus pedidos
-            </p>
-          </div>
-          <div class="chart-container">
-            <canvas id="ordersStatusChart"></canvas>
-          </div>
-        </div>
-
         <!-- LAST 7 DAYS ORDERS (Line Chart) -->
         <div
           class="rounded-3xl bg-white dark:bg-gray-900 shadow-xl p-6 sm:p-8 border border-gray-200 dark:border-gray-800 animate-fadeInUp"
@@ -337,7 +297,7 @@
             <h2
               class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-2"
             >
-              Pedidos Últimos 7 Días
+              Pedidos Cobrados Últimos 7 Días
             </h2>
             <p class="text-sm text-gray-600 dark:text-gray-400">
               Tendencia de pedidos en la última semana
@@ -502,20 +462,6 @@
     <!-- CHARTS INITIALIZATION SCRIPT -->
     <script th:inline="javascript">
       // Get data from Thymeleaf
-      const totalPending = /*[[${totalPending}]]*/ 0;
-      const totalInPreparation = /*[[${totalInPreparation}]]*/ 0;
-      const totalReady = /*[[${totalReady}]]*/ 0;
-      const totalDelivered = /*[[${totalDelivered}]]*/ 0;
-      const totalPaid = /*[[${totalPaid}]]*/ 0;
-      const totalCancelled = /*[[${totalCancelled}]]*/ 0;
-
-      const todayPending = /*[[${todayPending}]]*/ 0;
-      const todayInPreparation = /*[[${todayInPreparation}]]*/ 0;
-      const todayReady = /*[[${todayReady}]]*/ 0;
-      const todayDelivered = /*[[${todayDelivered}]]*/ 0;
-      const todayPaid = /*[[${todayPaid}]]*/ 0;
-      const todayCancelled = /*[[${todayCancelled}]]*/ 0;
-
       const last7DaysLabels = /*[[${last7DaysLabels}]]*/ [];
       const last7DaysOrdersData = /*[[${last7DaysOrdersData}]]*/ [];
       const last7DaysRevenueData = /*[[${last7DaysRevenueData}]]*/ [];
@@ -524,138 +470,6 @@
       // Chart.js default config
       Chart.defaults.font.family = "Work Sans";
       Chart.defaults.color = "#6B7280";
-
-      // Orders Status Chart (Total)
-      const ordersStatusCtx = document
-        .getElementById("ordersStatusChart")
-        .getContext("2d");
-      new Chart(ordersStatusCtx, {
-        type: "doughnut",
-        data: {
-          labels: [
-            "Pendiente",
-            "En Preparación",
-            "Listo",
-            "Entregado",
-            "Pagado",
-            "Cancelado",
-          ],
-          datasets: [
-            {
-              data: [
-                totalPending,
-                totalInPreparation,
-                totalReady,
-                totalDelivered,
-                totalPaid,
-                totalCancelled,
-              ],
-              backgroundColor: [
-                "#FCD34D", // Pendiente - Yellow
-                "#60A5FA", // En Preparación - Blue
-                "#A78BFA", // Listo - Purple
-                "#34D399", // Entregado - Green
-                "#38e07b", // Pagado - Primary
-                "#F87171", // Cancelado - Red
-              ],
-              borderWidth: 0,
-            },
-          ],
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              position: "bottom",
-              labels: {
-                padding: 15,
-                font: {
-                  size: 12,
-                },
-              },
-            },
-            tooltip: {
-              callbacks: {
-                label: function (context) {
-                  const label = context.label || "";
-                  const value = context.parsed || 0;
-                  const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                  const percentage =
-                    total > 0 ? ((value / total) * 100).toFixed(1) : 0;
-                  return `${label}: ${value} (${percentage}%)`;
-                },
-              },
-            },
-          },
-        },
-      });
-
-      // Today Orders Status Chart
-      const todayOrdersStatusCtx = document
-        .getElementById("todayOrdersStatusChart")
-        .getContext("2d");
-      new Chart(todayOrdersStatusCtx, {
-        type: "doughnut",
-        data: {
-          labels: [
-            "Pendiente",
-            "En Preparación",
-            "Listo",
-            "Entregado",
-            "Pagado",
-            "Cancelado",
-          ],
-          datasets: [
-            {
-              data: [
-                todayPending,
-                todayInPreparation,
-                todayReady,
-                todayDelivered,
-                todayPaid,
-                todayCancelled,
-              ],
-              backgroundColor: [
-                "#FCD34D",
-                "#60A5FA",
-                "#A78BFA",
-                "#34D399",
-                "#38e07b",
-                "#F87171",
-              ],
-              borderWidth: 0,
-            },
-          ],
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              position: "bottom",
-              labels: {
-                padding: 15,
-                font: {
-                  size: 12,
-                },
-              },
-            },
-            tooltip: {
-              callbacks: {
-                label: function (context) {
-                  const label = context.label || "";
-                  const value = context.parsed || 0;
-                  const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                  const percentage =
-                    total > 0 ? ((value / total) * 100).toFixed(1) : 0;
-                  return `${label}: ${value} (${percentage}%)`;
-                },
-              },
-            },
-          },
-        },
-      });
 
       // Last 7 Days Orders Chart (Line)
       const last7DaysOrdersCtx = document

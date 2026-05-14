@@ -223,16 +223,15 @@ public class ChefOrderServiceImpl implements OrderService {
         OrderStatus targetStatus;
         List<Long> itemsToChange = new ArrayList<>();
         
-        // PRIORITY 1: If ANY item is IN_PREPARATION, mark ALL chef items as READY
+        // PRIORITY 1: If ANY item is IN_PREPARATION, mark ALL actionable chef items as READY
         // This allows new PENDING items to "skip" IN_PREPARATION state.
-        // TO_ACCEPT items are excluded because chef cannot manipulate them
-        // until cashier/admin accepts them and they become PENDING.
+        // Only PENDING and IN_PREPARATION items are considered: items already in
+        // READY, DELIVERED, PAID, CANCELLED or TO_ACCEPT cannot be transitioned by the chef.
         if (inPrepCount > 0) {
             targetStatus = OrderStatus.READY;
-            // Move ALL items that are NOT already READY and NOT TO_ACCEPT
             itemsToChange = chefItems.stream()
-                .filter(d -> d.getItemStatus() != OrderStatus.READY
-                    && d.getItemStatus() != OrderStatus.TO_ACCEPT)
+                .filter(d -> d.getItemStatus() == OrderStatus.PENDING
+                    || d.getItemStatus() == OrderStatus.IN_PREPARATION)
                 .map(OrderDetail::getIdOrderDetail)
                 .collect(Collectors.toList());
             

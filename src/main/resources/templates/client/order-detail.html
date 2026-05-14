@@ -587,7 +587,7 @@
                           >
                           <!-- Delete complement button -->
                           <button
-                            th:if="${order.status.name() != 'CANCELLED' && order.status.name() != 'PAID' && order.status.name() != 'DELIVERED' && order.canDeleteItems() && detail.itemStatus.name() == 'PENDING' && !detail.comboChild}"
+                            th:if="${order.status.name() != 'CANCELLED' && order.status.name() != 'PAID' && order.status.name() != 'DELIVERED' && order.canDeleteItems() && detail.itemStatus.name() == 'PENDING'}"
                             class="btn-delete-complement p-1.5 rounded-lg text-purple-600 dark:text-purple-400 hover:bg-purple-100 dark:hover:bg-purple-900/40 transition-colors"
                             th:data-order-id="${order.idOrder}"
                             th:data-item-id="${detail.idOrderDetail}"

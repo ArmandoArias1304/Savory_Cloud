@@ -624,7 +624,8 @@ public class ChefController {
             // Count today's PAID orders prepared by each employee
             List<Map<String, Object>> employeeRanking = employees.stream()
                     .map(emp -> {
-                        // Count PAID orders prepared by this employee today
+                        // Count PAID orders prepared by this employee today (by paidAt).
+                        // SCOPE: only PAID status; only orders prepared (preparedBy/preparedByBarista) by this employee.
                         long ordersCount = companyOrders.stream()
                                 .filter(order -> order.getStatus() == OrderStatus.PAID)
                                 .filter(order -> {

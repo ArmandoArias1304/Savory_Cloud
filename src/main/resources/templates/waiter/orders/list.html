@@ -141,7 +141,7 @@
 
           <!-- STATS -->
           <div
-            class="mb-6 sm:mb-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-6"
+            class="mb-6 sm:mb-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6"
           >
             <!-- Paid Orders -->
             <div
@@ -165,7 +165,7 @@
               </p>
             </div>
 
-            <!-- Today's Revenue (My Own - Created and Paid by me) -->
+            <!-- Ingresos (total collected by current waiter) -->
             <div
               class="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 sm:p-6 shadow-lg"
             >
@@ -173,7 +173,7 @@
                 <h3
                   class="text-sm font-medium text-gray-600 dark:text-gray-400"
                 >
-                  Ingresos Propios Hoy
+                  Ingresos
                 </h3>
                 <span class="material-symbols-outlined text-2xl text-primary"
                   >payments</span
@@ -181,14 +181,14 @@
               </div>
               <p class="text-3xl font-bold text-primary">
                 $<span
-                  id="myOwnRevenueSpan"
-                  th:text="${#numbers.formatDecimal(myOwnRevenue, 1, 2)}"
+                  id="myCollectedRevenueSpan"
+                  th:text="${#numbers.formatDecimal(myCollectedRevenue, 1, 2)}"
                   >0.00</span
                 >
               </p>
             </div>
 
-            <!-- Pending Orders -->
+            <!-- Pending Orders (mine) -->
             <div
               class="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 sm:p-6 shadow-lg"
             >
@@ -196,7 +196,7 @@
                 <h3
                   class="text-sm font-medium text-gray-600 dark:text-gray-400"
                 >
-                  Pendientes Hoy
+                  Pendientes
                 </h3>
                 <span class="material-symbols-outlined text-2xl text-yellow-500"
                   >pending</span
@@ -210,7 +210,7 @@
               </p>
             </div>
 
-            <!-- In Preparation -->
+            <!-- In Preparation (mine) -->
             <div
               class="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 sm:p-6 shadow-lg"
             >
@@ -218,7 +218,7 @@
                 <h3
                   class="text-sm font-medium text-gray-600 dark:text-gray-400"
                 >
-                  En Preparación Hoy
+                  En Preparación
                 </h3>
                 <span class="material-symbols-outlined text-2xl text-orange-500"
                   >restaurant</span
@@ -229,29 +229,6 @@
                 th:text="${inPreparationCount}"
               >
                 0
-              </p>
-            </div>
-
-            <!-- Global Revenue (Created by me, paid by others today) -->
-            <div
-              class="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 sm:p-6 shadow-lg"
-            >
-              <div class="flex items-center justify-between mb-3">
-                <h3
-                  class="text-sm font-medium text-gray-600 dark:text-gray-400"
-                >
-                  Ingresos Globales Hoy
-                </h3>
-                <span class="material-symbols-outlined text-2xl text-purple-500"
-                  >account_balance_wallet</span
-                >
-              </div>
-              <p class="text-3xl font-bold text-purple-500">
-                $<span
-                  id="othersCollectedRevenueSpan"
-                  th:text="${#numbers.formatDecimal(othersCollectedRevenue, 1, 2)}"
-                  >0.00</span
-                >
               </p>
             </div>
           </div>
@@ -898,17 +875,7 @@
               cancelButtonText: "Cancelar",
               reverseButtons: true,
               showLoaderOnConfirm: true,
-              background: document.documentElement.classList.contains("dark")
-                ? "#1f2937"
-                : "#ffffff",
-              color: document.documentElement.classList.contains("dark")
-                ? "#f3f4f6"
-                : "#1f2937",
-              customClass: {
-                popup: "rounded-2xl",
-                confirmButton: "rounded-xl px-6 py-2.5 font-semibold",
-                cancelButton: "rounded-xl px-6 py-2.5 font-semibold",
-              },
+              customClass: getSwalDarkModeClasses(),
               preConfirm: () => {
                 const newStatus = document.getElementById("newStatus").value;
                 if (!newStatus) {
@@ -945,8 +912,6 @@
                   text: result.value.message,
                   timer: 2000,
                   showConfirmButton: false,
-                  background: document.documentElement.classList.contains("dark") ? "#1f2937" : "#ffffff",
-                  color: document.documentElement.classList.contains("dark") ? "#f3f4f6" : "#1f2937",
                   customClass: getSwalDarkModeClasses(),
                 });
 

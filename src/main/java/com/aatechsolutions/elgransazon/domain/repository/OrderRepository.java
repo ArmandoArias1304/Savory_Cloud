@@ -410,6 +410,20 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
             @Param("company") Company company);
 
     /**
+     * Find PAID orders by date range and company (global - any employee).
+     * Filters by {@code paidAt} (authoritative payment timestamp).
+     * Used by the admin dashboard to build sales/customers/popular-items/hourly metrics.
+     */
+    @Query("SELECT o FROM Order o WHERE o.company = :company " +
+           "AND o.status = 'PAID' " +
+           "AND o.paidAt BETWEEN :startDate AND :endDate " +
+           "ORDER BY o.paidAt ASC")
+    List<Order> findPaidByPaidAtRangeAndCompany(
+            @Param("company") Company company,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate);
+
+    /**
      * Count PAID orders by date range, paidBy username, and company.
      * Filters by {@code paidAt} (authoritative payment timestamp).
      * Used for Waiter/Cashier's "Pedidos Cobrados" card (only their collections).

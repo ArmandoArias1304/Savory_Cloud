@@ -141,9 +141,9 @@
 
           <!-- STATS -->
           <div
-            class="mb-6 sm:mb-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-6"
+            class="mb-6 sm:mb-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6"
           >
-            <!-- Paid Orders Today -->
+            <!-- Paid Orders (in date range) -->
             <div
               class="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 sm:p-6 shadow-lg"
             >
@@ -165,7 +165,7 @@
               </p>
             </div>
 
-            <!-- Today's Revenue (Cash Register) -->
+            <!-- Ingresos (Total collected by this cashier in date range) -->
             <div
               class="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 sm:p-6 shadow-lg"
             >
@@ -173,7 +173,7 @@
                 <h3
                   class="text-sm font-medium text-gray-600 dark:text-gray-400"
                 >
-                  En Caja Hoy
+                  Ingresos
                 </h3>
                 <span class="material-symbols-outlined text-2xl text-primary"
                   >payments</span
@@ -186,7 +186,7 @@
               </p>
             </div>
 
-            <!-- Pending Orders -->
+            <!-- Pending Orders (in date range) -->
             <div
               class="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 sm:p-6 shadow-lg"
             >
@@ -194,7 +194,7 @@
                 <h3
                   class="text-sm font-medium text-gray-600 dark:text-gray-400"
                 >
-                  Pendientes Hoy
+                  Pendientes
                 </h3>
                 <span class="material-symbols-outlined text-2xl text-yellow-500"
                   >pending</span
@@ -208,7 +208,7 @@
               </p>
             </div>
 
-            <!-- In Preparation -->
+            <!-- In Preparation (in date range) -->
             <div
               class="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 sm:p-6 shadow-lg"
             >
@@ -216,7 +216,7 @@
                 <h3
                   class="text-sm font-medium text-gray-600 dark:text-gray-400"
                 >
-                  En Preparación Hoy
+                  En Preparación
                 </h3>
                 <span class="material-symbols-outlined text-2xl text-orange-500"
                   >restaurant</span
@@ -227,27 +227,6 @@
                 th:text="${inPreparationCount}"
               >
                 0
-              </p>
-            </div>
-
-            <!-- My Own Revenue Today -->
-            <div
-              class="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 sm:p-6 shadow-lg"
-            >
-              <div class="flex items-center justify-between mb-3">
-                <h3
-                  class="text-sm font-medium text-gray-600 dark:text-gray-400"
-                >
-                  Ingresos Hoy Propios
-                </h3>
-                <span class="material-symbols-outlined text-2xl text-purple-500"
-                  >account_balance_wallet</span
-                >
-              </div>
-              <p class="text-3xl font-bold text-purple-500">
-                $<span th:text="${#numbers.formatDecimal(myOwnRevenue, 1, 2)}"
-                  >0.00</span
-                >
               </p>
             </div>
           </div>
@@ -654,124 +633,9 @@
             </div>
           </div>
 
-          <!-- GLOBAL TABLE FILTERS CARD -->
-          <div
-            id="globalFiltersSection"
-            class="rounded-2xl border border-orange-200 dark:border-orange-800 bg-white dark:bg-gray-900 p-4 sm:p-6 shadow-lg mb-6 mt-8"
-          >
-            <div class="flex items-center gap-2 mb-4">
-              <span class="material-symbols-outlined text-orange-500 text-2xl"
-                >filter_alt</span
-              >
-              <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
-                Filtros - Pedidos Globales
-              </h3>
-            </div>
-
-            <div
-              class="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-4"
-            >
-              <div
-                class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 flex-1"
-              >
-                <!-- Global Table Filter -->
-                <div>
-                  <label
-                    class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-                    >Mesa</label
-                  >
-                  <select
-                    id="globalFilterTable"
-                    class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
-                  >
-                    <option value="">Todas las mesas</option>
-                    <option
-                      th:each="table : ${tables}"
-                      th:value="${table.id}"
-                      th:text="${'Mesa #' + table.tableNumber}"
-                      th:selected="${selectedGlobalTableId != null && selectedGlobalTableId == table.id}"
-                    ></option>
-                  </select>
-                </div>
-
-                <!-- Global Status Filter -->
-                <div>
-                  <label
-                    class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-                    >Estado</label
-                  >
-                  <select
-                    id="globalFilterStatus"
-                    class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
-                  >
-                    <option value="">Todos los estados</option>
-                    <option
-                      th:each="status : ${statuses}"
-                      th:if="${status.name() != 'CANCELLED'}"
-                      th:value="${status}"
-                      th:text="${status.displayName}"
-                      th:selected="${selectedGlobalStatus != null && selectedGlobalStatus == status}"
-                    ></option>
-                  </select>
-                </div>
-
-                <!-- Global Order Type Filter -->
-                <div>
-                  <label
-                    class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-                    >Tipo</label
-                  >
-                  <select
-                    id="globalFilterOrderType"
-                    class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
-                  >
-                    <option value="">Todos los tipos</option>
-                    <option
-                      th:each="type : ${orderTypes}"
-                      th:value="${type}"
-                      th:text="${type.displayName}"
-                      th:selected="${selectedGlobalOrderType != null && selectedGlobalOrderType == type}"
-                    ></option>
-                  </select>
-                </div>
-
-                <!-- Global Date Filter -->
-                <div>
-                  <label
-                    class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-                    >Fecha</label
-                  >
-                  <input
-                    type="date"
-                    id="globalFilterDate"
-                    th:value="${selectedGlobalDate}"
-                    class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
-                  />
-                </div>
-              </div>
-
-              <!-- Filter Actions -->
-              <div class="flex gap-2">
-                <button
-                  onclick="applyGlobalFilters()"
-                  class="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 text-white font-semibold hover:shadow-lg hover:shadow-orange-500/30 transition-all"
-                >
-                  <span class="material-symbols-outlined text-lg">search</span>
-                  Filtrar
-                </button>
-                <button
-                  onclick="clearGlobalFilters()"
-                  class="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-semibold hover:bg-gray-200 dark:hover:bg-gray-700 transition-all"
-                >
-                  <span class="material-symbols-outlined text-lg">close</span>
-                  Limpiar
-                </button>
-              </div>
-            </div>
-          </div>
-
           <!-- GLOBAL ORDERS TABLE (All orders - PENDING to PAID - Includes history) -->
           <div
+            id="globalOrdersSection"
             class="rounded-2xl border border-orange-200 dark:border-orange-800 bg-white dark:bg-gray-900 shadow-lg overflow-hidden mt-8"
           >
             <div
@@ -825,9 +689,11 @@
                   <tr>
                     <th class="px-6 py-4 font-semibold">Nº Pedido</th>
                     <th class="px-6 py-4 font-semibold">Fecha/Hora</th>
-                    <th class="px-6 py-4 font-semibold">Tipo de Pedido</th>
-                    <th class="px-6 py-4 font-semibold">Creado Por</th>
+                    <th class="px-6 py-4 font-semibold">Mesa</th>
+                    <th class="px-6 py-4 font-semibold">Tipo</th>
+                    <th class="px-6 py-4 font-semibold">Cliente</th>
                     <th class="px-6 py-4 font-semibold">Total</th>
+                    <th class="px-6 py-4 font-semibold">Pago</th>
                     <th class="px-6 py-4 font-semibold">Estado</th>
                     <th class="px-6 py-4 font-semibold">Cobrado por</th>
                     <th class="px-6 py-4 font-semibold text-center">
@@ -838,7 +704,7 @@
                 <tbody>
                   <tr th:if="${unpaidOrders.empty}">
                     <td
-                      colspan="8"
+                      colspan="10"
                       class="px-6 py-12 text-center text-gray-500 dark:text-gray-400"
                     >
                       <span
@@ -875,68 +741,59 @@
                       ></div>
                     </td>
 
-                    <!-- Order Type -->
+                    <!-- Table -->
                     <td class="px-6 py-4 whitespace-nowrap">
                       <span
-                        th:if="${order.orderType.name() == 'DINE_IN'}"
-                        class="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
-                      >
-                        <span class="material-symbols-outlined text-sm"
-                          >restaurant</span
-                        >
-                        <span
-                          th:text="${order.table != null ? 'Mesa #' + order.table.tableNumber : 'En Restaurante'}"
-                        ></span>
-                      </span>
-                      <span
-                        th:if="${order.orderType.name() == 'TAKEOUT'}"
-                        class="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium rounded-full bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400"
-                      >
-                        <span class="material-symbols-outlined text-sm"
-                          >shopping_bag</span
-                        >
-                        Para pasar a recoger
-                      </span>
-                      <span
-                        th:if="${order.orderType.name() == 'DELIVERY'}"
-                        class="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium rounded-full bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400"
-                      >
-                        <span class="material-symbols-outlined text-sm"
-                          >local_shipping</span
-                        >
-                        Entrega a domicilio
-                      </span>
-                    </td>
-
-                    <!-- Created By -->
-                    <td class="px-6 py-4 whitespace-nowrap">
-                      <span
-                        th:if="${order.customer != null}"
-                        class="inline-flex items-center gap-1 text-sm text-primary font-medium"
-                      >
-                        <span class="material-symbols-outlined text-sm"
-                          >person</span
-                        >
-                        <span th:text="${order.customer.fullName}"></span>
-                      </span>
-                      <span
-                        th:if="${order.customer == null && order.employee != null}"
-                        class="text-sm text-gray-700 dark:text-gray-300"
-                        th:text="${order.employee.fullName}"
+                        th:if="${order.table != null}"
+                        class="text-sm text-gray-900 dark:text-white"
+                        th:text="${'Mesa #' + order.table.tableNumber}"
                       ></span>
                       <span
-                        th:if="${order.customer == null && order.employee == null}"
+                        th:if="${order.table == null}"
                         class="text-sm text-gray-400"
                         >N/A</span
                       >
                     </td>
 
-                    <!-- Total -->
+                    <!-- Order Type -->
                     <td class="px-6 py-4 whitespace-nowrap">
                       <span
-                        class="text-sm font-bold text-gray-900 dark:text-white"
-                        th:text="${'$' + #numbers.formatDecimal(order.total, 1, 2)}"
+                        class="px-3 py-1 text-xs rounded-full font-medium"
+                        th:classappend="${order.orderType.name() == 'DINE_IN'} ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' : (${order.orderType.name() == 'TAKEOUT'} ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400' : 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400')"
+                        th:text="${order.orderType.displayName}"
+                      >
+                      </span>
+                    </td>
+
+                    <!-- Customer -->
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <div
+                        class="text-sm text-gray-900 dark:text-white"
+                        th:text="${order.customerName}"
+                      ></div>
+                      <div
+                        class="text-xs text-gray-500 dark:text-gray-400"
+                        th:text="${order.customerPhone}"
+                      ></div>
+                    </td>
+
+                    <!-- Total -->
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <span class="text-sm font-semibold text-primary"
+                        >$<span
+                          th:text="${#numbers.formatDecimal(order.total, 1, 2)}"
+                        ></span
                       ></span>
+                    </td>
+
+                    <!-- Payment Method -->
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <span
+                        class="px-3 py-1 text-xs rounded-full font-medium"
+                        th:classappend="${order.paymentMethod.name() == 'CASH'} ? 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400' : 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'"
+                        th:text="${order.paymentMethod.displayName}"
+                      >
+                      </span>
                     </td>
 
                     <!-- Status -->
@@ -1133,7 +990,7 @@
       function goToGlobalOrdersPage(page) {
         const url = new URL(window.location.href);
         url.searchParams.set("globalPage", page);
-        url.hash = "globalFiltersSection";
+        url.hash = "globalOrdersSection";
         window.location.href = url.toString();
       }
 
@@ -1222,37 +1079,6 @@
         params.delete("orderType");
         params.delete("date");
         window.location.href = `/${currentRole}/orders?${params.toString()}#mainFiltersSection`;
-      }
-
-      function applyGlobalFilters() {
-        const tableId = document.getElementById("globalFilterTable").value;
-        const status = document.getElementById("globalFilterStatus").value;
-        const orderType = document.getElementById(
-          "globalFilterOrderType",
-        ).value;
-        const date = document.getElementById("globalFilterDate").value;
-
-        const params = new URLSearchParams(window.location.search);
-
-        if (tableId) params.set("globalTableId", tableId);
-        else params.delete("globalTableId");
-        if (status) params.set("globalStatus", status);
-        else params.delete("globalStatus");
-        if (orderType) params.set("globalOrderType", orderType);
-        else params.delete("globalOrderType");
-        if (date) params.set("globalDate", date);
-        else params.delete("globalDate");
-
-        window.location.href = `/${currentRole}/orders?${params.toString()}#globalFiltersSection`;
-      }
-
-      function clearGlobalFilters() {
-        const params = new URLSearchParams(window.location.search);
-        params.delete("globalTableId");
-        params.delete("globalStatus");
-        params.delete("globalOrderType");
-        params.delete("globalDate");
-        window.location.href = `/${currentRole}/orders?${params.toString()}#globalFiltersSection`;
       }
 
       // Helper function to get SweetAlert dark mode classes

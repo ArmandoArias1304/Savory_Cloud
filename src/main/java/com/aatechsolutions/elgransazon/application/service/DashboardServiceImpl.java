@@ -54,30 +54,31 @@ public class DashboardServiceImpl implements DashboardService {
         LocalDateTime yesterdayStart = dateTimeService.startOfDayUtc(yesterdayDate);
         LocalDateTime yesterdayEnd = dateTimeService.endOfDayUtc(yesterdayDate);
 
-        // MULTI-TENANT: Get orders filtered by company
-        List<Order> todayOrders = orderRepository.findByDateRangeAndCompany(company, todayStart, todayEnd);
-        List<Order> yesterdayOrders = orderRepository.findByDateRangeAndCompany(company, yesterdayStart, yesterdayEnd);
+        // MULTI-TENANT: Get orders filtered by company.
+        // todayPaidOrders / yesterdayPaidOrders (by paidAt) drive every payment-related
+        // metric (sales, paid-order count, unique customers, hourly sales, popular items),
+        // so orders created on a previous day but collected today are correctly attributed
+        // to today (and viceversa). Operational createdAt-based metrics (pending/in-prep
+        // backlog) are computed inside getPendingOrders() with its own query.
+        List<Order> todayPaidOrders = orderRepository.findPaidByPaidAtRangeAndCompany(company, todayStart, todayEnd);
+        List<Order> yesterdayPaidOrders = orderRepository.findPaidByPaidAtRangeAndCompany(company, yesterdayStart, yesterdayEnd);
 
-        // Calculate sales statistics
-        BigDecimal todaySales = calculateSales(todayOrders);
-        BigDecimal yesterdaySales = calculateSales(yesterdayOrders);
+        // Calculate sales statistics (by paidAt)
+        BigDecimal todaySales = calculateSales(todayPaidOrders);
+        BigDecimal yesterdaySales = calculateSales(yesterdayPaidOrders);
         Double salesChangePercentage = calculatePercentageChange(todaySales, yesterdaySales);
 
-        // Calculate orders statistics (only PAID orders)
-        Long todayOrdersCount = todayOrders.stream()
-            .filter(order -> order.getStatus() == OrderStatus.PAID)
-            .count();
-        Long yesterdayOrdersCount = yesterdayOrders.stream()
-            .filter(order -> order.getStatus() == OrderStatus.PAID)
-            .count();
+        // Calculate orders statistics (only PAID orders, by paidAt)
+        Long todayOrdersCount = (long) todayPaidOrders.size();
+        Long yesterdayOrdersCount = (long) yesterdayPaidOrders.size();
         Double ordersChangePercentage = calculatePercentageChange(
             BigDecimal.valueOf(todayOrdersCount), 
             BigDecimal.valueOf(yesterdayOrdersCount)
         );
 
-        // Calculate customers statistics
-        Long todayCustomers = countUniqueCustomers(todayOrders);
-        Long yesterdayCustomers = countUniqueCustomers(yesterdayOrders);
+        // Calculate customers statistics (by paidAt)
+        Long todayCustomers = countUniqueCustomers(todayPaidOrders);
+        Long yesterdayCustomers = countUniqueCustomers(yesterdayPaidOrders);
         Double customersChangePercentage = calculatePercentageChange(
             BigDecimal.valueOf(todayCustomers), 
             BigDecimal.valueOf(yesterdayCustomers)
@@ -86,8 +87,8 @@ public class DashboardServiceImpl implements DashboardService {
         // Calculate projected revenue
         BigDecimal totalHistoricalRevenue = calculateTotalHistoricalRevenue();
 
-        // Get popular items
-        List<PopularItemDTO> popularItems = getPopularItems(todayOrders);
+        // Get popular items (from orders paid today)
+        List<PopularItemDTO> popularItems = getPopularItems(todayPaidOrders);
 
         // Get active employees (excluding PROGRAMMER) - capacity based on license maxUsers
         Long activeEmployees = employeeService.countEnabledByCompany(company);
@@ -119,8 +120,8 @@ public class DashboardServiceImpl implements DashboardService {
         // Get inventory alerts (out of stock, low stock)
         List<InventoryAlertDTO> inventoryAlerts = getInventoryAlerts();
 
-        // Get hourly sales for today
-        List<HourlySalesDTO> hourlySales = getHourlySales(todayOrders);
+        // Get hourly sales for today (by paidAt)
+        List<HourlySalesDTO> hourlySales = getHourlySales(todayPaidOrders);
 
         // Get table status
         TableStatusDTO tableStatus = getTableStatus();
@@ -521,9 +522,11 @@ public class DashboardServiceImpl implements DashboardService {
                 break;
         }
         
-        // MULTI-TENANT: Get orders for the period filtered by company
+        // MULTI-TENANT: Get PAID orders for the period filtered by company (by paidAt).
+        // Popular items must reflect what was actually collected in the period, not
+        // when the order was created.
         Company company = CompanyContext.requireCurrentCompany();
-        List<Order> orders = orderRepository.findByDateRangeAndCompany(company, startDate, endDate);
+        List<Order> orders = orderRepository.findPaidByPaidAtRangeAndCompany(company, startDate, endDate);
         
         return getPopularItems(orders);
     }
