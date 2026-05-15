@@ -557,6 +557,26 @@
                           <i class="fas fa-eye"></i>
                         </a>
 
+                        <!-- WhatsApp (only for TAKEOUT/DELIVERY with phone) -->
+                        <button
+                          th:if="${(order.orderType.name() == 'TAKEOUT' || order.orderType.name() == 'DELIVERY') && order.customerPhone != null && !order.customerPhone.isEmpty()}"
+                          type="button"
+                          onclick="
+                            openWhatsApp(
+                              this.dataset.phone,
+                              this.dataset.orderNumber,
+                              this.dataset.customerName,
+                            )
+                          "
+                          th:data-phone="${order.customerPhone}"
+                          th:data-order-number="${order.orderNumber}"
+                          th:data-customer-name="${order.customerName != null ? order.customerName : ''}"
+                          class="p-2 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-all"
+                          title="Contactar por WhatsApp"
+                        >
+                          <i class="fab fa-whatsapp"></i>
+                        </button>
+
                         <!-- Download Ticket (only for PAID orders) -->
                         <a
                           th:if="${order.status.name() == 'PAID'}"
@@ -673,6 +693,8 @@
       /*<![CDATA[*/
       const serverCurrentPage = /*[[${currentPage}]]*/ 1;
       const serverTotalPages = /*[[${totalPages}]]*/ 1;
+      const restaurantName =
+        /*[[${systemConfig != null ? systemConfig.restaurantName : 'El Restaurante'}]]*/ "El Restaurante";
 
       function goToPage(page) {
         const url = new URL(window.location.href);
@@ -729,6 +751,17 @@
 
       function clearFilters() {
         window.location.href = "/admin/orders";
+      }
+
+      function openWhatsApp(phone, orderNumber, customerName) {
+        const msg =
+          `¡Hola! Nos comunicamos de *${restaurantName}* para informarte ` +
+          `que el pedido *${orderNumber}* a nombre de *${customerName}* está..`;
+        window.open(
+          `https://wa.me/52${phone}?text=${encodeURIComponent(msg)}`,
+          "_blank",
+          "noopener,noreferrer",
+        );
       }
 
       // Helper function to get SweetAlert dark mode classes
@@ -1354,31 +1387,54 @@
 
       function printTicketViaQZ(rawUrl) {
         if (typeof qz === "undefined" || !qz.websocket) return;
-        if (qz.websocket.isActive()) { _doQzPrint(rawUrl); return; }
+        if (qz.websocket.isActive()) {
+          _doQzPrint(rawUrl);
+          return;
+        }
         var probe = new WebSocket("ws://localhost:8182");
-        var probeTimer = setTimeout(function () { probe.close(); }, 500);
+        var probeTimer = setTimeout(function () {
+          probe.close();
+        }, 500);
         probe.onopen = function () {
-          clearTimeout(probeTimer); probe.close();
-          qz.websocket.connect().then(function () { _doQzPrint(rawUrl); }).catch(function () {});
+          clearTimeout(probeTimer);
+          probe.close();
+          qz.websocket
+            .connect()
+            .then(function () {
+              _doQzPrint(rawUrl);
+            })
+            .catch(function () {});
         };
-        probe.onerror = function () { clearTimeout(probeTimer); };
+        probe.onerror = function () {
+          clearTimeout(probeTimer);
+        };
       }
 
       function _doQzPrint(rawUrl) {
         fetch(rawUrl)
-          .then(function (r) { if (!r.ok) throw new Error("fetch failed"); return r.arrayBuffer(); })
+          .then(function (r) {
+            if (!r.ok) throw new Error("fetch failed");
+            return r.arrayBuffer();
+          })
           .then(function (buf) {
-            var b = new Uint8Array(buf), s = "";
+            var b = new Uint8Array(buf),
+              s = "";
             for (var i = 0; i < b.length; i++) s += String.fromCharCode(b[i]);
             return btoa(s);
           })
           .then(function (b64) {
             return qz.printers.getDefault().then(function (p) {
-              return qz.print(qz.configs.create(p), [{ type: "raw", format: "base64", data: b64 }]);
+              return qz.print(qz.configs.create(p), [
+                { type: "raw", format: "base64", data: b64 },
+              ]);
             });
           })
-          .then(function () { console.log("Ticket enviado a imprimir (ESC/POS)."); })
-          .catch(function (e) { console.warn("No se pudo imprimir ticket:", e); });
+          .then(function () {
+            console.log("Ticket enviado a imprimir (ESC/POS).");
+          })
+          .catch(function (e) {
+            console.warn("No se pudo imprimir ticket:", e);
+          });
       }
     </script>
 
@@ -1422,10 +1478,13 @@
             reconnectDelay = 1000;
 
             // Subscribe to admin kitchen channel for order updates
-            stompClient.subscribe(`/topic/admin/kitchen/${companyId}`, function (message) {
-              const notification = JSON.parse(message.body);
-              handleOrderListUpdate(notification);
-            });
+            stompClient.subscribe(
+              `/topic/admin/kitchen/${companyId}`,
+              function (message) {
+                const notification = JSON.parse(message.body);
+                handleOrderListUpdate(notification);
+              },
+            );
           },
           function (error) {
             if (isIntentionalDisconnect) {
@@ -1595,9 +1654,7 @@
         let updatedCount = 0;
 
         // Update Paid Orders count
-        const paidCountEl = document.querySelector(
-          '[th\\:text*="paidCount"]',
-        );
+        const paidCountEl = document.querySelector('[th\\:text*="paidCount"]');
         if (paidCountEl && stats.paidCount != null) {
           paidCountEl.textContent = stats.paidCount;
           updatedCount++;

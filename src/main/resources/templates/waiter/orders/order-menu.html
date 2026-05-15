@@ -494,8 +494,13 @@
                 id="cartEnvioNote"
                 class="hidden flex items-start gap-1.5 text-xs italic text-gray-500 dark:text-gray-400 px-1"
               >
-                <span class="material-symbols-outlined text-sm">local_shipping</span>
-                <span>Incluye costo de envío de <span id="cartEnvioAmount">$0.00</span></span>
+                <span class="material-symbols-outlined text-sm"
+                  >local_shipping</span
+                >
+                <span
+                  >Incluye costo de envío de
+                  <span id="cartEnvioAmount">$0.00</span></span
+                >
               </div>
 
               <!-- Nota informativa de descuento por promoción (incluido en subtotal e IVA) -->
@@ -503,8 +508,13 @@
                 id="cartDescuentoNote"
                 class="hidden flex items-start gap-1.5 text-xs italic text-gray-500 dark:text-gray-400 px-1"
               >
-                <span class="material-symbols-outlined text-sm">local_offer</span>
-                <span>Incluye descuento por promoción de <span id="cartDescuentoAmount">$0.00</span></span>
+                <span class="material-symbols-outlined text-sm"
+                  >local_offer</span
+                >
+                <span
+                  >Incluye descuento por promoción de
+                  <span id="cartDescuentoAmount">$0.00</span></span
+                >
               </div>
 
               <!-- Payment Method Selector (only for new orders) -->
@@ -532,7 +542,7 @@
               <div class="space-y-2 pt-2">
                 <button
                   type="button"
-                  onclick="submitOrder()"
+                  onclick="confirmAndSubmitOrder()"
                   id="submitOrderBtn"
                   disabled
                   class="primary-button w-full px-6 py-3.5 disabled:bg-gray-300 disabled:cursor-not-allowed disabled:shadow-none text-white rounded-xl font-bold transition-all flex items-center justify-center gap-2"
@@ -1034,8 +1044,13 @@
       function generateComplementsHTML(complementsData) {
         if (!complementsData) return "";
 
-        const { sauces, complements, maxSauces, minSauces, totalSaucesAvailable } =
-          complementsData;
+        const {
+          sauces,
+          complements,
+          maxSauces,
+          minSauces,
+          totalSaucesAvailable,
+        } = complementsData;
         currentItemMaxSauces = maxSauces;
         currentItemMinSauces = minSauces;
         selectedSaucesCount = 0;
@@ -2397,10 +2412,17 @@
        * Returns true if the operation should be aborted (validation failed),
        * false if it should continue.
        */
-      async function validateMinSauces(itemComplements, quantity, comments, selectedPromotionId) {
+      async function validateMinSauces(
+        itemComplements,
+        quantity,
+        comments,
+        selectedPromotionId,
+      ) {
         const minSauces = itemComplements && itemComplements.minSauces;
         if (!minSauces || minSauces <= 0) return false;
-        const selectedSaucesNow = selectedComplements.filter((c) => c.isSauce).length;
+        const selectedSaucesNow = selectedComplements.filter(
+          (c) => c.isSauce,
+        ).length;
         if (selectedSaucesNow >= minSauces) return false;
         const isDarkMode = document.documentElement.classList.contains("dark");
         await Swal.fire({
@@ -2415,7 +2437,12 @@
         const savedComments = comments || "";
         const savedComplements = [...selectedComplements];
         if (typeof reopenItemModal === "function") {
-          reopenItemModal(savedQuantity, savedComments, selectedPromotionId, savedComplements);
+          reopenItemModal(
+            savedQuantity,
+            savedComments,
+            selectedPromotionId,
+            savedComplements,
+          );
         }
         return true;
       }
@@ -2508,7 +2535,6 @@
 
         // Si hay promoción aplicable, calcular el precio con descuento
         if (appliedPromotion) {
-
           // Validar cantidad mínima para BUY_X_PAY_Y
           if (appliedPromotion.promotionType === "BUY_X_PAY_Y") {
             if (qty < appliedPromotion.buyQuantity) {
@@ -2534,7 +2560,6 @@
           appliedPromotion = promotions.find(
             (p) => p.id == selectedPromotionId,
           );
-
 
           if (appliedPromotion) {
             // Validate minimum quantity for BUY_X_PAY_Y promotions
@@ -2562,7 +2587,6 @@
             // Calculate discounted price based on promotion type
             const originalTotal = currentItem.price * qty;
             let discountedTotal = originalTotal;
-
 
             if (appliedPromotion.promotionType === "BUY_X_PAY_Y") {
               const sets = Math.floor(qty / appliedPromotion.buyQuantity);
@@ -2682,7 +2706,6 @@
         const cartIVAEl = document.getElementById("cartIVA");
         const cartTotalEl = document.getElementById("cartTotal");
         const submitBtn = document.getElementById("submitOrderBtn");
-
 
         // Update item count (both counters)
         itemCount.textContent = cart.length;
@@ -2807,7 +2830,9 @@
 
         // Actualizar nota informativa de descuento por promoción (debajo del Total)
         const descuentoNoteEl = document.getElementById("cartDescuentoNote");
-        const descuentoAmountEl = document.getElementById("cartDescuentoAmount");
+        const descuentoAmountEl = document.getElementById(
+          "cartDescuentoAmount",
+        );
         if (descuentoNoteEl && descuentoAmountEl) {
           // Calcular descuento con IVA directamente desde el carrito para evitar errores
           // de redondeo (sumar/restar centavos): original_con_IVA - total_aplicado_con_IVA
@@ -3120,6 +3145,31 @@
       // Guard flag to prevent duplicate order submissions
       let isSubmitting = false;
 
+      function confirmAndSubmitOrder() {
+        if (isSubmitting) return;
+        const isDark = document.documentElement.classList.contains("dark");
+        Swal.fire({
+          title: isAddItemsMode ? "¿Agregar items?" : "¿Crear pedido?",
+          text: isAddItemsMode
+            ? "¿Deseas agregar los items seleccionados a la orden?"
+            : "¿Deseas confirmar la creación del pedido?",
+          icon: "question",
+          showCancelButton: true,
+          confirmButtonText: isAddItemsMode
+            ? "Sí, agregar"
+            : "Sí, crear pedido",
+          cancelButtonText: "Cancelar",
+          confirmButtonColor: "#38e07b",
+          cancelButtonColor: "#6b7280",
+          background: isDark ? "#1f2937" : "#ffffff",
+          color: isDark ? "#f3f4f6" : "#1f2937",
+        }).then((result) => {
+          if (result.isConfirmed) {
+            submitOrder();
+          }
+        });
+      }
+
       function submitOrder() {
         // Prevent duplicate submissions
         if (isSubmitting) {
@@ -3147,7 +3197,6 @@
         isSubmitting = true;
         const submitBtn = document.getElementById("submitOrderBtn");
         if (submitBtn) submitBtn.disabled = true;
-
 
         // Show loading state
         Swal.fire({
@@ -3216,7 +3265,6 @@
           paymentMethod: paymentMethod,
           items: items,
         };
-
 
         // Add CSRF token if Spring Security is enabled
         const csrfToken = document.querySelector('meta[name="_csrf"]')?.content;

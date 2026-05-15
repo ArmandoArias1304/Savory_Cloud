@@ -521,6 +521,26 @@
                           <i class="fas fa-eye"></i>
                         </a>
 
+                        <!-- WhatsApp (only for TAKEOUT/DELIVERY with phone) -->
+                        <button
+                          th:if="${(order.orderType.name() == 'TAKEOUT' || order.orderType.name() == 'DELIVERY') && order.customerPhone != null && !order.customerPhone.isEmpty()}"
+                          type="button"
+                          onclick="
+                            openWhatsApp(
+                              this.dataset.phone,
+                              this.dataset.orderNumber,
+                              this.dataset.customerName,
+                            )
+                          "
+                          th:data-phone="${order.customerPhone}"
+                          th:data-order-number="${order.orderNumber}"
+                          th:data-customer-name="${order.customerName != null ? order.customerName : ''}"
+                          class="p-2 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-all"
+                          title="Contactar por WhatsApp"
+                        >
+                          <i class="fab fa-whatsapp"></i>
+                        </button>
+
                         <!-- Download Ticket (only for PAID orders) -->
                         <a
                           th:if="${order.status.name() == 'PAID'}"
@@ -838,6 +858,26 @@
                           <i class="fas fa-eye"></i>
                         </a>
 
+                        <!-- WhatsApp (only for TAKEOUT/DELIVERY with phone) -->
+                        <button
+                          th:if="${(order.orderType.name() == 'TAKEOUT' || order.orderType.name() == 'DELIVERY') && order.customerPhone != null && !order.customerPhone.isEmpty()}"
+                          type="button"
+                          onclick="
+                            openWhatsApp(
+                              this.dataset.phone,
+                              this.dataset.orderNumber,
+                              this.dataset.customerName,
+                            )
+                          "
+                          th:data-phone="${order.customerPhone}"
+                          th:data-order-number="${order.orderNumber}"
+                          th:data-customer-name="${order.customerName != null ? order.customerName : ''}"
+                          class="p-2 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-all"
+                          title="Contactar por WhatsApp"
+                        >
+                          <i class="fab fa-whatsapp"></i>
+                        </button>
+
                         <!-- Download Ticket (only for PAID orders) -->
                         <a
                           th:if="${order.status.name() == 'PAID'}"
@@ -890,17 +930,6 @@
                         >
                           <i class="fas fa-dollar-sign"></i>
                         </a>
-
-                        <!-- Mark as Delivered (only for READY status AND TAKEOUT/DINE_IN orders) -->
-                        <button
-                          th:if="${order.status.name() == 'READY' && (order.orderType.name() == 'TAKEOUT' || order.orderType.name() == 'DINE_IN')}"
-                          class="btn-mark-delivered p-2 rounded-lg bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 hover:bg-purple-100 dark:hover:bg-purple-900/40 transition-all"
-                          th:data-order-id="${order.idOrder}"
-                          th:data-order-number="${order.orderNumber}"
-                          title="Marcar como Entregado"
-                        >
-                          <i class="fas fa-check-circle"></i>
-                        </button>
 
                         <!-- Cancel (TO_ACCEPT, PENDING, IN_PREPARATION, READY) -->
                         <button
@@ -970,6 +999,8 @@
     <script th:inline="javascript">
       /*<![CDATA[*/
       const currentRole = /*[[${currentRole}]]*/ "waiter";
+      const restaurantName =
+        /*[[${systemConfig != null ? systemConfig.restaurantName : 'El Restaurante'}]]*/ "El Restaurante";
       /*]]>*/
 
       // ============================================
@@ -1079,6 +1110,18 @@
         params.delete("orderType");
         params.delete("date");
         window.location.href = `/${currentRole}/orders?${params.toString()}#mainFiltersSection`;
+      }
+
+      function openWhatsApp(phone, orderNumber, customerName) {
+        const msg =
+          `¡Hola! 👋 Nos comunicamos de *${restaurantName}* para informarte ` +
+          `que el pedido *${orderNumber}* a nombre de *${customerName}* está en proceso. ` +
+          `¿En qué más podemos ayudarte? 😊`;
+        window.open(
+          `https://wa.me/52${phone}?text=${encodeURIComponent(msg)}`,
+          "_blank",
+          "noopener,noreferrer",
+        );
       }
 
       // Helper function to get SweetAlert dark mode classes
@@ -1373,70 +1416,7 @@
             markAsPaid(orderId, orderNumber);
           });
         });
-
-        // Mark as Delivered buttons (for global orders table)
-        document.querySelectorAll(".btn-mark-delivered").forEach((button) => {
-          button.addEventListener("click", function () {
-            const orderId = this.getAttribute("data-order-id");
-            const orderNumber = this.getAttribute("data-order-number");
-            markAsDelivered(orderId, orderNumber);
-          });
-        });
       });
-
-      // Mark as Delivered - For READY orders in global table
-      function markAsDelivered(orderId, orderNumber) {
-        Swal.fire({
-          title: "¿Marcar como Entregado?",
-          text: `¿Confirmar que el pedido ${orderNumber} ha sido entregado al cliente?`,
-          icon: "question",
-          showCancelButton: true,
-          confirmButtonColor: "#38e07b",
-          cancelButtonColor: "#6b7280",
-          confirmButtonText: "Sí, confirmar",
-          cancelButtonText: "Cancelar",
-          reverseButtons: true,
-          showLoaderOnConfirm: true,
-          customClass: getSwalDarkModeClasses(),
-          preConfirm: () => {
-            return fetch(
-              `/${currentRole}/orders/${orderId}/change-status?newStatus=DELIVERED`,
-              {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/x-www-form-urlencoded",
-                },
-              },
-            )
-              .then((response) => response.json())
-              .then((data) => {
-                if (!data.success) {
-                  throw new Error(data.message);
-                }
-                return data;
-              })
-              .catch((error) => {
-                Swal.showValidationMessage(`Error: ${error.message}`);
-              });
-          },
-          allowOutsideClick: () => !Swal.isLoading(),
-        }).then((result) => {
-          if (result.isConfirmed && result.value) {
-            Swal.fire({
-              icon: "success",
-              title: "¡Pedido Entregado!",
-              text: result.value.message,
-              timer: 2000,
-              showConfirmButton: false,
-              customClass: getSwalDarkModeClasses(),
-            });
-
-            setTimeout(() => {
-              window.location.reload();
-            }, 2100);
-          }
-        });
-      }
 
       // Format currency
       function formatCurrency(amount) {
@@ -1451,38 +1431,62 @@
       document.addEventListener("DOMContentLoaded", function () {
         const printOrderId = /*[[${printTicketOrderId}]]*/ null;
         if (printOrderId) {
-          var rawUrl = "/cashier/orders/" + printOrderId + "/download-ticket-raw";
+          var rawUrl =
+            "/cashier/orders/" + printOrderId + "/download-ticket-raw";
           printTicketViaQZ(rawUrl);
         }
       });
 
       function printTicketViaQZ(rawUrl) {
         if (typeof qz === "undefined" || !qz.websocket) return;
-        if (qz.websocket.isActive()) { _doQzPrint(rawUrl); return; }
+        if (qz.websocket.isActive()) {
+          _doQzPrint(rawUrl);
+          return;
+        }
         var probe = new WebSocket("ws://localhost:8182");
-        var probeTimer = setTimeout(function () { probe.close(); }, 500);
+        var probeTimer = setTimeout(function () {
+          probe.close();
+        }, 500);
         probe.onopen = function () {
-          clearTimeout(probeTimer); probe.close();
-          qz.websocket.connect().then(function () { _doQzPrint(rawUrl); }).catch(function () {});
+          clearTimeout(probeTimer);
+          probe.close();
+          qz.websocket
+            .connect()
+            .then(function () {
+              _doQzPrint(rawUrl);
+            })
+            .catch(function () {});
         };
-        probe.onerror = function () { clearTimeout(probeTimer); };
+        probe.onerror = function () {
+          clearTimeout(probeTimer);
+        };
       }
 
       function _doQzPrint(rawUrl) {
         fetch(rawUrl)
-          .then(function (r) { if (!r.ok) throw new Error("fetch failed"); return r.arrayBuffer(); })
+          .then(function (r) {
+            if (!r.ok) throw new Error("fetch failed");
+            return r.arrayBuffer();
+          })
           .then(function (buf) {
-            var b = new Uint8Array(buf), s = "";
+            var b = new Uint8Array(buf),
+              s = "";
             for (var i = 0; i < b.length; i++) s += String.fromCharCode(b[i]);
             return btoa(s);
           })
           .then(function (b64) {
             return qz.printers.getDefault().then(function (p) {
-              return qz.print(qz.configs.create(p), [{ type: "raw", format: "base64", data: b64 }]);
+              return qz.print(qz.configs.create(p), [
+                { type: "raw", format: "base64", data: b64 },
+              ]);
             });
           })
-          .then(function () { console.log("Ticket enviado a imprimir (ESC/POS)."); })
-          .catch(function (e) { console.warn("No se pudo imprimir ticket:", e); });
+          .then(function () {
+            console.log("Ticket enviado a imprimir (ESC/POS).");
+          })
+          .catch(function (e) {
+            console.warn("No se pudo imprimir ticket:", e);
+          });
       }
     </script>
 

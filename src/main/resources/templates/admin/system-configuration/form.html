@@ -847,10 +847,19 @@
                       readonly
                       class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 cursor-not-allowed"
                     />
-                    <input type="hidden" name="taxRate" th:value="${configuration.taxRate}" />
-                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
-                      <span class="material-symbols-outlined text-xs">lock</span>
-                      Este valor es configurado por el administrador del sistema.
+                    <input
+                      type="hidden"
+                      name="taxRate"
+                      th:value="${configuration.taxRate}"
+                    />
+                    <p
+                      class="mt-1 text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1"
+                    >
+                      <span class="material-symbols-outlined text-xs"
+                        >lock</span
+                      >
+                      Este valor es configurado por el administrador del
+                      sistema.
                     </p>
                   </div>
 
@@ -877,23 +886,32 @@
                       th:errors="*{defaultDeliveryCost}"
                     ></p>
                     <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                      Ingrese el monto por defecto a cobrar para envíos a domicilio. Incluye IVA.
+                      Ingrese el monto por defecto a cobrar para envíos a
+                      domicilio. Incluye IVA.
                     </p>
                   </div>
                 </div>
 
                 <!-- Delivery Range (Restaurant geolocation + max distance) -->
-                <div class="mt-6 p-5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/40">
+                <div
+                  class="mt-6 p-5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/40"
+                >
                   <div class="flex items-start justify-between mb-3 gap-3">
                     <div>
-                      <h4 class="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                        <span class="material-symbols-outlined text-primary">my_location</span>
+                      <h4
+                        class="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2"
+                      >
+                        <span class="material-symbols-outlined text-primary"
+                          >my_location</span
+                        >
                         Rango de Entrega a Domicilio
                       </h4>
                       <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        Si configura las coordenadas del restaurante <b>y</b> una distancia máxima,
-                        los clientes solo podrán hacer pedidos a domicilio dentro de ese radio (en línea recta).
-                        Deje los tres campos vacíos para no aplicar ninguna restricción.
+                        Si configura las coordenadas del restaurante
+                        <b>y</b> una distancia máxima, los clientes solo podrán
+                        hacer pedidos a domicilio dentro de ese radio (en línea
+                        recta). Deje los tres campos vacíos para no aplicar
+                        ninguna restricción.
                       </p>
                     </div>
                     <button
@@ -901,7 +919,9 @@
                       onclick="useRestaurantCurrentLocation()"
                       class="shrink-0 inline-flex items-center gap-1 px-3 py-2 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 text-xs font-semibold"
                     >
-                      <span class="material-symbols-outlined text-base">gps_fixed</span>
+                      <span class="material-symbols-outlined text-base"
+                        >gps_fixed</span
+                      >
                       Usar mi ubicación
                     </button>
                   </div>
@@ -1018,10 +1038,10 @@
                           function (pos) {
                             if (cancelled) return;
                             document.getElementById(
-                              "restaurantLatitude"
+                              "restaurantLatitude",
                             ).value = pos.coords.latitude.toFixed(6);
                             document.getElementById(
-                              "restaurantLongitude"
+                              "restaurantLongitude",
                             ).value = pos.coords.longitude.toFixed(6);
                             Swal.fire({
                               icon: "success",
@@ -1046,7 +1066,7 @@
                               ...swalTheme(),
                             });
                           },
-                          { enableHighAccuracy: true, timeout: 15000 }
+                          { enableHighAccuracy: true, timeout: 15000 },
                         );
                       },
                       willClose: () => {
@@ -1137,10 +1157,11 @@
                         class="block mt-1 text-xs text-gray-500 dark:text-gray-400"
                       >
                         Cuando está activado, los pedidos creados por clientes
-                        (TAKEOUT/DELIVERY) iniciarán en estado "Por aceptar".
-                        El stock no se descontará hasta que un administrador,
+                        (TAKEOUT/DELIVERY) iniciarán en estado "Por aceptar". El
+                        stock no se descontará hasta que un administrador,
                         gerente o cajero acepte los items. Si está desactivado,
-                        los pedidos siguen el flujo normal y descuentan stock al crearse.
+                        los pedidos siguen el flujo normal y descuentan stock al
+                        crearse.
                       </span>
                     </div>
                   </label>
@@ -1375,7 +1396,12 @@
                 enctype="multipart/form-data"
                 class="hidden"
               >
-                <input type="hidden" id="restaurantLogoUrl" name="imageUrl" value="" />
+                <input
+                  type="hidden"
+                  id="restaurantLogoUrl"
+                  name="imageUrl"
+                  value=""
+                />
               </form>
             </div>
           </div>
@@ -1672,6 +1698,104 @@
               </div>
             </div>
           </div>
+
+          <!-- QR CODES SECTION -->
+          <div
+            class="mb-6 bg-white dark:bg-gray-900 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800"
+            id="qrCodesSection"
+          >
+            <div
+              class="p-6 border-b border-gray-200 dark:border-gray-800 flex items-center gap-3"
+            >
+              <span class="material-symbols-outlined text-primary text-2xl"
+                >qr_code_2</span
+              >
+              <h3 class="text-xl font-bold text-gray-900 dark:text-white">
+                Códigos QR
+              </h3>
+              <span class="ml-auto text-xs text-gray-400 dark:text-gray-500"
+                >Generados en tiempo real · descargables en PNG</span
+              >
+            </div>
+
+            <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-8">
+              <!-- QR: Landing page -->
+              <div
+                class="flex flex-col items-center gap-4 p-6 rounded-2xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800"
+              >
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="material-symbols-outlined text-primary"
+                    >storefront</span
+                  >
+                  <span class="font-bold text-gray-800 dark:text-white text-lg"
+                    >Página Principal</span
+                  >
+                </div>
+                <p
+                  class="text-xs text-center text-gray-500 dark:text-gray-400 mb-2"
+                >
+                  Redirige a la página web del restaurante mientras tenga el
+                  plan Web o All In One.
+                </p>
+                <div
+                  id="qr-landing"
+                  class="bg-white rounded-xl p-3 shadow-md"
+                ></div>
+                <p
+                  class="text-xs text-gray-400 dark:text-gray-500 break-all text-center"
+                  id="qr-landing-url"
+                ></p>
+                <button
+                  type="button"
+                  onclick="downloadQR('qr-landing', 'qr-pagina-principal.png')"
+                  class="mt-2 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary hover:bg-primary-dark text-white font-semibold text-sm shadow transition-colors"
+                >
+                  <span class="material-symbols-outlined text-base"
+                    >download</span
+                  >
+                  Descargar PNG
+                </button>
+              </div>
+
+              <!-- QR: Menú público -->
+              <div
+                class="flex flex-col items-center gap-4 p-6 rounded-2xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800"
+              >
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="material-symbols-outlined text-primary"
+                    >menu_book</span
+                  >
+                  <span class="font-bold text-gray-800 dark:text-white text-lg"
+                    >Menú Digital</span
+                  >
+                </div>
+                <p
+                  class="text-xs text-center text-gray-500 dark:text-gray-400 mb-2"
+                >
+                  Redirige directamente al menú público del restaurante.
+                </p>
+                <div
+                  id="qr-menu"
+                  class="bg-white rounded-xl p-3 shadow-md"
+                ></div>
+                <p
+                  class="text-xs text-gray-400 dark:text-gray-500 break-all text-center"
+                  id="qr-menu-url"
+                ></p>
+                <button
+                  type="button"
+                  onclick="downloadQR('qr-menu', 'qr-menu-digital.png')"
+                  class="mt-2 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary hover:bg-primary-dark text-white font-semibold text-sm shadow transition-colors"
+                >
+                  <span class="material-symbols-outlined text-base"
+                    >download</span
+                  >
+                  Descargar PNG
+                </button>
+              </div>
+            </div>
+          </div>
+          <!-- FIN QR CODES SECTION -->
         </div>
       </main>
     </div>
@@ -2320,12 +2444,65 @@
           urlInputId: "restaurantLogoUrl",
           tokenUrl: "/admin/api/cf-images/upload-token",
           kind: "restaurant-logo",
-          getName: function () { return "restaurant-logo"; },
+          getName: function () {
+            return "restaurant-logo";
+          },
         });
       });
     </script>
 
     <!-- Script del Sistema de Temas -->
     <div th:replace="~{fragments/theme :: themeScript}"></div>
+
+    <!-- QR Code generation — qrcodejs (browser-native, sin módulos) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        var base = window.location.protocol + "//" + window.location.host;
+        var landingUrl = base + "/";
+        var menuUrl = base + "/home/menu";
+
+        document.getElementById("qr-landing-url").textContent = landingUrl;
+        document.getElementById("qr-menu-url").textContent = menuUrl;
+
+        var opts = {
+          width: 200,
+          height: 200,
+          colorDark: "#111827",
+          colorLight: "#ffffff",
+          correctLevel: QRCode.CorrectLevel.H,
+        };
+
+        new QRCode(
+          document.getElementById("qr-landing"),
+          Object.assign({}, opts, { text: landingUrl }),
+        );
+        new QRCode(
+          document.getElementById("qr-menu"),
+          Object.assign({}, opts, { text: menuUrl }),
+        );
+      });
+
+      function downloadQR(containerId, filename) {
+        var container = document.getElementById(containerId);
+        // qrcodejs genera un <canvas> dentro del contenedor
+        var canvas = container.querySelector("canvas");
+        if (!canvas) return;
+
+        var padding = 24;
+        var out = document.createElement("canvas");
+        out.width = canvas.width + padding * 2;
+        out.height = canvas.height + padding * 2;
+        var ctx = out.getContext("2d");
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, out.width, out.height);
+        ctx.drawImage(canvas, padding, padding);
+
+        var link = document.createElement("a");
+        link.download = filename;
+        link.href = out.toDataURL("image/png");
+        link.click();
+      }
+    </script>
   </body>
 </html>

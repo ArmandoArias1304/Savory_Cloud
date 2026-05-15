@@ -166,6 +166,13 @@
       .swal-close-green:hover {
         color: #dc2626 !important;
       }
+      .swal-cancel-dark {
+        color: #f3f4f6 !important;
+        background-color: #374151 !important;
+      }
+      .swal-cancel-dark:hover {
+        background-color: #4b5563 !important;
+      }
     </style>
   </head>
   <body
@@ -496,8 +503,13 @@
                 id="cartEnvioNote"
                 class="hidden flex items-start gap-1.5 text-xs italic text-gray-500 dark:text-gray-400 px-1"
               >
-                <span class="material-symbols-outlined text-sm">local_shipping</span>
-                <span>Incluye costo de envío de <span id="cartEnvioAmount">$0.00</span></span>
+                <span class="material-symbols-outlined text-sm"
+                  >local_shipping</span
+                >
+                <span
+                  >Incluye costo de envío de
+                  <span id="cartEnvioAmount">$0.00</span></span
+                >
               </div>
 
               <!-- Nota informativa de descuento por promoción (incluido en subtotal e IVA) -->
@@ -505,8 +517,13 @@
                 id="cartDescuentoNote"
                 class="hidden flex items-start gap-1.5 text-xs italic text-gray-500 dark:text-gray-400 px-1"
               >
-                <span class="material-symbols-outlined text-sm">local_offer</span>
-                <span>Incluye descuento por promoción de <span id="cartDescuentoAmount">$0.00</span></span>
+                <span class="material-symbols-outlined text-sm"
+                  >local_offer</span
+                >
+                <span
+                  >Incluye descuento por promoción de
+                  <span id="cartDescuentoAmount">$0.00</span></span
+                >
               </div>
             </div>
 
@@ -864,8 +881,7 @@
       function saveCartToStorage() {
         try {
           localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart));
-        } catch (e) {
-        }
+        } catch (e) {}
       }
 
       // Load cart from localStorage
@@ -876,8 +892,7 @@
             cart = JSON.parse(savedCart);
             return true;
           }
-        } catch (e) {
-        }
+        } catch (e) {}
         return false;
       }
 
@@ -885,8 +900,7 @@
       function clearCartFromStorage() {
         try {
           localStorage.removeItem(CART_STORAGE_KEY);
-        } catch (e) {
-        }
+        } catch (e) {}
       }
 
       /**
@@ -1450,8 +1464,13 @@
       function generateComplementsHTML(complementsData) {
         if (!complementsData) return "";
 
-        const { sauces, complements, maxSauces, minSauces, totalSaucesAvailable } =
-          complementsData;
+        const {
+          sauces,
+          complements,
+          maxSauces,
+          minSauces,
+          totalSaucesAvailable,
+        } = complementsData;
         currentItemMaxSauces = maxSauces;
         currentItemMinSauces = minSauces;
         selectedSaucesCount = 0;
@@ -1909,8 +1928,14 @@
         }
 
         // Preferred order: CASH > DEBIT_CARD > CREDIT_CARD > TRANSFER
-        const preferredOrder = ["CASH", "DEBIT_CARD", "CREDIT_CARD", "TRANSFER"];
-        const defaultMethod = preferredOrder.find(m => methods.includes(m)) || methods[0];
+        const preferredOrder = [
+          "CASH",
+          "DEBIT_CARD",
+          "CREDIT_CARD",
+          "TRANSFER",
+        ];
+        const defaultMethod =
+          preferredOrder.find((m) => methods.includes(m)) || methods[0];
 
         methods.forEach((method) => {
           const option = document.createElement("option");
@@ -1934,7 +1959,6 @@
 
           paymentMethodSelect.appendChild(option);
         });
-
       }
 
       // Toggle order details section
@@ -2725,10 +2749,17 @@
        * Returns true if the operation should be aborted (validation failed),
        * false if it should continue.
        */
-      async function validateMinSauces(itemComplements, quantity, comments, selectedPromotionId) {
+      async function validateMinSauces(
+        itemComplements,
+        quantity,
+        comments,
+        selectedPromotionId,
+      ) {
         const minSauces = itemComplements && itemComplements.minSauces;
         if (!minSauces || minSauces <= 0) return false;
-        const selectedSaucesNow = selectedComplements.filter((c) => c.isSauce).length;
+        const selectedSaucesNow = selectedComplements.filter(
+          (c) => c.isSauce,
+        ).length;
         if (selectedSaucesNow >= minSauces) return false;
         const isDarkMode = document.documentElement.classList.contains("dark");
         await Swal.fire({
@@ -2743,7 +2774,12 @@
         const savedComments = comments || "";
         const savedComplements = [...selectedComplements];
         if (typeof reopenItemModal === "function") {
-          reopenItemModal(savedQuantity, savedComments, selectedPromotionId, savedComplements);
+          reopenItemModal(
+            savedQuantity,
+            savedComments,
+            selectedPromotionId,
+            savedComplements,
+          );
         }
         return true;
       }
@@ -2836,7 +2872,6 @@
 
         // Si hay promoción aplicable, calcular el precio con descuento
         if (appliedPromotion) {
-
           // Validar cantidad mínima para BUY_X_PAY_Y
           if (appliedPromotion.promotionType === "BUY_X_PAY_Y") {
             if (qty < appliedPromotion.buyQuantity) {
@@ -2884,7 +2919,6 @@
             // Calculate discounted price based on promotion type
             const originalTotal = currentItem.price * qty;
             let discountedTotal = originalTotal;
-
 
             if (appliedPromotion.promotionType === "BUY_X_PAY_Y") {
               const sets = Math.floor(qty / appliedPromotion.buyQuantity);
@@ -2984,7 +3018,6 @@
           complementsTotal: complementsTotal,
         };
 
-
         cart.push(cartItem);
 
         // Clear selected complements for next item
@@ -3024,7 +3057,6 @@
         const cartIVAEl = document.getElementById("cartIVA");
         const cartTotalEl = document.getElementById("cartTotal");
         const submitBtn = document.getElementById("submitOrderBtn");
-
 
         // Update item count (both counters)
         itemCount.textContent = cart.length;
@@ -3139,7 +3171,9 @@
 
         // Actualizar nota informativa de descuento por promoción (debajo del Total)
         const descuentoNoteEl = document.getElementById("cartDescuentoNote");
-        const descuentoAmountEl = document.getElementById("cartDescuentoAmount");
+        const descuentoAmountEl = document.getElementById(
+          "cartDescuentoAmount",
+        );
         if (descuentoNoteEl && descuentoAmountEl) {
           // Calcular descuento con IVA directamente desde el carrito para evitar errores
           // de redondeo (sumar/restar centavos): original_con_IVA - total_aplicado_con_IVA
@@ -3182,7 +3216,6 @@
         // Render cart items (estilo de menu.html con imagen y botones de cantidad)
         const cartHTML = cart
           .map((item, index) => {
-
             return `
           <div class="order-item rounded-lg p-3 border border-slate-100 dark:border-slate-800">
             <div class="flex items-center gap-3">
@@ -3459,7 +3492,7 @@
       let isSubmitting = false;
 
       // Submit order
-      function submitOrder() {
+      async function submitOrder() {
         // Prevent duplicate submissions
         if (isSubmitting) {
           return;
@@ -3514,11 +3547,48 @@
           }
         }
 
+        // Confirmation dialog
+        const isDark = document.documentElement.classList.contains("dark");
+        const totalText =
+          document.getElementById("cartTotal")?.textContent || "$0.00";
+        const itemCount = cart.reduce((acc, i) => acc + i.quantity, 0);
+        const isAddingItems = /*[[${existingOrderId != null}]]*/ false;
+        const actionLabel = isAddingItems ? "Agregar Items" : "Crear Pedido";
+
+        const confirmResult = await Swal.fire({
+          title: `<span style="font-size:1.1rem;font-weight:700">${actionLabel}</span>`,
+          html: `
+            <div style="font-size:0.92rem;color:${isDark ? "#d1d5db" : "#374151"}">
+              <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+                <span>Productos</span><strong>${itemCount} item${itemCount !== 1 ? "s" : ""}</strong>
+              </div>
+              <div style="display:flex;justify-content:space-between;padding:8px 12px;border-radius:8px;background:${isDark ? "#065f46" : "#d1fae5"};margin-top:4px">
+                <span style="font-weight:700;color:${isDark ? "#6ee7b7" : "#065f46"}">Total</span>
+                <strong style="font-size:1.05rem;color:${isDark ? "#34d399" : "#059669"}">${totalText}</strong>
+              </div>
+            </div>`,
+          icon: "question",
+          background: isDark ? "#1f2937" : "#ffffff",
+          color: isDark ? "#f3f4f6" : "#1f2937",
+          showCancelButton: true,
+          confirmButtonText: actionLabel,
+          cancelButtonText: "Revisar",
+          confirmButtonColor: "#38e07b",
+          cancelButtonColor: isDark ? "#374151" : "#e5e7eb",
+          customClass: {
+            cancelButton: isDark ? "swal-cancel-dark" : "",
+          },
+          reverseButtons: true,
+        });
+
+        if (!confirmResult.isConfirmed) {
+          return;
+        }
+
         // Lock submission immediately
         isSubmitting = true;
         const submitBtn = document.getElementById("submitOrderBtn");
         if (submitBtn) submitBtn.disabled = true;
-
 
         // Prepare order data for AJAX
         const paymentMethod =
@@ -3586,7 +3656,6 @@
           deliveryAddress: deliveryAddress,
           deliveryReferences: deliveryReferences,
         };
-
 
         // Send AJAX request
         fetch("/client/orders/create", {
@@ -3660,7 +3729,6 @@
                 : "#1f2937",
             });
           });
-
       }
 
       function handleExpiredPromotions(expiredPromotions) {
@@ -4524,8 +4592,12 @@
         if (orderTypeSelector) {
           updatePaymentMethodsForOrderType(orderTypeSelector.value);
           if (orderTypeSelector.value === "DELIVERY") {
-            document.getElementById("deliveryAddressContainer").classList.remove("hidden");
-            document.getElementById("deliveryReferencesContainer").classList.remove("hidden");
+            document
+              .getElementById("deliveryAddressContainer")
+              .classList.remove("hidden");
+            document
+              .getElementById("deliveryReferencesContainer")
+              .classList.remove("hidden");
           }
         }
 

@@ -714,10 +714,17 @@
               </div>
 
               <!-- Descuento de orden sin IVA (debajo del Subtotal) -->
-              <div th:if="${order.hasOrderDiscount()}" class="flex justify-between items-center">
-                <span class="text-sm text-gray-600 dark:text-gray-400">Descuento de orden:</span>
-                <span class="font-semibold text-red-600 dark:text-red-400"
-                      th:text="'-' + ${order.getFormattedOrderDiscountWithoutTax()}"></span>
+              <div
+                th:if="${order.hasOrderDiscount()}"
+                class="flex justify-between items-center"
+              >
+                <span class="text-sm text-gray-600 dark:text-gray-400"
+                  >Descuento de orden:</span
+                >
+                <span
+                  class="font-semibold text-red-600 dark:text-red-400"
+                  th:text="'-' + ${order.getFormattedOrderDiscountWithoutTax()}"
+                ></span>
               </div>
 
               <!-- IVA (siempre visible, incluye IVA del envío y el IVA del descuento de orden permanece dentro de esta línea) -->
@@ -749,9 +756,14 @@
                 th:if="${order.orderType != null and order.orderType.name() == 'DELIVERY' and order.deliveryCost != null and order.deliveryCost.compareTo(T(java.math.BigDecimal).ZERO) > 0}"
                 class="flex justify-end items-center gap-1 text-xs text-gray-500 dark:text-gray-400 italic"
               >
-                <span class="material-symbols-outlined text-sm">local_shipping</span>
+                <span class="material-symbols-outlined text-sm"
+                  >local_shipping</span
+                >
                 <span>Incluye costo de envío de </span>
-                <span th:text="'$' + ${#numbers.formatDecimal(order.deliveryCost, 1, 2)}">$0.00</span>
+                <span
+                  th:text="'$' + ${#numbers.formatDecimal(order.deliveryCost, 1, 2)}"
+                  >$0.00</span
+                >
               </div>
 
               <!-- Nota informativa de descuento por promoción (después del TOTAL) -->
@@ -759,7 +771,9 @@
                 th:if="${order.hasDiscount()}"
                 class="flex justify-end items-center gap-1 text-xs text-gray-500 dark:text-gray-400 italic"
               >
-                <span class="material-symbols-outlined text-sm">local_offer</span>
+                <span class="material-symbols-outlined text-sm"
+                  >local_offer</span
+                >
                 <span>Incluye descuento por promoción de </span>
                 <span th:text="${order.formattedDiscountWithTax}">$0.00</span>
               </div>
@@ -802,8 +816,10 @@
               >
                 <span class="material-symbols-outlined">task_alt</span>
                 <span>
-                  Aceptar items por aceptar
-                  (<span th:text="${order.toAcceptItemsCount}">0</span>)
+                  Aceptar items - Por aceptar (<span
+                    th:text="${order.toAcceptItemsCount}"
+                    >0</span
+                  >)
                 </span>
               </button>
 
@@ -867,18 +883,38 @@
         if (!orderId) return;
 
         if (typeof Swal === "undefined") {
-          if (!confirm("¿Aceptar los " + pending + " items pendientes? Se descontará el stock.")) return;
+          if (
+            !confirm(
+              "¿Aceptar los " +
+                pending +
+                " items pendientes? Se descontará el stock.",
+            )
+          )
+            return;
           _doAcceptToAcceptItems(btn, orderId);
           return;
         }
+        var isDark = document.documentElement.classList.contains("dark");
         Swal.fire({
           title: "¿Aceptar items por aceptar?",
-          html: "Se aceptarán <b>" + pending + "</b> item(s) y se descontará el stock correspondiente.",
+          html:
+            "Se aceptarán <b>" +
+            pending +
+            "</b> item(s) y se descontará el stock correspondiente.",
           icon: "question",
           showCancelButton: true,
           confirmButtonText: "Sí, aceptar",
           cancelButtonText: "Cancelar",
           confirmButtonColor: "#f59e0b",
+          background: isDark ? "#1f2937" : "#ffffff",
+          color: isDark ? "#f3f4f6" : "#1f2937",
+          customClass: {
+            popup: isDark ? "rounded-2xl" : "rounded-2xl",
+            confirmButton: "rounded-xl px-6 py-2.5 font-semibold",
+            cancelButton:
+              "rounded-xl px-6 py-2.5 font-semibold" +
+              (isDark ? " !bg-gray-700 !text-gray-100" : ""),
+          },
         }).then(function (result) {
           if (result.isConfirmed) _doAcceptToAcceptItems(btn, orderId);
         });
@@ -889,18 +925,28 @@
         var csrfToken = document.querySelector('meta[name="_csrf"]');
         var csrfHeader = document.querySelector('meta[name="_csrf_header"]');
         var headers = { "X-Requested-With": "XMLHttpRequest" };
-        if (csrfToken && csrfHeader) headers[csrfHeader.getAttribute("content")] = csrfToken.getAttribute("content");
+        if (csrfToken && csrfHeader)
+          headers[csrfHeader.getAttribute("content")] =
+            csrfToken.getAttribute("content");
 
         fetch("/admin/orders/" + orderId + "/accept-items", {
           method: "POST",
           headers: headers,
           credentials: "same-origin",
         })
-          .then(function (r) { return r.json(); })
+          .then(function (r) {
+            return r.json();
+          })
           .then(function (data) {
             if (data && data.success) {
               if (typeof Swal !== "undefined") {
-                Swal.fire({ icon: "success", title: "Items aceptados", text: data.message || "OK", timer: 1500, showConfirmButton: false }).then(function () {
+                Swal.fire({
+                  icon: "success",
+                  title: "Items aceptados",
+                  text: data.message || "OK",
+                  timer: 1500,
+                  showConfirmButton: false,
+                }).then(function () {
                   window.location.reload();
                 });
               } else {
@@ -909,14 +955,20 @@
             } else {
               btn.disabled = false;
               var msg = (data && data.message) || "Error al aceptar los items";
-              if (typeof Swal !== "undefined") Swal.fire({ icon: "error", title: "Error", text: msg });
+              if (typeof Swal !== "undefined")
+                Swal.fire({ icon: "error", title: "Error", text: msg });
               else alert(msg);
             }
           })
           .catch(function (err) {
             btn.disabled = false;
             console.error(err);
-            if (typeof Swal !== "undefined") Swal.fire({ icon: "error", title: "Error", text: "No se pudo conectar con el servidor" });
+            if (typeof Swal !== "undefined")
+              Swal.fire({
+                icon: "error",
+                title: "Error",
+                text: "No se pudo conectar con el servidor",
+              });
             else alert("Error de red");
           });
       }

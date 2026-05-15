@@ -232,13 +232,7 @@ public class HomeController {
     @GetMapping("/home/menu")
     public String viewMenu(Model model) {
         log.info("Accessing public menu view");
-        
-        // Check if license has landing page access (WEB or ECOMMERCE)
-        if (!licenseService.hasLandingPageAccess()) {
-            log.info("License doesn't have landing page access (BASIC package). Redirecting to /login");
-            return "redirect:/login";
-        }
-        
+
         try {
             // Update item availability
             itemMenuService.updateAllItemsAvailability();

@@ -148,273 +148,281 @@
       <!-- Form -->
       <form th:action="${formAction}" method="post" id="orderForm">
         <div class="space-y-6">
-            <!-- Order Type & Table -->
-            <div
-              class="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-6 shadow-lg animate-fadeIn"
-            >
-              <div class="flex items-center gap-2 mb-4">
-                <span
-                  class="material-symbols-outlined text-blue-600 dark:text-blue-400 text-2xl"
-                  >info</span
+          <!-- Order Type & Table -->
+          <div
+            class="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-6 shadow-lg animate-fadeIn"
+          >
+            <div class="flex items-center gap-2 mb-4">
+              <span
+                class="material-symbols-outlined text-blue-600 dark:text-blue-400 text-2xl"
+                >info</span
+              >
+              <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+                Información del Pedido
+              </h3>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <!-- Order Type -->
+              <div>
+                <label
+                  class="block text-xs uppercase text-gray-500 dark:text-gray-400 font-medium mb-2"
                 >
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
-                  Información del Pedido
-                </h3>
+                  Tipo de Pedido <span class="text-red-500">*</span>
+                </label>
+                <select
+                  name="orderType"
+                  id="orderType"
+                  required
+                  th:disabled="${order.idOrder != null && !canChangeOrderType}"
+                  th:classappend="${order.idOrder != null && !canChangeOrderType} ? 'opacity-60 cursor-not-allowed' : ''"
+                  class="w-full px-4 py-3 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-xl focus:ring-2 focus:ring-primary transition-all"
+                >
+                  <option
+                    th:each="type : ${orderTypes}"
+                    th:value="${type}"
+                    th:text="${type.displayName}"
+                    th:selected="${order.orderType == type}"
+                  ></option>
+                </select>
+                <!-- Hidden field to preserve orderType value when select is disabled -->
+                <input
+                  type="hidden"
+                  name="orderType"
+                  th:if="${order.idOrder != null && !canChangeOrderType}"
+                  th:value="${order.orderType}"
+                />
+                <p
+                  th:if="${order.idOrder != null && !canChangeOrderType}"
+                  class="mt-2 text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1"
+                >
+                  <span class="material-symbols-outlined text-sm">info</span>
+                  <span
+                    >No se puede cambiar el tipo de pedido en el estado
+                    actual</span
+                  >
+                </p>
               </div>
 
+              <!-- Table (only for DINE_IN) -->
+              <div id="tableSection">
+                <label
+                  class="block text-xs uppercase text-gray-500 dark:text-gray-400 font-medium mb-2"
+                >
+                  Mesa <span class="text-red-500">*</span>
+                </label>
+                <select
+                  name="tableId"
+                  id="tableId"
+                  class="w-full px-4 py-3 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-xl focus:ring-2 focus:ring-primary transition-all"
+                >
+                  <option value="">Seleccionar mesa</option>
+                  <option
+                    th:each="table : ${availableTables}"
+                    th:value="${table.id}"
+                    th:text="${'Mesa #' + table.tableNumber + ' (' + table.capacity + ' personas)'}"
+                    th:selected="${order.table != null && order.table.id == table.id}"
+                  ></option>
+                </select>
+              </div>
+
+              <!-- Payment Method -->
+              <div>
+                <label
+                  class="block text-xs uppercase text-gray-500 dark:text-gray-400 font-medium mb-2 flex items-center gap-1"
+                >
+                  <span
+                    class="material-symbols-outlined text-purple-500 dark:text-purple-400"
+                    style="font-size: 16px"
+                    >payments</span
+                  >
+                  Método de Pago <span class="text-red-500">*</span>
+                </label>
+                <select
+                  name="paymentMethod"
+                  required
+                  th:disabled="${order.status == T(com.aatechsolutions.elgransazon.domain.entity.OrderStatus).PAID}"
+                  th:classappend="${order.status == T(com.aatechsolutions.elgransazon.domain.entity.OrderStatus).PAID} ? 'opacity-60 cursor-not-allowed' : ''"
+                  class="w-full px-4 py-3 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-xl focus:ring-2 focus:ring-primary transition-all"
+                >
+                  <option
+                    th:each="method : ${paymentMethods}"
+                    th:value="${method}"
+                    th:text="${method.displayName}"
+                    th:selected="${order.paymentMethod == method}"
+                  ></option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Customer Info -->
+          <div
+            class="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-6 shadow-lg animate-fadeIn"
+            style="animation-delay: 0.1s"
+          >
+            <div class="flex items-center gap-2 mb-4">
+              <span class="material-symbols-outlined text-primary text-2xl"
+                >person</span
+              >
+              <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+                Información del Cliente
+              </h3>
+            </div>
+
+            <div class="space-y-4">
               <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <!-- Order Type -->
+                <!-- Customer Name -->
                 <div>
                   <label
                     class="block text-xs uppercase text-gray-500 dark:text-gray-400 font-medium mb-2"
                   >
-                    Tipo de Pedido <span class="text-red-500">*</span>
-                  </label>
-                  <select
-                    name="orderType"
-                    id="orderType"
-                    required
-                    th:disabled="${order.idOrder != null && !canChangeOrderType}"
-                    th:classappend="${order.idOrder != null && !canChangeOrderType} ? 'opacity-60 cursor-not-allowed' : ''"
-                    class="w-full px-4 py-3 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-xl focus:ring-2 focus:ring-primary transition-all"
-                  >
-                    <option
-                      th:each="type : ${orderTypes}"
-                      th:value="${type}"
-                      th:text="${type.displayName}"
-                      th:selected="${order.orderType == type}"
-                    ></option>
-                  </select>
-                  <!-- Hidden field to preserve orderType value when select is disabled -->
-                  <input
-                    type="hidden"
-                    name="orderType"
-                    th:if="${order.idOrder != null && !canChangeOrderType}"
-                    th:value="${order.orderType}"
-                  />
-                  <p
-                    th:if="${order.idOrder != null && !canChangeOrderType}"
-                    class="mt-2 text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1"
-                  >
-                    <span class="material-symbols-outlined text-sm">info</span>
-                    <span
-                      >No se puede cambiar el tipo de pedido en el estado
-                      actual</span
-                    >
-                  </p>
-                </div>
-
-                <!-- Table (only for DINE_IN) -->
-                <div id="tableSection">
-                  <label
-                    class="block text-xs uppercase text-gray-500 dark:text-gray-400 font-medium mb-2"
-                  >
-                    Mesa <span class="text-red-500">*</span>
-                  </label>
-                  <select
-                    name="tableId"
-                    id="tableId"
-                    class="w-full px-4 py-3 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-xl focus:ring-2 focus:ring-primary transition-all"
-                  >
-                    <option value="">Seleccionar mesa</option>
-                    <option
-                      th:each="table : ${availableTables}"
-                      th:value="${table.id}"
-                      th:text="${'Mesa #' + table.tableNumber + ' (' + table.capacity + ' personas)'}"
-                      th:selected="${order.table != null && order.table.id == table.id}"
-                    ></option>
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            <!-- Customer Info -->
-            <div
-              class="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-6 shadow-lg animate-fadeIn"
-              style="animation-delay: 0.1s"
-            >
-              <div class="flex items-center gap-2 mb-4">
-                <span class="material-symbols-outlined text-primary text-2xl"
-                  >person</span
-                >
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
-                  Información del Cliente
-                </h3>
-              </div>
-
-              <div class="space-y-4">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <!-- Customer Name -->
-                  <div>
-                    <label
-                      class="block text-xs uppercase text-gray-500 dark:text-gray-400 font-medium mb-2"
-                    >
-                      Nombre
-                      <span class="text-red-500" id="nameRequired">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      name="customerName"
-                      id="customerName"
-                      th:value="${order.customerName}"
-                      th:disabled="${order.status == T(com.aatechsolutions.elgransazon.domain.entity.OrderStatus).PAID}"
-                      th:classappend="${order.status == T(com.aatechsolutions.elgransazon.domain.entity.OrderStatus).PAID} ? 'opacity-60 cursor-not-allowed' : ''"
-                      class="w-full px-4 py-3 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-xl focus:ring-2 focus:ring-primary transition-all"
-                      placeholder="Nombre del cliente"
-                      maxlength="100"
-                    />
-                  </div>
-
-                  <!-- Customer Phone -->
-                  <div>
-                    <label
-                      class="block text-xs uppercase text-gray-500 dark:text-gray-400 font-medium mb-2"
-                    >
-                      Teléfono (10 dígitos)
-                      <span class="text-red-500" id="phoneRequired">*</span>
-                    </label>
-                    <div class="relative">
-                      <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <span class="material-symbols-outlined text-gray-400 text-xl">phone</span>
-                      </div>
-                      <input
-                        type="tel"
-                        name="customerPhone"
-                        id="customerPhone"
-                        th:value="${order.customerPhone}"
-                        th:disabled="${order.status == T(com.aatechsolutions.elgransazon.domain.entity.OrderStatus).PAID}"
-                        th:classappend="${order.status == T(com.aatechsolutions.elgransazon.domain.entity.OrderStatus).PAID} ? 'opacity-60 cursor-not-allowed' : ''"
-                        class="w-full pl-10 pr-4 py-3 border-2 border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-xl focus:ring-2 transition-all"
-                        placeholder="Ej: 1234567890"
-                        oninput="validatePhoneNumber(this)"
-                        pattern="[0-9]{10}"
-                        maxlength="10"
-                        title="El teléfono debe tener exactamente 10 dígitos"
-                      />
-                      <p id="phoneCounter" class="text-xs mt-1 text-gray-500 dark:text-gray-400">0/10 dígitos</p>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Delivery Address -->
-                <div id="deliverySection">
-                  <label
-                    class="block text-xs uppercase text-gray-500 dark:text-gray-400 font-medium mb-2"
-                  >
-                    Dirección de Entrega
-                    <span id="deliveryAddressRequired" class="text-red-500"
-                      >*</span
-                    >
+                    Nombre
+                    <span class="text-red-500" id="nameRequired">*</span>
                   </label>
                   <input
                     type="text"
-                    name="deliveryAddress"
-                    th:value="${order.deliveryAddress}"
+                    name="customerName"
+                    id="customerName"
+                    th:value="${order.customerName}"
                     th:disabled="${order.status == T(com.aatechsolutions.elgransazon.domain.entity.OrderStatus).PAID}"
                     th:classappend="${order.status == T(com.aatechsolutions.elgransazon.domain.entity.OrderStatus).PAID} ? 'opacity-60 cursor-not-allowed' : ''"
                     class="w-full px-4 py-3 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-xl focus:ring-2 focus:ring-primary transition-all"
-                    placeholder="Dirección completa"
-                    maxlength="500"
+                    placeholder="Nombre del cliente"
+                    maxlength="100"
                   />
                 </div>
 
-                <!-- Delivery References -->
-                <div id="referencesSection">
+                <!-- Customer Phone -->
+                <div>
                   <label
                     class="block text-xs uppercase text-gray-500 dark:text-gray-400 font-medium mb-2"
                   >
-                    Referencias
+                    Teléfono (10 dígitos)
+                    <span class="text-red-500" id="phoneRequired">*</span>
                   </label>
-                  <textarea
-                    name="deliveryReferences"
-                    th:text="${order.deliveryReferences}"
-                    th:disabled="${order.status == T(com.aatechsolutions.elgransazon.domain.entity.OrderStatus).PAID}"
-                    th:classappend="${order.status == T(com.aatechsolutions.elgransazon.domain.entity.OrderStatus).PAID} ? 'opacity-60 cursor-not-allowed' : ''"
-                    class="w-full px-4 py-3 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-xl focus:ring-2 focus:ring-primary transition-all"
-                    rows="2"
-                    placeholder="Referencias adicionales"
-                    maxlength="500"
-                  ></textarea>
-                </div>
-
-                <!-- Delivery Cost (only for DELIVERY) -->
-                <div id="deliveryCostSection">
-                  <label
-                    class="block text-xs uppercase text-gray-500 dark:text-gray-400 font-medium mb-2"
-                  >
-                    Costo de Envío <span class="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="number"
-                    id="deliveryCost"
-                    name="deliveryCost"
-                    step="0.01"
-                    min="0"
-                    max="999999.99"
-                    th:value="${order.deliveryCost}"
-                    th:disabled="${order.status == T(com.aatechsolutions.elgransazon.domain.entity.OrderStatus).PAID}"
-                    th:classappend="${order.status == T(com.aatechsolutions.elgransazon.domain.entity.OrderStatus).PAID} ? 'opacity-60 cursor-not-allowed' : ''"
-                    class="w-full px-4 py-3 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-xl focus:ring-2 focus:ring-primary transition-all"
-                    placeholder="0.00"
-                  />
-                  <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                    Monto a cobrar por el envío a domicilio (incluye IVA).
-                  </p>
+                  <div class="relative">
+                    <div
+                      class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"
+                    >
+                      <span
+                        class="material-symbols-outlined text-gray-400 text-xl"
+                        >phone</span
+                      >
+                    </div>
+                    <input
+                      type="tel"
+                      name="customerPhone"
+                      id="customerPhone"
+                      th:value="${order.customerPhone}"
+                      th:disabled="${order.status == T(com.aatechsolutions.elgransazon.domain.entity.OrderStatus).PAID}"
+                      th:classappend="${order.status == T(com.aatechsolutions.elgransazon.domain.entity.OrderStatus).PAID} ? 'opacity-60 cursor-not-allowed' : ''"
+                      class="w-full pl-10 pr-4 py-3 border-2 border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-xl focus:ring-2 transition-all"
+                      placeholder="Ej: 1234567890"
+                      oninput="validatePhoneNumber(this)"
+                      pattern="[0-9]{10}"
+                      maxlength="10"
+                      title="El teléfono debe tener exactamente 10 dígitos"
+                    />
+                    <p
+                      id="phoneCounter"
+                      class="text-xs mt-1 text-gray-500 dark:text-gray-400"
+                    >
+                      0/10 dígitos
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <!-- Payment Method -->
-            <div
-              class="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-6 shadow-lg animate-fadeIn"
-              style="animation-delay: 0.15s"
+              <!-- Delivery Address -->
+              <div id="deliverySection">
+                <label
+                  class="block text-xs uppercase text-gray-500 dark:text-gray-400 font-medium mb-2"
+                >
+                  Dirección de Entrega
+                  <span id="deliveryAddressRequired" class="text-red-500"
+                    >*</span
+                  >
+                </label>
+                <input
+                  type="text"
+                  name="deliveryAddress"
+                  th:value="${order.deliveryAddress}"
+                  th:disabled="${order.status == T(com.aatechsolutions.elgransazon.domain.entity.OrderStatus).PAID}"
+                  th:classappend="${order.status == T(com.aatechsolutions.elgransazon.domain.entity.OrderStatus).PAID} ? 'opacity-60 cursor-not-allowed' : ''"
+                  class="w-full px-4 py-3 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-xl focus:ring-2 focus:ring-primary transition-all"
+                  placeholder="Dirección completa"
+                  maxlength="500"
+                />
+              </div>
+
+              <!-- Delivery References -->
+              <div id="referencesSection">
+                <label
+                  class="block text-xs uppercase text-gray-500 dark:text-gray-400 font-medium mb-2"
+                >
+                  Referencias
+                </label>
+                <textarea
+                  name="deliveryReferences"
+                  th:text="${order.deliveryReferences}"
+                  th:disabled="${order.status == T(com.aatechsolutions.elgransazon.domain.entity.OrderStatus).PAID}"
+                  th:classappend="${order.status == T(com.aatechsolutions.elgransazon.domain.entity.OrderStatus).PAID} ? 'opacity-60 cursor-not-allowed' : ''"
+                  class="w-full px-4 py-3 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-xl focus:ring-2 focus:ring-primary transition-all"
+                  rows="2"
+                  placeholder="Referencias adicionales"
+                  maxlength="500"
+                ></textarea>
+              </div>
+
+              <!-- Delivery Cost (only for DELIVERY) -->
+              <div id="deliveryCostSection">
+                <label
+                  class="block text-xs uppercase text-gray-500 dark:text-gray-400 font-medium mb-2"
+                >
+                  Costo de Envío <span class="text-red-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  id="deliveryCost"
+                  name="deliveryCost"
+                  step="0.01"
+                  min="0"
+                  max="999999.99"
+                  th:value="${order.deliveryCost}"
+                  th:disabled="${order.status == T(com.aatechsolutions.elgransazon.domain.entity.OrderStatus).PAID}"
+                  th:classappend="${order.status == T(com.aatechsolutions.elgransazon.domain.entity.OrderStatus).PAID} ? 'opacity-60 cursor-not-allowed' : ''"
+                  class="w-full px-4 py-3 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-xl focus:ring-2 focus:ring-primary transition-all"
+                  placeholder="0.00"
+                />
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  Monto a cobrar por el envío a domicilio (incluye IVA).
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div
+            class="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 pt-2"
+          >
+            <button
+              type="submit"
+              class="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-8 py-3 rounded-xl bg-gradient-to-r from-primary to-primary-dark text-white font-semibold whitespace-nowrap hover:shadow-lg hover:shadow-primary/30 transition-all shadow-md"
             >
-              <div class="flex items-center gap-2 mb-4">
-                <span
-                  class="material-symbols-outlined text-purple-600 dark:text-purple-400 text-2xl"
-                  >payments</span
-                >
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
-                  Método de Pago
-                </h3>
-              </div>
-
-              <select
-                name="paymentMethod"
-                required
-                th:disabled="${order.status == T(com.aatechsolutions.elgransazon.domain.entity.OrderStatus).PAID}"
-                th:classappend="${order.status == T(com.aatechsolutions.elgransazon.domain.entity.OrderStatus).PAID} ? 'opacity-60 cursor-not-allowed' : ''"
-                class="w-full px-4 py-3 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-xl focus:ring-2 focus:ring-primary transition-all"
-              >
-                <option
-                  th:each="method : ${paymentMethods}"
-                  th:value="${method}"
-                  th:text="${method.displayName}"
-                  th:selected="${order.paymentMethod == method}"
-                ></option>
-              </select>
-
-            </div>
-
-            <!-- Action Buttons -->
-            <div class="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 pt-2">
-                <button
-                  type="submit"
-                  class="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-8 py-3 rounded-xl bg-gradient-to-r from-primary to-primary-dark text-white font-semibold whitespace-nowrap hover:shadow-lg hover:shadow-primary/30 transition-all shadow-md"
-                >
-                  <span class="material-symbols-outlined">save</span>
-                  <span
-                    th:text="${order.idOrder != null ? 'Actualizar Pedido' : 'Crear Pedido'}"
-                  ></span>
-                </button>
-                <a
-                  th:href="@{/waiter/orders}"
-                  class="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-8 py-3 rounded-xl bg-gray-600 dark:bg-gray-700 hover:bg-gray-700 dark:hover:bg-gray-600 text-white font-semibold whitespace-nowrap transition-all shadow-md hover:shadow-lg"
-                >
-                  <span class="material-symbols-outlined">close</span>
-                  Cancelar
-                </a>
-            </div>
+              <span class="material-symbols-outlined">save</span>
+              <span
+                th:text="${order.idOrder != null ? 'Actualizar Pedido' : 'Crear Pedido'}"
+              ></span>
+            </button>
+            <a
+              th:href="@{/waiter/orders}"
+              class="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-8 py-3 rounded-xl bg-gray-600 dark:bg-gray-700 hover:bg-gray-700 dark:hover:bg-gray-600 text-white font-semibold whitespace-nowrap transition-all shadow-md hover:shadow-lg"
+            >
+              <span class="material-symbols-outlined">close</span>
+              Cancelar
+            </a>
+          </div>
         </div>
 
         <!-- Hidden fields -->
@@ -473,8 +481,8 @@
         regularPaymentMethods = window.APP_DATA.regularPaymentMethods || [];
         deliveryPaymentMethods = window.APP_DATA.deliveryPaymentMethods || [];
         currentPaymentMethod = window.APP_DATA.currentPaymentMethod || null;
-        defaultDeliveryCost = parseFloat(window.APP_DATA.defaultDeliveryCost) || 0;
-
+        defaultDeliveryCost =
+          parseFloat(window.APP_DATA.defaultDeliveryCost) || 0;
       }
 
       // Initialize form
@@ -510,7 +518,9 @@
         const deliveryAddressRequired = document.getElementById(
           "deliveryAddressRequired",
         );
-        const deliveryCostSection = document.getElementById("deliveryCostSection");
+        const deliveryCostSection = document.getElementById(
+          "deliveryCostSection",
+        );
         const deliveryCostInput = document.getElementById("deliveryCost");
 
         // Customer fields
@@ -597,7 +607,6 @@
             ? deliveryPaymentMethods
             : regularPaymentMethods;
 
-
         // Save current selection
         const currentValue = paymentMethodSelect.value;
 
@@ -627,7 +636,6 @@
           // If editing, try to set the original payment method
           paymentMethodSelect.value = currentPaymentMethod;
         }
-
       }
 
       function addItem(itemId = null, quantity = 1, comments = "") {
@@ -789,7 +797,8 @@
         const subtotalEl = document.getElementById("subtotalDisplay");
         const taxEl = document.getElementById("taxDisplay");
         const totalEl = document.getElementById("totalDisplay");
-        if (subtotalEl) subtotalEl.textContent = "$" + round2(subtotalSinIVA).toFixed(2);
+        if (subtotalEl)
+          subtotalEl.textContent = "$" + round2(subtotalSinIVA).toFixed(2);
         if (taxEl) taxEl.textContent = "$" + round2(taxAmount).toFixed(2);
         if (totalEl) totalEl.textContent = "$" + round2(totalConIVA).toFixed(2);
       }
@@ -820,16 +829,24 @@
           }
 
           // Validate phone: exactly 10 digits when required
-          const phoneInput = document.getElementById('customerPhone');
-          if (phoneInput && phoneInput.required && phoneInput.value.replace(/[^0-9]/g, '').length !== 10) {
+          const phoneInput = document.getElementById("customerPhone");
+          if (
+            phoneInput &&
+            phoneInput.required &&
+            phoneInput.value.replace(/[^0-9]/g, "").length !== 10
+          ) {
             e.preventDefault();
             Swal.fire({
-              icon: 'error',
-              title: 'Teléfono inválido',
-              text: 'El teléfono debe tener exactamente 10 dígitos',
-              confirmButtonColor: '#38e07b',
-              background: document.documentElement.classList.contains('dark') ? '#1f2937' : '#ffffff',
-              color: document.documentElement.classList.contains('dark') ? '#f3f4f6' : '#1f2937',
+              icon: "error",
+              title: "Teléfono inválido",
+              text: "El teléfono debe tener exactamente 10 dígitos",
+              confirmButtonColor: "#38e07b",
+              background: document.documentElement.classList.contains("dark")
+                ? "#1f2937"
+                : "#ffffff",
+              color: document.documentElement.classList.contains("dark")
+                ? "#f3f4f6"
+                : "#1f2937",
             });
             return false;
           }
@@ -838,31 +855,58 @@
         });
 
       function validatePhoneNumber(input) {
-        input.value = input.value.replace(/[^0-9]/g, '').substring(0, 10);
+        input.value = input.value.replace(/[^0-9]/g, "").substring(0, 10);
         const length = input.value.length;
-        const counter = document.getElementById('phoneCounter');
+        const counter = document.getElementById("phoneCounter");
         counter.textContent = `${length}/10 dígitos`;
         if (length === 0) {
-          input.classList.remove('!border-red-500', '!border-primary', 'focus:!ring-red-500', 'focus:!ring-primary');
-          input.classList.add('border-gray-300', 'dark:border-gray-700');
-          counter.classList.remove('text-red-500', 'text-primary', 'font-semibold');
-          counter.classList.add('text-gray-500', 'dark:text-gray-400');
+          input.classList.remove(
+            "!border-red-500",
+            "!border-primary",
+            "focus:!ring-red-500",
+            "focus:!ring-primary",
+          );
+          input.classList.add("border-gray-300", "dark:border-gray-700");
+          counter.classList.remove(
+            "text-red-500",
+            "text-primary",
+            "font-semibold",
+          );
+          counter.classList.add("text-gray-500", "dark:text-gray-400");
         } else if (length < 10) {
-          input.classList.remove('border-gray-300', 'dark:border-gray-700', '!border-primary', 'focus:!ring-primary');
-          input.classList.add('!border-red-500', 'focus:!ring-red-500');
-          counter.classList.remove('text-gray-500', 'dark:text-gray-400', 'text-primary');
-          counter.classList.add('text-red-500', 'font-semibold');
+          input.classList.remove(
+            "border-gray-300",
+            "dark:border-gray-700",
+            "!border-primary",
+            "focus:!ring-primary",
+          );
+          input.classList.add("!border-red-500", "focus:!ring-red-500");
+          counter.classList.remove(
+            "text-gray-500",
+            "dark:text-gray-400",
+            "text-primary",
+          );
+          counter.classList.add("text-red-500", "font-semibold");
         } else {
-          input.classList.remove('border-gray-300', 'dark:border-gray-700', '!border-red-500', 'focus:!ring-red-500');
-          input.classList.add('!border-primary', 'focus:!ring-primary');
-          counter.classList.remove('text-gray-500', 'dark:text-gray-400', 'text-red-500');
-          counter.classList.add('text-primary', 'font-semibold');
+          input.classList.remove(
+            "border-gray-300",
+            "dark:border-gray-700",
+            "!border-red-500",
+            "focus:!ring-red-500",
+          );
+          input.classList.add("!border-primary", "focus:!ring-primary");
+          counter.classList.remove(
+            "text-gray-500",
+            "dark:text-gray-400",
+            "text-red-500",
+          );
+          counter.classList.add("text-primary", "font-semibold");
         }
       }
 
       // Initialize phone counter if there's a pre-filled value
-      document.addEventListener('DOMContentLoaded', function() {
-        const phoneInput = document.getElementById('customerPhone');
+      document.addEventListener("DOMContentLoaded", function () {
+        const phoneInput = document.getElementById("customerPhone");
         if (phoneInput && phoneInput.value) validatePhoneNumber(phoneInput);
       });
     </script>

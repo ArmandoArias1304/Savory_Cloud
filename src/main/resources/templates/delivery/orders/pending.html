@@ -19,6 +19,10 @@
 
     <!-- Sistema de Temas (Modo Claro/Oscuro) -->
     <div th:replace="~{fragments/theme :: themeResources}"></div>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
@@ -235,7 +239,10 @@
                     Pedido #<span th:text="${order.orderNumber}"></span>
                   </p>
                   <p class="text-xs text-gray-600 dark:text-gray-400">
-                    Creado: <span th:text="${#tz.format(order.createdAt, 'dd/MM/yyyy HH:mm')}"></span>
+                    Creado:
+                    <span
+                      th:text="${#tz.format(order.createdAt, 'dd/MM/yyyy HH:mm')}"
+                    ></span>
                   </p>
                 </div>
               </div>
@@ -294,6 +301,26 @@
                   >
                   <span th:text="${order.customerPhone}"></span>
                 </p>
+                <!-- WhatsApp Button (only when delivery accepted) -->
+                <button
+                  th:if="${(order.status.name() == 'ON_THE_WAY' || order.status.name() == 'DELIVERED') && order.customerPhone != null && !order.customerPhone.isEmpty()}"
+                  type="button"
+                  onclick="
+                    openWhatsApp(
+                      this.dataset.phone,
+                      this.dataset.orderNumber,
+                      this.dataset.customerName,
+                    )
+                  "
+                  th:data-phone="${order.customerPhone}"
+                  th:data-order-number="${order.orderNumber}"
+                  th:data-customer-name="${order.customerName != null ? order.customerName : ''}"
+                  class="mt-3 w-full py-2 px-3 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-md hover:shadow-lg border-0 cursor-pointer"
+                  title="Contactar al cliente por WhatsApp"
+                >
+                  <i class="fab fa-whatsapp text-sm"></i>
+                  Contactar por WhatsApp
+                </button>
               </div>
 
               <!-- Delivery Address -->
@@ -352,19 +379,27 @@
                         class="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-1.5 flex-wrap"
                       >
                         <span th:text="${detail.displayName}"></span>
-                        <span class="text-sm font-bold text-primary" th:text="'x' + ${detail.quantity}"></span>
+                        <span
+                          class="text-sm font-bold text-primary"
+                          th:text="'x' + ${detail.quantity}"
+                        ></span>
                       </p>
                       <span
                         th:if="${detail.comboParent}"
                         class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300 mt-1"
                       >
-                        <span class="material-symbols-outlined" style="font-size: 0.625rem">inventory_2</span>
+                        <span
+                          class="material-symbols-outlined"
+                          style="font-size: 0.625rem"
+                          >inventory_2</span
+                        >
                         COMBO
                       </span>
                       <span
                         th:if="${detail.comboChild}"
                         class="block text-[10px] text-teal-600 dark:text-teal-400 font-medium mt-0.5"
-                      >&#8627; parte del combo</span>
+                        >&#8627; parte del combo</span
+                      >
                       <p
                         th:if="${detail.displayComments != null}"
                         class="text-xs text-gray-600 dark:text-gray-400 italic mt-1"
@@ -475,9 +510,14 @@
                   th:if="${order.orderType != null and order.orderType.name() == 'DELIVERY' and order.deliveryCost != null and order.deliveryCost.compareTo(T(java.math.BigDecimal).ZERO) > 0}"
                   class="flex justify-end items-center gap-1 text-xs text-gray-500 dark:text-gray-400 italic mt-1"
                 >
-                  <span class="material-symbols-outlined text-sm">local_shipping</span>
+                  <span class="material-symbols-outlined text-sm"
+                    >local_shipping</span
+                  >
                   <span>Incluye </span>
-                  <span th:text="'$' + ${#numbers.formatDecimal(order.deliveryCost, 1, 2)}">$0.00</span>
+                  <span
+                    th:text="'$' + ${#numbers.formatDecimal(order.deliveryCost, 1, 2)}"
+                    >$0.00</span
+                  >
                   <span> de envío</span>
                 </div>
                 <!-- Nota informativa de descuento por promoción (después del TOTAL) -->
@@ -485,7 +525,9 @@
                   th:if="${order.hasDiscount()}"
                   class="flex justify-end items-center gap-1 text-xs text-gray-500 dark:text-gray-400 italic mt-1"
                 >
-                  <span class="material-symbols-outlined text-sm">local_offer</span>
+                  <span class="material-symbols-outlined text-sm"
+                    >local_offer</span
+                  >
                   <span>Incluye descuento por promoción de </span>
                   <span th:text="${order.formattedDiscountWithTax}">$0.00</span>
                 </div>
@@ -595,7 +637,9 @@
               th:disabled="${currentPage == 1}"
               class="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
-              <span class="material-symbols-outlined text-lg">chevron_left</span>
+              <span class="material-symbols-outlined text-lg"
+                >chevron_left</span
+              >
             </button>
             <div id="pageNumbers" class="flex items-center gap-1"></div>
             <button
@@ -603,7 +647,9 @@
               th:disabled="${currentPage >= totalPages}"
               class="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
-              <span class="material-symbols-outlined text-lg">chevron_right</span>
+              <span class="material-symbols-outlined text-lg"
+                >chevron_right</span
+              >
             </button>
           </div>
         </div>
@@ -614,7 +660,25 @@
       /*<![CDATA[*/
       const currentRole = "delivery";
       const companyId = /*[[${systemConfig.company != null ? systemConfig.company.idCompany : 0}]]*/ 0;
+      const restaurantName =
+        /*[[${systemConfig != null ? systemConfig.restaurantName : 'El Restaurante'}]]*/ "El Restaurante";
       /*]]>*/
+
+      function openWhatsApp(phone, orderNumber, customerName) {
+        const msg =
+          "Hola soy el repartidor de " +
+          restaurantName +
+          " para hacerle entrega de su pedido " +
+          orderNumber +
+          " a nombre de " +
+          customerName +
+          ".";
+        window.open(
+          "https://wa.me/52" + phone + "?text=" + encodeURIComponent(msg),
+          "_blank",
+          "noopener,noreferrer",
+        );
+      }
 
       // Function to remove visual effect from card
       function removeCardEffect(orderId) {
@@ -768,16 +832,12 @@
 
           audio
             .play()
-            .then(() => {
-            })
-            .catch((error) => {
-            });
+            .then(() => {})
+            .catch((error) => {});
 
           // Handle audio errors
-          audio.onerror = function (e) {
-          };
-        } catch (e) {
-        }
+          audio.onerror = function (e) {};
+        } catch (e) {}
       }
 
       function connectDeliveryOrdersWebSocket() {
@@ -788,7 +848,6 @@
         stompClient.connect(
           {},
           function (frame) {
-
             // Subscribe to delivery topic (company-specific)
             stompClient.subscribe(
               `/topic/delivery/orders/${companyId}`,
@@ -797,7 +856,6 @@
                 handleOrderUpdate(message);
               },
             );
-
           },
           function (error) {
             setTimeout(connectDeliveryOrdersWebSocket, 5000);
@@ -810,7 +868,6 @@
         const orderId = notification.orderId;
         const orderNumber = notification.orderNumber;
         const status = notification.status;
-
 
         if (notificationType === "ORDER_CANCELLED") {
           // Order cancelled - remove from view
@@ -841,8 +898,12 @@
             showConfirmButton: false,
             timer: 4000,
             timerProgressBar: true,
-            background: document.documentElement.classList.contains("dark") ? "#1f2937" : "#ffffff",
-            color: document.documentElement.classList.contains("dark") ? "#f3f4f6" : "#1f2937",
+            background: document.documentElement.classList.contains("dark")
+              ? "#1f2937"
+              : "#ffffff",
+            color: document.documentElement.classList.contains("dark")
+              ? "#f3f4f6"
+              : "#1f2937",
           });
 
           // Play sound
@@ -880,8 +941,12 @@
           showConfirmButton: false,
           timer: 3000,
           timerProgressBar: true,
-          background: document.documentElement.classList.contains("dark") ? "#1f2937" : "#ffffff",
-          color: document.documentElement.classList.contains("dark") ? "#f3f4f6" : "#1f2937",
+          background: document.documentElement.classList.contains("dark")
+            ? "#1f2937"
+            : "#ffffff",
+          color: document.documentElement.classList.contains("dark")
+            ? "#f3f4f6"
+            : "#1f2937",
         });
 
         // Play sound
