@@ -862,6 +862,15 @@
       }
 
       function prepareFormSubmit() {
+        // Trim leading/trailing whitespace from text fields before submit
+        document
+          .querySelectorAll(
+            '#promotionForm input[type="text"], #promotionForm textarea',
+          )
+          .forEach(function (el) {
+            el.value = el.value.trim();
+          });
+
         // Skip file input if no new image was selected
         const imageFileInput = document.getElementById("imageFile");
         if (!_promoImageChanged && imageFileInput) {

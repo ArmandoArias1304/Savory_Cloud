@@ -221,6 +221,7 @@
                             Nombre *
                         </label>
                         <input type="text" th:field="*{adminFirstName}" required
+                               minlength="2" maxlength="50"
                                placeholder="Juan"
                                class="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent">
                         <p th:if="${#fields.hasErrors('adminFirstName')}" th:errors="*{adminFirstName}" class="mt-1 text-sm text-red-500"></p>
@@ -231,6 +232,7 @@
                             Apellido *
                         </label>
                         <input type="text" th:field="*{adminLastName}" required
+                               minlength="2" maxlength="50"
                                placeholder="Pérez"
                                class="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent">
                         <p th:if="${#fields.hasErrors('adminLastName')}" th:errors="*{adminLastName}" class="mt-1 text-sm text-red-500"></p>
@@ -241,6 +243,7 @@
                             Nombre de Usuario *
                         </label>
                         <input type="text" th:field="*{adminUsername}" required
+                               minlength="3" maxlength="50"
                                placeholder="admin"
                                class="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent">
                         <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Usuario para iniciar sesión</p>
@@ -254,7 +257,7 @@
                         <div class="relative">
                             <input type="password" th:field="*{adminPassword}" required id="adminPasswordInput"
                                    placeholder="••••••••"
-                                   minlength="6"
+                                   minlength="6" maxlength="100"
                                    class="w-full px-4 py-2 pr-12 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent">
                             <button type="button" id="togglePassword"
                                     class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
@@ -395,6 +398,12 @@
 
         freeTrialCheck.addEventListener('change', togglePaidFields);
         togglePaidFields(); // initial state
+      });
+
+      document.querySelector('form').addEventListener('submit', function () {
+        this.querySelectorAll('input[type="text"], input[type="email"], input[type="tel"]').forEach(function (el) {
+          el.value = el.value.trim();
+        });
       });
     </script>
 </body>

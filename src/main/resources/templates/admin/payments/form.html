@@ -1088,6 +1088,13 @@
       document
         .getElementById("paymentForm")
         .addEventListener("submit", function (e) {
+          // Trim leading/trailing whitespace from text fields before submit
+          this.querySelectorAll(
+            'input[type="text"], textarea',
+          ).forEach(function (el) {
+            el.value = el.value.trim();
+          });
+
           const paymentMethod =
             document.getElementById("paymentMethodInput").value;
 

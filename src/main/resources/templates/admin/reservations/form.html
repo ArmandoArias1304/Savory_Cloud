@@ -915,6 +915,13 @@
       // Form validation and double-submit prevention
       let isSubmitting = false;
       document.querySelector("form").addEventListener("submit", function (e) {
+        // Trim leading/trailing whitespace from text fields before submit
+        this.querySelectorAll(
+          'input[type="text"], input[type="email"], input[type="tel"], textarea',
+        ).forEach(function (el) {
+          el.value = el.value.trim();
+        });
+
         // Prevent double submission
         if (isSubmitting) {
           e.preventDefault();

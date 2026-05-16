@@ -552,6 +552,12 @@
           counter.classList.add("text-primary", "font-semibold");
         }
       }
+
+      document.getElementById("customerForm").addEventListener("submit", function () {
+        this.querySelectorAll('input[type="text"]').forEach(function (el) {
+          el.value = el.value.trim();
+        });
+      });
     </script>
   </body>
 </html>

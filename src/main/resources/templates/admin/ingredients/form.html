@@ -824,6 +824,13 @@
       const mainForm = document.querySelector("form");
       if (mainForm && mainForm.id !== "addStockForm") {
         mainForm.addEventListener("submit", function (e) {
+          // Trim leading/trailing whitespace from text fields before submit
+          mainForm.querySelectorAll(
+            'input[type="text"], textarea',
+          ).forEach(function (el) {
+            el.value = el.value.trim();
+          });
+
           const unit = unitOfMeasure.value;
           if (unit === "UN") {
             const currentStockValue = parseFloat(currentStock.value) || 0;

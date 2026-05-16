@@ -562,6 +562,10 @@
 
       // Validate quantity before form submission
       document.querySelector("form").addEventListener("submit", function (e) {
+        // Trim leading/trailing whitespace from text fields before submit
+        this.querySelectorAll('input[type="text"]').forEach(function (el) {
+          el.value = el.value.trim();
+        });
         if (currentUnitType === "UN") {
           const quantity = parseFloat(quantityInput.value);
           if (!Number.isInteger(quantity)) {

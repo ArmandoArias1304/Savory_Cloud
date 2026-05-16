@@ -135,6 +135,8 @@
               placeholder="https://facebook.com/tupagina"
               required
               maxlength="500"
+              pattern="https?://.*"
+              title="La URL debe comenzar con http:// o https://"
             />
             <p
               th:if="${#fields.hasErrors('url')}"
@@ -568,6 +570,15 @@
             selectIcon(matchingButton);
           }
         }
+      });
+
+      // Trim leading/trailing whitespace from text fields before submit
+      document.querySelector("form").addEventListener("submit", function () {
+        this.querySelectorAll(
+          'input[type="text"], input[type="url"], textarea',
+        ).forEach(function (el) {
+          el.value = el.value.trim();
+        });
       });
     </script>
 

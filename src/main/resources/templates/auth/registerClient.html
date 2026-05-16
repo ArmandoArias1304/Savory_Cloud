@@ -489,6 +489,9 @@
         }
 
         document.querySelector('form').addEventListener('submit', function(e) {
+            this.querySelectorAll('input[type="text"], input[type="email"], input[type="tel"]').forEach(function(el) {
+                el.value = el.value.trim();
+            });
             var password = document.getElementById('password').value;
             var confirmPassword = document.getElementById('confirmPassword').value;
             var errorMsg = document.getElementById('confirmPasswordError');

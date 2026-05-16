@@ -565,6 +565,15 @@
           counter.classList.add("text-primary", "font-semibold");
         }
       }
+
+      // Trim leading/trailing whitespace from text fields before submit
+      document.getElementById("customerForm").addEventListener("submit", function () {
+        this.querySelectorAll(
+          'input[type="text"], input[type="tel"], textarea',
+        ).forEach(function (el) {
+          el.value = el.value.trim();
+        });
+      });
     </script>
   </body>
 </html>

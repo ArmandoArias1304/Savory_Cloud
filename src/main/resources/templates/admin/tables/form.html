@@ -420,6 +420,15 @@
         commentsTextarea.addEventListener("input", updateCounter);
         updateCounter();
       }
+
+      // Trim leading/trailing whitespace from text fields before submit
+      document.querySelector("form").addEventListener("submit", function () {
+        this.querySelectorAll(
+          'input[type="text"], input[type="email"], textarea',
+        ).forEach(function (el) {
+          el.value = el.value.trim();
+        });
+      });
     </script>
 
     <!-- Script del Sistema de Temas -->

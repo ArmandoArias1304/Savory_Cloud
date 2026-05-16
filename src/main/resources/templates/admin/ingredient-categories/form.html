@@ -299,6 +299,16 @@
       </main>
     </div>
 
+    <script>
+      document.querySelector("form").addEventListener("submit", function () {
+        this.querySelectorAll('input[type="text"], textarea').forEach(
+          function (el) {
+            el.value = el.value.trim();
+          }
+        );
+      });
+    </script>
+
     <!-- Sidebar Scripts Fragment -->
     <div th:replace="~{fragments/sidebar :: sidebarScripts}"></div>
     <!-- Script del Sistema de Temas -->

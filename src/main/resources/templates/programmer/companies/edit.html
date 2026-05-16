@@ -218,6 +218,13 @@
         </form>
     </main>
 
+    <script>
+      document.querySelector("form").addEventListener("submit", function () {
+        this.querySelectorAll('input[type="text"], input[type="email"], input[type="tel"]').forEach(function (el) {
+          el.value = el.value.trim();
+        });
+      });
+    </script>
     <th:block th:replace="~{fragments/theme :: themeScript}"></th:block>
 </body>
 </html>

@@ -655,6 +655,15 @@
       </div>
     </div>
 
+    <!-- Trim de espacios en formulario de perfil -->
+    <script>
+      document.querySelector('form[action*="/profile/update"]').addEventListener("submit", function () {
+        this.querySelectorAll('input[type="text"], input[type="tel"]').forEach(function (el) {
+          el.value = el.value.trim();
+        });
+      });
+    </script>
+
     <!-- Script del Sistema de Temas -->
     <div th:replace="~{fragments/theme :: themeScript}"></div>
 

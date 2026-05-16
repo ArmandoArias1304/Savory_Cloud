@@ -361,6 +361,9 @@
 
       // Form validation
       document.querySelector("form").addEventListener("submit", function (e) {
+        this.querySelectorAll("textarea").forEach(function (el) {
+          el.value = el.value.trim();
+        });
         if (currentRating === 0) {
           e.preventDefault();
           Swal.fire({

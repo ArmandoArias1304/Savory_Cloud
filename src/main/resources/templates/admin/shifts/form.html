@@ -460,6 +460,13 @@
       document
         .getElementById("shiftForm")
         .addEventListener("submit", function (e) {
+          // Trim leading/trailing whitespace from text fields before submit
+          this.querySelectorAll(
+            'input[type="text"], textarea',
+          ).forEach(function (el) {
+            el.value = el.value.trim();
+          });
+
           const checkboxes = document.querySelectorAll(
             'input[type="checkbox"][name="workDays"]',
           );

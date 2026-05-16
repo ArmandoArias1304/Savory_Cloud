@@ -844,6 +844,12 @@
       </div>
     </div>
     <script>
+      document.querySelector("form").addEventListener("submit", function () {
+        this.querySelectorAll('input[type="text"]').forEach(function (el) {
+          el.value = el.value.trim();
+        });
+      });
+
       function togglePassword(inputId, icon) {
         var input = document.getElementById(inputId);
         if (input.type === "password") {

@@ -1885,6 +1885,19 @@
         const themeIcon = document.getElementById("theme-icon");
         const themeDescription = document.getElementById("theme-description");
 
+        // Trim leading/trailing whitespace from all text fields before any form submit
+        document.querySelectorAll("form").forEach(function (form) {
+          form.addEventListener("submit", function () {
+            form
+              .querySelectorAll(
+                'input[type="text"], input[type="email"], input[type="tel"], input[type="url"], textarea',
+              )
+              .forEach(function (el) {
+                el.value = el.value.trim();
+              });
+          });
+        });
+
         // Verificar el tema actual
         const currentTheme =
           localStorage.getItem("elgransazon-theme") || "light";

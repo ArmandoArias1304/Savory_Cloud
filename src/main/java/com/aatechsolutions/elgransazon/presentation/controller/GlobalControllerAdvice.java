@@ -5,7 +5,10 @@ import com.aatechsolutions.elgransazon.domain.entity.SystemConfiguration;
 import com.aatechsolutions.elgransazon.application.service.GlobalSystemConfigService;
 import com.aatechsolutions.elgransazon.application.service.SystemConfigurationService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.propertyeditors.StringTrimmerEditor;
+import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.ControllerAdvice;
+import org.springframework.web.bind.annotation.InitBinder;
 import org.springframework.web.bind.annotation.ModelAttribute;
 
 /**
@@ -27,6 +30,15 @@ public class GlobalControllerAdvice {
 
     @Autowired
     private GlobalSystemConfigService globalSystemConfigService;
+
+    /**
+     * Trim leading/trailing whitespace from all String fields across every controller.
+     * Empty strings (after trim) are converted to null.
+     */
+    @InitBinder
+    public void initBinder(WebDataBinder binder) {
+        binder.registerCustomEditor(String.class, new StringTrimmerEditor(true));
+    }
 
     /**
      * Añade la configuración GLOBAL del sistema a todas las vistas.

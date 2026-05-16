@@ -240,6 +240,14 @@
         const iconName = e.target.value.trim() || "category";
         iconPreview.textContent = iconName;
       });
+
+      document.querySelector("form").addEventListener("submit", function () {
+        this.querySelectorAll('input[type="text"], textarea').forEach(
+          function (el) {
+            el.value = el.value.trim();
+          }
+        );
+      });
     </script>
 
       </main>

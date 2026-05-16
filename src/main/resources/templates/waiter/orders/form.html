@@ -807,6 +807,11 @@
       document
         .getElementById("orderForm")
         .addEventListener("submit", function (e) {
+          // Trim espacios en campos de texto
+          this.querySelectorAll('input[type="text"], textarea').forEach(function (el) {
+            el.value = el.value.trim();
+          });
+
           // In edit mode, items are already validated (they exist)
           if (!isEditMode) {
             const items = document.querySelectorAll(".item-select");

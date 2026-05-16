@@ -1302,6 +1302,12 @@
       // Form Validation
       function validateForm(event) {
         const form = document.getElementById("employeeForm");
+        // Trim leading/trailing whitespace from text fields before submit
+        form
+          .querySelectorAll('input[type="text"], input[type="tel"]')
+          .forEach(function (el) {
+            el.value = el.value.trim();
+          });
         const username = form
           .querySelector('input[name="username"]')
           .value.trim();

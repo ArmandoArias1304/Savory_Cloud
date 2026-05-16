@@ -1359,6 +1359,7 @@
 
     // Auto-generate license key if needed
     document.getElementById('createLicenseForm')?.addEventListener('submit', function(e) {
+        this.querySelectorAll('input[type="text"], input[type="email"], input[type="tel"]').forEach(function(el) { el.value = el.value.trim(); });
         const licenseKeyInput = document.querySelector('input[name="licenseKey"]');
         if (!licenseKeyInput.value || licenseKeyInput.value.trim() === '') {
             const year = new Date().getFullYear();
@@ -1367,6 +1368,11 @@
             const random = Date.now().toString().substring(7);
             licenseKeyInput.value = `ELGS-${year}-${code}-${random}`;
         }
+    });
+
+    // Trim para el modal de editar información de licencia
+    document.querySelector('#editLicenseModal form')?.addEventListener('submit', function () {
+        this.querySelectorAll('input[type="text"], input[type="email"], input[type="tel"]').forEach(function(el) { el.value = el.value.trim(); });
     });
 
     // Calculate new expiration date when renewing
