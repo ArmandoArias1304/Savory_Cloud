@@ -51,11 +51,6 @@ public interface SocialNetworkService {
     void deactivateSocialNetwork(Long id);
 
     /**
-     * Reorder social networks
-     */
-    void reorderSocialNetworks(List<Long> socialNetworkIds);
-
-    /**
      * Count active social networks
      */
     long countActiveSocialNetworks();

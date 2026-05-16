@@ -17,13 +17,13 @@ public interface SocialNetworkRepository extends JpaRepository<SocialNetwork, Lo
     /**
      * Find social networks by system configuration ID
      */
-    @Query("SELECT sn FROM SocialNetwork sn WHERE sn.systemConfiguration.id = :configId ORDER BY sn.displayOrder, sn.name")
+    @Query("SELECT sn FROM SocialNetwork sn WHERE sn.systemConfiguration.id = :configId ORDER BY sn.name")
     List<SocialNetwork> findBySystemConfigurationId(@Param("configId") Long configId);
 
     /**
      * Find all active social networks
      */
-    @Query("SELECT sn FROM SocialNetwork sn WHERE sn.systemConfiguration.id = :configId AND sn.active = true ORDER BY sn.displayOrder, sn.name")
+    @Query("SELECT sn FROM SocialNetwork sn WHERE sn.systemConfiguration.id = :configId AND sn.active = true ORDER BY sn.name")
     List<SocialNetwork> findActiveBySystemConfigurationId(@Param("configId") Long configId);
 
     /**

@@ -43,9 +43,6 @@ public class SocialNetwork implements Serializable {
     @Column(name = "icon", length = 100)
     private String icon;
 
-    @Column(name = "display_order")
-    private Integer displayOrder;
-
     @Column(name = "active", nullable = false)
     @Builder.Default
     private Boolean active = true;

@@ -56,12 +56,6 @@ public class SocialNetworkServiceImpl implements SocialNetworkService {
         // Set system configuration
         socialNetwork.setSystemConfiguration(config);
         
-        // Set default display order if not set
-        if (socialNetwork.getDisplayOrder() == null) {
-            long count = socialNetworkRepository.findBySystemConfigurationId(config.getId()).size();
-            socialNetwork.setDisplayOrder((int) count + 1);
-        }
-        
         SocialNetwork saved = socialNetworkRepository.save(socialNetwork);
         log.info("Social network created successfully with ID: {}", saved.getId());
         return saved;
@@ -79,10 +73,6 @@ public class SocialNetworkServiceImpl implements SocialNetworkService {
         existingNetwork.setUrl(socialNetwork.getUrl());
         existingNetwork.setIcon(socialNetwork.getIcon());
         existingNetwork.setActive(socialNetwork.getActive());
-        
-        if (socialNetwork.getDisplayOrder() != null) {
-            existingNetwork.setDisplayOrder(socialNetwork.getDisplayOrder());
-        }
         
         SocialNetwork saved = socialNetworkRepository.save(existingNetwork);
         log.info("Social network updated successfully");
@@ -123,22 +113,6 @@ public class SocialNetworkServiceImpl implements SocialNetworkService {
         network.setActive(false);
         socialNetworkRepository.save(network);
         log.info("Social network deactivated successfully");
-    }
-
-    @Override
-    public void reorderSocialNetworks(List<Long> socialNetworkIds) {
-        log.info("Reordering {} social networks", socialNetworkIds.size());
-        
-        for (int i = 0; i < socialNetworkIds.size(); i++) {
-            Long id = socialNetworkIds.get(i);
-            final int displayOrder = i + 1;
-            socialNetworkRepository.findById(id).ifPresent(network -> {
-                network.setDisplayOrder(displayOrder);
-                socialNetworkRepository.save(network);
-            });
-        }
-        
-        log.info("Social networks reordered successfully");
     }
 
     @Override

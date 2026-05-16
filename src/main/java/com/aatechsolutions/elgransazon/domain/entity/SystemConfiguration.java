@@ -160,7 +160,7 @@ public class SystemConfiguration implements Serializable {
     private List<BusinessHours> businessHours = new ArrayList<>();
 
     @OneToMany(mappedBy = "systemConfiguration", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
-    @OrderBy("displayOrder ASC")
+    @OrderBy("name ASC")
     @Builder.Default
     private List<SocialNetwork> socialNetworks = new ArrayList<>();
 
