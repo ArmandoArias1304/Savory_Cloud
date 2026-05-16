@@ -597,7 +597,6 @@ class TimezoneEdgeCaseIntegrationTest {
                 .validDays(validDays)
                 .active(true)
                 .deleted(false)
-                .priority(1)
                 .build();
         return promotionRepository.save(promo);
     }

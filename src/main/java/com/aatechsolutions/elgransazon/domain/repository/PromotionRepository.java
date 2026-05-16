@@ -40,7 +40,7 @@ public interface PromotionRepository extends JpaRepository<Promotion, Long> {
      */
     @Query("SELECT p FROM Promotion p WHERE p.active = true " +
            "AND p.startDate <= :today AND p.endDate >= :today " +
-           "ORDER BY p.priority DESC, p.name ASC")
+           "ORDER BY p.name ASC")
     List<Promotion> findActivePromotionsForDate(@Param("today") LocalDate today);
 
     /**
@@ -49,7 +49,7 @@ public interface PromotionRepository extends JpaRepository<Promotion, Long> {
      */
     @Query("SELECT p FROM Promotion p JOIN p.items i " +
            "WHERE i.idItemMenu = :itemId " +
-           "ORDER BY p.priority DESC, p.name ASC")
+           "ORDER BY p.name ASC")
     List<Promotion> findPromotionsByItemId(@Param("itemId") Long itemId);
 
     /**
@@ -61,7 +61,7 @@ public interface PromotionRepository extends JpaRepository<Promotion, Long> {
            "WHERE i.idItemMenu = :itemId " +
            "AND p.active = true " +
            "AND p.startDate <= :today AND p.endDate >= :today " +
-           "ORDER BY p.priority DESC, p.name ASC")
+           "ORDER BY p.name ASC")
     List<Promotion> findActivePromotionsByItemId(
         @Param("itemId") Long itemId, 
         @Param("today") LocalDate today
@@ -109,9 +109,9 @@ public interface PromotionRepository extends JpaRepository<Promotion, Long> {
     boolean existsByNameIgnoreCaseExcludingId(@Param("name") String name, @Param("excludeId") Long excludeId);
 
     /**
-     * Find promotions ordered by priority
+     * Find promotions ordered by name
      */
-    List<Promotion> findAllByOrderByPriorityDescNameAsc();
+    List<Promotion> findAllByOrderByNameAsc();
 
     // ========== Multi-Tenant Methods (by Company) ==========
 
@@ -135,13 +135,13 @@ public interface PromotionRepository extends JpaRepository<Promotion, Long> {
      */
     @Query("SELECT p FROM Promotion p WHERE p.company = :company AND p.active = true " +
            "AND p.startDate <= :today AND p.endDate >= :today " +
-           "ORDER BY p.priority DESC, p.name ASC")
+           "ORDER BY p.name ASC")
     List<Promotion> findActivePromotionsForDateByCompany(@Param("company") Company company, @Param("today") LocalDate today);
 
     /**
-     * Find all promotions by company ordered by priority
+     * Find all promotions by company ordered by name
      */
-    List<Promotion> findByCompanyOrderByPriorityDescNameAsc(Company company);
+    List<Promotion> findByCompanyOrderByNameAsc(Company company);
 
     /**
      * Check if a promotion name already exists for a company (for unique validation)

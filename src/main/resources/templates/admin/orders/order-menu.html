@@ -3108,6 +3108,8 @@
             text: `Máximo ${complement.maxQuantity} unidad(es) de ${complement.name} permitidas`,
             timer: 2000,
             showConfirmButton: false,
+            background: document.documentElement.classList.contains("dark") ? "#1f2937" : "#ffffff",
+            color: document.documentElement.classList.contains("dark") ? "#f3f4f6" : "#1f2937",
           });
           return;
         }

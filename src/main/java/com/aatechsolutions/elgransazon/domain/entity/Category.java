@@ -50,9 +50,6 @@ public class Category implements Serializable {
     @Builder.Default
     private Boolean active = true;
 
-    @Column(name = "display_order")
-    private Integer displayOrder;
-
     @Column(name = "icon", length = 50)
     private String icon;
 

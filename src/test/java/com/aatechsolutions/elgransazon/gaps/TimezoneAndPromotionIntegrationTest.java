@@ -290,7 +290,6 @@ class TimezoneAndPromotionIntegrationTest {
                 .validDays("MONDAY,TUESDAY,WEDNESDAY,THURSDAY,FRIDAY,SATURDAY,SUNDAY")
                 .active(true)
                 .deleted(false)
-                .priority(1)
                 .build();
         return promotionRepository.save(promo);
     }

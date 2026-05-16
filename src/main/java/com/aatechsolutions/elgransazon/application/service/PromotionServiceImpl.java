@@ -12,7 +12,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 
@@ -218,10 +217,9 @@ public class PromotionServiceImpl implements PromotionService {
             return Optional.empty();
         }
         
-        // For simplicity, we'll use priority as the main criterion
-        // In a real scenario, you might want to calculate actual savings
+        // Return first active promotion (ordered by name in repository query)
         return activePromotions.stream()
-                .max(Comparator.comparing(Promotion::getPriority));
+                .findFirst();
     }
 
     @Override
@@ -302,10 +300,10 @@ public class PromotionServiceImpl implements PromotionService {
     }
 
     @Override
-    public List<Promotion> findAllOrderedByPriority() {
-        log.debug("Finding all promotions ordered by priority");
+    public List<Promotion> findAllOrderedByName() {
+        log.debug("Finding all promotions ordered by name");
         Company currentCompany = CompanyContext.requireCurrentCompany();
-        return promotionRepository.findByCompanyOrderByPriorityDescNameAsc(currentCompany);
+        return promotionRepository.findByCompanyOrderByNameAsc(currentCompany);
     }
 
     @Override

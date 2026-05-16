@@ -141,16 +141,6 @@ public class Promotion implements Serializable {
     @Builder.Default
     private Boolean deleted = false;
 
-    /**
-     * Priority for applying promotions when multiple are available
-     * Higher number = higher priority
-     */
-    @NotNull(message = "La prioridad es requerida")
-    @Min(value = 1, message = "La prioridad debe ser al menos 1")
-    @Column(name = "priority", nullable = false)
-    @Builder.Default
-    private Integer priority = 1;
-
     // ========== Relationships ==========
 
     /**
@@ -185,9 +175,6 @@ public class Promotion implements Serializable {
         }
         if (this.deleted == null) {
             this.deleted = false;
-        }
-        if (this.priority == null) {
-            this.priority = 1;
         }
     }
 

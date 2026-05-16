@@ -492,7 +492,7 @@
                         <button
                           th:if="${detail.itemStatus != null && detail.itemStatus.name() != 'DELIVERED' && order.canDeleteItems() && !detail.comboChild}"
                           th:disabled="${order.status.name() == 'CANCELLED'}"
-                          class="btn-delete-item inline-flex items-center justify-center w-9 h-9 text-white bg-red-500 hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-700 rounded-lg transition-all duration-200 hover:scale-110 active:scale-95 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:shadow-none mb-1"
+                          class="btn-delete-item p-2 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                           th:data-order-id="${order.idOrder}"
                           th:data-item-id="${detail.idOrderDetail}"
                           th:data-item-name="${detail.displayName}"
@@ -549,7 +549,7 @@
                         ></span>
                       </td>
                       <td
-                        class="py-2 px-3 text-right text-sm text-purple-600 dark:text-purple-400"
+                        class="py-2 px-3 text-right text-sm text-gray-600 dark:text-gray-400"
                         th:text="${comp.getFormattedPrice()}"
                       ></td>
                       <td
@@ -565,16 +565,30 @@
                         <button
                           th:if="${detail.itemStatus != null && detail.itemStatus.name() != 'DELIVERED' && order.canDeleteItems()}"
                           th:disabled="${order.status.name() == 'CANCELLED'}"
-                          class="btn-delete-complement inline-flex items-center justify-center w-7 h-7 text-white bg-purple-500 hover:bg-purple-600 dark:bg-purple-600 dark:hover:bg-purple-700 rounded-lg transition-all duration-200 hover:scale-110 active:scale-95 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:shadow-none"
+                          class="btn-delete-complement p-1.5 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-500 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                           th:data-order-id="${order.idOrder}"
                           th:data-item-id="${detail.idOrderDetail}"
                           th:data-complement-id="${comp.idOrderDetailComplement}"
                           th:data-complement-name="${comp.complementName}"
-                          th:data-complement-quantity="${comp.quantity}"
+                          th:data-item-status="${detail.itemStatus.name()}"
+                          th:data-requires-preparation="${detail.itemMenu.requiresPreparation}"
+                          th:data-requires-barista-preparation="${detail.itemMenu.requiresBaristaPreparation}"
                           title="Eliminar complemento"
                         >
                           <i class="fas fa-times text-xs"></i>
                         </button>
+                        <span
+                          th:if="${detail.itemStatus != null && detail.itemStatus.name() == 'DELIVERED'}"
+                          class="text-xs text-gray-400 dark:text-gray-600 italic"
+                        >
+                          -
+                        </span>
+                        <span
+                          th:if="${detail.itemStatus != null && detail.itemStatus.name() != 'DELIVERED' && !order.canDeleteItems() && order.orderType.name() == 'DELIVERY'}"
+                          class="text-xs text-gray-400 dark:text-gray-600"
+                        >
+                          -
+                        </span>
                       </td>
                     </tr>
                   </th:block>
@@ -805,12 +819,7 @@
                 class="flex items-center justify-center gap-2 w-full px-4 py-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-semibold transition-all shadow-md hover:shadow-lg"
               >
                 <span class="material-symbols-outlined">task_alt</span>
-                <span>
-                  Aceptar items por aceptar (<span
-                    th:text="${order.toAcceptItemsCount}"
-                    >0</span
-                  >)
-                </span>
+                <span>Aceptar items</span>
               </button>
 
               <!-- Add Items (only for DINE_IN and TAKEOUT orders that can accept new items) -->
@@ -869,9 +878,7 @@
         if (typeof Swal === "undefined") {
           if (
             !confirm(
-              "¿Aceptar los " +
-                pending +
-                " items pendientes? Se descontará el stock.",
+              "¿Aceptar los items pendientes? Se descontará el stock.",
             )
           )
             return;
@@ -880,11 +887,8 @@
         }
         var isDark = document.documentElement.classList.contains("dark");
         Swal.fire({
-          title: "¿Aceptar items por aceptar?",
-          html:
-            "Se aceptarán <b>" +
-            pending +
-            "</b> item(s) y se descontará el stock correspondiente.",
+          title: "¿Aceptar items?",
+          html: "Se descontará el stock correspondiente de los items pendientes.",
           icon: "question",
           showCancelButton: true,
           confirmButtonText: "Sí, aceptar",
@@ -921,12 +925,15 @@
           .then(function (data) {
             if (data && data.success) {
               if (typeof Swal !== "undefined") {
+                var isDark = document.documentElement.classList.contains("dark");
                 Swal.fire({
                   icon: "success",
                   title: "Items aceptados",
                   text: data.message || "OK",
                   timer: 1500,
                   showConfirmButton: false,
+                  background: isDark ? "#1f2937" : "#ffffff",
+                  color: isDark ? "#f3f4f6" : "#1f2937",
                 }).then(function () {
                   window.location.reload();
                 });
@@ -936,21 +943,25 @@
             } else {
               btn.disabled = false;
               var msg = (data && data.message) || "Error al aceptar los items";
-              if (typeof Swal !== "undefined")
-                Swal.fire({ icon: "error", title: "Error", text: msg });
-              else alert(msg);
+              if (typeof Swal !== "undefined") {
+                var isDark = document.documentElement.classList.contains("dark");
+                Swal.fire({ icon: "error", title: "Error", text: msg, background: isDark ? "#1f2937" : "#ffffff", color: isDark ? "#f3f4f6" : "#1f2937" });
+              } else alert(msg);
             }
           })
           .catch(function (err) {
             btn.disabled = false;
             console.error(err);
-            if (typeof Swal !== "undefined")
+            if (typeof Swal !== "undefined") {
+              var isDark = document.documentElement.classList.contains("dark");
               Swal.fire({
                 icon: "error",
                 title: "Error",
                 text: "No se pudo conectar con el servidor",
+                background: isDark ? "#1f2937" : "#ffffff",
+                color: isDark ? "#f3f4f6" : "#1f2937",
               });
-            else alert("Error de red");
+            } else alert("Error de red");
           });
       }
 
@@ -1106,7 +1117,7 @@
             '<p class="text-sm text-orange-600 dark:text-orange-400 mt-3">⚠️ El stock debe ser devuelto manualmente (item ya fue preparado)</p>';
         } else if (itemStatus === "IN_PREPARATION") {
           stockWarning =
-            '<p class="text-sm text-orange-600 dark:text-orange-400 mt-3">⚠️ El stock debe ser devuelto manualmente (item estaba en preparación)</p>';
+            '<p class="text-sm text-orange-600 dark:text-orange-400 mt-3">⚠️ El stock debe ser devuelto manualmente (item está en preparación)</p>';
         }
 
         const result = await Swal.fire({
@@ -1325,13 +1336,19 @@
             const itemId = this.dataset.itemId;
             const complementId = this.dataset.complementId;
             const complementName = this.dataset.complementName;
-            const complementQuantity = this.dataset.complementQuantity;
+            const itemStatus = this.getAttribute("data-item-status");
+            const requiresPrep = this.getAttribute("data-requires-preparation");
+            const requiresBaristaPrep = this.getAttribute(
+              "data-requires-barista-preparation",
+            );
             deleteOrderComplement(
               orderId,
               itemId,
               complementId,
               complementName,
-              complementQuantity,
+              itemStatus,
+              requiresPrep,
+              requiresBaristaPrep,
             );
           });
         });
@@ -1345,34 +1362,45 @@
         itemId,
         complementId,
         complementName,
-        complementQuantity,
+        itemStatus,
+        requiresPrep,
+        requiresBaristaPrep,
       ) {
+        // Build warning message based on item status
+        let stockWarning = "";
+
+        if (itemStatus === "PENDING") {
+          stockWarning =
+            '<p class="text-sm text-green-600 dark:text-green-400 mt-3">✅ El stock del complemento será devuelto automáticamente (item pendiente)</p>';
+        } else if (
+          itemStatus === "READY" &&
+          requiresPrep === "false" &&
+          requiresBaristaPrep === "false"
+        ) {
+          stockWarning =
+            '<p class="text-sm text-green-600 dark:text-green-400 mt-3">✅ El stock del complemento será devuelto automáticamente (item no requiere preparación)</p>';
+        } else if (
+          itemStatus === "READY" &&
+          (requiresPrep === "true" || requiresBaristaPrep === "true")
+        ) {
+          stockWarning =
+            '<p class="text-sm text-orange-600 dark:text-orange-400 mt-3">⚠️ El stock del complemento debe ser devuelto manualmente (item ya fue preparado)</p>';
+        } else if (itemStatus === "IN_PREPARATION") {
+          stockWarning =
+            '<p class="text-sm text-orange-600 dark:text-orange-400 mt-3">⚠️ El stock del complemento debe ser devuelto manualmente (item está en preparación)</p>';
+        }
+
         const result = await Swal.fire({
           title: "¿Eliminar complemento?",
-          html: `
-            <div class="text-left">
-              <p class="mb-3">Estás a punto de eliminar:</p>
-              <div class="bg-purple-50 dark:bg-purple-900/20 rounded-xl p-4 mb-4">
-                <div class="flex items-center gap-2 mb-2">
-                  <span class="material-symbols-outlined text-purple-500">add_circle</span>
-                  <span class="font-semibold text-purple-700 dark:text-purple-300">${complementName}</span>
-                </div>
-                <p class="text-sm text-purple-600 dark:text-purple-400">Cantidad: ${complementQuantity}</p>
-              </div>
-              <div class="bg-amber-50 dark:bg-amber-900/20 rounded-lg p-3">
-                <p class="text-sm text-amber-700 dark:text-amber-400 flex items-start gap-2">
-                  <span class="material-symbols-outlined text-sm mt-0.5">inventory_2</span>
-                  El stock del ingrediente se restaurará automáticamente
-                </p>
-              </div>
-            </div>
-          `,
+          html: `<p>¿Estás seguro de que deseas eliminar el complemento <strong>${complementName}</strong> de este item?</p>${stockWarning}`,
           icon: "warning",
           showCancelButton: true,
-          confirmButtonColor: "#8b5cf6",
+          confirmButtonColor: "#ef4444",
           cancelButtonColor: "#6b7280",
           confirmButtonText: "Sí, eliminar",
           cancelButtonText: "Cancelar",
+          reverseButtons: true,
+          showLoaderOnConfirm: true,
           background: document.documentElement.classList.contains("dark")
             ? "#1f2937"
             : "#ffffff",
@@ -1384,7 +1412,6 @@
             confirmButton: "rounded-xl px-6 py-2.5 font-semibold",
             cancelButton: "rounded-xl px-6 py-2.5 font-semibold",
           },
-          showLoaderOnConfirm: true,
           preConfirm: async () => {
             try {
               const response = await fetch(

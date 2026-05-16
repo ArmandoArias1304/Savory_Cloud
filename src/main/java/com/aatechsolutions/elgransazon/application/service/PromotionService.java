@@ -114,9 +114,9 @@ public interface PromotionService {
     boolean existsByName(String name, Long excludeId);
 
     /**
-     * Find all promotions ordered by priority
+     * Find all promotions ordered by name
      */
-    List<Promotion> findAllOrderedByPriority();
+    List<Promotion> findAllOrderedByName();
 
     /**
      * Validate that fixed discount amount is not greater than item prices

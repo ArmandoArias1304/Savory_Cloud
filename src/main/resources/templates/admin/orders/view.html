@@ -495,6 +495,7 @@
                           th:data-item-name="${detail.displayName}"
                           th:data-item-status="${detail.itemStatus.name()}"
                           th:data-requires-preparation="${detail.itemMenu.requiresPreparation}"
+                          th:data-requires-barista-preparation="${detail.itemMenu.requiresBaristaPreparation}"
                           title="Eliminar item"
                         >
                           <i class="fas fa-trash"></i>
@@ -569,6 +570,7 @@
                           th:data-complement-name="${comp.complementName}"
                           th:data-item-status="${detail.itemStatus.name()}"
                           th:data-requires-preparation="${detail.itemMenu.requiresPreparation}"
+                          th:data-requires-barista-preparation="${detail.itemMenu.requiresBaristaPreparation}"
                           title="Eliminar complemento"
                         >
                           <i class="fas fa-times text-xs"></i>
@@ -815,12 +817,7 @@
                 class="flex items-center justify-center gap-2 w-full px-4 py-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-semibold transition-all shadow-md hover:shadow-lg"
               >
                 <span class="material-symbols-outlined">task_alt</span>
-                <span>
-                  Aceptar items - Por aceptar (<span
-                    th:text="${order.toAcceptItemsCount}"
-                    >0</span
-                  >)
-                </span>
+                <span>Aceptar items</span>
               </button>
 
               <!-- Add Items (only for DINE_IN and TAKEOUT orders that can accept new items) -->
@@ -885,9 +882,7 @@
         if (typeof Swal === "undefined") {
           if (
             !confirm(
-              "¿Aceptar los " +
-                pending +
-                " items pendientes? Se descontará el stock.",
+              "¿Aceptar los items pendientes? Se descontará el stock.",
             )
           )
             return;
@@ -896,11 +891,8 @@
         }
         var isDark = document.documentElement.classList.contains("dark");
         Swal.fire({
-          title: "¿Aceptar items por aceptar?",
-          html:
-            "Se aceptarán <b>" +
-            pending +
-            "</b> item(s) y se descontará el stock correspondiente.",
+          title: "¿Aceptar items?",
+          html: "Se descontará el stock correspondiente de los items pendientes.",
           icon: "question",
           showCancelButton: true,
           confirmButtonText: "Sí, aceptar",
@@ -940,12 +932,15 @@
           .then(function (data) {
             if (data && data.success) {
               if (typeof Swal !== "undefined") {
+                var isDark = document.documentElement.classList.contains("dark");
                 Swal.fire({
                   icon: "success",
                   title: "Items aceptados",
                   text: data.message || "OK",
                   timer: 1500,
                   showConfirmButton: false,
+                  background: isDark ? "#1f2937" : "#ffffff",
+                  color: isDark ? "#f3f4f6" : "#1f2937",
                 }).then(function () {
                   window.location.reload();
                 });
@@ -955,21 +950,25 @@
             } else {
               btn.disabled = false;
               var msg = (data && data.message) || "Error al aceptar los items";
-              if (typeof Swal !== "undefined")
-                Swal.fire({ icon: "error", title: "Error", text: msg });
-              else alert(msg);
+              if (typeof Swal !== "undefined") {
+                var isDark = document.documentElement.classList.contains("dark");
+                Swal.fire({ icon: "error", title: "Error", text: msg, background: isDark ? "#1f2937" : "#ffffff", color: isDark ? "#f3f4f6" : "#1f2937" });
+              } else alert(msg);
             }
           })
           .catch(function (err) {
             btn.disabled = false;
             console.error(err);
-            if (typeof Swal !== "undefined")
+            if (typeof Swal !== "undefined") {
+              var isDark = document.documentElement.classList.contains("dark");
               Swal.fire({
                 icon: "error",
                 title: "Error",
                 text: "No se pudo conectar con el servidor",
+                background: isDark ? "#1f2937" : "#ffffff",
+                color: isDark ? "#f3f4f6" : "#1f2937",
               });
-            else alert("Error de red");
+            } else alert("Error de red");
           });
       }
 
@@ -1102,6 +1101,7 @@
         itemName,
         itemStatus,
         requiresPrep,
+        requiresBaristaPrep,
       ) {
         // Build warning message based on item status
         let stockWarning = "";
@@ -1109,15 +1109,22 @@
         if (itemStatus === "PENDING") {
           stockWarning =
             '<p class="text-sm text-green-600 dark:text-green-400 mt-3">✅ El stock será devuelto automáticamente (item nunca fue preparado)</p>';
-        } else if (itemStatus === "READY" && requiresPrep === "false") {
+        } else if (
+          itemStatus === "READY" &&
+          requiresPrep === "false" &&
+          requiresBaristaPrep === "false"
+        ) {
           stockWarning =
             '<p class="text-sm text-green-600 dark:text-green-400 mt-3">✅ El stock será devuelto automáticamente (item no requiere preparación)</p>';
-        } else if (itemStatus === "READY" && requiresPrep === "true") {
+        } else if (
+          itemStatus === "READY" &&
+          (requiresPrep === "true" || requiresBaristaPrep === "true")
+        ) {
           stockWarning =
-            '<p class="text-sm text-orange-600 dark:text-orange-400 mt-3">⚠️ El stock debe ser devuelto manualmente (chef ya preparó el item)</p>';
+            '<p class="text-sm text-orange-600 dark:text-orange-400 mt-3">⚠️ El stock debe ser devuelto manualmente (item ya fue preparado)</p>';
         } else if (itemStatus === "IN_PREPARATION") {
           stockWarning =
-            '<p class="text-sm text-orange-600 dark:text-orange-400 mt-3">⚠️ El stock debe ser devuelto manualmente (item estaba en preparación)</p>';
+            '<p class="text-sm text-orange-600 dark:text-orange-400 mt-3">⚠️ El stock debe ser devuelto manualmente (item está en preparación)</p>';
         }
 
         const result = await Swal.fire({
@@ -1312,6 +1319,7 @@
         complementName,
         itemStatus,
         requiresPrep,
+        requiresBaristaPrep,
       ) {
         // Build warning message based on item status
         let stockWarning = "";
@@ -1319,15 +1327,22 @@
         if (itemStatus === "PENDING") {
           stockWarning =
             '<p class="text-sm text-green-600 dark:text-green-400 mt-3">✅ El stock del complemento será devuelto automáticamente (item pendiente)</p>';
-        } else if (itemStatus === "READY" && requiresPrep === "false") {
+        } else if (
+          itemStatus === "READY" &&
+          requiresPrep === "false" &&
+          requiresBaristaPrep === "false"
+        ) {
           stockWarning =
             '<p class="text-sm text-green-600 dark:text-green-400 mt-3">✅ El stock del complemento será devuelto automáticamente (item no requiere preparación)</p>';
-        } else if (itemStatus === "READY" && requiresPrep === "true") {
+        } else if (
+          itemStatus === "READY" &&
+          (requiresPrep === "true" || requiresBaristaPrep === "true")
+        ) {
           stockWarning =
-            '<p class="text-sm text-orange-600 dark:text-orange-400 mt-3">⚠️ El stock del complemento debe ser devuelto manualmente (item ya preparado)</p>';
+            '<p class="text-sm text-orange-600 dark:text-orange-400 mt-3">⚠️ El stock del complemento debe ser devuelto manualmente (item ya fue preparado)</p>';
         } else if (itemStatus === "IN_PREPARATION") {
           stockWarning =
-            '<p class="text-sm text-orange-600 dark:text-orange-400 mt-3">⚠️ El stock del complemento debe ser devuelto manualmente (item en preparación)</p>';
+            '<p class="text-sm text-orange-600 dark:text-orange-400 mt-3">⚠️ El stock del complemento debe ser devuelto manualmente (item está en preparación)</p>';
         }
 
         const result = await Swal.fire({
@@ -1423,12 +1438,16 @@
             const itemName = this.getAttribute("data-item-name");
             const itemStatus = this.getAttribute("data-item-status");
             const requiresPrep = this.getAttribute("data-requires-preparation");
+            const requiresBaristaPrep = this.getAttribute(
+              "data-requires-barista-preparation",
+            );
             deleteOrderItem(
               orderId,
               itemId,
               itemName,
               itemStatus,
               requiresPrep,
+              requiresBaristaPrep,
             );
           });
         });
@@ -1446,6 +1465,9 @@
               const requiresPrep = this.getAttribute(
                 "data-requires-preparation",
               );
+              const requiresBaristaPrep = this.getAttribute(
+                "data-requires-barista-preparation",
+              );
               deleteOrderComplement(
                 orderId,
                 itemId,
@@ -1453,6 +1475,7 @@
                 complementName,
                 itemStatus,
                 requiresPrep,
+                requiresBaristaPrep,
               );
             });
           });

@@ -11,6 +11,7 @@ import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -712,7 +713,7 @@ public class ItemMenu implements Serializable {
         
         return promotions.stream()
             .filter(Promotion::isValidNow)
-            .sorted((p1, p2) -> p2.getPriority().compareTo(p1.getPriority())) // Higher priority first
+            .sorted(Comparator.comparing(Promotion::getName))
             .collect(java.util.stream.Collectors.toList());
     }
 

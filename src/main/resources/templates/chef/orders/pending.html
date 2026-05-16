@@ -1176,14 +1176,16 @@
           message = `Pedido #${notification.orderNumber} - ${notification.orderType} - ${notification.itemCount} items - Total: $${notification.total}`;
           icon = "info";
 
-          // ALWAYS play sound for new orders
-          playNotificationSound();
-
-          // Request browser notification
-          requestBrowserNotification(
-            "Nuevo Pedido",
-            `Pedido #${notification.orderNumber} - ${notification.itemCount} items`,
-          );
+          // Only play sound if order is PENDING (items ready to prepare).
+          // If status is TO_ACCEPT, items still need cashier/admin acceptance first
+          // and the kitchen cannot act on them yet.
+          if (notification.status !== "TO_ACCEPT") {
+            playNotificationSound();
+            requestBrowserNotification(
+              "Nuevo Pedido",
+              `Pedido #${notification.orderNumber} - ${notification.itemCount} items`,
+            );
+          }
         } else if (notification.notificationType === "ORDER_ACCEPTED") {
           // Another chef/barista accepted this order - hide it from current view
           const currentUser = /*[[${currentChef}]]*/ "";
@@ -1220,7 +1222,7 @@
             notification.message ||
             `El pedido #${notification.orderNumber} ha sido cancelado`;
           icon = "warning";
-          playNotificationSound();
+          // No sound for cancelled orders — kitchen staff don't need audio alert for this
 
           // Reload page immediately to remove cancelled order from view
           showNotification(title, message, icon);
@@ -1259,7 +1261,15 @@
           message = `Pedido #${notification.orderNumber} - ${notification.message}`;
           icon = notification.status === "CANCELLED" ? "warning" : "success";
 
-          // NO sound for regular status changes
+          // Play sound only when items transition to PENDING — this is the moment
+          // items have been accepted and the kitchen can start preparing them.
+          if (notification.status === "PENDING") {
+            playNotificationSound();
+            requestBrowserNotification(
+              "📋 Items Listos para Preparar",
+              `Pedido #${notification.orderNumber} - Items aceptados y listos`,
+            );
+          }
         }
 
         // Show notification

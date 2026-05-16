@@ -22,6 +22,9 @@
     <!-- Sistema de Temas (Modo Claro/Oscuro) -->
     <div th:replace="~{fragments/theme :: themeResources}"></div>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- Sidebar Styles Fragment -->
+    <div th:replace="~{fragments/sidebar :: sidebarStyles}"></div>
     <script>
       tailwind.config = {
         darkMode: "class",
@@ -42,8 +45,17 @@
     </script>
   </head>
   <body
-    class="bg-gradient-to-br from-background-light to-gray-50 dark:from-background-dark dark:to-gray-900 font-display text-gray-800 dark:text-gray-200 min-h-screen"
+    class="bg-gradient-to-br from-background-light to-gray-50 dark:from-background-dark dark:to-gray-900 font-display text-gray-800 dark:text-gray-200 overflow-hidden"
   >
+    <!-- Menu Controls Fragment -->
+    <div th:replace="~{fragments/sidebar :: menuControls}"></div>
+
+    <div class="flex h-screen overflow-hidden">
+      <!-- SIDEBAR -->
+      <div th:replace="~{fragments/sidebar :: sidebar(activeMenu='suppliers')}"></div>
+
+      <!-- MAIN CONTENT -->
+      <main class="flex-1 overflow-y-auto h-screen">
     <div class="max-w-5xl mx-auto p-4 sm:p-6 lg:p-8 pb-32">
       <!-- HEADER -->
       <div class="mb-6 sm:mb-8">
@@ -388,5 +400,13 @@
         </form>
       </div>
     </div>
+
+      </main>
+    </div>
+
+    <!-- Sidebar Scripts Fragment -->
+    <div th:replace="~{fragments/sidebar :: sidebarScripts}"></div>
+    <!-- Script del Sistema de Temas -->
+    <div th:replace="~{fragments/theme :: themeScript}"></div>
   </body>
 </html>

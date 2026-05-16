@@ -3845,6 +3845,8 @@
                 showConfirmButton: false,
                 timer: 3000,
                 timerProgressBar: true,
+                background: document.documentElement.classList.contains("dark") ? "#1f2937" : "#ffffff",
+                color: document.documentElement.classList.contains("dark") ? "#f3f4f6" : "#1f2937",
               });
               Toast.fire({
                 icon: "info",
@@ -4577,6 +4579,8 @@
               showConfirmButton: false,
               timer: 3000,
               timerProgressBar: true,
+              background: document.documentElement.classList.contains("dark") ? "#1f2937" : "#ffffff",
+              color: document.documentElement.classList.contains("dark") ? "#f3f4f6" : "#1f2937",
             });
             Toast.fire({
               icon: "success",

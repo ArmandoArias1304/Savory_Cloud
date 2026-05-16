@@ -21,6 +21,9 @@
 
     <!-- Sistema de Temas (Modo Claro/Oscuro) -->
     <div th:replace="~{fragments/theme :: themeResources}"></div>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- Sidebar Styles Fragment -->
+    <div th:replace="~{fragments/sidebar :: sidebarStyles}"></div>
     <script>
       tailwind.config = {
         darkMode: "class",
@@ -41,8 +44,17 @@
     </script>
   </head>
   <body
-    class="bg-gradient-to-br from-background-light to-gray-50 dark:from-background-dark dark:to-gray-900 font-display text-gray-800 dark:text-gray-200 min-h-screen"
+    class="bg-gradient-to-br from-background-light to-gray-50 dark:from-background-dark dark:to-gray-900 font-display text-gray-800 dark:text-gray-200 overflow-hidden"
   >
+    <!-- Menu Controls Fragment -->
+    <div th:replace="~{fragments/sidebar :: menuControls}"></div>
+
+    <div class="flex h-screen overflow-hidden">
+      <!-- SIDEBAR -->
+      <div th:replace="~{fragments/sidebar :: sidebar(activeMenu='complements')}"></div>
+
+      <!-- MAIN CONTENT -->
+      <main class="flex-1 overflow-y-auto h-screen">
     <!-- Main Content Centered -->
     <div class="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
       <div class="max-w-2xl mx-auto">
@@ -305,6 +317,12 @@
         </form>
       </div>
     </div>
+
+      </main>
+    </div>
+
+    <!-- Sidebar Scripts Fragment -->
+    <div th:replace="~{fragments/sidebar :: sidebarScripts}"></div>
 
     <!-- Script del Sistema de Temas -->
     <div th:replace="~{fragments/theme :: themeScript}"></div>

@@ -37,7 +37,7 @@ public class CategoryServiceImpl implements CategoryService {
     public List<Category> getAllCategories() {
         log.debug("Fetching all categories");
         Company company = CompanyContext.requireCurrentCompany();
-        return categoryRepository.findAllByCompanyOrderedByDisplayOrder(company);
+        return categoryRepository.findAllByCompanyOrderedByName(company);
     }
 
     @Override
@@ -45,7 +45,7 @@ public class CategoryServiceImpl implements CategoryService {
     public List<Category> getAllActiveCategories() {
         log.debug("Fetching all active categories");
         Company company = CompanyContext.requireCurrentCompany();
-        return categoryRepository.findAllActiveByCompanyOrderedByDisplayOrder(company);
+        return categoryRepository.findAllActiveByCompanyOrderedByName(company);
     }
 
     @Override
@@ -112,7 +112,6 @@ public class CategoryServiceImpl implements CategoryService {
         existingCategory.setName(category.getName());
         existingCategory.setDescription(category.getDescription());
         existingCategory.setActive(category.getActive());
-        existingCategory.setDisplayOrder(category.getDisplayOrder());
         existingCategory.setIcon(category.getIcon());
 
         Category updatedCategory = categoryRepository.save(existingCategory);

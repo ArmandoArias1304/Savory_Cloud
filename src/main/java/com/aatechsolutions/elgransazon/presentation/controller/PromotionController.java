@@ -72,7 +72,7 @@ public class PromotionController {
                     .collect(Collectors.toList());
             }
         } else {
-            promotions = promotionService.findAllOrderedByPriority();
+            promotions = promotionService.findAllOrderedByName();
         }
 
         // Statistics
@@ -100,7 +100,6 @@ public class PromotionController {
 
         Promotion promotion = new Promotion();
         promotion.setActive(true);
-        promotion.setPriority(1);
 
         List<ItemMenu> menuItems = itemMenuService.findAllActive();
         
@@ -362,7 +361,6 @@ public class PromotionController {
             existing.setEndDate(promotion.getEndDate());
             existing.setValidDays(promotion.getValidDays());
             existing.setActive(promotion.getActive());
-            existing.setPriority(promotion.getPriority());
 
             // Update items
             existing.clearItems();
@@ -570,7 +568,6 @@ public class PromotionController {
                     promoMap.put("discountPercentage", promo.getDiscountPercentage());
                     promoMap.put("discountAmount", promo.getDiscountAmount());
                     promoMap.put("minQuantityForFixedDiscount", promo.getEffectiveMinQuantityForFixedDiscount());
-                    promoMap.put("priority", promo.getPriority());
                     
                     // Get item IDs for this promotion (filtered by current company and distinct)
                     List<Long> itemIds = promo.getItems().stream()
@@ -636,7 +633,6 @@ public class PromotionController {
         map.put("description", promotion.getDescription());
         map.put("type", promotion.getPromotionType().name());
         map.put("displayLabel", promotion.getDisplayLabel());
-        map.put("priority", promotion.getPriority());
         map.put("buyQuantity", promotion.getBuyQuantity());
         map.put("payQuantity", promotion.getPayQuantity());
         map.put("discountPercentage", promotion.getDiscountPercentage());

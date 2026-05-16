@@ -22,6 +22,8 @@
     <!-- Sistema de Temas (Modo Claro/Oscuro) -->
     <div th:replace="~{fragments/theme :: themeResources}"></div>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- Sidebar Styles Fragment -->
+    <div th:replace="~{fragments/sidebar :: sidebarStyles}"></div>
     <script>
       tailwind.config = {
         darkMode: "class",
@@ -105,8 +107,17 @@
     </style>
   </head>
   <body
-    class="bg-gradient-to-br from-background-light to-gray-50 dark:from-background-dark dark:to-gray-900 font-display text-gray-800 dark:text-gray-200"
+    class="bg-gradient-to-br from-background-light to-gray-50 dark:from-background-dark dark:to-gray-900 font-display text-gray-800 dark:text-gray-200 overflow-hidden"
   >
+    <!-- Menu Controls Fragment -->
+    <div th:replace="~{fragments/sidebar :: menuControls}"></div>
+
+    <div class="flex h-screen overflow-hidden">
+      <!-- SIDEBAR -->
+      <div th:replace="~{fragments/sidebar :: sidebar(activeMenu='inventory')}"></div>
+
+      <!-- MAIN CONTENT -->
+      <main class="flex-1 overflow-y-auto h-screen">
     <div class="min-h-screen pb-32">
       <!-- Header -->
       <header
@@ -426,21 +437,21 @@
                   <td class="px-4 sm:px-6 py-4">
                     <span
                       th:if="${category.active}"
-                      class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-green-100 text-green-700 shadow-sm"
+                      class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400"
                     >
                       <span class="material-symbols-outlined text-sm"
                         >check_circle</span
                       >
-                      <span class="hidden sm:inline">Activa</span>
+                      Activa
                     </span>
                     <span
                       th:unless="${category.active}"
-                      class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-red-100 text-red-700 shadow-sm"
+                      class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400"
                     >
                       <span class="material-symbols-outlined text-sm"
                         >cancel</span
                       >
-                      <span class="hidden sm:inline">Inactiva</span>
+                      Inactiva
                     </span>
                   </td>
                   <td class="px-4 sm:px-6 py-4">
@@ -495,6 +506,12 @@
         </div>
       </main>
     </div>
+
+      </main>
+    </div>
+
+    <!-- Sidebar Scripts Fragment -->
+    <div th:replace="~{fragments/sidebar :: sidebarScripts}"></div>
 
     <script>
       // Auto-hide alerts after 5 seconds

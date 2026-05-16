@@ -25,18 +25,18 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
     Optional<Category> findByName(String name);
 
     /**
-     * Find all active categories ordered by display order
+     * Find all active categories ordered by name
      * @return List of active categories
      */
-    @Query("SELECT c FROM Category c WHERE c.active = true ORDER BY c.displayOrder ASC, c.name ASC")
-    List<Category> findAllActiveOrderedByDisplayOrder();
+    @Query("SELECT c FROM Category c WHERE c.active = true ORDER BY c.name ASC")
+    List<Category> findAllActiveOrderedByName();
 
     /**
-     * Find all categories ordered by display order
+     * Find all categories ordered by name
      * @return List of all categories
      */
-    @Query("SELECT c FROM Category c ORDER BY c.displayOrder ASC, c.name ASC")
-    List<Category> findAllOrderedByDisplayOrder();
+    @Query("SELECT c FROM Category c ORDER BY c.name ASC")
+    List<Category> findAllOrderedByName();
 
     /**
      * Check if a category name already exists (case-insensitive)
@@ -59,16 +59,16 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
     Optional<Category> findByNameAndCompany(String name, Company company);
 
     /**
-     * Find all active categories by company ordered by display order
+     * Find all active categories by company ordered by name
      */
-    @Query("SELECT c FROM Category c WHERE c.company = :company AND c.active = true ORDER BY c.displayOrder ASC, c.name ASC")
-    List<Category> findAllActiveByCompanyOrderedByDisplayOrder(@Param("company") Company company);
+    @Query("SELECT c FROM Category c WHERE c.company = :company AND c.active = true ORDER BY c.name ASC")
+    List<Category> findAllActiveByCompanyOrderedByName(@Param("company") Company company);
 
     /**
-     * Find all categories by company ordered by display order
+     * Find all categories by company ordered by name
      */
-    @Query("SELECT c FROM Category c WHERE c.company = :company ORDER BY c.displayOrder ASC, c.name ASC")
-    List<Category> findAllByCompanyOrderedByDisplayOrder(@Param("company") Company company);
+    @Query("SELECT c FROM Category c WHERE c.company = :company ORDER BY c.name ASC")
+    List<Category> findAllByCompanyOrderedByName(@Param("company") Company company);
 
     /**
      * Check if category name exists for a company

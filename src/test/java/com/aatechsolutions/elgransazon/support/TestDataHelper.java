@@ -362,7 +362,7 @@ public class TestDataHelper {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public Category createCategory(Company company, String name) {
         Category cat = Category.builder()
-                .company(company).name(name).active(true).displayOrder(1).build();
+                .company(company).name(name).active(true).build();
         return categoryRepository.save(cat);
     }
 

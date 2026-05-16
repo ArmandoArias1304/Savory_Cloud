@@ -565,40 +565,22 @@
                 ></p>
               </div>
 
-              <!-- Priority and Status -->
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                <div>
-                  <label
-                    class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
-                    >Prioridad *</label
-                  >
+              <!-- Status -->
+              <div class="mb-6">
+                <label
+                  class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+                  >Estado</label
+                >
+                <label class="flex items-center mt-2">
                   <input
-                    type="number"
-                    th:field="*{priority}"
-                    min="1"
-                    required
-                    class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                    type="checkbox"
+                    th:field="*{active}"
+                    class="rounded text-primary focus:ring-primary"
                   />
-                  <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                    Mayor número = mayor prioridad
-                  </p>
-                </div>
-                <div>
-                  <label
-                    class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
-                    >Estado</label
+                  <span class="ml-2 text-sm text-gray-700 dark:text-gray-300"
+                    >Activar promoción</span
                   >
-                  <label class="flex items-center mt-2">
-                    <input
-                      type="checkbox"
-                      th:field="*{active}"
-                      class="rounded text-primary focus:ring-primary"
-                    />
-                    <span class="ml-2 text-sm text-gray-700 dark:text-gray-300"
-                      >Activar promoción</span
-                    >
-                  </label>
-                </div>
+                </label>
               </div>
 
               <!-- Buttons -->

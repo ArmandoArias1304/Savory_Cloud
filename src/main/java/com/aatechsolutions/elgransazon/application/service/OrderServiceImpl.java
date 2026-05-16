@@ -1211,6 +1211,52 @@ public class OrderServiceImpl implements OrderService {
         List<OrderDetail> accepted = new ArrayList<>();
         List<String> failures = new ArrayList<>();
 
+        // ===== PRE-FLIGHT: Combo group atomicity check =====
+        // A combo must be served as a complete unit. If any child OrderDetail (or its
+        // complements) lacks sufficient stock, the ENTIRE combo group is un-servable and
+        // must be excluded before the acceptance loop so that no partial stock deductions
+        // occur for siblings that would otherwise pass individually.
+        {
+            Map<String, List<OrderDetail>> comboGroups = targets.stream()
+                    .filter(d -> d.getComboGroupId() != null && !d.getComboGroupId().isEmpty())
+                    .collect(Collectors.groupingBy(OrderDetail::getComboGroupId));
+
+            Set<String> rejectedGroupIds = new HashSet<>();
+
+            for (Map.Entry<String, List<OrderDetail>> entry : comboGroups.entrySet()) {
+                String groupId = entry.getKey();
+                List<OrderDetail> groupMembers = entry.getValue();
+
+                for (OrderDetail member : groupMembers) {
+                    Map<Long, String> stockErrors = validateStock(List.of(member));
+                    if (!stockErrors.isEmpty()) {
+                        if (rejectedGroupIds.add(groupId)) {
+                            // Find the combo parent name for a user-friendly message
+                            String comboName = groupMembers.stream()
+                                    .filter(OrderDetail::isComboParent)
+                                    .map(d -> d.getItemMenu() != null ? d.getItemMenu().getName() : "Combo")
+                                    .findFirst()
+                                    .orElse("Combo");
+                            String missingItem = stockErrors.values().iterator().next();
+                            failures.add("Combo '" + comboName + "' rechazado: stock insuficiente para '"
+                                    + missingItem + "' (el combo requiere todos sus items)");
+                            log.warn("Combo group '{}' rejected in order {}: insufficient stock for '{}'",
+                                    groupId, order.getOrderNumber(), missingItem);
+                        }
+                        break; // Group already rejected; no need to check further members
+                    }
+                }
+            }
+
+            if (!rejectedGroupIds.isEmpty()) {
+                targets = targets.stream()
+                        .filter(d -> d.getComboGroupId() == null
+                                || !rejectedGroupIds.contains(d.getComboGroupId()))
+                        .collect(Collectors.toList());
+            }
+        }
+        // ===== END PRE-FLIGHT =====
+
         for (OrderDetail detail : targets) {
             String itemName = detail.getItemMenu() != null ? detail.getItemMenu().getName() : ("#" + detail.getIdOrderDetail());
             try {

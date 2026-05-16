@@ -40,10 +40,21 @@
         },
       };
     </script>
+    <!-- Sidebar Styles Fragment -->
+    <div th:replace="~{fragments/sidebar :: sidebarStyles}"></div>
   </head>
   <body
-    class="bg-gradient-to-br from-background-light to-gray-50 dark:from-background-dark dark:to-gray-900 font-display text-gray-800 dark:text-gray-200"
+    class="bg-gradient-to-br from-background-light to-gray-50 dark:from-background-dark dark:to-gray-900 font-display text-gray-800 dark:text-gray-200 overflow-hidden"
   >
+    <!-- Menu Controls Fragment -->
+    <div th:replace="~{fragments/sidebar :: menuControls}"></div>
+
+    <div class="flex h-screen overflow-hidden">
+      <!-- SIDEBAR -->
+      <div th:replace="~{fragments/sidebar :: sidebar(activeMenu='inventory')}"></div>
+
+      <!-- MAIN CONTENT -->
+      <main class="flex-1 overflow-y-auto h-screen">
     <div class="min-h-screen p-4 sm:p-6 lg:p-8 pb-32">
       <div class="max-w-4xl mx-auto">
         <!-- HEADER -->
@@ -284,5 +295,13 @@
         </form>
       </div>
     </div>
+
+      </main>
+    </div>
+
+    <!-- Sidebar Scripts Fragment -->
+    <div th:replace="~{fragments/sidebar :: sidebarScripts}"></div>
+    <!-- Script del Sistema de Temas -->
+    <div th:replace="~{fragments/theme :: themeScript}"></div>
   </body>
 </html>

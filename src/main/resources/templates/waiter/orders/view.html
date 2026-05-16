@@ -478,7 +478,7 @@
                         <button
                           th:if="${detail.itemStatus != null && detail.itemStatus.name() != 'DELIVERED' && order.canDeleteItems() && !detail.comboChild}"
                           th:disabled="${order.status.name() == 'CANCELLED'}"
-                          class="btn-delete-item inline-flex items-center justify-center w-9 h-9 text-white bg-red-500 hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-700 rounded-lg transition-all duration-200 hover:scale-110 active:scale-95 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:shadow-none mb-1"
+                          class="btn-delete-item p-2 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                           th:data-order-id="${order.idOrder}"
                           th:data-item-id="${detail.idOrderDetail}"
                           th:data-item-name="${detail.displayName}"
@@ -559,6 +559,7 @@
                           th:data-complement-name="${comp.complementName}"
                           th:data-item-status="${detail.itemStatus.name()}"
                           th:data-requires-preparation="${detail.itemMenu.requiresPreparation}"
+                          th:data-requires-barista-preparation="${detail.itemMenu.requiresBaristaPreparation}"
                           title="Eliminar complemento"
                         >
                           <i class="fas fa-times text-xs"></i>
@@ -986,7 +987,7 @@
             '<p class="text-sm text-orange-600 dark:text-orange-400 mt-3">⚠️ El stock debe ser devuelto manualmente (item ya fue preparado)</p>';
         } else if (itemStatus === "IN_PREPARATION") {
           stockWarning =
-            '<p class="text-sm text-orange-600 dark:text-orange-400 mt-3">⚠️ El stock debe ser devuelto manualmente (item estaba en preparación)</p>';
+            '<p class="text-sm text-orange-600 dark:text-orange-400 mt-3">⚠️ El stock debe ser devuelto manualmente (item está en preparación)</p>';
         }
 
         const result = await Swal.fire({
@@ -1207,6 +1208,9 @@
               const requiresPrep = this.getAttribute(
                 "data-requires-preparation",
               );
+              const requiresBaristaPrep = this.getAttribute(
+                "data-requires-barista-preparation",
+              );
               deleteOrderComplement(
                 orderId,
                 itemId,
@@ -1214,6 +1218,7 @@
                 complementName,
                 itemStatus,
                 requiresPrep,
+                requiresBaristaPrep,
               );
             });
           });
@@ -1231,6 +1236,7 @@
         complementName,
         itemStatus,
         requiresPrep,
+        requiresBaristaPrep,
       ) {
         // Build warning message based on item status
         let stockWarning = "";
@@ -1238,15 +1244,22 @@
         if (itemStatus === "PENDING") {
           stockWarning =
             '<p class="text-sm text-green-600 dark:text-green-400 mt-3">✅ El stock del complemento será devuelto automáticamente (item pendiente)</p>';
-        } else if (itemStatus === "READY" && requiresPrep === "false") {
+        } else if (
+          itemStatus === "READY" &&
+          requiresPrep === "false" &&
+          requiresBaristaPrep === "false"
+        ) {
           stockWarning =
             '<p class="text-sm text-green-600 dark:text-green-400 mt-3">✅ El stock del complemento será devuelto automáticamente (item no requiere preparación)</p>';
-        } else if (itemStatus === "READY" && requiresPrep === "true") {
+        } else if (
+          itemStatus === "READY" &&
+          (requiresPrep === "true" || requiresBaristaPrep === "true")
+        ) {
           stockWarning =
-            '<p class="text-sm text-orange-600 dark:text-orange-400 mt-3">⚠️ El stock del complemento debe ser devuelto manualmente (item ya preparado)</p>';
+            '<p class="text-sm text-orange-600 dark:text-orange-400 mt-3">⚠️ El stock del complemento debe ser devuelto manualmente (item ya fue preparado)</p>';
         } else if (itemStatus === "IN_PREPARATION") {
           stockWarning =
-            '<p class="text-sm text-orange-600 dark:text-orange-400 mt-3">⚠️ El stock del complemento debe ser devuelto manualmente (item en preparación)</p>';
+            '<p class="text-sm text-orange-600 dark:text-orange-400 mt-3">⚠️ El stock del complemento debe ser devuelto manualmente (item está en preparación)</p>';
         }
 
         const result = await Swal.fire({
