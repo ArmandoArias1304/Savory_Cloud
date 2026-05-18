@@ -295,6 +295,20 @@ public class CashierController {
 
         model.addAttribute("currentRole", "cashier");
 
+        // Staff one-click "Avanzar preparación" feature flags.
+        // Mirror of OrderController.listOrders so the btn-advance-preparation renders
+        // when SystemConfiguration.enableOrderStatusPermission is ON.
+        SystemConfiguration listCfg = systemConfigurationService.getConfiguration();
+        boolean staffOrderStatusEnabled = listCfg != null
+                && Boolean.TRUE.equals(listCfg.getEnableOrderStatusPermission());
+        boolean staffChefEnabled = staffOrderStatusEnabled
+                && Boolean.TRUE.equals(listCfg.getStaffCanManageChefItems());
+        boolean staffBaristaEnabled = staffOrderStatusEnabled
+                && Boolean.TRUE.equals(listCfg.getStaffCanManageBaristaItems());
+        model.addAttribute("staffOrderStatusEnabled", staffOrderStatusEnabled);
+        model.addAttribute("staffChefEnabled", staffChefEnabled);
+        model.addAttribute("staffBaristaEnabled", staffBaristaEnabled);
+
         return "cashier/orders/list";
     }
 

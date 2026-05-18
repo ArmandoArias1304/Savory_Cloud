@@ -449,32 +449,40 @@ public class WebSocketNotificationService {
                       Boolean.TRUE.equals(detail.getItemMenu().getRequiresBaristaPreparation()));
         
         // Send to chefs only if order has chef items
+        // Rule: if the order has already been taken by a chef (preparedBy != null),
+        // notify ONLY that chef via their personal queue. Other chefs no longer see
+        // this order in their pending view, so they should not receive cancellation
+        // notifications for orders that don't belong to them.
         if (hasChefItems) {
-            messagingTemplate.convertAndSend(getCompanyTopic("/topic/chef/orders", order), notification);
-            log.info("👨‍🍳 WebSocket: Notifying CHEF - Order {} cancelled (has chef items)", order.getOrderNumber());
-            
-            // If chef was assigned, send personal notification
             if (order.getPreparedBy() != null) {
                 messagingTemplate.convertAndSendToUser(
                     order.getPreparedBy().getUsername(),
                     "/queue/orders",
                     notification
                 );
+                log.info("👨‍🍳 WebSocket: Notifying owner CHEF '{}' - Order {} cancelled",
+                        order.getPreparedBy().getUsername(), order.getOrderNumber());
+            } else {
+                // Order is still pending / unassigned → broadcast to all chefs
+                messagingTemplate.convertAndSend(getCompanyTopic("/topic/chef/orders", order), notification);
+                log.info("👨‍🍳 WebSocket: Broadcasting to ALL CHEFS - Order {} cancelled (unassigned)", order.getOrderNumber());
             }
         }
         
-        // Send to baristas only if order has barista items
+        // Send to baristas only if order has barista items (same rule as chef)
         if (hasBaristaItems) {
-            messagingTemplate.convertAndSend(getCompanyTopic("/topic/barista/orders", order), notification);
-            log.info("☕ WebSocket: Notifying BARISTA - Order {} cancelled (has barista items)", order.getOrderNumber());
-            
-            // If barista was assigned, send personal notification
             if (order.getPreparedByBarista() != null) {
                 messagingTemplate.convertAndSendToUser(
                     order.getPreparedByBarista().getUsername(),
                     "/queue/orders",
                     notification
                 );
+                log.info("☕ WebSocket: Notifying owner BARISTA '{}' - Order {} cancelled",
+                        order.getPreparedByBarista().getUsername(), order.getOrderNumber());
+            } else {
+                // Order is still pending / unassigned → broadcast to all baristas
+                messagingTemplate.convertAndSend(getCompanyTopic("/topic/barista/orders", order), notification);
+                log.info("☕ WebSocket: Broadcasting to ALL BARISTAS - Order {} cancelled (unassigned)", order.getOrderNumber());
             }
         }
         

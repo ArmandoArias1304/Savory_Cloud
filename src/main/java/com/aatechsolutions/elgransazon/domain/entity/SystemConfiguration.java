@@ -126,6 +126,31 @@ public class SystemConfiguration implements Serializable {
     @Builder.Default
     private Boolean requireCustomerOrderAcceptance = false;
 
+    // ========== Staff Order Status Permission ==========
+    // Parent flag. When TRUE, staff (waiter/cashier/admin/manager) can advance the status of
+    // items that require chef/barista preparation (PENDING -> IN_PREPARATION -> READY) with
+    // a single click on the orders list, instead of relying on chef/barista accepting them.
+    // When FALSE (default), only chef/barista can manage those item statuses. Backward compatible.
+    @Column(name = "enable_order_status_permission", nullable = false,
+            columnDefinition = "boolean not null default false")
+    @Builder.Default
+    private Boolean enableOrderStatusPermission = false;
+
+    // Child flag (only evaluated when enableOrderStatusPermission = TRUE).
+    // When TRUE, staff can advance items that require chef preparation (requiresPreparation=true).
+    // When both child flags are TRUE, staff manages chef + barista items together with one click.
+    @Column(name = "staff_can_manage_chef_items", nullable = false,
+            columnDefinition = "boolean not null default false")
+    @Builder.Default
+    private Boolean staffCanManageChefItems = false;
+
+    // Child flag (only evaluated when enableOrderStatusPermission = TRUE).
+    // When TRUE, staff can advance items that require barista preparation (requiresBaristaPreparation=true).
+    @Column(name = "staff_can_manage_barista_items", nullable = false,
+            columnDefinition = "boolean not null default false")
+    @Builder.Default
+    private Boolean staffCanManageBaristaItems = false;
+
     // Ticket logo intensity (10-100%). Controls how dark/visible the logo prints on thermal tickets.
     // Higher value = darker print (more pixels become black dots). 50% ≈ original threshold.
     // Useful for logos with light colors that don't print well on thermal printers.

@@ -327,6 +327,19 @@ public class OrderController {
         model.addAttribute("isRestaurantOpen", isRestaurantOpen);
         log.debug("Restaurant is currently: {}", isRestaurantOpen ? "open" : "closed");
 
+        // Expose the "staff can advance preparation items" permission flags so the list view
+        // can decide whether to render the "Avanzar preparación" button per order row.
+        SystemConfiguration listCfg = systemConfigurationService.getConfiguration();
+        boolean staffOrderStatusEnabled = listCfg != null
+            && Boolean.TRUE.equals(listCfg.getEnableOrderStatusPermission());
+        boolean staffChefEnabled = staffOrderStatusEnabled
+            && listCfg != null && Boolean.TRUE.equals(listCfg.getStaffCanManageChefItems());
+        boolean staffBaristaEnabled = staffOrderStatusEnabled
+            && listCfg != null && Boolean.TRUE.equals(listCfg.getStaffCanManageBaristaItems());
+        model.addAttribute("staffOrderStatusEnabled", staffOrderStatusEnabled);
+        model.addAttribute("staffChefEnabled", staffChefEnabled);
+        model.addAttribute("staffBaristaEnabled", staffBaristaEnabled);
+
         return role + "/orders/list";
     }
 
@@ -2060,6 +2073,70 @@ public class OrderController {
     }
 
     /**
+     * Advance ALL preparation items (chef and/or barista) of an order to the next status (AJAX).
+     * Available for staff roles (admin, manager, cashier, waiter) when the SystemConfiguration
+     * permission flag is enabled. Mirrors the chef/barista one-click flow but applies the staff
+     * ownership lock by Employee.idEmpleado on the order.
+     */
+    @PostMapping("/{id}/change-all-preparation-items")
+    @ResponseBody
+    public Map<String, Object> changeAllPreparationItems(
+            @PathVariable String role,
+            @PathVariable Long id,
+            Authentication authentication) {
+
+        String username = authentication.getName();
+        log.info("Staff advancing ALL preparation items in order {} by user: {} (role: {})", id, username, role);
+
+        // Validate role - ONLY admin/manager/cashier/waiter can use this endpoint
+        validateRole(role, authentication);
+
+        String lowerRole = role.toLowerCase();
+        boolean isAllowedRole = lowerRole.equals("admin")
+            || lowerRole.equals("manager")
+            || lowerRole.equals("cashier")
+            || lowerRole.equals("waiter");
+        if (!isAllowedRole) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("message", "Esta operación no está disponible para el rol: " + role);
+            return errorResponse;
+        }
+
+        Map<String, Object> response = new HashMap<>();
+
+        try {
+            // Defense in depth: also re-check the feature flag at the controller level so we
+            // fail fast with a clear message before going into the service layer.
+            SystemConfiguration cfg = systemConfigurationService.getConfiguration();
+            if (cfg == null || !Boolean.TRUE.equals(cfg.getEnableOrderStatusPermission())) {
+                response.put("success", false);
+                response.put("message", "El permiso de estado de orden para staff está deshabilitado.");
+                return response;
+            }
+
+            // Always go through adminOrderService (the single source of truth that owns the method)
+            OrderServiceImpl adminService = (OrderServiceImpl) orderServices.get("admin");
+            Order updated = adminService.changeAllPreparationItemsToNextStatus(id, username);
+
+            response.put("success", true);
+            response.put("message", "Items de preparación actualizados");
+            response.put("order", buildOrderDTO(updated));
+            response.put("orderStatus", updated.getStatus().name());
+        } catch (IllegalStateException | IllegalArgumentException e) {
+            log.warn("Error advancing preparation items in order {}: {}", id, e.getMessage());
+            response.put("success", false);
+            response.put("message", e.getMessage());
+        } catch (Exception e) {
+            log.error("Error advancing preparation items in order {}", id, e);
+            response.put("success", false);
+            response.put("message", "Error al avanzar los items: " + e.getMessage());
+        }
+
+        return response;
+    }
+
+    /**
      * Delete a specific item from an order (AJAX)
      */
     @DeleteMapping("/{orderId}/items/{itemId}")
@@ -2291,6 +2368,53 @@ public class OrderController {
             response.put("orderType", order.getOrderType().name());
             response.put("validStatuses", statusList);
             response.put("canBeCancelled", order.getStatus().canBeCancelled());
+
+            // --- Staff "advance preparation items" capability flags ------------------
+            // Tell the client (admin/cashier/waiter list views) whether the one-click
+            // "Avanzar preparación" button should be shown, and what the next status
+            // would be (PENDING -> IN_PREPARATION, or IN_PREPARATION -> READY).
+            String lowerRole2 = role.toLowerCase();
+            boolean staffRole = lowerRole2.equals("admin") || lowerRole2.equals("manager")
+                    || lowerRole2.equals("cashier") || lowerRole2.equals("waiter");
+            boolean canAdvanceChef = false;
+            boolean canAdvanceBarista = false;
+            String nextPreparationStatus = null;
+            if (staffRole) {
+                SystemConfiguration cfg = systemConfigurationService.getConfiguration();
+                if (cfg != null && Boolean.TRUE.equals(cfg.getEnableOrderStatusPermission())) {
+                    boolean flagChef = Boolean.TRUE.equals(cfg.getStaffCanManageChefItems());
+                    boolean flagBar = Boolean.TRUE.equals(cfg.getStaffCanManageBaristaItems());
+                    boolean anyChefActionable = flagChef && order.getOrderDetails().stream()
+                        .anyMatch(d -> d.getItemMenu() != null
+                            && Boolean.TRUE.equals(d.getItemMenu().getRequiresPreparation())
+                            && (d.getItemStatus() == OrderStatus.PENDING
+                                || d.getItemStatus() == OrderStatus.IN_PREPARATION));
+                    boolean anyBaristaActionable = flagBar && order.getOrderDetails().stream()
+                        .anyMatch(d -> d.getItemMenu() != null
+                            && Boolean.TRUE.equals(d.getItemMenu().getRequiresBaristaPreparation())
+                            && (d.getItemStatus() == OrderStatus.PENDING
+                                || d.getItemStatus() == OrderStatus.IN_PREPARATION));
+                    canAdvanceChef = anyChefActionable;
+                    canAdvanceBarista = anyBaristaActionable;
+
+                    // Resolve "next" label: READY wins if any actionable item is already IN_PREP,
+                    // otherwise IN_PREPARATION.
+                    boolean anyInPrep = order.getOrderDetails().stream()
+                        .filter(d -> d.getItemMenu() != null)
+                        .filter(d -> (flagChef && Boolean.TRUE.equals(d.getItemMenu().getRequiresPreparation()))
+                            || (flagBar && Boolean.TRUE.equals(d.getItemMenu().getRequiresBaristaPreparation())))
+                        .anyMatch(d -> d.getItemStatus() == OrderStatus.IN_PREPARATION);
+                    if (canAdvanceChef || canAdvanceBarista) {
+                        nextPreparationStatus = anyInPrep
+                            ? OrderStatus.READY.name()
+                            : OrderStatus.IN_PREPARATION.name();
+                    }
+                }
+            }
+            response.put("canAdvancePreparation", canAdvanceChef || canAdvanceBarista);
+            response.put("canAdvanceChef", canAdvanceChef);
+            response.put("canAdvanceBarista", canAdvanceBarista);
+            response.put("nextPreparationStatus", nextPreparationStatus);
         } catch (Exception e) {
             log.error("Error getting valid statuses", e);
             response.put("success", false);

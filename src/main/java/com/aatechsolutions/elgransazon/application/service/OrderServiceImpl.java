@@ -71,6 +71,12 @@ public class OrderServiceImpl implements OrderService {
     @Lazy
     private OrderServiceImpl self;
 
+    // Injected as field (rather than constructor) to avoid touching the existing constructor
+    // signature. Used by changeAllPreparationItemsToNextStatus() to resolve the current
+    // staff Employee for ownership assignment of preparedBy / preparedByBarista.
+    @Autowired
+    private EmployeeService employeeService;
+
     // Constructor with @Lazy for ReservationService to break circular dependency
     public OrderServiceImpl(
             OrderRepository orderRepository,
@@ -1141,6 +1147,178 @@ public class OrderServiceImpl implements OrderService {
         }
 
         return savedOrder;
+    }
+
+    /**
+     * Advance ALL preparation items (chef and/or barista) of an order to the next status
+     * in a single click, used by staff roles (admin, manager, cashier, waiter) when the
+     * SystemConfiguration permission flags are enabled.
+     *
+     * Behaviour mirrors {@code ChefOrderServiceImpl.changeAllChefItemsToNextStatus} /
+     * {@code BaristaOrderServiceImpl.changeAllBaristaItemsToNextStatus}:
+     *   - If ANY actionable item is IN_PREPARATION -> ALL PENDING+IN_PREP go to READY (skip-state).
+     *   - Else if there are PENDING items -> move them to IN_PREPARATION.
+     *
+     * Authorization rules (defense in depth — the controller also checks):
+     *   - {@code enableOrderStatusPermission} must be TRUE.
+     *   - At least one of {@code staffCanManageChefItems} / {@code staffCanManageBaristaItems} must be TRUE.
+     *   - If the order already has {@code preparedBy} (chef-owner) set, and the staff would
+     *     touch chef items, only the same Employee can advance them (Employee.idEmpleado lock).
+     *   - Same rule for {@code preparedByBarista} when touching barista items.
+     *
+     * After advancement, the order's preparedBy / preparedByBarista are set to the staff's
+     * Employee record (so chef/barista screens correctly hide the order via WebSocket).
+     */
+    @Transactional
+    public Order changeAllPreparationItemsToNextStatus(Long orderId, String username) {
+        log.info("Staff {} attempting to advance ALL preparation items in order {}", username, orderId);
+
+        SystemConfiguration cfg = systemConfigurationService.getConfiguration();
+        if (cfg == null || !Boolean.TRUE.equals(cfg.getEnableOrderStatusPermission())) {
+            throw new IllegalStateException(
+                "El permiso de estado de orden para staff no está habilitado en la configuración.");
+        }
+        boolean canManageChef = Boolean.TRUE.equals(cfg.getStaffCanManageChefItems());
+        boolean canManageBarista = Boolean.TRUE.equals(cfg.getStaffCanManageBaristaItems());
+        if (!canManageChef && !canManageBarista) {
+            throw new IllegalStateException(
+                "Ninguno de los sub-permisos (chef/barista) está habilitado.");
+        }
+
+        Order order = findByIdOrThrow(orderId);
+
+        // Guard against finalised orders
+        if (order.getStatus() == OrderStatus.CANCELLED) {
+            throw new IllegalStateException("No se puede cambiar el estado de items en una orden CANCELADA.");
+        }
+        if (order.getStatus() == OrderStatus.PAID) {
+            throw new IllegalStateException("No se puede cambiar el estado de items en una orden PAGADA.");
+        }
+
+        // Resolve current staff employee (used for the ownership lock on the order)
+        Employee currentEmployee = employeeService.findByUsername(username)
+            .orElseThrow(() -> new IllegalStateException("Empleado no encontrado: " + username));
+
+        // Partition the order items into chef / barista sets (only those the staff is allowed to touch)
+        List<OrderDetail> chefItems = canManageChef
+            ? order.getOrderDetails().stream()
+                .filter(d -> d.getItemMenu() != null
+                    && Boolean.TRUE.equals(d.getItemMenu().getRequiresPreparation()))
+                .collect(Collectors.toList())
+            : new ArrayList<>();
+        List<OrderDetail> baristaItems = canManageBarista
+            ? order.getOrderDetails().stream()
+                .filter(d -> d.getItemMenu() != null
+                    && Boolean.TRUE.equals(d.getItemMenu().getRequiresBaristaPreparation()))
+                .collect(Collectors.toList())
+            : new ArrayList<>();
+
+        // Filter to only actionable statuses (PENDING / IN_PREPARATION). Items already READY,
+        // DELIVERED, PAID, CANCELLED or TO_ACCEPT are skipped automatically -> idempotent.
+        List<OrderDetail> actionableChef = chefItems.stream()
+            .filter(d -> d.getItemStatus() == OrderStatus.PENDING
+                || d.getItemStatus() == OrderStatus.IN_PREPARATION)
+            .collect(Collectors.toList());
+        List<OrderDetail> actionableBarista = baristaItems.stream()
+            .filter(d -> d.getItemStatus() == OrderStatus.PENDING
+                || d.getItemStatus() == OrderStatus.IN_PREPARATION)
+            .collect(Collectors.toList());
+
+        if (actionableChef.isEmpty() && actionableBarista.isEmpty()) {
+            throw new IllegalStateException(
+                "No hay items pendientes o en preparación que el staff pueda avanzar en esta orden.");
+        }
+
+        // Ownership lock — chef side. Compare by Employee.idEmpleado (resilient to username changes).
+        if (!actionableChef.isEmpty() && order.getPreparedBy() != null
+                && order.getPreparedBy().getIdEmpleado() != null
+                && !order.getPreparedBy().getIdEmpleado().equals(currentEmployee.getIdEmpleado())) {
+            String holder = order.getPreparedBy().getUsername() != null
+                ? order.getPreparedBy().getUsername()
+                : ("empleado #" + order.getPreparedBy().getIdEmpleado());
+            throw new IllegalStateException(
+                "Esta orden ya fue tomada por " + holder + " (chef). Solo esa persona puede avanzar los items de preparación.");
+        }
+
+        // Ownership lock — barista side.
+        if (!actionableBarista.isEmpty() && order.getPreparedByBarista() != null
+                && order.getPreparedByBarista().getIdEmpleado() != null
+                && !order.getPreparedByBarista().getIdEmpleado().equals(currentEmployee.getIdEmpleado())) {
+            String holder = order.getPreparedByBarista().getUsername() != null
+                ? order.getPreparedByBarista().getUsername()
+                : ("empleado #" + order.getPreparedByBarista().getIdEmpleado());
+            throw new IllegalStateException(
+                "Esta orden ya fue tomada por " + holder + " (barista). Solo esa persona puede avanzar los items de bebidas.");
+        }
+
+        // Decide target status per side (skip-state rule). Each side is decided independently
+        // so that chef items can be at IN_PREPARATION while barista items are still PENDING,
+        // and the single click advances each side to its natural next state.
+        boolean advancedChefToReady = false;
+        boolean advancedBaristaToReady = false;
+
+        if (!actionableChef.isEmpty()) {
+            boolean anyChefInPrep = actionableChef.stream()
+                .anyMatch(d -> d.getItemStatus() == OrderStatus.IN_PREPARATION);
+            OrderStatus chefTarget = anyChefInPrep ? OrderStatus.READY : OrderStatus.IN_PREPARATION;
+            advancedChefToReady = (chefTarget == OrderStatus.READY);
+
+            // Take ownership BEFORE delegating, so chef screens hide the order via WebSocket.
+            if (order.getPreparedBy() == null) {
+                order.setPreparedBy(currentEmployee);
+                order = orderRepository.save(order);
+                try {
+                    wsNotificationService.notifyOrderAccepted(order, username, "chef");
+                } catch (Exception e) {
+                    log.error("Failed to send WebSocket chef-accept notification: {}", e.getMessage(), e);
+                }
+            }
+
+            List<Long> chefIds = actionableChef.stream()
+                .map(OrderDetail::getIdOrderDetail)
+                .collect(Collectors.toList());
+            order = changeItemsStatus(orderId, chefIds, chefTarget, username);
+            log.info("Staff {} advanced {} chef items in order {} -> {}", username, chefIds.size(), orderId, chefTarget);
+        }
+
+        if (!actionableBarista.isEmpty()) {
+            // Re-read items after any chef-side mutation to get fresh statuses
+            List<OrderDetail> freshBarista = order.getOrderDetails().stream()
+                .filter(d -> d.getItemMenu() != null
+                    && Boolean.TRUE.equals(d.getItemMenu().getRequiresBaristaPreparation()))
+                .filter(d -> d.getItemStatus() == OrderStatus.PENDING
+                    || d.getItemStatus() == OrderStatus.IN_PREPARATION)
+                .collect(Collectors.toList());
+
+            if (!freshBarista.isEmpty()) {
+                boolean anyBaristaInPrep = freshBarista.stream()
+                    .anyMatch(d -> d.getItemStatus() == OrderStatus.IN_PREPARATION);
+                OrderStatus baristaTarget = anyBaristaInPrep ? OrderStatus.READY : OrderStatus.IN_PREPARATION;
+                advancedBaristaToReady = (baristaTarget == OrderStatus.READY);
+
+                if (order.getPreparedByBarista() == null) {
+                    order.setPreparedByBarista(currentEmployee);
+                    order = orderRepository.save(order);
+                    try {
+                        wsNotificationService.notifyOrderAccepted(order, username, "barista");
+                    } catch (Exception e) {
+                        log.error("Failed to send WebSocket barista-accept notification: {}", e.getMessage(), e);
+                    }
+                }
+
+                List<Long> baristaIds = freshBarista.stream()
+                    .map(OrderDetail::getIdOrderDetail)
+                    .collect(Collectors.toList());
+                order = changeItemsStatus(orderId, baristaIds, baristaTarget, username);
+                log.info("Staff {} advanced {} barista items in order {} -> {}", username, baristaIds.size(), orderId, baristaTarget);
+            }
+        }
+
+        // Avoid unused-variable warnings while keeping the flags for future logging hooks.
+        log.debug("changeAllPreparationItemsToNextStatus completed: chef->READY={}, barista->READY={}",
+            advancedChefToReady, advancedBaristaToReady);
+
+        return order;
     }
 
     @Override

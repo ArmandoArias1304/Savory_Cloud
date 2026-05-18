@@ -541,7 +541,7 @@
                         >
                         <span
                           class="text-sm text-gray-500 dark:text-gray-400 mt-1"
-                          th:text="${#strings.length(item.description) > 50 ? #strings.substring(item.description, 0, 50) + '...' : item.description}"
+                          th:text="${item.description != null ? (#strings.length(item.description) > 50 ? #strings.substring(item.description, 0, 50) + '...' : item.description) : ''}"
                         >
                           Description
                         </span>

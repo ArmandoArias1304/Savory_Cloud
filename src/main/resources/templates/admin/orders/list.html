@@ -620,6 +620,27 @@
                           <i class="fas fa-exchange-alt"></i>
                         </button>
 
+                        <!-- Advance Preparation Items (Staff: only when permission flag enabled
+                             AND order has at least one actionable chef/barista item;
+                             hidden for terminal statuses PAID and CANCELLED) -->
+                        <button
+                          th:if="${staffOrderStatusEnabled and order.status.name() != 'PAID' and order.status.name() != 'CANCELLED'}"
+                          th:with="hasChefActionable=${staffChefEnabled and #lists.size(order.orderDetails.?[itemMenu != null and itemMenu.requiresPreparation == true and (itemStatus.name() == 'PENDING' or itemStatus.name() == 'IN_PREPARATION')]) > 0},
+                                   hasBaristaActionable=${staffBaristaEnabled and #lists.size(order.orderDetails.?[itemMenu != null and itemMenu.requiresBaristaPreparation == true and (itemStatus.name() == 'PENDING' or itemStatus.name() == 'IN_PREPARATION')]) > 0},
+                                   anyInPrep=${(staffChefEnabled and #lists.size(order.orderDetails.?[itemMenu != null and itemMenu.requiresPreparation == true and itemStatus.name() == 'IN_PREPARATION']) > 0) or (staffBaristaEnabled and #lists.size(order.orderDetails.?[itemMenu != null and itemMenu.requiresBaristaPreparation == true and itemStatus.name() == 'IN_PREPARATION']) > 0)},
+                                   hasPending=${(staffChefEnabled and #lists.size(order.orderDetails.?[itemMenu != null and itemMenu.requiresPreparation == true and itemStatus.name() == 'PENDING']) > 0) or (staffBaristaEnabled and #lists.size(order.orderDetails.?[itemMenu != null and itemMenu.requiresBaristaPreparation == true and itemStatus.name() == 'PENDING']) > 0)}"
+                          th:style="${hasChefActionable or hasBaristaActionable} ? '' : 'display: none;'"
+                          th:class="|btn-advance-preparation p-2 rounded-lg transition-all ${anyInPrep ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/40' : 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/40'}|"
+                          th:data-order-id="${order.idOrder}"
+                          th:data-order-number="${order.orderNumber}"
+                          th:data-next-status="${anyInPrep ? 'READY' : 'IN_PREPARATION'}"
+                          th:data-has-pending="${hasPending}"
+                          th:title="${anyInPrep ? 'Marcar items de EN PREPARACIÓN como LISTOS' : 'Avanzar items de PENDIENTE a EN PREPARACIÓN'}"
+                        >
+                          <i th:if="${anyInPrep}" class="fas fa-check-double"></i>
+                          <i th:unless="${anyInPrep}" class="fas fa-play"></i>
+                        </button>
+
                         <!-- Pay (only DELIVERED) -->
                         <a
                           th:if="${order.status.name() == 'DELIVERED'}"
@@ -851,6 +872,114 @@
         });
       }
 
+      // Advance ALL preparation items (chef + barista) of an order in one click.
+      // Used by Staff (admin/manager/cashier/waiter) when the SystemConfiguration
+      // flag "enableOrderStatusPermission" is enabled.
+      function advancePreparationItems(button, orderId, orderNumber, nextStatus) {
+        const isDarkMode = document.documentElement.classList.contains("dark");
+        const darkBg = "#1f2937"; // gray-800 (matches getSwalDarkModeClasses popup)
+        const hasPending = button.dataset.hasPending === "true";
+
+        // Informational alert: when advancing to READY but some items are still PENDING,
+        // they'll be marked READY without ever entering IN_PREPARATION. Warn the staff.
+        if (nextStatus === "READY" && hasPending) {
+          Swal.fire({
+            icon: "warning",
+            title: "Items PENDIENTES serán marcados como LISTOS",
+            html:
+              "Este pedido tiene items en estado <strong>PENDIENTE</strong> que pasarán " +
+              "<strong>directamente a LISTO</strong> sin haber estado en PREPARACIÓN.<br><br>¿Deseas continuar?",
+            showCancelButton: true,
+            confirmButtonText: "Continuar",
+            cancelButtonText: "Revisar",
+            confirmButtonColor: "#f59e0b",
+            cancelButtonColor: "#6b7280",
+            reverseButtons: true,
+            background: isDarkMode ? darkBg : undefined,
+            customClass: getSwalDarkModeClasses(),
+          }).then((res) => {
+            if (res.isConfirmed) {
+              advancePreparationItemsConfirmed(button, orderId, orderNumber, nextStatus);
+            }
+          });
+          return;
+        }
+        advancePreparationItemsConfirmed(button, orderId, orderNumber, nextStatus);
+      }
+
+      function advancePreparationItemsConfirmed(button, orderId, orderNumber, nextStatus) {
+        const isDarkMode = document.documentElement.classList.contains("dark");
+        const darkBg = "#1f2937"; // gray-800 (matches getSwalDarkModeClasses popup)
+        const confirmTitle =
+          nextStatus === "READY"
+            ? "¿Marcar items como LISTOS?"
+            : "¿Avanzar items a EN PREPARACIÓN?";
+        const confirmText =
+          nextStatus === "READY"
+            ? `Se marcarán como LISTOS todos los items en preparación del pedido #${orderNumber}.`
+            : `Se iniciará la preparación de todos los items pendientes del pedido #${orderNumber}.`;
+        const successTitle =
+          nextStatus === "READY"
+            ? "Items marcados como LISTOS"
+            : "Items en preparación";
+        Swal.fire({
+          icon: "question",
+          title: confirmTitle,
+          text: confirmText,
+          showCancelButton: true,
+          confirmButtonText: "Aceptar",
+          cancelButtonText: "Cancelar",
+          confirmButtonColor: "#38e07b",
+          cancelButtonColor: "#ef4444",
+          reverseButtons: true,
+          background: isDarkMode ? darkBg : undefined,
+          customClass: getSwalDarkModeClasses(),
+        }).then((result) => {
+          if (!result.isConfirmed) return;
+          button.disabled = true;
+          fetch(`/admin/orders/${orderId}/change-all-preparation-items`, {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          })
+            .then((response) => response.json())
+            .then((data) => {
+              if (data.success) {
+                Swal.fire({
+                  icon: "success",
+                  title: successTitle,
+                  text: `Pedido #${orderNumber}`,
+                  confirmButtonColor: "#38e07b",
+                  timer: 1500,
+                  showConfirmButton: false,
+                  background: isDarkMode ? darkBg : undefined,
+                  customClass: getSwalDarkModeClasses(),
+                }).then(() => window.location.reload());
+              } else {
+                button.disabled = false;
+                Swal.fire({
+                  icon: "error",
+                  title: "Error",
+                  text: data.message || "No se pudo avanzar el estado",
+                  confirmButtonColor: "#ef4444",
+                  background: isDarkMode ? darkBg : undefined,
+                  customClass: getSwalDarkModeClasses(),
+                });
+              }
+            })
+            .catch((err) => {
+              button.disabled = false;
+              Swal.fire({
+                icon: "error",
+                title: "Error",
+                text: "Error de red al avanzar el estado",
+                confirmButtonColor: "#ef4444",
+                background: isDarkMode ? darkBg : undefined,
+                customClass: getSwalDarkModeClasses(),
+              });
+            });
+        });
+      }
+
       // Change status modal with AJAX
       function showStatusModal(orderId, orderNumber, currentStatus) {
         // First, get valid statuses from backend
@@ -985,6 +1114,18 @@
             showStatusModal(orderId, orderNumber, orderStatus);
           });
         });
+
+        // Advance preparation items buttons (Staff one-click flow)
+        document
+          .querySelectorAll(".btn-advance-preparation")
+          .forEach((button) => {
+            button.addEventListener("click", function () {
+              const orderId = this.getAttribute("data-order-id");
+              const orderNumber = this.getAttribute("data-order-number");
+              const nextStatus = this.getAttribute("data-next-status");
+              advancePreparationItems(this, orderId, orderNumber, nextStatus);
+            });
+          });
 
         // Add items buttons
         document.querySelectorAll(".btn-add-items").forEach((button) => {

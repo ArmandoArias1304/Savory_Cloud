@@ -1167,6 +1167,166 @@
                   </label>
                 </div>
 
+                <!-- Staff Order Status Permission Toggle (parent + 2 children) -->
+                <div id="staffOrderStatusPermissionSection">
+                  <label
+                    class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3"
+                  >
+                    Permiso de Estado de Orden para Staff
+                  </label>
+                  <label
+                    class="flex items-start gap-3 p-4 rounded-xl border-2 border-gray-200 dark:border-gray-700 hover:border-primary cursor-pointer transition-colors"
+                  >
+                    <input
+                      type="checkbox"
+                      id="enableOrderStatusPermission"
+                      name="enableOrderStatusPermission"
+                      th:checked="${configuration.enableOrderStatusPermission}"
+                      class="mt-1 w-5 h-5 text-primary border-gray-300 rounded focus:ring-primary"
+                      onchange="toggleStaffOrderStatusChildren()"
+                    />
+                    <div>
+                      <span
+                        class="block text-sm font-medium text-gray-900 dark:text-white"
+                      >
+                        Habilitar permiso de estado de orden
+                      </span>
+                      <span
+                        class="block mt-1 text-xs text-gray-500 dark:text-gray-400"
+                      >
+                        Cuando está activado, el staff (mesero, cajero, administrador y
+                        gerente) podrá avanzar el estado de los items de la orden que
+                        requieren preparación (PENDIENTE → EN PREPARACIÓN → LISTO) con un
+                        solo click, igual que lo hace el chef. Si está desactivado, solo
+                        chef y barista pueden cambiar esos estados.
+                      </span>
+                    </div>
+                  </label>
+
+                  <!-- Children (only meaningful when parent is enabled) -->
+                  <div
+                    id="staffOrderStatusChildren"
+                    class="mt-3 ml-6 grid grid-cols-1 md:grid-cols-2 gap-3"
+                  >
+                    <label
+                      class="flex items-start gap-3 p-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 hover:border-primary cursor-pointer transition-colors"
+                    >
+                      <input
+                        type="checkbox"
+                        id="staffCanManageChefItems"
+                        name="staffCanManageChefItems"
+                        th:checked="${configuration.staffCanManageChefItems}"
+                        class="mt-1 w-5 h-5 text-primary border-gray-300 rounded focus:ring-primary staff-order-status-child"
+                      />
+                      <div>
+                        <span
+                          class="block text-sm font-medium text-gray-900 dark:text-white"
+                        >
+                          Items que requieren preparación por chef
+                        </span>
+                        <span
+                          class="block mt-1 text-xs text-gray-500 dark:text-gray-400"
+                        >
+                          El staff podrá avanzar items con
+                          <code>requiresPreparation=true</code>.
+                        </span>
+                      </div>
+                    </label>
+
+                    <label
+                      class="flex items-start gap-3 p-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 hover:border-primary cursor-pointer transition-colors"
+                    >
+                      <input
+                        type="checkbox"
+                        id="staffCanManageBaristaItems"
+                        name="staffCanManageBaristaItems"
+                        th:checked="${configuration.staffCanManageBaristaItems}"
+                        class="mt-1 w-5 h-5 text-primary border-gray-300 rounded focus:ring-primary staff-order-status-child"
+                      />
+                      <div>
+                        <span
+                          class="block text-sm font-medium text-gray-900 dark:text-white"
+                        >
+                          Items que requieren preparación por barista
+                        </span>
+                        <span
+                          class="block mt-1 text-xs text-gray-500 dark:text-gray-400"
+                        >
+                          El staff podrá avanzar items con
+                          <code>requiresBaristaPreparation=true</code>.
+                        </span>
+                      </div>
+                    </label>
+                  </div>
+                  <p
+                    id="staffOrderStatusChildrenError"
+                    class="mt-2 text-xs text-red-600 dark:text-red-400 hidden"
+                  >
+                    Debes seleccionar al menos uno de los dos sub-permisos cuando el
+                    permiso principal está activado.
+                  </p>
+                </div>
+
+                <script>
+                  (function () {
+                    function syncStaffOrderStatusChildren() {
+                      var parent = document.getElementById(
+                        "enableOrderStatusPermission"
+                      );
+                      var container = document.getElementById(
+                        "staffOrderStatusChildren"
+                      );
+                      var errorMsg = document.getElementById(
+                        "staffOrderStatusChildrenError"
+                      );
+                      if (!parent || !container) return;
+                      var enabled = parent.checked;
+                      container.style.opacity = enabled ? "1" : "0.5";
+                      container
+                        .querySelectorAll(".staff-order-status-child")
+                        .forEach(function (cb) {
+                          cb.disabled = !enabled;
+                          if (!enabled) cb.checked = false;
+                        });
+                      if (errorMsg) errorMsg.classList.add("hidden");
+                    }
+                    window.toggleStaffOrderStatusChildren =
+                      syncStaffOrderStatusChildren;
+                    document.addEventListener(
+                      "DOMContentLoaded",
+                      syncStaffOrderStatusChildren
+                    );
+
+                    // Validate at submit time
+                    document.addEventListener("DOMContentLoaded", function () {
+                      var form = document.querySelector(
+                        'form[action$="/admin/system-configuration/update"]'
+                      );
+                      if (!form) return;
+                      form.addEventListener("submit", function (e) {
+                        var parent = document.getElementById(
+                          "enableOrderStatusPermission"
+                        );
+                        if (!parent || !parent.checked) return;
+                        var chef = document.getElementById(
+                          "staffCanManageChefItems"
+                        );
+                        var bar = document.getElementById(
+                          "staffCanManageBaristaItems"
+                        );
+                        var errorMsg = document.getElementById(
+                          "staffOrderStatusChildrenError"
+                        );
+                        if (!chef.checked && !bar.checked) {
+                          e.preventDefault();
+                          if (errorMsg) errorMsg.classList.remove("hidden");
+                          chef.focus();
+                        }
+                      });
+                    });
+                  })();
+                </script>
+
                 <!-- Payment Methods -->
                 <!-- Note: Work days are now managed through Business Hours section (open/closed status) -->
                 <div id="paymentMethodsSection">

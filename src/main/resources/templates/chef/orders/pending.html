@@ -715,7 +715,8 @@
                 <div
                   th:if="${#lists.size(order.orderDetails.?[itemMenu.requiresPreparation == true && itemStatus.name() == 'IN_PREPARATION']) > 0}"
                   class="slide-confirm"
-                  th:attr="data-action='ready-all', data-order-id=${order.idOrder}, data-order-number=${order.orderNumber}"
+                  th:with="chefHasPending=${#lists.size(order.orderDetails.?[itemMenu.requiresPreparation == true && itemStatus.name() == 'PENDING']) > 0}"
+                  th:attr="data-action='ready-all', data-order-id=${order.idOrder}, data-order-number=${order.orderNumber}, data-has-pending=${chefHasPending}"
                 >
                   <div
                     class="slide-confirm-track bg-gradient-to-r from-primary-dark to-primary"
@@ -820,6 +821,26 @@
       const currentRole = /*[[${isBarista ? 'barista' : 'chef'}]]*/ "chef";
       const companyId = /*[[${systemConfig.company != null ? systemConfig.company.idCompany : 0}]]*/ 0;
       /*]]>*/
+
+      // Helper function to get SweetAlert dark mode classes
+      function getSwalDarkModeClasses() {
+        const isDark = document.documentElement.classList.contains("dark");
+        return isDark
+          ? {
+              popup: "rounded-2xl !bg-gray-800 !text-gray-100",
+              title: "!text-gray-100",
+              htmlContainer: "!text-gray-300",
+              confirmButton: "rounded-xl px-6 py-2.5 font-semibold",
+              cancelButton: "rounded-xl px-6 py-2.5 font-semibold",
+              input: "!bg-gray-700 !text-gray-100 !border-gray-600",
+              validationMessage: "!bg-red-900 !text-red-200",
+            }
+          : {
+              popup: "rounded-2xl",
+              confirmButton: "rounded-xl px-6 py-2.5 font-semibold",
+              cancelButton: "rounded-xl px-6 py-2.5 font-semibold",
+            };
+      }
 
       // ===== Slide to Confirm Logic =====
       function initSlideConfirm() {
@@ -927,6 +948,39 @@
             "Preparación iniciada",
           );
         } else if (action === "ready-all") {
+          const hasPending = slider.dataset.hasPending === "true";
+          if (hasPending) {
+            const isDarkMode = document.documentElement.classList.contains("dark");
+            const darkBg = "#1f2937";
+            Swal.fire({
+              icon: "warning",
+              title: "Items PENDIENTES serán marcados como LISTOS",
+              html:
+                "Este pedido tiene items en estado <strong>PENDIENTE</strong> que pasarán " +
+                "<strong>directamente a LISTO</strong> sin haber estado en PREPARACIÓN.<br><br>¿Deseas continuar?",
+              showCancelButton: true,
+              confirmButtonText: "Continuar",
+              cancelButtonText: "Revisar",
+              confirmButtonColor: "#f59e0b",
+              cancelButtonColor: "#6b7280",
+              reverseButtons: true,
+              background: isDarkMode ? darkBg : undefined,
+              customClass: getSwalDarkModeClasses(),
+            }).then((res) => {
+              if (res.isConfirmed) {
+                changeAllChefItems(
+                  slider,
+                  orderId,
+                  orderNumber,
+                  "Items Listos",
+                  "Items listos para servir",
+                );
+              } else {
+                resetSlider(slider);
+              }
+            });
+            return;
+          }
           changeAllChefItems(
             slider,
             orderId,

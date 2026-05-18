@@ -102,7 +102,15 @@ public class ChefOrderServiceImpl implements OrderService {
         }
         
         String currentUsername = getCurrentUsername();
-        
+
+        // Resolve current chef's Employee once (used for the ownership-lock comparison below)
+        // We compare by Employee.idEmpleado (FK) instead of the legacy username string stored
+        // on OrderDetail.preparedBy, which is resilient to username changes and consistent
+        // with how preparedBy/preparedByBarista are set on the Order itself.
+        Long currentEmployeeId = employeeService.findByUsername(currentUsername)
+            .map(Employee::getIdEmpleado)
+            .orElse(null);
+
         // Validate that chef can change these items
         for (Long itemDetailId : itemDetailIds) {
             OrderDetail detail = order.getOrderDetails().stream()
@@ -112,13 +120,27 @@ public class ChefOrderServiceImpl implements OrderService {
                     "Item detail no encontrado: " + itemDetailId
                 ));
             
-            // Check if item is in preparation by another chef
+            // Check if order is already owned by another chef. The lock now lives on the
+            // Order (preparedBy.idEmpleado) — the previous per-item String check is kept
+            // only as a defensive fallback for legacy data where Order.preparedBy was never set.
             if (detail.getItemStatus() == OrderStatus.IN_PREPARATION) {
-                if (detail.getPreparedBy() != null && 
-                    !detail.getPreparedBy().equals(currentUsername)) {
+                Employee orderChef = order.getPreparedBy();
+                if (orderChef != null && orderChef.getIdEmpleado() != null
+                        && currentEmployeeId != null
+                        && !orderChef.getIdEmpleado().equals(currentEmployeeId)) {
                     throw new IllegalStateException(
-                        "Solo el chef que aceptó este item puede cambiar su estado: " + 
-                        detail.getItemMenu().getName()
+                        "Solo el chef que aceptó esta orden puede cambiar el estado de sus items: "
+                        + detail.getItemMenu().getName()
+                    );
+                }
+                // Legacy fallback: if Order.preparedBy was never populated (older records),
+                // fall back to the per-item username check to preserve previous behaviour.
+                if (orderChef == null
+                        && detail.getPreparedBy() != null
+                        && !detail.getPreparedBy().equals(currentUsername)) {
+                    throw new IllegalStateException(
+                        "Solo el chef que aceptó este item puede cambiar su estado: "
+                        + detail.getItemMenu().getName()
                     );
                 }
             }
@@ -199,7 +221,12 @@ public class ChefOrderServiceImpl implements OrderService {
         if (order.getStatus() == OrderStatus.CANCELLED) {
             throw new IllegalStateException("No se puede cambiar el estado de items en una orden CANCELADA.");
         }
-        
+
+        // Prevent modification if order is already PAID (defense against DB tampering).
+        if (order.getStatus() == OrderStatus.PAID) {
+            throw new IllegalStateException("No se puede cambiar el estado de items en una orden PAGADA.");
+        }
+
         String currentUsername = getCurrentUsername();
         
         // Get all items requiring chef preparation

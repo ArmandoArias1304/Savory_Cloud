@@ -148,6 +148,14 @@ public class SystemConfigurationServiceImpl implements SystemConfigurationServic
         existingConfig.setRequireCustomerOrderAcceptance(
                 Boolean.TRUE.equals(configuration.getRequireCustomerOrderAcceptance()));
 
+        // Staff order-status permission toggles (parent + 2 children)
+        existingConfig.setEnableOrderStatusPermission(
+                Boolean.TRUE.equals(configuration.getEnableOrderStatusPermission()));
+        existingConfig.setStaffCanManageChefItems(
+                Boolean.TRUE.equals(configuration.getStaffCanManageChefItems()));
+        existingConfig.setStaffCanManageBaristaItems(
+                Boolean.TRUE.equals(configuration.getStaffCanManageBaristaItems()));
+
         SystemConfiguration saved = configurationRepository.save(existingConfig);
         invalidateConfigCache();
         log.info("System configuration updated successfully");

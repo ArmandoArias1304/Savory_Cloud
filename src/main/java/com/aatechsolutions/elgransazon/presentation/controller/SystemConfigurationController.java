@@ -106,6 +106,9 @@ public class SystemConfigurationController {
             @RequestParam(value = "deliveryPaymentDebitCard", required = false) Boolean deliveryPaymentDebitCard,
             @RequestParam(value = "deliveryPaymentTransfer", required = false) Boolean deliveryPaymentTransfer,
             @RequestParam(value = "requireCustomerOrderAcceptance", required = false) Boolean requireCustomerOrderAcceptance,
+            @RequestParam(value = "enableOrderStatusPermission", required = false) Boolean enableOrderStatusPermission,
+            @RequestParam(value = "staffCanManageChefItems", required = false) Boolean staffCanManageChefItems,
+            @RequestParam(value = "staffCanManageBaristaItems", required = false) Boolean staffCanManageBaristaItems,
             RedirectAttributes redirectAttributes,
             Model model) {
 
@@ -154,6 +157,20 @@ public class SystemConfigurationController {
 
             // Customer-order acceptance toggle (defaults to false when checkbox is unchecked)
             configuration.setRequireCustomerOrderAcceptance(Boolean.TRUE.equals(requireCustomerOrderAcceptance));
+
+            // Staff order-status permission toggles. Parent flag gates the two child flags.
+            // When parent is TRUE, at least one of the child flags must also be TRUE.
+            boolean parentEnabled = Boolean.TRUE.equals(enableOrderStatusPermission);
+            boolean chefChild = Boolean.TRUE.equals(staffCanManageChefItems);
+            boolean baristaChild = Boolean.TRUE.equals(staffCanManageBaristaItems);
+            if (parentEnabled && !chefChild && !baristaChild) {
+                throw new IllegalArgumentException(
+                    "Si activas 'Habilitar permiso de estado de orden', debes habilitar al menos uno de los dos sub-permisos (chef o barista).");
+            }
+            configuration.setEnableOrderStatusPermission(parentEnabled);
+            // Persist child values as received; they are only evaluated by business logic when parent is TRUE.
+            configuration.setStaffCanManageChefItems(chefChild);
+            configuration.setStaffCanManageBaristaItems(baristaChild);
 
             configurationService.updateConfiguration(configuration);
             

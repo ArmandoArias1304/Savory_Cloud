@@ -176,11 +176,26 @@ public class BaristaOrderServiceImpl implements OrderService {
             throw new IllegalStateException("No se puede cambiar el estado de items en una orden CANCELADA.");
         }
 
+        // Prevent modification if order is already PAID. Although the normal flow makes this
+        // unreachable (a PAID order requires all items DELIVERED), this guards against direct
+        // DB tampering that could otherwise let a barista effectively "unpay" an order by
+        // moving its items back to PENDING / IN_PREPARATION.
+        if (order.getStatus() == OrderStatus.PAID) {
+            throw new IllegalStateException("No se puede cambiar el estado de items en una orden PAGADA.");
+        }
+
         String currentUsername = getCurrentUsername();
-        
+
         log.info("Barista {} changing status of {} items in order {}", 
             currentUsername, itemDetailIds.size(), orderId);
-        
+
+        // Resolve current barista's Employee once for the ownership-lock comparison below.
+        // We compare by Employee.idEmpleado (FK), consistent with how Order.preparedByBarista
+        // is set on the Order itself — resilient to username changes.
+        Long currentEmployeeId = employeeService.findByUsername(currentUsername)
+            .map(Employee::getIdEmpleado)
+            .orElse(null);
+
         // Validate that barista can change these items
         for (Long itemDetailId : itemDetailIds) {
             OrderDetail detail = order.getOrderDetails().stream()
@@ -196,6 +211,20 @@ public class BaristaOrderServiceImpl implements OrderService {
                     "Este item no requiere preparación por el barista: " + 
                     detail.getItemMenu().getName()
                 );
+            }
+
+            // Ownership lock: once an order has a preparedByBarista assigned, only that
+            // barista can move its items forward (mirrors chef ownership check).
+            if (detail.getItemStatus() == OrderStatus.IN_PREPARATION) {
+                Employee orderBarista = order.getPreparedByBarista();
+                if (orderBarista != null && orderBarista.getIdEmpleado() != null
+                        && currentEmployeeId != null
+                        && !orderBarista.getIdEmpleado().equals(currentEmployeeId)) {
+                    throw new IllegalStateException(
+                        "Solo el barista que aceptó esta orden puede cambiar el estado de sus items: "
+                        + detail.getItemMenu().getName()
+                    );
+                }
             }
             
             // Validate status change for this item
