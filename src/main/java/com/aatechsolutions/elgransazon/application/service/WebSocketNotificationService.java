@@ -46,7 +46,12 @@ public class WebSocketNotificationService {
             log.warn("notifyNewOrder called with order without items: {}", order.getOrderNumber());
             return;
         }
-        
+
+        // If the order is still TO_ACCEPT (awaiting manual acceptance by admin/cashier),
+        // do NOT notify chef/barista/parrillero. They will be notified later, when items
+        // are accepted and transition to PENDING, via notifyItemsAdded/notifyOrderStatusChange.
+        boolean isToAccept = order.getStatus() == com.aatechsolutions.elgransazon.domain.entity.OrderStatus.TO_ACCEPT;
+
         // Detect what type of items the order has
         boolean hasChefItems = order.getOrderDetails().stream()
             .anyMatch(detail -> detail.getItemMenu() != null && 
@@ -56,26 +61,41 @@ public class WebSocketNotificationService {
             .anyMatch(detail -> detail.getItemMenu() != null && 
                 Boolean.TRUE.equals(detail.getItemMenu().getRequiresBaristaPreparation()));
         
+        boolean hasParrilleroItems = order.getOrderDetails().stream()
+            .anyMatch(detail -> detail.getItemMenu() != null && 
+                Boolean.TRUE.equals(detail.getItemMenu().getRequiresParrilleroPreparation()));
+        
         OrderNotificationDTO notification = buildOrderNotification(order, "NEW_ORDER", 
             "Nuevo pedido #" + order.getOrderNumber());
         
-        // Only notify CHEF if order has chef items
-        if (hasChefItems) {
+        // Only notify CHEF if order has chef items AND is not awaiting acceptance
+        if (hasChefItems && !isToAccept) {
             messagingTemplate.convertAndSend(getCompanyTopic("/topic/chef/orders", order), notification);
             log.info("👨‍🍳 WebSocket: Notifying CHEF - New order {} with chef items", order.getOrderNumber());
         }
         
-        // Only notify BARISTA if order has barista items
-        if (hasBaristaItems) {
+        // Only notify BARISTA if order has barista items AND is not awaiting acceptance
+        if (hasBaristaItems && !isToAccept) {
             messagingTemplate.convertAndSend(getCompanyTopic("/topic/barista/orders", order), notification);
             log.info("☕ WebSocket: Notifying BARISTA - New order {} with barista items", order.getOrderNumber());
         }
         
-        // Always send to admin kitchen view
+        // Only notify PARRILLERO if order has parrillero items AND is not awaiting acceptance
+        if (hasParrilleroItems && !isToAccept) {
+            messagingTemplate.convertAndSend(getCompanyTopic("/topic/parrillero/orders", order), notification);
+            log.info("🔥 WebSocket: Notifying PARRILLERO - New order {} with parrillero items", order.getOrderNumber());
+        }
+        
+        // Always send to admin kitchen view (admin/cashier need to see TO_ACCEPT orders)
         messagingTemplate.convertAndSend(getCompanyTopic("/topic/admin/kitchen", order), notification);
         
-        log.info("🔔 WebSocket: New order notification sent - {} - Chef: {}, Barista: {}", 
-            order.getOrderNumber(), hasChefItems, hasBaristaItems);
+        if (isToAccept) {
+            log.info("🔔 WebSocket: New TO_ACCEPT order {} - kitchen roles skipped (awaiting manual acceptance)",
+                order.getOrderNumber());
+        } else {
+            log.info("🔔 WebSocket: New order notification sent - {} - Chef: {}, Barista: {}, Parrillero: {}", 
+                order.getOrderNumber(), hasChefItems, hasBaristaItems, hasParrilleroItems);
+        }
     }
 
     /**
@@ -134,14 +154,27 @@ public class WebSocketNotificationService {
                 } else {
                     log.warn("⚠️ Barista role specified but no barista assigned to order {}", order.getOrderNumber());
                 }
+            } else if ("parrillero".equalsIgnoreCase(roleWhoChanged)) {
+                if (order.getPreparedByParrillero() != null) {
+                    messagingTemplate.convertAndSendToUser(
+                        order.getPreparedByParrillero().getUsername(),
+                        "/queue/orders",
+                        notification
+                    );
+                    log.debug("🔥 WebSocket: Notifying ONLY assigned parrillero {} - Order {} status changed", 
+                        order.getPreparedByParrillero().getUsername(), order.getOrderNumber());
+                } else {
+                    log.warn("⚠️ Parrillero role specified but no parrillero assigned to order {}", order.getOrderNumber());
+                }
             }
         } else {
             // roleWhoChanged is null: check if order has assignments
             boolean hasAssignedChef = order.getPreparedBy() != null;
             boolean hasAssignedBarista = order.getPreparedByBarista() != null;
+            boolean hasAssignedParrillero = order.getPreparedByParrillero() != null;
             
             // If order has assignments, only notify the assigned users
-            if (hasAssignedChef || hasAssignedBarista) {
+            if (hasAssignedChef || hasAssignedBarista || hasAssignedParrillero) {
                 if (hasAssignedChef) {
                     messagingTemplate.convertAndSendToUser(
                         order.getPreparedBy().getUsername(),
@@ -161,6 +194,16 @@ public class WebSocketNotificationService {
                     log.debug("☕ WebSocket: Notifying assigned barista {} - Order {} status changed", 
                         order.getPreparedByBarista().getUsername(), order.getOrderNumber());
                 }
+
+                if (hasAssignedParrillero) {
+                    messagingTemplate.convertAndSendToUser(
+                        order.getPreparedByParrillero().getUsername(),
+                        "/queue/orders",
+                        notification
+                    );
+                    log.debug("🔥 WebSocket: Notifying assigned parrillero {} - Order {} status changed", 
+                        order.getPreparedByParrillero().getUsername(), order.getOrderNumber());
+                }
             } else {
                 // No assignments: notify all roles that have items (broadcast for pending orders)
                 boolean hasChefItems = order.getOrderDetails() != null && order.getOrderDetails().stream()
@@ -171,6 +214,10 @@ public class WebSocketNotificationService {
                     .anyMatch(detail -> detail.getItemMenu() != null && 
                         Boolean.TRUE.equals(detail.getItemMenu().getRequiresBaristaPreparation()));
                 
+                boolean hasParrilleroItems = order.getOrderDetails() != null && order.getOrderDetails().stream()
+                    .anyMatch(detail -> detail.getItemMenu() != null && 
+                        Boolean.TRUE.equals(detail.getItemMenu().getRequiresParrilleroPreparation()));
+                
                 if (hasChefItems) {
                     messagingTemplate.convertAndSend(getCompanyTopic("/topic/chef/orders", order), notification);
                     log.debug("👨‍🍳 WebSocket: Notifying ALL CHEFS - Order {} status changed (no assignment)", 
@@ -180,6 +227,12 @@ public class WebSocketNotificationService {
                 if (hasBaristaItems) {
                     messagingTemplate.convertAndSend(getCompanyTopic("/topic/barista/orders", order), notification);
                     log.debug("☕ WebSocket: Notifying ALL BARISTAS - Order {} status changed (no assignment)", 
+                        order.getOrderNumber());
+                }
+
+                if (hasParrilleroItems) {
+                    messagingTemplate.convertAndSend(getCompanyTopic("/topic/parrillero/orders", order), notification);
+                    log.debug("🔥 WebSocket: Notifying ALL PARRILLEROS - Order {} status changed (no assignment)", 
                         order.getOrderNumber());
                 }
             }
@@ -214,21 +267,48 @@ public class WebSocketNotificationService {
             log.warn("notifyItemsAdded called with empty items list");
             return;
         }
-        
+
+        // Filter out items still in TO_ACCEPT: kitchen roles should not be notified about
+        // items that have not yet been accepted by admin/cashier. They will receive a
+        // notification once those items transition to PENDING (handled by acceptOrderItems).
+        java.util.List<com.aatechsolutions.elgransazon.domain.entity.OrderDetail> actionableItems = newItems.stream()
+            .filter(detail -> detail.getItemStatus() != com.aatechsolutions.elgransazon.domain.entity.OrderStatus.TO_ACCEPT)
+            .collect(java.util.stream.Collectors.toList());
+
+        if (actionableItems.isEmpty()) {
+            // All new items are TO_ACCEPT: only inform admin kitchen, skip chef/barista/parrillero.
+            String adminMessage = String.format("Se agregaron %d item(s) por aceptar al pedido %s",
+                newItems.size(), order.getOrderNumber());
+            OrderNotificationDTO adminNotification = buildOrderNotification(order, "ITEMS_ADDED", adminMessage);
+            messagingTemplate.convertAndSend(getCompanyTopic("/topic/admin/kitchen", order), adminNotification);
+            messagingTemplate.convertAndSend(getCompanyTopic("/topic/orders", order), adminNotification);
+            log.info("🔔 WebSocket: {} TO_ACCEPT item(s) added to order {} - kitchen roles skipped",
+                newItems.size(), order.getOrderNumber());
+            return;
+        }
+
+        // From here on, only consider items that are NOT TO_ACCEPT for kitchen routing.
+        java.util.List<com.aatechsolutions.elgransazon.domain.entity.OrderDetail> routedItems = actionableItems;
+
         // Detect what type of items were added
-        boolean hasChefItems = newItems.stream()
+        boolean hasChefItems = routedItems.stream()
             .anyMatch(detail -> detail.getItemMenu() != null && 
                 Boolean.TRUE.equals(detail.getItemMenu().getRequiresPreparation()));
         
-        boolean hasBaristaItems = newItems.stream()
+        boolean hasBaristaItems = routedItems.stream()
             .anyMatch(detail -> detail.getItemMenu() != null && 
                 Boolean.TRUE.equals(detail.getItemMenu().getRequiresBaristaPreparation()));
+        
+        boolean hasParrilleroItems = routedItems.stream()
+            .anyMatch(detail -> detail.getItemMenu() != null && 
+                Boolean.TRUE.equals(detail.getItemMenu().getRequiresParrilleroPreparation()));
         
         // Check current assignments
         boolean hasAssignedChef = order.getPreparedBy() != null;
         boolean hasAssignedBarista = order.getPreparedByBarista() != null;
+        boolean hasAssignedParrillero = order.getPreparedByParrillero() != null;
         
-        String message = String.format("Se agregaron %d item(s) al pedido %s", newItems.size(), order.getOrderNumber());
+        String message = String.format("Se agregaron %d item(s) al pedido %s", routedItems.size(), order.getOrderNumber());
         OrderNotificationDTO notification = buildOrderNotification(order, "ITEMS_ADDED", message);
         
         // SMART NOTIFICATION ROUTING LOGIC
@@ -343,6 +423,23 @@ public class WebSocketNotificationService {
                 messagingTemplate.convertAndSend(getCompanyTopic("/topic/barista/orders", order), notification);
             }
         }
+
+        // Parrillero independent routing (kept simple: assigned -> personal queue, else broadcast)
+        if (hasParrilleroItems) {
+            if (hasAssignedParrillero) {
+                messagingTemplate.convertAndSendToUser(
+                    order.getPreparedByParrillero().getUsername(),
+                    "/queue/orders",
+                    notification
+                );
+                log.info("🔥 WebSocket: Notifying assigned PARRILLERO {} - Parrillero items added to order {}",
+                    order.getPreparedByParrillero().getUsername(), order.getOrderNumber());
+            } else {
+                messagingTemplate.convertAndSend(getCompanyTopic("/topic/parrillero/orders", order), notification);
+                log.info("🔥 WebSocket: Broadcasting to ALL PARRILLEROS - Parrillero items added to order {} (unassigned)",
+                    order.getOrderNumber());
+            }
+        }
         
         // Always send to admin kitchen
         messagingTemplate.convertAndSend(getCompanyTopic("/topic/admin/kitchen", order), notification);
@@ -391,6 +488,10 @@ public class WebSocketNotificationService {
         } else if ("barista".equalsIgnoreCase(role)) {
             messagingTemplate.convertAndSend(getCompanyTopic("/topic/barista/orders", order), notification);
             log.info("☕ WebSocket: Notifying ALL BARISTAS - Order {} accepted by barista {}", 
+                order.getOrderNumber(), acceptedBy);
+        } else if ("parrillero".equalsIgnoreCase(role)) {
+            messagingTemplate.convertAndSend(getCompanyTopic("/topic/parrillero/orders", order), notification);
+            log.info("🔥 WebSocket: Notifying ALL PARRILLEROS - Order {} accepted by parrillero {}", 
                 order.getOrderNumber(), acceptedBy);
         }
         
@@ -448,6 +549,11 @@ public class WebSocketNotificationService {
             .anyMatch(detail -> detail.getItemMenu() != null && 
                       Boolean.TRUE.equals(detail.getItemMenu().getRequiresBaristaPreparation()));
         
+        // Check if order has items that require parrillero preparation
+        boolean hasParrilleroItems = order.getOrderDetails().stream()
+            .anyMatch(detail -> detail.getItemMenu() != null && 
+                      Boolean.TRUE.equals(detail.getItemMenu().getRequiresParrilleroPreparation()));
+        
         // Send to chefs only if order has chef items
         // Rule: if the order has already been taken by a chef (preparedBy != null),
         // notify ONLY that chef via their personal queue. Other chefs no longer see
@@ -483,6 +589,22 @@ public class WebSocketNotificationService {
                 // Order is still pending / unassigned → broadcast to all baristas
                 messagingTemplate.convertAndSend(getCompanyTopic("/topic/barista/orders", order), notification);
                 log.info("☕ WebSocket: Broadcasting to ALL BARISTAS - Order {} cancelled (unassigned)", order.getOrderNumber());
+            }
+        }
+
+        // Send to parrilleros only if order has parrillero items (same rule as chef)
+        if (hasParrilleroItems) {
+            if (order.getPreparedByParrillero() != null) {
+                messagingTemplate.convertAndSendToUser(
+                    order.getPreparedByParrillero().getUsername(),
+                    "/queue/orders",
+                    notification
+                );
+                log.info("🔥 WebSocket: Notifying owner PARRILLERO '{}' - Order {} cancelled",
+                        order.getPreparedByParrillero().getUsername(), order.getOrderNumber());
+            } else {
+                messagingTemplate.convertAndSend(getCompanyTopic("/topic/parrillero/orders", order), notification);
+                log.info("🔥 WebSocket: Broadcasting to ALL PARRILLEROS - Order {} cancelled (unassigned)", order.getOrderNumber());
             }
         }
         
@@ -527,6 +649,7 @@ public class WebSocketNotificationService {
         // Determine if item requires chef or barista preparation
         boolean requiresChef = Boolean.TRUE.equals(deletedItem.getItemMenu().getRequiresPreparation());
         boolean requiresBarista = Boolean.TRUE.equals(deletedItem.getItemMenu().getRequiresBaristaPreparation());
+        boolean requiresParrillero = Boolean.TRUE.equals(deletedItem.getItemMenu().getRequiresParrilleroPreparation());
         
         // Send to appropriate role-specific topics
         if (requiresChef) {
@@ -553,6 +676,20 @@ public class WebSocketNotificationService {
             if (order.getPreparedByBarista() != null) {
                 messagingTemplate.convertAndSendToUser(
                     order.getPreparedByBarista().getUsername(),
+                    "/queue/orders",
+                    notification
+                );
+            }
+        }
+
+        if (requiresParrillero) {
+            messagingTemplate.convertAndSend(getCompanyTopic("/topic/parrillero/orders", order), notification);
+            log.info("🔥 WebSocket: Notifying parrilleros - Item '{}' deleted from order {}",
+                itemName, order.getOrderNumber());
+
+            if (order.getPreparedByParrillero() != null) {
+                messagingTemplate.convertAndSendToUser(
+                    order.getPreparedByParrillero().getUsername(),
                     "/queue/orders",
                     notification
                 );

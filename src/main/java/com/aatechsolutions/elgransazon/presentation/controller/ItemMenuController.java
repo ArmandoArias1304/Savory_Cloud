@@ -209,6 +209,7 @@ public class ItemMenuController {
             @RequestParam(value = "units", required = false) List<String> units,
             @RequestParam(value = "requiresPreparation", required = false) Boolean requiresPreparationParam,
             @RequestParam(value = "requiresBaristaPreparation", required = false) Boolean requiresBaristaPreparationParam,
+            @RequestParam(value = "requiresParrilleroPreparation", required = false) Boolean requiresParrilleroPreparationParam,
             @RequestParam(value = "requiresIngredients", required = false) Boolean requiresIngredientsParam,
             @RequestParam(value = "isCombo", required = false) Boolean isComboParam,
             @RequestParam(value = "dineInOnly", required = false) Boolean dineInOnlyParam,
@@ -239,6 +240,11 @@ public class ItemMenuController {
             log.info("🔍 Using @RequestParam value for Barista: {}", requiresBaristaPreparationParam);
             itemMenu.setRequiresBaristaPreparation(requiresBaristaPreparationParam);
         }
+
+        if (requiresParrilleroPreparationParam != null) {
+            log.info("🔍 Using @RequestParam value for Parrillero: {}", requiresParrilleroPreparationParam);
+            itemMenu.setRequiresParrilleroPreparation(requiresParrilleroPreparationParam);
+        }
         
         // Set isCombo on item
         itemMenu.setIsCombo(Boolean.TRUE.equals(isComboParam));
@@ -256,13 +262,14 @@ public class ItemMenuController {
         // Set hasCustomSchedule on item
         itemMenu.setHasCustomSchedule(Boolean.TRUE.equals(hasCustomSchedule));
 
-        // Validate mutual exclusion: only one of Chef, Barista, or Combo can be selected
+        // Validate mutual exclusion: only one of Chef, Barista, Parrillero, or Combo can be selected
         int selectedOptions = 0;
         if (Boolean.TRUE.equals(itemMenu.getRequiresPreparation())) selectedOptions++;
         if (Boolean.TRUE.equals(itemMenu.getRequiresBaristaPreparation())) selectedOptions++;
+        if (Boolean.TRUE.equals(itemMenu.getRequiresParrilleroPreparation())) selectedOptions++;
         if (Boolean.TRUE.equals(itemMenu.getIsCombo())) selectedOptions++;
         if (selectedOptions > 1) {
-             model.addAttribute("errorMessage", "Solo puede seleccionar una opción: preparación por Chef, preparación por Barista o Combo.");
+             model.addAttribute("errorMessage", "Solo puede seleccionar una opción: preparación por Chef, Barista, Parrillero o Combo.");
              List<ItemIngredient> recipe = buildRecipe(ingredientIds, quantities, units);
              loadFormData(model, itemMenu, recipe);
              loadAvailabilityFormData(model, itemMenu);
@@ -406,6 +413,7 @@ public class ItemMenuController {
             @RequestParam(value = "units", required = false) List<String> units,
             @RequestParam(value = "requiresPreparation", required = false) Boolean requiresPreparationParam,
             @RequestParam(value = "requiresBaristaPreparation", required = false) Boolean requiresBaristaPreparationParam,
+            @RequestParam(value = "requiresParrilleroPreparation", required = false) Boolean requiresParrilleroPreparationParam,
             @RequestParam(value = "requiresIngredients", required = false) Boolean requiresIngredientsParam,
             @RequestParam(value = "isCombo", required = false) Boolean isComboParam,
             @RequestParam(value = "dineInOnly", required = false) Boolean dineInOnlyParam,
@@ -423,6 +431,8 @@ public class ItemMenuController {
         log.info("🔍 requiresPreparation as @RequestParam: {}", requiresPreparationParam);
         log.info("🔍 requiresBaristaPreparation received from form: {}", itemMenu.getRequiresBaristaPreparation());
         log.info("🔍 requiresBaristaPreparation as @RequestParam: {}", requiresBaristaPreparationParam);
+        log.info("🔍 requiresParrilleroPreparation received from form: {}", itemMenu.getRequiresParrilleroPreparation());
+        log.info("🔍 requiresParrilleroPreparation as @RequestParam: {}", requiresParrilleroPreparationParam);
         log.info("🔍 requiresIngredients: {}", requiresIngredientsParam);
         log.info("🔍 saucesSyncEnabled: {} | selectedSauceIds: {}", saucesSyncEnabled, selectedSauceIds);
         log.info("🔍 hasCustomSchedule: {}", hasCustomSchedule);
@@ -436,6 +446,11 @@ public class ItemMenuController {
         if (requiresBaristaPreparationParam != null) {
             log.info("🔍 Using @RequestParam value for Barista: {}", requiresBaristaPreparationParam);
             itemMenu.setRequiresBaristaPreparation(requiresBaristaPreparationParam);
+        }
+
+        if (requiresParrilleroPreparationParam != null) {
+            log.info("🔍 Using @RequestParam value for Parrillero: {}", requiresParrilleroPreparationParam);
+            itemMenu.setRequiresParrilleroPreparation(requiresParrilleroPreparationParam);
         }
         
         // Set isCombo on item
@@ -455,13 +470,14 @@ public class ItemMenuController {
         // Set hasCustomSchedule on item
         itemMenu.setHasCustomSchedule(Boolean.TRUE.equals(hasCustomSchedule));
 
-        // Validate mutual exclusion: only one of Chef, Barista, or Combo can be selected
+        // Validate mutual exclusion: only one of Chef, Barista, Parrillero, or Combo can be selected
         int selectedOptions = 0;
         if (Boolean.TRUE.equals(itemMenu.getRequiresPreparation())) selectedOptions++;
         if (Boolean.TRUE.equals(itemMenu.getRequiresBaristaPreparation())) selectedOptions++;
+        if (Boolean.TRUE.equals(itemMenu.getRequiresParrilleroPreparation())) selectedOptions++;
         if (Boolean.TRUE.equals(itemMenu.getIsCombo())) selectedOptions++;
         if (selectedOptions > 1) {
-             model.addAttribute("errorMessage", "Solo puede seleccionar una opción: preparación por Chef, preparación por Barista o Combo.");
+             model.addAttribute("errorMessage", "Solo puede seleccionar una opción: preparación por Chef, Barista, Parrillero o Combo.");
              List<BigDecimal> quantitiesBD = convertQuantities(quantities);
              List<ItemIngredient> recipe = buildRecipe(ingredientIds, quantitiesBD, units);
              loadFormData(model, itemMenu, recipe);
@@ -775,6 +791,7 @@ public class ItemMenuController {
                 itemData.put("childItemImageUrl", ci.getChildMenu().getImageUrl());
                 itemData.put("childRequiresPreparation", ci.getChildMenu().getRequiresPreparation());
                 itemData.put("childRequiresBaristaPreparation", ci.getChildMenu().getRequiresBaristaPreparation());
+                itemData.put("childRequiresParrilleroPreparation", ci.getChildMenu().getRequiresParrilleroPreparation());
                 itemData.put("childActive", ci.getChildMenu().getActive());
                 itemData.put("quantity", ci.getQuantity());
                 itemData.put("displayOrder", ci.getDisplayOrder());
@@ -814,6 +831,7 @@ public class ItemMenuController {
                 dto.put("categoryName", item.getCategory() != null ? item.getCategory().getName() : "");
                 dto.put("requiresPreparation", item.getRequiresPreparation());
                 dto.put("requiresBaristaPreparation", item.getRequiresBaristaPreparation());
+                dto.put("requiresParrilleroPreparation", item.getRequiresParrilleroPreparation());
                 dto.put("requiresIngredients", item.getRequiresIngredients());
                 dto.put("active", item.getActive());
                 return dto;

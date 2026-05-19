@@ -103,6 +103,27 @@ public interface EmployeeMonthlyStatsRepository extends JpaRepository<EmployeeMo
     );
 
     /**
+     * Get the parrillero of the month (most orders prepared)
+     */
+    @Query(value = """
+        SELECT ems.* 
+        FROM employee_monthly_stats ems
+        INNER JOIN employee e ON ems.employee_id = e.id_empleado
+        INNER JOIN employee_roles er ON e.id_empleado = er.id_empleado
+        INNER JOIN roles r ON er.id_rol = r.id_rol
+        WHERE ems.month = :month 
+        AND ems.year = :year 
+        AND r.nombre_rol = 'ROLE_PARRILLERO'
+        AND ems.total_orders > 0
+        ORDER BY ems.total_orders DESC
+        LIMIT 1
+        """, nativeQuery = true)
+    Optional<EmployeeMonthlyStats> findTopParrilleroOfMonth(
+        @Param("month") Integer month,
+        @Param("year") Integer year
+    );
+
+    /**
      * Get all waiters of the month ordered by sales (limit in service layer)
      */
     @Query(value = """
@@ -138,6 +159,26 @@ public interface EmployeeMonthlyStatsRepository extends JpaRepository<EmployeeMo
         ORDER BY ems.total_orders DESC
         """, nativeQuery = true)
     List<EmployeeMonthlyStats> findTopChefsOfMonth(
+        @Param("month") Integer month,
+        @Param("year") Integer year
+    );
+
+    /**
+     * Get all parrilleros of the month ordered by orders (limit in service layer)
+     */
+    @Query(value = """
+        SELECT ems.* 
+        FROM employee_monthly_stats ems
+        INNER JOIN employee e ON ems.employee_id = e.id_empleado
+        INNER JOIN employee_roles er ON e.id_empleado = er.id_empleado
+        INNER JOIN roles r ON er.id_rol = r.id_rol
+        WHERE ems.month = :month 
+        AND ems.year = :year 
+        AND r.nombre_rol = 'ROLE_PARRILLERO'
+        AND ems.total_orders > 0
+        ORDER BY ems.total_orders DESC
+        """, nativeQuery = true)
+    List<EmployeeMonthlyStats> findTopParrillerosOfMonth(
         @Param("month") Integer month,
         @Param("year") Integer year
     );

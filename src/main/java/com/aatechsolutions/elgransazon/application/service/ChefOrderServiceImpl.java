@@ -119,7 +119,15 @@ public class ChefOrderServiceImpl implements OrderService {
                 .orElseThrow(() -> new IllegalArgumentException(
                     "Item detail no encontrado: " + itemDetailId
                 ));
-            
+
+            // Check if item requires chef preparation
+            if (!Boolean.TRUE.equals(detail.getItemMenu().getRequiresPreparation())) {
+                throw new IllegalStateException(
+                    "Este item no requiere preparación por el chef: " +
+                    detail.getItemMenu().getName()
+                );
+            }
+
             // Check if order is already owned by another chef. The lock now lives on the
             // Order (preparedBy.idEmpleado) — the previous per-item String check is kept
             // only as a defensive fallback for legacy data where Order.preparedBy was never set.

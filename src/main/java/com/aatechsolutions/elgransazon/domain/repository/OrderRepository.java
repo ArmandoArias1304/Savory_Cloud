@@ -372,6 +372,16 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     List<Order> findOrdersWithBaristaItemsByCompany(@Param("company") Company company);
 
     /**
+     * Find orders with parrillero preparation items by company
+     */
+    @Query("SELECT DISTINCT o FROM Order o " +
+           "JOIN FETCH o.orderDetails od " +
+           "JOIN FETCH od.itemMenu im " +
+           "WHERE o.company = :company AND im.requiresParrilleroPreparation = true " +
+           "ORDER BY o.createdAt DESC")
+    List<Order> findOrdersWithParrilleroItemsByCompany(@Param("company") Company company);
+
+    /**
      * Get total income by company
      */
     @Query("SELECT COALESCE(SUM(o.total), 0) FROM Order o WHERE o.company = :company AND o.status = 'PAID'")

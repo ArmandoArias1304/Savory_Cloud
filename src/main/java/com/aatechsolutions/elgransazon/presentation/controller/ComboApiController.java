@@ -47,6 +47,8 @@ public class ComboApiController {
                         ci.getChildMenu().getRequiresPreparation() != null && ci.getChildMenu().getRequiresPreparation());
                 item.put("childRequiresBaristaPreparation",
                         ci.getChildMenu().getRequiresBaristaPreparation() != null && ci.getChildMenu().getRequiresBaristaPreparation());
+                item.put("childRequiresParrilleroPreparation",
+                        ci.getChildMenu().getRequiresParrilleroPreparation() != null && ci.getChildMenu().getRequiresParrilleroPreparation());
                 return item;
             }).collect(Collectors.toList());
 

@@ -44,7 +44,7 @@ import java.util.stream.Collectors;
  * CHEF and BARISTA roles share the same interface with role-specific filtering
  */
 @Controller
-@RequestMapping("/{rolePrefix:chef|barista}")
+@RequestMapping("/{rolePrefix:chef|barista|parrillero}")
 @RequiredArgsConstructor
 @Slf4j
 public class ChefController {
@@ -53,6 +53,8 @@ public class ChefController {
     private final OrderService chefOrderService;
     @Qualifier("baristaOrderService")
     private final OrderService baristaOrderService;
+    @Qualifier("parrilleroOrderService")
+    private final OrderService parrilleroOrderService;
     private final EmployeeService employeeService;
     private final OrderRepository orderRepository;
     private final ItemMenuService itemMenuService;
@@ -70,9 +72,18 @@ public class ChefController {
     }
 
     /**
+     * Detect if current user is a Parrillero
+     */
+    private boolean isParrillero(Authentication authentication) {
+        return authentication.getAuthorities().stream()
+            .anyMatch(auth -> auth.getAuthority().equals("ROLE_PARRILLERO"));
+    }
+
+    /**
      * Get appropriate order service based on user role
      */
     private OrderService getOrderService(Authentication authentication) {
+        if (isParrillero(authentication)) return parrilleroOrderService;
         return isBarista(authentication) ? baristaOrderService : chefOrderService;
     }
 
@@ -80,6 +91,7 @@ public class ChefController {
      * Get role display name based on user role
      */
     private String getRoleDisplayName(Authentication authentication) {
+        if (isParrillero(authentication)) return "Parrillero";
         return isBarista(authentication) ? "Barista" : "Chef";
     }
 
@@ -87,7 +99,24 @@ public class ChefController {
      * Get expected URL prefix based on user role
      */
     private String getExpectedRolePrefix(Authentication authentication) {
+        if (isParrillero(authentication)) return "parrillero";
         return isBarista(authentication) ? "barista" : "chef";
+    }
+
+    /**
+     * Return the employee preparer for the current user's role on a given order.
+     */
+    private Employee getPreparer(Order order, Authentication authentication) {
+        if (isParrillero(authentication)) return order.getPreparedByParrillero();
+        return isBarista(authentication) ? order.getPreparedByBarista() : order.getPreparedBy();
+    }
+
+    /**
+     * Return the Spring Security authority string for the current role (e.g. ROLE_CHEF).
+     */
+    private String currentRoleAuthority(Authentication authentication) {
+        if (isParrillero(authentication)) return "ROLE_PARRILLERO";
+        return isBarista(authentication) ? "ROLE_BARISTA" : "ROLE_CHEF";
     }
 
     /**
@@ -127,6 +156,9 @@ public class ChefController {
         model.addAttribute("username", username);
         model.addAttribute("role", roleDisplay);
         model.addAttribute("isBarista", isBarista(authentication));
+        model.addAttribute("isParrillero", isParrillero(authentication));
+        model.addAttribute("currentRole", getExpectedRolePrefix(authentication));
+        model.addAttribute("currentRoleLabel", getRoleDisplayName(authentication));
         model.addAttribute("isRestaurantOpen", isRestaurantOpen);
         
         return "chef/dashboard";
@@ -171,7 +203,7 @@ public class ChefController {
         List<Order> workingOrders = orderService.findAll().stream()
             .filter(order -> {
                 // For Barista: check preparedByBarista, For Chef: check preparedBy
-                Employee preparer = isBaristaRole ? order.getPreparedByBarista() : order.getPreparedBy();
+                Employee preparer = getPreparer(order, authentication);
                 
                 // CASO 1: Orden PENDING que NUNCA fue aceptada (preparer = null)
                 // Estas órdenes son visibles para TODOS los chefs/baristas (disponibles para aceptar)
@@ -255,6 +287,9 @@ public class ChefController {
         model.addAttribute("username", username);
         model.addAttribute("role", roleDisplay);
         model.addAttribute("isBarista", isBaristaRole);
+        model.addAttribute("isParrillero", isParrillero(authentication));
+        model.addAttribute("currentRole", getExpectedRolePrefix(authentication));
+        model.addAttribute("currentRoleLabel", getRoleDisplayName(authentication));
         model.addAttribute("currentChef", username);
         
         return "chef/orders/pending";
@@ -282,6 +317,7 @@ public class ChefController {
         String username = authentication.getName();
         String roleDisplay = getRoleDisplayName(authentication);
         boolean isBaristaRole = isBarista(authentication);
+        boolean isParrilleroRole = isParrillero(authentication);
         // Usamos repository directamente porque el servicio filtra solo órdenes activas
         
         log.info("{} {} viewing completed orders history", roleDisplay, username);
@@ -296,13 +332,13 @@ public class ChefController {
         List<Order> completedOrders = sourceOrders.stream()
             .filter(order -> {
                 // 1. Verificar si el usuario es el preparador asignado
-                Employee preparer = isBaristaRole ? order.getPreparedByBarista() : order.getPreparedBy();
+                Employee preparer = getPreparer(order, authentication);
                 if (preparer == null || !preparer.getUsername().equalsIgnoreCase(username)) {
                     return false;
                 }
 
                 // BUG FIX: Si la orden está CANCELADA, mostrarla siempre en el historial
-                // Esto permite ver órdenes que el chef/barista comenzó a preparar pero luego fueron canceladas
+                // Esto permite ver órdenes que el chef/barista/parrillero comenzó a preparar pero luego fueron canceladas
                 if (order.getStatus() == OrderStatus.CANCELLED) {
                     return true;
                 }
@@ -311,9 +347,14 @@ public class ChefController {
                 // (No debe tener items relevantes en estado PENDING o IN_PREPARATION)
                 boolean hasPendingWork = order.getOrderDetails().stream().anyMatch(detail -> {
                     ItemMenu item = detail.getItemMenu();
-                    boolean isRelevantItem = isBaristaRole 
-                        ? Boolean.TRUE.equals(item.getRequiresBaristaPreparation())
-                        : Boolean.TRUE.equals(item.getRequiresPreparation());
+                    boolean isRelevantItem;
+                    if (isParrilleroRole) {
+                        isRelevantItem = Boolean.TRUE.equals(item.getRequiresParrilleroPreparation());
+                    } else if (isBaristaRole) {
+                        isRelevantItem = Boolean.TRUE.equals(item.getRequiresBaristaPreparation());
+                    } else {
+                        isRelevantItem = Boolean.TRUE.equals(item.getRequiresPreparation());
+                    }
                     
                     if (!isRelevantItem) return false;
 
@@ -369,6 +410,9 @@ public class ChefController {
         model.addAttribute("username", username);
         model.addAttribute("role", roleDisplay);
         model.addAttribute("isBarista", isBaristaRole);
+        model.addAttribute("isParrillero", isParrillero(authentication));
+        model.addAttribute("currentRole", getExpectedRolePrefix(authentication));
+        model.addAttribute("currentRoleLabel", getRoleDisplayName(authentication));
         
         return "chef/orders/my-orders";
     }
@@ -398,6 +442,9 @@ public class ChefController {
             
             model.addAttribute("employee", employee);
             model.addAttribute("isBarista", isBarista(authentication));
+            model.addAttribute("isParrillero", isParrillero(authentication));
+            model.addAttribute("currentRole", getExpectedRolePrefix(authentication));
+            model.addAttribute("currentRoleLabel", getRoleDisplayName(authentication));
             return "chef/profile/view";
             
         } catch (Exception e) {
@@ -438,7 +485,7 @@ public class ChefController {
             // Get all orders prepared by this chef/barista
             List<Order> allOrders = orderRepository.findByCompany(company).stream()
                     .filter(order -> {
-                        Employee preparer = isBaristaRole ? order.getPreparedByBarista() : order.getPreparedBy();
+                        Employee preparer = getPreparer(order, authentication);
                         return preparer != null && preparer.getUsername().equalsIgnoreCase(username);
                     })
                     .toList();
@@ -505,6 +552,9 @@ public class ChefController {
             model.addAttribute("totalOrders", allOrders.size());
             model.addAttribute("todayOrders", todaysOrders.size());
             model.addAttribute("isBarista", isBaristaRole);
+            model.addAttribute("isParrillero", isParrillero(authentication));
+            model.addAttribute("currentRole", getExpectedRolePrefix(authentication));
+            model.addAttribute("currentRoleLabel", getRoleDisplayName(authentication));
             
             // All time counts
             model.addAttribute("totalPending", totalPending);
@@ -573,6 +623,9 @@ public class ChefController {
             model.addAttribute("categories", categories);
             model.addAttribute("itemsByCategory", itemsByCategory);
             model.addAttribute("isBarista", isBarista(authentication));
+            model.addAttribute("isParrillero", isParrillero(authentication));
+            model.addAttribute("currentRole", getExpectedRolePrefix(authentication));
+            model.addAttribute("currentRoleLabel", getRoleDisplayName(authentication));
             
             return "chef/menu/view";
             
@@ -612,7 +665,7 @@ public class ChefController {
             LocalDateTime endOfDay = dateTimeService.endOfDayUtc(today);
             
             // Get all chefs or baristas based on role
-            String targetRole = isBaristaRole ? "ROLE_BARISTA" : "ROLE_CHEF";
+            String targetRole = currentRoleAuthority(authentication);
             List<Employee> employees = employeeService.findAll().stream()
                     .filter(emp -> emp.hasRole(targetRole))
                     .toList();
@@ -629,7 +682,7 @@ public class ChefController {
                         long ordersCount = companyOrders.stream()
                                 .filter(order -> order.getStatus() == OrderStatus.PAID)
                                 .filter(order -> {
-                                    Employee preparer = isBaristaRole ? order.getPreparedByBarista() : order.getPreparedBy();
+                                    Employee preparer = getPreparer(order, authentication);
                                     return preparer != null && preparer.getIdEmpleado().equals(emp.getIdEmpleado());
                                 })
                                 .filter(order -> {
@@ -677,6 +730,9 @@ public class ChefController {
             model.addAttribute("waiterRanking", employeeRanking); // Using same attribute name for template compatibility
             model.addAttribute("rankingDate", today);
             model.addAttribute("isBarista", isBaristaRole);
+            model.addAttribute("isParrillero", isParrillero(authentication));
+            model.addAttribute("currentRole", getExpectedRolePrefix(authentication));
+            model.addAttribute("currentRoleLabel", getRoleDisplayName(authentication));
             
             return "chef/ranking/view";
             

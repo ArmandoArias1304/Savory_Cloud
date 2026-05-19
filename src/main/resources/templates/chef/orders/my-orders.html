@@ -86,10 +86,13 @@
                   📋 Historial de Pedidos
                 </h1>
                 <p class="text-sm text-gray-600 dark:text-gray-300">
-                  <span th:if="${isBarista}"
+                  <span th:if="${currentRole == 'barista'}"
                     >Pedidos completados por la barra</span
                   >
-                  <span th:unless="${isBarista}"
+                  <span th:if="${currentRole == 'parrillero'}"
+                    >Pedidos completados por la parrilla</span
+                  >
+                  <span th:if="${currentRole == 'chef'}"
                     >Pedidos completados por la cocina</span
                   >
                 </p>
@@ -393,7 +396,12 @@
                   <span class="font-medium">Preparado por:</span>
                   <span
                     class="font-semibold text-primary"
-                    th:text="${(order.preparedBy != null && order.preparedByBarista != null) ? (order.preparedBy.fullName + ' (Chef), ' + order.preparedByBarista.fullName + ' (Barista)') : ((order.preparedBy != null) ? (order.preparedBy.fullName + ' (Chef)') : ((order.preparedByBarista != null) ? (order.preparedByBarista.fullName + ' (Barista)') : 'N/A'))}"
+                    th:text="${(order.preparedBy != null ? (order.preparedBy.fullName + ' (Chef)') : '')
+                              + (order.preparedBy != null and (order.preparedByBarista != null or order.preparedByParrillero != null) ? ', ' : '')
+                              + (order.preparedByBarista != null ? (order.preparedByBarista.fullName + ' (Barista)') : '')
+                              + (order.preparedByBarista != null and order.preparedByParrillero != null ? ', ' : '')
+                              + (order.preparedByParrillero != null ? (order.preparedByParrillero.fullName + ' (Parrillero)') : '')
+                              + (order.preparedBy == null and order.preparedByBarista == null and order.preparedByParrillero == null ? 'N/A' : '')}"
                   ></span>
                 </div>
                 <div
@@ -540,7 +548,7 @@
     <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
     <script th:inline="javascript">
       /*<![CDATA[*/
-      const currentRole = /*[[${isBarista ? 'barista' : 'chef'}]]*/ "chef";
+      const currentRole = /*[[${currentRole}]]*/ "chef";
       const companyId = /*[[${systemConfig.company != null ? systemConfig.company.idCompany : 0}]]*/ 0;
       /*]]>*/
 

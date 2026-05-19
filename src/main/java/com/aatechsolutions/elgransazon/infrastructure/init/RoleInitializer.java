@@ -32,6 +32,7 @@ public class RoleInitializer implements CommandLineRunner {
             Role.WAITER,
             Role.CHEF,
             Role.BARISTA,
+            Role.PARRILLERO,
             Role.CASHIER,
             Role.DELIVERY,
             Role.CLIENT,

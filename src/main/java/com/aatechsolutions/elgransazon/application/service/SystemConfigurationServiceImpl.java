@@ -155,6 +155,8 @@ public class SystemConfigurationServiceImpl implements SystemConfigurationServic
                 Boolean.TRUE.equals(configuration.getStaffCanManageChefItems()));
         existingConfig.setStaffCanManageBaristaItems(
                 Boolean.TRUE.equals(configuration.getStaffCanManageBaristaItems()));
+        existingConfig.setStaffCanManageParrilleroItems(
+                Boolean.TRUE.equals(configuration.getStaffCanManageParrilleroItems()));
 
         SystemConfiguration saved = configurationRepository.save(existingConfig);
         invalidateConfigCache();

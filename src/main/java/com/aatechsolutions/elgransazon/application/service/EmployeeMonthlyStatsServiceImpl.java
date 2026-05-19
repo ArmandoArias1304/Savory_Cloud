@@ -96,6 +96,20 @@ public class EmployeeMonthlyStatsServiceImpl implements EmployeeMonthlyStatsServ
 
     @Override
     @Transactional
+    public void updateParrilleroOrders(Employee parrillero, Integer month, Integer year) {
+        log.info("Updating parrillero {} orders: incrementing for {}/{}", 
+                parrillero.getIdEmpleado(), month, year);
+        
+        EmployeeMonthlyStats stats = getOrCreateStats(parrillero, month, year);
+        stats.incrementOrders();
+        statsRepository.save(stats);
+        
+        log.info("Parrillero {} now has {} total orders for {}/{}", 
+                parrillero.getIdEmpleado(), stats.getTotalOrders(), month, year);
+    }
+
+    @Override
+    @Transactional
     public void updateCashierSales(Employee cashier, BigDecimal amount, Integer month, Integer year) {
         log.info("Updating cashier {} sales: adding ${} for {}/{}", 
                 cashier.getIdEmpleado(), amount, month, year);

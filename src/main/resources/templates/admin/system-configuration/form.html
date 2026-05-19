@@ -1257,6 +1257,31 @@
                         </span>
                       </div>
                     </label>
+
+                    <label
+                      class="flex items-start gap-3 p-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 hover:border-primary cursor-pointer transition-colors"
+                    >
+                      <input
+                        type="checkbox"
+                        id="staffCanManageParrilleroItems"
+                        name="staffCanManageParrilleroItems"
+                        th:checked="${configuration.staffCanManageParrilleroItems}"
+                        class="mt-1 w-5 h-5 text-primary border-gray-300 rounded focus:ring-primary staff-order-status-child"
+                      />
+                      <div>
+                        <span
+                          class="block text-sm font-medium text-gray-900 dark:text-white"
+                        >
+                          Items que requieren preparación por parrillero
+                        </span>
+                        <span
+                          class="block mt-1 text-xs text-gray-500 dark:text-gray-400"
+                        >
+                          El staff podrá avanzar items con
+                          <code>requiresParrilleroPreparation=true</code>.
+                        </span>
+                      </div>
+                    </label>
                   </div>
                   <p
                     id="staffOrderStatusChildrenError"
@@ -1314,10 +1339,13 @@
                         var bar = document.getElementById(
                           "staffCanManageBaristaItems"
                         );
+                        var par = document.getElementById(
+                          "staffCanManageParrilleroItems"
+                        );
                         var errorMsg = document.getElementById(
                           "staffOrderStatusChildrenError"
                         );
-                        if (!chef.checked && !bar.checked) {
+                        if (!chef.checked && !bar.checked && !(par && par.checked)) {
                           e.preventDefault();
                           if (errorMsg) errorMsg.classList.remove("hidden");
                           chef.focus();

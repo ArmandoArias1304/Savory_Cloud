@@ -325,17 +325,17 @@ public class OrderDetail implements Serializable {
     }
 
     /**
-     * Check if this order detail is a combo child (part of combo, price = $0)
+     * Check if this order detail is a combo child (part of combo, itemMenu is not a combo type)
      */
     public boolean isComboChild() {
-        return isComboMember() && unitPrice != null && unitPrice.compareTo(java.math.BigDecimal.ZERO) == 0;
+        return isComboMember() && itemMenu != null && !Boolean.TRUE.equals(itemMenu.getIsCombo());
     }
 
     /**
-     * Check if this order detail is a combo parent (part of combo, price > $0)
+     * Check if this order detail is a combo parent (part of combo, itemMenu.isCombo = true)
      */
     public boolean isComboParent() {
-        return isComboMember() && unitPrice != null && unitPrice.compareTo(java.math.BigDecimal.ZERO) > 0;
+        return isComboMember() && itemMenu != null && Boolean.TRUE.equals(itemMenu.getIsCombo());
     }
 
     /**

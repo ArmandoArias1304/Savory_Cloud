@@ -619,8 +619,10 @@ public class ClientController {
                         .unitPrice(unitPrice)
                         .promotionAppliedPrice(promotionAppliedPrice)
                         .appliedPromotionId(promotionId)
-                        .comments(comments)
-                        .itemStatus(OrderStatus.PENDING);
+                        .comments(comments);
+                        // NOTE: itemStatus lo asigna autoritativamente OrderServiceImpl.createInternal
+                        // según los flags de preparación del ItemMenu (chef/barista/parrillero).
+                        // .itemStatus(OrderStatus.PENDING);
                 
                 // For BUY_X_PAY_Y, set the pre-calculated subtotal directly
                 if (calculatedSubtotal != null) {
@@ -1106,8 +1108,10 @@ public class ClientController {
                         .unitPrice(unitPrice)
                         .promotionAppliedPrice(promotionAppliedPrice)
                         .appliedPromotionId(promotionId)
-                        .comments(comments)
-                        .itemStatus(OrderStatus.PENDING);
+                        .comments(comments);
+                        // NOTE: itemStatus lo asigna autoritativamente OrderServiceImpl.addItemsToExistingOrder
+                        // según los flags de preparación del ItemMenu (chef/barista/parrillero).
+                        // .itemStatus(OrderStatus.PENDING);
                 
                 // For BUY_X_PAY_Y, set the pre-calculated subtotal directly
                 if (calculatedSubtotal != null) {
@@ -2054,10 +2058,11 @@ public class ClientController {
         OrderStatus itemStatus = itemDetail.getItemStatus();
         boolean requiresPrep = Boolean.TRUE.equals(itemDetail.getItemMenu().getRequiresPreparation());
         boolean requiresBarista = Boolean.TRUE.equals(itemDetail.getItemMenu().getRequiresBaristaPreparation());
+        boolean requiresParrillero = Boolean.TRUE.equals(itemDetail.getItemMenu().getRequiresParrilleroPreparation());
         
         if (itemStatus == OrderStatus.PENDING) {
             return "âœ… Stock del complemento devuelto automáticamente (item pendiente)";
-        } else if (!requiresPrep && !requiresBarista && itemStatus == OrderStatus.READY) {
+        } else if (!requiresPrep && !requiresBarista && !requiresParrillero && itemStatus == OrderStatus.READY) {
             return "âœ… Stock del complemento devuelto automáticamente (item listo sin preparación)";
         } else {
             return "âš ï¸ El stock del complemento NO fue devuelto (el item ya está en preparación o listo)";
@@ -2122,7 +2127,9 @@ public class ClientController {
                 .promotionAppliedPrice(promotionAppliedPrice)
                 .appliedPromotionId(promotionId)
                 .comments(comments)
-                .itemStatus(OrderStatus.READY)
+                // NOTE: itemStatus del combo parent lo asigna OrderServiceImpl (createInternal
+                // detecta isComboParent y fuerza READY; addItems lo deja READY por no requerir prep).
+                // .itemStatus(OrderStatus.READY)
                 .comboGroupId(comboGroupId)
                 .build();
         
@@ -2148,16 +2155,15 @@ public class ClientController {
             ItemMenu childItem = comboChild.getChildMenu();
             int childQty = comboChild.getQuantity() * quantity;
             
-            boolean childRequiresChef = Boolean.TRUE.equals(childItem.getRequiresPreparation());
-            boolean childRequiresBarista = Boolean.TRUE.equals(childItem.getRequiresBaristaPreparation());
-            
+            // NOTE: itemStatus del combo child lo asigna autoritativamente OrderServiceImpl
+            // (createInternal / addItemsToExistingOrder) según los flags chef/barista/parrillero del ItemMenu.
+            // El cálculo previo aquí no incluía parrillero y dejaba items solo-parrillero en READY.
             OrderDetail childDetail = OrderDetail.builder()
                     .itemMenu(childItem)
                     .itemName(childItem.getName())
                     .quantity(childQty)
                     .unitPrice(BigDecimal.ZERO)
                     .comments(comments)
-                    .itemStatus((childRequiresChef || childRequiresBarista) ? OrderStatus.PENDING : OrderStatus.READY)
                     .comboGroupId(comboGroupId)
                     .build();
             childDetail.calculateSubtotal();

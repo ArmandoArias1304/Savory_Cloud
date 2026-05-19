@@ -482,6 +482,7 @@ public class ReportPdfService {
         java.util.List<Employee> waiters = new ArrayList<>();
         java.util.List<Employee> chefs = new ArrayList<>();
         java.util.List<Employee> baristas = new ArrayList<>();
+        java.util.List<Employee> parrilleros = new ArrayList<>();
         java.util.List<Employee> cashiers = new ArrayList<>();
         java.util.List<Employee> deliveryPersons = new ArrayList<>();
         java.util.List<Employee> admins = new ArrayList<>();
@@ -490,6 +491,7 @@ public class ReportPdfService {
             if (emp.hasRole(Role.WAITER)) waiters.add(emp);
             if (emp.hasRole(Role.CHEF)) chefs.add(emp);
             if (emp.hasRole(Role.BARISTA)) baristas.add(emp);
+            if (emp.hasRole(Role.PARRILLERO)) parrilleros.add(emp);
             if (emp.hasRole(Role.CASHIER)) cashiers.add(emp);
             if (emp.hasRole(Role.DELIVERY)) deliveryPersons.add(emp);
             if (emp.hasRole(Role.ADMIN) || emp.hasRole(Role.MANAGER)) admins.add(emp);
@@ -578,6 +580,39 @@ public class ReportPdfService {
                 );
             }
             document.add(baristasTable);
+            document.add(new Paragraph("\n"));
+        }
+
+        // === PARRILLEROS ===
+        {
+            addSectionTitle(document, boldFont, "🔥 Parrilleros - Órdenes Preparadas");
+            Table parrillerosTable = new Table(new float[]{0.5f, 3, 2, 2, 2});
+            parrillerosTable.setWidth(UnitValue.createPercentValue(100));
+            addTableHeader(parrillerosTable, boldFont, "#", "Nombre", "Órdenes Preparadas", "Platos Totales", "Promedio/Orden");
+
+            int parrilleroRank = 1;
+
+            for (Employee emp : parrilleros) {
+                long ordersPrep = paidOrders.stream()
+                    .filter(o -> o.getPreparedByParrillero() != null && o.getPreparedByParrillero().getIdEmpleado().equals(emp.getIdEmpleado()))
+                    .count();
+
+                long totalItems = paidOrders.stream()
+                    .filter(o -> o.getPreparedByParrillero() != null && o.getPreparedByParrillero().getIdEmpleado().equals(emp.getIdEmpleado()))
+                    .mapToLong(o -> o.getOrderDetails().size())
+                    .sum();
+
+                double avgItemsPerOrder = ordersPrep > 0 ? (double) totalItems / ordersPrep : 0.0;
+
+                addTableRow(parrillerosTable, regularFont,
+                    String.valueOf(parrilleroRank++),
+                    emp.getFullName(),
+                    String.valueOf(ordersPrep),
+                    String.valueOf(totalItems),
+                    String.format("%.1f", avgItemsPerOrder)
+                );
+            }
+            document.add(parrillerosTable);
             document.add(new Paragraph("\n"));
         }
 

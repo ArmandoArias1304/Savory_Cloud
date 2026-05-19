@@ -221,14 +221,18 @@
                 <h1
                   class="text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white"
                 >
-                  <span th:if="${isBarista}">☕ Gestión de Pedidos</span>
-                  <span th:unless="${isBarista}">👨‍🍳 Gestión de Pedidos</span>
+                  <span th:if="${currentRole == 'barista'}">☕ Gestión de Pedidos</span>
+                  <span th:if="${currentRole == 'parrillero'}">🔥 Gestión de Pedidos</span>
+                  <span th:if="${currentRole == 'chef'}">👨‍🍳 Gestión de Pedidos</span>
                 </h1>
                 <p class="text-sm text-gray-600 dark:text-gray-300">
-                  <span th:if="${isBarista}"
+                  <span th:if="${currentRole == 'barista'}"
                     >Todos los pedidos activos de barra</span
                   >
-                  <span th:unless="${isBarista}"
+                  <span th:if="${currentRole == 'parrillero'}"
+                    >Todos los pedidos activos de parrilla</span
+                  >
+                  <span th:if="${currentRole == 'chef'}"
                     >Todos los pedidos activos de cocina</span
                   >
                 </p>
@@ -320,8 +324,9 @@
               </div>
             </div>
             <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">
-              <span th:if="${isBarista}">Pedidos en barra</span>
-              <span th:unless="${isBarista}">Pedidos en cocina</span>
+              <span th:if="${currentRole == 'barista'}">Pedidos en barra</span>
+              <span th:if="${currentRole == 'parrillero'}">Pedidos en parrilla</span>
+              <span th:if="${currentRole == 'chef'}">Pedidos en cocina</span>
             </p>
           </div>
         </div>
@@ -458,10 +463,10 @@
                 Detalles del Pedido:
               </h4>
               <div class="space-y-1">
-                <!-- FILTER: Chef sees items with requiresPreparation, Barista sees items with requiresBaristaPreparation -->
+                <!-- FILTER: Chef sees items with requiresPreparation, Barista sees items with requiresBaristaPreparation, Parrillero sees items with requiresParrilleroPreparation -->
                 <div
                   th:each="detail : ${order.orderDetails}"
-                  th:if="${isBarista ? (detail.itemMenu.requiresBaristaPreparation == true) : (detail.itemMenu.requiresPreparation == true)}"
+                  th:if="${currentRole == 'barista' ? (detail.itemMenu.requiresBaristaPreparation == true) : (currentRole == 'parrillero' ? (detail.itemMenu.requiresParrilleroPreparation == true) : (detail.itemMenu.requiresPreparation == true))}"
                   class="py-4 border-b border-gray-100 dark:border-gray-700 flex flex-col gap-2 last:border-b-0"
                 >
                   <div class="flex items-start justify-between w-full gap-2">
@@ -608,8 +613,8 @@
                         </span>
                       </div>
 
-                      <!-- Barista Item Slide Controls -->
-                      <div th:if="${isBarista}" class="mt-3">
+                      <!-- Barista Item Slide Controls (per-item) -->
+                      <div th:if="${currentRole == 'barista'}" class="mt-3">
                         <!-- Slide to Accept Item (PENDING -> IN_PREPARATION) -->
                         <div
                           th:if="${detail.itemStatus != null && detail.itemStatus.name() == 'PENDING'}"
@@ -709,13 +714,14 @@
               </div>
 
               <!-- Action Slider -->
-              <!-- CHEF: Show order-level slide-to-confirm -->
-              <div th:if="${!isBarista}">
+              <!-- CHEF / PARRILLERO: Show order-level slide-to-confirm -->
+              <div th:if="${currentRole == 'chef' or currentRole == 'parrillero'}"
+                   th:with="itemFlagCheck=${currentRole == 'parrillero' ? 'requiresParrilleroPreparation' : 'requiresPreparation'}">
                 <!-- PRIORITY 1: If ANY item is IN_PREPARATION, show "Marcar Listo" slider -->
                 <div
-                  th:if="${#lists.size(order.orderDetails.?[itemMenu.requiresPreparation == true && itemStatus.name() == 'IN_PREPARATION']) > 0}"
+                  th:if="${currentRole == 'parrillero' ? #lists.size(order.orderDetails.?[itemMenu.requiresParrilleroPreparation == true && itemStatus.name() == 'IN_PREPARATION']) > 0 : #lists.size(order.orderDetails.?[itemMenu.requiresPreparation == true && itemStatus.name() == 'IN_PREPARATION']) > 0}"
                   class="slide-confirm"
-                  th:with="chefHasPending=${#lists.size(order.orderDetails.?[itemMenu.requiresPreparation == true && itemStatus.name() == 'PENDING']) > 0}"
+                  th:with="chefHasPending=${currentRole == 'parrillero' ? #lists.size(order.orderDetails.?[itemMenu.requiresParrilleroPreparation == true && itemStatus.name() == 'PENDING']) > 0 : #lists.size(order.orderDetails.?[itemMenu.requiresPreparation == true && itemStatus.name() == 'PENDING']) > 0}"
                   th:attr="data-action='ready-all', data-order-id=${order.idOrder}, data-order-number=${order.orderNumber}, data-has-pending=${chefHasPending}"
                 >
                   <div
@@ -742,7 +748,7 @@
 
                 <!-- PRIORITY 2: If NO items IN_PREPARATION but PENDING, show "Comenzar" slider -->
                 <div
-                  th:if="${#lists.size(order.orderDetails.?[itemMenu.requiresPreparation == true && itemStatus.name() == 'IN_PREPARATION']) == 0 && #lists.size(order.orderDetails.?[itemMenu.requiresPreparation == true && itemStatus.name() == 'PENDING']) > 0}"
+                  th:if="${currentRole == 'parrillero' ? (#lists.size(order.orderDetails.?[itemMenu.requiresParrilleroPreparation == true && itemStatus.name() == 'IN_PREPARATION']) == 0 && #lists.size(order.orderDetails.?[itemMenu.requiresParrilleroPreparation == true && itemStatus.name() == 'PENDING']) > 0) : (#lists.size(order.orderDetails.?[itemMenu.requiresPreparation == true && itemStatus.name() == 'IN_PREPARATION']) == 0 && #lists.size(order.orderDetails.?[itemMenu.requiresPreparation == true && itemStatus.name() == 'PENDING']) > 0)}"
                   class="slide-confirm"
                   th:attr="data-action='accept-all', data-order-id=${order.idOrder}, data-order-number=${order.orderNumber}"
                 >
@@ -818,7 +824,7 @@
 
     <script th:inline="javascript">
       /*<![CDATA[*/
-      const currentRole = /*[[${isBarista ? 'barista' : 'chef'}]]*/ "chef";
+      const currentRole = /*[[${currentRole}]]*/ "chef";
       const companyId = /*[[${systemConfig.company != null ? systemConfig.company.idCompany : 0}]]*/ 0;
       /*]]>*/
 
@@ -1019,7 +1025,13 @@
         successTitle,
         successText,
       ) {
-        fetch(`/${currentRole}/orders/${orderId}/change-all-chef-items`, {
+        // Route to the correct backend endpoint based on the current role.
+        // Chef and parrillero share this template; each role has its own dedicated endpoint
+        // (the backend rejects cross-role calls with a "solo está disponible para el rol de X" error).
+        const endpoint = currentRole === "parrillero"
+          ? "change-all-parrillero-items"
+          : "change-all-chef-items";
+        fetch(`/${currentRole}/orders/${orderId}/${endpoint}`, {
           method: "POST",
           headers: { "Content-Type": "application/x-www-form-urlencoded" },
         })

@@ -151,6 +151,13 @@ public class SystemConfiguration implements Serializable {
     @Builder.Default
     private Boolean staffCanManageBaristaItems = false;
 
+    // Child flag (only evaluated when enableOrderStatusPermission = TRUE).
+    // When TRUE, staff can advance items that require parrillero preparation (requiresParrilleroPreparation=true).
+    @Column(name = "staff_can_manage_parrillero_items", nullable = false,
+            columnDefinition = "boolean not null default false")
+    @Builder.Default
+    private Boolean staffCanManageParrilleroItems = false;
+
     // Ticket logo intensity (10-100%). Controls how dark/visible the logo prints on thermal tickets.
     // Higher value = darker print (more pixels become black dots). 50% ≈ original threshold.
     // Useful for logos with light colors that don't print well on thermal printers.

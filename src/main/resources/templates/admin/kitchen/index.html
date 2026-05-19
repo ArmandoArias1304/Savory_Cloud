@@ -242,6 +242,35 @@
                 Baristas trabajando
               </p>
             </div>
+
+            <!-- Active Parrilleros -->
+            <div
+              class="bg-gradient-to-br from-red-500/10 to-red-500/20 dark:from-red-500/20 dark:to-red-500/30 p-4 sm:p-6 rounded-2xl border-2 border-red-500/30 dark:border-red-500/40 shadow-lg"
+            >
+              <div class="flex justify-between items-start mb-3">
+                <div
+                  class="w-12 h-12 bg-red-500 rounded-xl flex items-center justify-center shadow-lg"
+                >
+                  <span class="material-symbols-outlined text-white text-2xl"
+                    >outdoor_grill</span
+                  >
+                </div>
+                <span
+                  class="px-3 py-1 bg-red-500/20 dark:bg-red-500/30 text-red-700 dark:text-red-300 rounded-full text-xs font-bold"
+                >
+                  ACTIVOS
+                </span>
+              </div>
+              <p
+                class="text-3xl sm:text-4xl font-bold text-red-700 dark:text-red-300 mb-1"
+                th:text="${activeParrillerosCount}"
+              >
+                0
+              </p>
+              <p class="text-sm text-gray-700 dark:text-gray-300">
+                Parrilleros trabajando
+              </p>
+            </div>
           </section>
 
           <!-- Filter Tabs -->
@@ -356,14 +385,15 @@
                   </span>
                 </div>
 
-                <!-- Chef/Barista Assignment -->
+                <!-- Chef/Barista/Parrillero Assignment -->
                 <div
                   class="mb-3 pb-3 border-b border-gray-200 dark:border-gray-700"
                 >
                   <!-- Check if order has items requiring chef preparation -->
                   <th:block
                     th:with="hasChefItems=${#lists.size(order.orderDetails.?[itemMenu.requiresPreparation]) > 0}, 
-                             hasBaristaItems=${#lists.size(order.orderDetails.?[itemMenu.requiresBaristaPreparation]) > 0}"
+                             hasBaristaItems=${#lists.size(order.orderDetails.?[itemMenu.requiresBaristaPreparation]) > 0},
+                             hasParrilleroItems=${#lists.size(order.orderDetails.?[itemMenu.requiresParrilleroPreparation]) > 0}"
                   >
                     <!-- Chef Section (only show if order has items requiring chef preparation) -->
                     <th:block th:if="${hasChefItems}">
@@ -435,6 +465,44 @@
                       >
                         <span class="material-symbols-outlined">local_cafe</span>
                         <span class="text-sm font-semibold">Sin barista asignado</span>
+                      </div>
+                    </th:block>
+
+                    <!-- Spacer between Barista and Parrillero sections if both exist -->
+                    <div th:if="${hasBaristaItems and hasParrilleroItems}" class="my-2"></div>
+
+                    <!-- Parrillero Section (only show if order has items requiring parrillero preparation) -->
+                    <th:block th:if="${hasParrilleroItems}">
+                      <div
+                        th:if="${order.preparedByParrillero != null}"
+                        class="flex items-center gap-3"
+                      >
+                        <div
+                          class="w-10 h-10 bg-gradient-to-br from-red-500 to-red-700 rounded-full flex items-center justify-center text-white font-bold shadow-lg"
+                        >
+                          <span
+                            th:text="${order.preparedByParrillero.nombre != null ? order.preparedByParrillero.nombre.substring(0,1).toUpperCase() + (order.preparedByParrillero.apellido != null ? order.preparedByParrillero.apellido.substring(0,1).toUpperCase() : '') : '?'}"
+                            >JD</span
+                          >
+                        </div>
+                        <div class="flex-1 min-w-0">
+                          <p class="text-xs text-gray-500 dark:text-gray-400">
+                            <span class="material-symbols-outlined text-red-600 text-xs align-middle mr-1">outdoor_grill</span>Parrillero:
+                          </p>
+                          <p
+                            class="font-semibold text-gray-900 dark:text-white truncate"
+                            th:text="${order.preparedByParrillero.nombre + ' ' + order.preparedByParrillero.apellido}"
+                          >
+                            Parrillero Name
+                          </p>
+                        </div>
+                      </div>
+                      <div
+                        th:if="${order.preparedByParrillero == null}"
+                        class="flex items-center gap-3 text-red-600 dark:text-red-400"
+                      >
+                        <span class="material-symbols-outlined">outdoor_grill</span>
+                        <span class="text-sm font-semibold">Sin parrillero asignado</span>
                       </div>
                     </th:block>
                   </th:block>

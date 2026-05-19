@@ -218,11 +218,12 @@ public class OrderServiceImpl implements OrderService {
             detail.setIsNewItem(false); // Initial items are not "new"
             detail.setAddedAt(LocalDateTime.now());
 
-            // Auto-advance to READY ONLY if item requires NO preparation at all (neither chef nor barista)
-            // Items requiring barista preparation MUST start as PENDING and be changed manually
+            // Auto-advance to READY ONLY if item requires NO preparation at all (neither chef, barista nor parrillero)
+            // Items requiring chef/barista/parrillero preparation MUST start as PENDING and be changed manually
             // Skip auto-advance for items that already have a status set (e.g., combo items)
             boolean requiresChefPreparation = Boolean.TRUE.equals(item.getRequiresPreparation());
             boolean requiresBaristaPreparation = Boolean.TRUE.equals(item.getRequiresBaristaPreparation());
+            boolean requiresParrilleroPreparation = Boolean.TRUE.equals(item.getRequiresParrilleroPreparation());
             boolean isComboParent = Boolean.TRUE.equals(item.getIsCombo());
 
             if (deferStockDeduction) {
@@ -236,17 +237,18 @@ public class OrderServiceImpl implements OrderService {
                 detail.setItemStatus(OrderStatus.READY);
                 detail.setStockDeducted(true);
                 log.info("Combo parent '{}' set to READY (no preparation needed, children handle preparation)", item.getName());
-            } else if (!requiresChefPreparation && !requiresBaristaPreparation) {
+            } else if (!requiresChefPreparation && !requiresBaristaPreparation && !requiresParrilleroPreparation) {
                 // Item requires NO preparation (e.g., bottled drinks, pre-packaged items)
                 detail.setItemStatus(OrderStatus.READY);
                 detail.setStockDeducted(true);
                 log.info("Item '{}' auto-advanced to READY (no preparation required)", item.getName());
             } else {
-                // Item requires preparation (chef or barista), starts as PENDING
+                // Item requires preparation (chef, barista or parrillero), starts as PENDING
                 detail.setStockDeducted(true);
-                log.info("Item '{}' set to PENDING (requires {} preparation)", 
-                    item.getName(), 
-                    requiresBaristaPreparation ? "barista" : "chef");
+                String prepRole = requiresChefPreparation ? "chef"
+                                : requiresBaristaPreparation ? "barista"
+                                : "parrillero";
+                log.info("Item '{}' set to PENDING (requires {} preparation)", item.getName(), prepRole);
             }
 
             if (!deferStockDeduction) {
@@ -453,8 +455,9 @@ public class OrderServiceImpl implements OrderService {
                 // Auto-advance logic (same as create)
                 boolean requiresChefPreparation = Boolean.TRUE.equals(item.getRequiresPreparation());
                 boolean requiresBaristaPreparation = Boolean.TRUE.equals(item.getRequiresBaristaPreparation());
+                boolean requiresParrilleroPreparation = Boolean.TRUE.equals(item.getRequiresParrilleroPreparation());
                 
-                if (!requiresChefPreparation && !requiresBaristaPreparation) {
+                if (!requiresChefPreparation && !requiresBaristaPreparation && !requiresParrilleroPreparation) {
                     newDetail.setItemStatus(OrderStatus.READY);
                 }
             }
@@ -754,17 +757,19 @@ public class OrderServiceImpl implements OrderService {
             for (OrderDetail detail : order.getOrderDetails()) {
                 ItemMenu itemMenu = detail.getItemMenu();
                 
-                // Check if item requires specific preparation by chef or barista
+                // Check if item requires specific preparation by chef, barista or parrillero
                 boolean requiresChefPreparation = itemMenu != null && 
                     Boolean.TRUE.equals(itemMenu.getRequiresPreparation());
                 boolean requiresBaristaPreparation = itemMenu != null && 
                     Boolean.TRUE.equals(itemMenu.getRequiresBaristaPreparation());
+                boolean requiresParrilleroPreparation = itemMenu != null && 
+                    Boolean.TRUE.equals(itemMenu.getRequiresParrilleroPreparation());
                 
                 // ONLY update items that DON'T require ANY specific preparation
                 // UNLESS newStatus is DELIVERED, then we force update all items to DELIVERED
                 boolean isDeliveredUpdate = (newStatus == OrderStatus.DELIVERED);
 
-                if ((!requiresChefPreparation && !requiresBaristaPreparation) || isDeliveredUpdate) {
+                if ((!requiresChefPreparation && !requiresBaristaPreparation && !requiresParrilleroPreparation) || isDeliveredUpdate) {
                     // Item doesn't require specific preparation - auto-advance with order
                     if (detail.getItemStatus() == null || 
                         detail.getItemStatus().ordinal() < newStatus.ordinal()) {
@@ -848,6 +853,13 @@ public class OrderServiceImpl implements OrderService {
                     monthlyStatsService.updateBaristaOrders(order.getPreparedByBarista(), month, year);
                     log.info("Updated barista {} monthly orders count for {}/{}", 
                             order.getPreparedByBarista().getUsername(), month, year);
+                }
+
+                // Update parrillero statistics (orders count)
+                if (order.getPreparedByParrillero() != null && order.getPreparedByParrillero().hasRole(Role.PARRILLERO)) {
+                    monthlyStatsService.updateParrilleroOrders(order.getPreparedByParrillero(), month, year);
+                    log.info("Updated parrillero {} monthly orders count for {}/{}", 
+                            order.getPreparedByParrillero().getUsername(), month, year);
                 }
                 
                 // Update cashier statistics (sales) - track who collected the payment
@@ -943,10 +955,11 @@ public class OrderServiceImpl implements OrderService {
             // Initialize as PENDING by default
             detail.setItemStatus(OrderStatus.PENDING);
             
-            // Auto-advance to READY ONLY if item requires NO preparation at all (neither chef nor barista)
-            // Items requiring barista preparation MUST start as PENDING and be changed manually
+            // Auto-advance to READY ONLY if item requires NO preparation at all (neither chef, barista nor parrillero)
+            // Items requiring chef/barista/parrillero preparation MUST start as PENDING and be changed manually
             boolean requiresChefPreparation = Boolean.TRUE.equals(item.getRequiresPreparation());
             boolean requiresBaristaPreparation = Boolean.TRUE.equals(item.getRequiresBaristaPreparation());
+            boolean requiresParrilleroPreparation = Boolean.TRUE.equals(item.getRequiresParrilleroPreparation());
 
             if (deferStockDeduction) {
                 // Customer-acceptance flow: new items start as TO_ACCEPT, regardless of
@@ -954,17 +967,18 @@ public class OrderServiceImpl implements OrderService {
                 detail.setItemStatus(OrderStatus.TO_ACCEPT);
                 detail.setStockDeducted(false);
                 log.info("New item '{}' set to TO_ACCEPT (deferred acceptance, stock not deducted)", item.getName());
-            } else if (!requiresChefPreparation && !requiresBaristaPreparation) {
+            } else if (!requiresChefPreparation && !requiresBaristaPreparation && !requiresParrilleroPreparation) {
                 // Item requires NO preparation (e.g., bottled drinks, pre-packaged items)
                 detail.setItemStatus(OrderStatus.READY);
                 detail.setStockDeducted(true);
                 log.info("New item '{}' auto-advanced to READY (no preparation required)", item.getName());
             } else {
-                // Item requires preparation (chef or barista), starts as PENDING
+                // Item requires preparation (chef, barista or parrillero), starts as PENDING
                 detail.setStockDeducted(true);
-                log.info("New item '{}' set to PENDING (requires {} preparation)", 
-                    item.getName(), 
-                    requiresBaristaPreparation ? "barista" : "chef");
+                String prepRole = requiresChefPreparation ? "chef"
+                                : requiresBaristaPreparation ? "barista"
+                                : "parrillero";
+                log.info("New item '{}' set to PENDING (requires {} preparation)", item.getName(), prepRole);
             }
 
             if (!deferStockDeduction) {
@@ -1038,9 +1052,10 @@ public class OrderServiceImpl implements OrderService {
 
         Order order = findByIdOrThrow(orderId);
 
-        // Detect what type of items are being changed (chef or barista items)
+        // Detect what type of items are being changed (chef, barista, or parrillero items)
         boolean changingChefItems = false;
         boolean changingBaristaItems = false;
+        boolean changingParrilleroItems = false;
 
         // Find and update each item
         for (Long itemDetailId : itemDetailIds) {
@@ -1058,6 +1073,9 @@ public class OrderServiceImpl implements OrderService {
                 }
                 if (Boolean.TRUE.equals(detail.getItemMenu().getRequiresBaristaPreparation())) {
                     changingBaristaItems = true;
+                }
+                if (Boolean.TRUE.equals(detail.getItemMenu().getRequiresParrilleroPreparation())) {
+                    changingParrilleroItems = true;
                 }
             }
 
@@ -1128,14 +1146,21 @@ public class OrderServiceImpl implements OrderService {
                     newOrderStatus.getDisplayName()
                 );
                 
-                // Determine which role made the change
+                // Determine which role made the change (only when a single role is involved).
+                // If multiple roles are involved, or none can be identified, leave it null to notify all.
                 String roleWhoChanged = null;
-                if (changingChefItems && !changingBaristaItems) {
-                    roleWhoChanged = "chef";
-                } else if (changingBaristaItems && !changingChefItems) {
-                    roleWhoChanged = "barista";
+                int rolesInvolved = (changingChefItems ? 1 : 0)
+                        + (changingBaristaItems ? 1 : 0)
+                        + (changingParrilleroItems ? 1 : 0);
+                if (rolesInvolved == 1) {
+                    if (changingChefItems) {
+                        roleWhoChanged = "chef";
+                    } else if (changingBaristaItems) {
+                        roleWhoChanged = "barista";
+                    } else {
+                        roleWhoChanged = "parrillero";
+                    }
                 }
-                // If both or none, roleWhoChanged stays null (notify all)
                 
                 wsNotificationService.notifyOrderStatusChange(savedOrder, statusChangeMessage, roleWhoChanged);
                 log.info("🔔 WebSocket: Order status auto-update notification sent - {} ({} -> {}) - Role: {}", 
@@ -1180,9 +1205,10 @@ public class OrderServiceImpl implements OrderService {
         }
         boolean canManageChef = Boolean.TRUE.equals(cfg.getStaffCanManageChefItems());
         boolean canManageBarista = Boolean.TRUE.equals(cfg.getStaffCanManageBaristaItems());
-        if (!canManageChef && !canManageBarista) {
+        boolean canManageParrillero = Boolean.TRUE.equals(cfg.getStaffCanManageParrilleroItems());
+        if (!canManageChef && !canManageBarista && !canManageParrillero) {
             throw new IllegalStateException(
-                "Ninguno de los sub-permisos (chef/barista) está habilitado.");
+                "Ninguno de los sub-permisos (chef/barista/parrillero) está habilitado.");
         }
 
         Order order = findByIdOrThrow(orderId);
@@ -1212,6 +1238,12 @@ public class OrderServiceImpl implements OrderService {
                     && Boolean.TRUE.equals(d.getItemMenu().getRequiresBaristaPreparation()))
                 .collect(Collectors.toList())
             : new ArrayList<>();
+        List<OrderDetail> parrilleroItems = canManageParrillero
+            ? order.getOrderDetails().stream()
+                .filter(d -> d.getItemMenu() != null
+                    && Boolean.TRUE.equals(d.getItemMenu().getRequiresParrilleroPreparation()))
+                .collect(Collectors.toList())
+            : new ArrayList<>();
 
         // Filter to only actionable statuses (PENDING / IN_PREPARATION). Items already READY,
         // DELIVERED, PAID, CANCELLED or TO_ACCEPT are skipped automatically -> idempotent.
@@ -1223,8 +1255,12 @@ public class OrderServiceImpl implements OrderService {
             .filter(d -> d.getItemStatus() == OrderStatus.PENDING
                 || d.getItemStatus() == OrderStatus.IN_PREPARATION)
             .collect(Collectors.toList());
+        List<OrderDetail> actionableParrillero = parrilleroItems.stream()
+            .filter(d -> d.getItemStatus() == OrderStatus.PENDING
+                || d.getItemStatus() == OrderStatus.IN_PREPARATION)
+            .collect(Collectors.toList());
 
-        if (actionableChef.isEmpty() && actionableBarista.isEmpty()) {
+        if (actionableChef.isEmpty() && actionableBarista.isEmpty() && actionableParrillero.isEmpty()) {
             throw new IllegalStateException(
                 "No hay items pendientes o en preparación que el staff pueda avanzar en esta orden.");
         }
@@ -1251,11 +1287,23 @@ public class OrderServiceImpl implements OrderService {
                 "Esta orden ya fue tomada por " + holder + " (barista). Solo esa persona puede avanzar los items de bebidas.");
         }
 
+        // Ownership lock — parrillero side.
+        if (!actionableParrillero.isEmpty() && order.getPreparedByParrillero() != null
+                && order.getPreparedByParrillero().getIdEmpleado() != null
+                && !order.getPreparedByParrillero().getIdEmpleado().equals(currentEmployee.getIdEmpleado())) {
+            String holder = order.getPreparedByParrillero().getUsername() != null
+                ? order.getPreparedByParrillero().getUsername()
+                : ("empleado #" + order.getPreparedByParrillero().getIdEmpleado());
+            throw new IllegalStateException(
+                "Esta orden ya fue tomada por " + holder + " (parrillero). Solo esa persona puede avanzar los items de parrilla.");
+        }
+
         // Decide target status per side (skip-state rule). Each side is decided independently
         // so that chef items can be at IN_PREPARATION while barista items are still PENDING,
         // and the single click advances each side to its natural next state.
         boolean advancedChefToReady = false;
         boolean advancedBaristaToReady = false;
+        boolean advancedParrilleroToReady = false;
 
         if (!actionableChef.isEmpty()) {
             boolean anyChefInPrep = actionableChef.stream()
@@ -1314,9 +1362,42 @@ public class OrderServiceImpl implements OrderService {
             }
         }
 
+        if (!actionableParrillero.isEmpty()) {
+            // Re-read items after any chef/barista mutation to get fresh statuses
+            List<OrderDetail> freshParrillero = order.getOrderDetails().stream()
+                .filter(d -> d.getItemMenu() != null
+                    && Boolean.TRUE.equals(d.getItemMenu().getRequiresParrilleroPreparation()))
+                .filter(d -> d.getItemStatus() == OrderStatus.PENDING
+                    || d.getItemStatus() == OrderStatus.IN_PREPARATION)
+                .collect(Collectors.toList());
+
+            if (!freshParrillero.isEmpty()) {
+                boolean anyParrilleroInPrep = freshParrillero.stream()
+                    .anyMatch(d -> d.getItemStatus() == OrderStatus.IN_PREPARATION);
+                OrderStatus parrilleroTarget = anyParrilleroInPrep ? OrderStatus.READY : OrderStatus.IN_PREPARATION;
+                advancedParrilleroToReady = (parrilleroTarget == OrderStatus.READY);
+
+                if (order.getPreparedByParrillero() == null) {
+                    order.setPreparedByParrillero(currentEmployee);
+                    order = orderRepository.save(order);
+                    try {
+                        wsNotificationService.notifyOrderAccepted(order, username, "parrillero");
+                    } catch (Exception e) {
+                        log.error("Failed to send WebSocket parrillero-accept notification: {}", e.getMessage(), e);
+                    }
+                }
+
+                List<Long> parrilleroIds = freshParrillero.stream()
+                    .map(OrderDetail::getIdOrderDetail)
+                    .collect(Collectors.toList());
+                order = changeItemsStatus(orderId, parrilleroIds, parrilleroTarget, username);
+                log.info("Staff {} advanced {} parrillero items in order {} -> {}", username, parrilleroIds.size(), orderId, parrilleroTarget);
+            }
+        }
+
         // Avoid unused-variable warnings while keeping the flags for future logging hooks.
-        log.debug("changeAllPreparationItemsToNextStatus completed: chef->READY={}, barista->READY={}",
-            advancedChefToReady, advancedBaristaToReady);
+        log.debug("changeAllPreparationItemsToNextStatus completed: chef->READY={}, barista->READY={}, parrillero->READY={}",
+            advancedChefToReady, advancedBaristaToReady, advancedParrilleroToReady);
 
         return order;
     }
@@ -1560,14 +1641,16 @@ public class OrderServiceImpl implements OrderService {
 
         boolean requiresChef = Boolean.TRUE.equals(item.getRequiresPreparation());
         boolean requiresBarista = Boolean.TRUE.equals(item.getRequiresBaristaPreparation());
+        boolean requiresParrillero = Boolean.TRUE.equals(item.getRequiresParrilleroPreparation());
 
-        if (!requiresChef && !requiresBarista) {
+        if (!requiresChef && !requiresBarista && !requiresParrillero) {
             detail.setItemStatus(OrderStatus.READY);
             log.info("Accepted item '{}' auto-advanced to READY (no preparation required)", item.getName());
         } else {
             detail.setItemStatus(OrderStatus.PENDING);
+            String prepRole = requiresChef ? "chef" : (requiresBarista ? "barista" : "parrillero");
             log.info("Accepted item '{}' set to PENDING (requires {} preparation)",
-                item.getName(), requiresBarista ? "barista" : "chef");
+                item.getName(), prepRole);
         }
 
         // Refresh item availability after stock deduction
@@ -2095,12 +2178,13 @@ public class OrderServiceImpl implements OrderService {
             return;
         }
 
-        // Check if ALL items don't require ANY preparation (neither chef nor barista)
-        // Items requiring barista preparation CANNOT auto-advance
+        // Check if ALL items don't require ANY preparation (neither chef, barista nor parrillero)
+        // Items requiring chef/barista/parrillero preparation CANNOT auto-advance.
         boolean allItemsReady = order.getOrderDetails().stream()
-            .allMatch(detail -> detail.getItemMenu() != null 
+            .allMatch(detail -> detail.getItemMenu() != null
                 && Boolean.FALSE.equals(detail.getItemMenu().getRequiresPreparation())
-                && Boolean.FALSE.equals(detail.getItemMenu().getRequiresBaristaPreparation()));
+                && Boolean.FALSE.equals(detail.getItemMenu().getRequiresBaristaPreparation())
+                && !Boolean.TRUE.equals(detail.getItemMenu().getRequiresParrilleroPreparation()));
 
         if (allItemsReady && !order.getOrderDetails().isEmpty()) {
             log.info("Order {} contains ONLY items that don't require ANY preparation. Auto-advancing to READY status.", 
@@ -2387,8 +2471,8 @@ public class OrderServiceImpl implements OrderService {
      * Determine if stock should be returned automatically for an item
      * TO_ACCEPT or stockDeducted=false -> NO return needed (never deducted)
      * PENDING -> automatic return (never touched)
-     * READY + NO requires preparation (Chef or Barista) -> automatic return (auto-advanced, never touched)
-     * READY + requires preparation -> manual return (chef/barista prepared it, used ingredients)
+     * READY + NO requires preparation (Chef, Barista or Parrillero) -> automatic return (auto-advanced, never touched)
+     * READY + requires preparation -> manual return (chef/barista/parrillero prepared it, used ingredients)
      * IN_PREPARATION -> manual return (working on it, may have used ingredients)
      */
     private boolean shouldReturnStockAutomatically(OrderDetail detail) {
@@ -2407,14 +2491,15 @@ public class OrderServiceImpl implements OrderService {
         
         // READY -> depends if someone prepared it or not
         if (itemStatus == OrderStatus.READY) {
-            // If item does NOT require preparation (neither Chef nor Barista) -> it was marked READY automatically
+            // If item does NOT require preparation (neither Chef, Barista nor Parrillero) -> it was marked READY automatically
             // No ingredients were used, can return automatically
             if (detail.getItemMenu() != null) {
                 boolean requiresChef = Boolean.TRUE.equals(detail.getItemMenu().getRequiresPreparation());
                 boolean requiresBarista = Boolean.TRUE.equals(detail.getItemMenu().getRequiresBaristaPreparation());
+                boolean requiresParrillero = Boolean.TRUE.equals(detail.getItemMenu().getRequiresParrilleroPreparation());
                 
                 // Only return automatically if NO ONE needs to prepare it
-                return !requiresChef && !requiresBarista;
+                return !requiresChef && !requiresBarista && !requiresParrillero;
             }
             return false;
         }

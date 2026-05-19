@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="es" xmlns:th="http://www.thymeleaf.org">
   <head>
     <meta charset="utf-8" />
@@ -1972,7 +1972,7 @@
           const imageUrl =
             itemImage && itemImage !== "null" && itemImage !== ""
               ? itemImage
-              : "https://via.placeholder.com/400x300/f3f4f6/9ca3af?text=Sin+Imagen";
+              : "https://placehold.co/400x300/f3f4f6/9ca3af?text=Sin+Imagen";
 
           // Detect dark mode
           const isDarkMode =
@@ -3558,7 +3558,7 @@
           const imageUrl =
             itemImage && itemImage !== "null" && itemImage !== ""
               ? itemImage
-              : "https://via.placeholder.com/400x300/f3f4f6/9ca3af?text=Combo";
+              : "https://placehold.co/400x300/f3f4f6/9ca3af?text=Combo";
 
           window._comboData = { comboItems: null, childComplementsMap: {} };
 
@@ -3566,7 +3566,7 @@
             html: `
             <div class="flex flex-col md:flex-row gap-6 text-left">
               <div class="md:w-2/5">
-                <img src="${imageUrl}" alt="${itemName}" class="w-full h-48 md:h-64 object-cover rounded-xl shadow-md" onerror="this.src='https://via.placeholder.com/400x300/f3f4f6/9ca3af?text=Combo'">
+                <img src="${imageUrl}" alt="${itemName}" class="w-full h-48 md:h-64 object-cover rounded-xl shadow-md" onerror="this.onerror=null;this.src='https://placehold.co/400x300/f3f4f6/9ca3af?text=Combo'">
                 <div class="mt-3 p-3 rounded-xl ${isDarkMode ? "bg-teal-900/30 border border-teal-800" : "bg-teal-50 border border-teal-200"}">
                   <p id="combo-items-count" class="text-xs font-medium ${isDarkMode ? "text-teal-300" : "text-teal-700"}">🍱 Combo</p>
                 </div>
@@ -3692,7 +3692,7 @@
                       <span class="font-semibold ${isDarkMode ? "text-white" : "text-gray-900"}">${ci.childItemName}</span>
                       <span class="text-xs px-2 py-0.5 rounded-full ${isDarkMode ? "bg-teal-900/40 text-teal-300" : "bg-teal-100 text-teal-700"}">x${ci.quantity}</span>
                     </div>
-                    <span class="text-xs ${isDarkMode ? "text-gray-400" : "text-gray-500"}">${ci.childRequiresPreparation ? "👨‍🍳 Chef" : ci.childRequiresBaristaPreparation ? "☕ Barista" : "📦 Listo"}</span>
+                    <span class="text-xs ${isDarkMode ? "text-gray-400" : "text-gray-500"}">${ci.childRequiresPreparation ? "👨‍🍳 Chef" : ci.childRequiresBaristaPreparation ? "☕ Barista" : ci.childRequiresParrilleroPreparation ? "🔥 Parrillero" : "📦 Listo"}</span>
                   </div>
                   ${
                     hasSauces || hasComplements

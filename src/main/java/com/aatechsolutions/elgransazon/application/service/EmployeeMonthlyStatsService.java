@@ -43,6 +43,12 @@ public interface EmployeeMonthlyStatsService {
     void updateBaristaOrders(Employee barista, Integer month, Integer year);
 
     /**
+     * Update parrillero orders count (increment total_orders)
+     * Used when an order is PAID
+     */
+    void updateParrilleroOrders(Employee parrillero, Integer month, Integer year);
+
+    /**
      * Update cashier sales (add amount to total_sales)
      * Used when an order is PAID by a cashier
      */

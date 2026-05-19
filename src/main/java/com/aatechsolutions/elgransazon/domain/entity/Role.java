@@ -41,6 +41,7 @@ public class Role implements Serializable {
     public static final String WAITER = "ROLE_WAITER";
     public static final String CHEF = "ROLE_CHEF";
     public static final String BARISTA = "ROLE_BARISTA";
+    public static final String PARRILLERO = "ROLE_PARRILLERO";
     public static final String CASHIER = "ROLE_CASHIER";
     public static final String DELIVERY = "ROLE_DELIVERY";
     public static final String CLIENT = "ROLE_CLIENT";
@@ -71,6 +72,7 @@ public class Role implements Serializable {
             case "WAITER": return "Mesero";
             case "CHEF": return "Chef";
             case "BARISTA": return "Barista";
+            case "PARRILLERO": return "Parrillero";
             case "CASHIER": return "Cajero";
             case "DELIVERY": return "Repartidor";
             case "CLIENT": return "Cliente";

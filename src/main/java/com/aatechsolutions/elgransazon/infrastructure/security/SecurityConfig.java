@@ -69,7 +69,7 @@ public class SecurityConfig {
                         .requestMatchers("/programmer/**").hasRole("PROGRAMMER")
                         .requestMatchers("/admin/**").hasAnyRole("ADMIN", "MANAGER")
                         .requestMatchers("/waiter/**").hasRole("WAITER")
-                        .requestMatchers("/chef/**", "/barista/**").hasAnyRole("CHEF", "BARISTA")
+                        .requestMatchers("/chef/**", "/barista/**", "/parrillero/**").hasAnyRole("CHEF", "BARISTA", "PARRILLERO")
                         .requestMatchers("/cashier/**").hasRole("CASHIER")
                         .requestMatchers("/delivery/**").hasRole("DELIVERY")
                         .requestMatchers("/client/**").hasRole("CLIENT")

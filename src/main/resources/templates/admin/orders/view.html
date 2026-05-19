@@ -496,6 +496,7 @@
                           th:data-item-status="${detail.itemStatus.name()}"
                           th:data-requires-preparation="${detail.itemMenu.requiresPreparation}"
                           th:data-requires-barista-preparation="${detail.itemMenu.requiresBaristaPreparation}"
+                          th:data-requires-parrillero-preparation="${detail.itemMenu.requiresParrilleroPreparation}"
                           title="Eliminar item"
                         >
                           <i class="fas fa-trash"></i>
@@ -571,6 +572,7 @@
                           th:data-item-status="${detail.itemStatus.name()}"
                           th:data-requires-preparation="${detail.itemMenu.requiresPreparation}"
                           th:data-requires-barista-preparation="${detail.itemMenu.requiresBaristaPreparation}"
+                          th:data-requires-parrillero-preparation="${detail.itemMenu.requiresParrilleroPreparation}"
                           title="Eliminar complemento"
                         >
                           <i class="fas fa-times text-xs"></i>
@@ -1102,6 +1104,7 @@
         itemStatus,
         requiresPrep,
         requiresBaristaPrep,
+        requiresParrilleroPrep,
       ) {
         // Build warning message based on item status
         let stockWarning = "";
@@ -1112,13 +1115,14 @@
         } else if (
           itemStatus === "READY" &&
           requiresPrep === "false" &&
-          requiresBaristaPrep === "false"
+          requiresBaristaPrep === "false" &&
+          requiresParrilleroPrep === "false"
         ) {
           stockWarning =
             '<p class="text-sm text-green-600 dark:text-green-400 mt-3">✅ El stock será devuelto automáticamente (item no requiere preparación)</p>';
         } else if (
           itemStatus === "READY" &&
-          (requiresPrep === "true" || requiresBaristaPrep === "true")
+          (requiresPrep === "true" || requiresBaristaPrep === "true" || requiresParrilleroPrep === "true")
         ) {
           stockWarning =
             '<p class="text-sm text-orange-600 dark:text-orange-400 mt-3">⚠️ El stock debe ser devuelto manualmente (item ya fue preparado)</p>';
@@ -1320,6 +1324,7 @@
         itemStatus,
         requiresPrep,
         requiresBaristaPrep,
+        requiresParrilleroPrep,
       ) {
         // Build warning message based on item status
         let stockWarning = "";
@@ -1330,13 +1335,14 @@
         } else if (
           itemStatus === "READY" &&
           requiresPrep === "false" &&
-          requiresBaristaPrep === "false"
+          requiresBaristaPrep === "false" &&
+          requiresParrilleroPrep === "false"
         ) {
           stockWarning =
             '<p class="text-sm text-green-600 dark:text-green-400 mt-3">✅ El stock del complemento será devuelto automáticamente (item no requiere preparación)</p>';
         } else if (
           itemStatus === "READY" &&
-          (requiresPrep === "true" || requiresBaristaPrep === "true")
+          (requiresPrep === "true" || requiresBaristaPrep === "true" || requiresParrilleroPrep === "true")
         ) {
           stockWarning =
             '<p class="text-sm text-orange-600 dark:text-orange-400 mt-3">⚠️ El stock del complemento debe ser devuelto manualmente (item ya fue preparado)</p>';
@@ -1441,6 +1447,9 @@
             const requiresBaristaPrep = this.getAttribute(
               "data-requires-barista-preparation",
             );
+            const requiresParrilleroPrep = this.getAttribute(
+              "data-requires-parrillero-preparation",
+            );
             deleteOrderItem(
               orderId,
               itemId,
@@ -1448,6 +1457,7 @@
               itemStatus,
               requiresPrep,
               requiresBaristaPrep,
+              requiresParrilleroPrep,
             );
           });
         });
@@ -1468,6 +1478,9 @@
               const requiresBaristaPrep = this.getAttribute(
                 "data-requires-barista-preparation",
               );
+              const requiresParrilleroPrep = this.getAttribute(
+                "data-requires-parrillero-preparation",
+              );
               deleteOrderComplement(
                 orderId,
                 itemId,
@@ -1476,6 +1489,7 @@
                 itemStatus,
                 requiresPrep,
                 requiresBaristaPrep,
+                requiresParrilleroPrep,
               );
             });
           });

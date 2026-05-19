@@ -151,6 +151,7 @@ public class CustomerOrderServiceImpl implements OrderService {
     private boolean canItemBeCancelledByCustomer(OrderDetail detail) {
         boolean requiresChef = Boolean.TRUE.equals(detail.getItemMenu().getRequiresPreparation());
         boolean requiresBarista = Boolean.TRUE.equals(detail.getItemMenu().getRequiresBaristaPreparation());
+        boolean requiresParrillero = Boolean.TRUE.equals(detail.getItemMenu().getRequiresParrilleroPreparation());
         OrderStatus itemStatus = detail.getItemStatus();
 
         // TO_ACCEPT items have not been accepted by staff and no stock has been deducted -
@@ -159,7 +160,7 @@ public class CustomerOrderServiceImpl implements OrderService {
             return true;
         }
 
-        if (requiresChef || requiresBarista) {
+        if (requiresChef || requiresBarista || requiresParrillero) {
             // Items with preparation: only cancellable if PENDING (not yet started)
             return itemStatus == OrderStatus.PENDING;
         } else {
@@ -174,10 +175,11 @@ public class CustomerOrderServiceImpl implements OrderService {
     private String getItemCancelBlockReason(OrderDetail detail) {
         boolean requiresChef = Boolean.TRUE.equals(detail.getItemMenu().getRequiresPreparation());
         boolean requiresBarista = Boolean.TRUE.equals(detail.getItemMenu().getRequiresBaristaPreparation());
+        boolean requiresParrillero = Boolean.TRUE.equals(detail.getItemMenu().getRequiresParrilleroPreparation());
         OrderStatus itemStatus = detail.getItemStatus();
         String itemName = detail.getItemMenu().getName();
         
-        if (requiresChef || requiresBarista) {
+        if (requiresChef || requiresBarista || requiresParrillero) {
             // Items with preparation
             if (itemStatus == OrderStatus.IN_PREPARATION) {
                 return String.format("'%s' ya está en preparación", itemName);
@@ -318,6 +320,22 @@ public class CustomerOrderServiceImpl implements OrderService {
         if (!canItemBeCancelledByCustomer(itemToDelete)) {
             String reason = getItemCancelBlockReason(itemToDelete);
             throw new IllegalStateException("No se puede eliminar el item: " + reason);
+        }
+
+        // If the item is a combo parent, also validate all its children.
+        // A combo child that is already IN_PREPARATION (or further) must block the parent's deletion.
+        if (itemToDelete.isComboParent()) {
+            String comboGroupId = itemToDelete.getComboGroupId();
+            List<String> blockedChildren = order.getOrderDetails().stream()
+                .filter(d -> comboGroupId.equals(d.getComboGroupId()) && d.isComboChild())
+                .filter(d -> !canItemBeCancelledByCustomer(d))
+                .map(this::getItemCancelBlockReason)
+                .collect(Collectors.toList());
+            if (!blockedChildren.isEmpty()) {
+                throw new IllegalStateException(
+                    "No se puede eliminar el combo porque al menos uno de sus items ya fue tomado: " +
+                    String.join("; ", blockedChildren));
+            }
         }
         
         // Check if this is the last item - if so, cancel the order instead

@@ -33,12 +33,13 @@ import java.util.stream.Collectors;
  */
 @Controller
 @RequestMapping("/{role}/orders")
-@PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_MANAGER', 'ROLE_WAITER', 'ROLE_CHEF', 'ROLE_BARISTA', 'ROLE_DELIVERY', 'ROLE_CASHIER')")
+@PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_MANAGER', 'ROLE_WAITER', 'ROLE_CHEF', 'ROLE_BARISTA', 'ROLE_PARRILLERO', 'ROLE_DELIVERY', 'ROLE_CASHIER')")
 @Slf4j
 public class OrderController {
 
     private final Map<String, OrderService> orderServices;
     private final OrderService chefOrderService; // Direct reference for chef-specific methods
+    private final OrderService parrilleroOrderService; // Direct reference for parrillero-specific methods
     
     // Guard to prevent duplicate order submissions per user (concurrent rapid clicks)
     private final Set<String> activeOrderSubmissions = ConcurrentHashMap.newKeySet();
@@ -71,6 +72,7 @@ public class OrderController {
             @Qualifier("waiterOrderService") OrderService waiterOrderService,
             @Qualifier("chefOrderService") OrderService chefOrderService,
             @Qualifier("baristaOrderService") OrderService baristaOrderService,
+            @Qualifier("parrilleroOrderService") OrderService parrilleroOrderService,
             @Qualifier("deliveryOrderService") OrderService deliveryOrderService,
             @Qualifier("cashierOrderService") OrderService cashierOrderService,
             RestaurantTableService restaurantTableService,
@@ -92,15 +94,16 @@ public class OrderController {
             DateTimeService dateTimeService) {
         
         this.chefOrderService = chefOrderService; // Store direct reference
-        this.orderServices = Map.of(
-            "admin", adminOrderService,
-            "manager", adminOrderService,  // MANAGER uses admin service
-            "waiter", waiterOrderService,
-            "chef", chefOrderService,
-            "barista", baristaOrderService,
-            "delivery", deliveryOrderService,
-            "cashier", cashierOrderService
-        );
+        this.parrilleroOrderService = parrilleroOrderService; // Store direct reference
+        this.orderServices = new java.util.HashMap<>();
+        this.orderServices.put("admin", adminOrderService);
+        this.orderServices.put("manager", adminOrderService);  // MANAGER uses admin service
+        this.orderServices.put("waiter", waiterOrderService);
+        this.orderServices.put("chef", chefOrderService);
+        this.orderServices.put("barista", baristaOrderService);
+        this.orderServices.put("parrillero", parrilleroOrderService);
+        this.orderServices.put("delivery", deliveryOrderService);
+        this.orderServices.put("cashier", cashierOrderService);
         this.restaurantTableService = restaurantTableService;
         this.itemMenuService = itemMenuService;
         this.employeeService = employeeService;
@@ -140,7 +143,7 @@ public class OrderController {
                 .map(GrantedAuthority::getAuthority)
                 .filter(auth -> auth.equals("ROLE_ADMIN") || auth.equals("ROLE_MANAGER") || 
                                auth.equals("ROLE_WAITER") || auth.equals("ROLE_CHEF") || 
-                               auth.equals("ROLE_BARISTA") || auth.equals("ROLE_DELIVERY") || 
+                               auth.equals("ROLE_BARISTA") || auth.equals("ROLE_PARRILLERO") || auth.equals("ROLE_DELIVERY") || 
                                auth.equals("ROLE_CASHIER"))
                 .map(auth -> auth.replace("ROLE_", "").toLowerCase())
                 .findFirst()
@@ -336,9 +339,12 @@ public class OrderController {
             && listCfg != null && Boolean.TRUE.equals(listCfg.getStaffCanManageChefItems());
         boolean staffBaristaEnabled = staffOrderStatusEnabled
             && listCfg != null && Boolean.TRUE.equals(listCfg.getStaffCanManageBaristaItems());
+        boolean staffParrilleroEnabled = staffOrderStatusEnabled
+            && listCfg != null && Boolean.TRUE.equals(listCfg.getStaffCanManageParrilleroItems());
         model.addAttribute("staffOrderStatusEnabled", staffOrderStatusEnabled);
         model.addAttribute("staffChefEnabled", staffChefEnabled);
         model.addAttribute("staffBaristaEnabled", staffBaristaEnabled);
+        model.addAttribute("staffParrilleroEnabled", staffParrilleroEnabled);
 
         return role + "/orders/list";
     }
@@ -1785,6 +1791,7 @@ public class OrderController {
             // Set preparedBy BEFORE changing status (when someone accepts the order)
             // For CHEF role: use preparedBy
             // For BARISTA role: use preparedByBarista
+            // For PARRILLERO role: use preparedByParrillero
             if (status == OrderStatus.IN_PREPARATION && order.getStatus() == OrderStatus.PENDING) {
                 if ("chef".equalsIgnoreCase(role) && order.getPreparedBy() == null) {
                     // Chef accepting the order
@@ -1796,6 +1803,11 @@ public class OrderController {
                     order.setPreparedByBarista(currentEmployee);
                     orderRepository.save(order);
                     log.info("Setting preparedByBarista to: {} for order {}", username, id);
+                } else if ("parrillero".equalsIgnoreCase(role) && order.getPreparedByParrillero() == null) {
+                    // Parrillero accepting the order
+                    order.setPreparedByParrillero(currentEmployee);
+                    orderRepository.save(order);
+                    log.info("Setting preparedByParrillero to: {} for order {}", username, id);
                 }
             }
             
@@ -2073,6 +2085,50 @@ public class OrderController {
     }
 
     /**
+     * Change ALL parrillero items in order to next status (AJAX).
+     * Only available for PARRILLERO role.
+     */
+    @PostMapping("/{id}/change-all-parrillero-items")
+    @ResponseBody
+    public Map<String, Object> changeAllParrilleroItems(
+            @PathVariable String role,
+            @PathVariable Long id,
+            Authentication authentication) {
+
+        String username = authentication.getName();
+        log.info("Changing ALL parrillero items in order {} by user: {} (role: {})", id, username, role);
+
+        validateRole(role, authentication);
+
+        if (!"parrillero".equalsIgnoreCase(role)) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("message", "Esta operación solo está disponible para el rol de parrillero");
+            return errorResponse;
+        }
+
+        Map<String, Object> response = new HashMap<>();
+        try {
+            ParrilleroOrderServiceImpl parrilleroService = (ParrilleroOrderServiceImpl) parrilleroOrderService;
+            Order updated = parrilleroService.changeAllParrilleroItemsToNextStatus(id, username);
+
+            response.put("success", true);
+            response.put("message", "Todos los items del parrillero han sido actualizados");
+            response.put("order", buildOrderDTO(updated));
+            response.put("orderStatus", updated.getStatus().name());
+        } catch (IllegalStateException e) {
+            log.warn("Error changing all parrillero items: {}", e.getMessage());
+            response.put("success", false);
+            response.put("message", e.getMessage());
+        } catch (Exception e) {
+            log.error("Error changing all parrillero items", e);
+            response.put("success", false);
+            response.put("message", "Error al cambiar el estado de los items: " + e.getMessage());
+        }
+        return response;
+    }
+
+    /**
      * Advance ALL preparation items (chef and/or barista) of an order to the next status (AJAX).
      * Available for staff roles (admin, manager, cashier, waiter) when the SystemConfiguration
      * permission flag is enabled. Mirrors the chef/barista one-click flow but applies the staff
@@ -2281,14 +2337,15 @@ public class OrderController {
         OrderStatus itemStatus = itemDetail.getItemStatus();
         boolean requiresPrep = Boolean.TRUE.equals(itemDetail.getItemMenu().getRequiresPreparation());
         boolean requiresBarista = Boolean.TRUE.equals(itemDetail.getItemMenu().getRequiresBaristaPreparation());
+        boolean requiresParrillero = Boolean.TRUE.equals(itemDetail.getItemMenu().getRequiresParrilleroPreparation());
         
         if (itemStatus == OrderStatus.PENDING) {
             return "✅ Stock del complemento devuelto automáticamente (item pendiente)";
-        } else if (itemStatus == OrderStatus.READY && !requiresPrep && !requiresBarista) {
+        } else if (itemStatus == OrderStatus.READY && !requiresPrep && !requiresBarista && !requiresParrillero) {
             return "✅ Stock del complemento devuelto automáticamente (item no requiere preparación)";
         } else if (itemStatus == OrderStatus.IN_PREPARATION) {
             return "⚠️ Stock del complemento debe ser devuelto manualmente (item en preparación)";
-        } else if (itemStatus == OrderStatus.READY && (requiresPrep || requiresBarista)) {
+        } else if (itemStatus == OrderStatus.READY && (requiresPrep || requiresBarista || requiresParrillero)) {
             return "⚠️ Stock del complemento debe ser devuelto manualmente (item ya preparado)";
         }
         
@@ -2378,12 +2435,14 @@ public class OrderController {
                     || lowerRole2.equals("cashier") || lowerRole2.equals("waiter");
             boolean canAdvanceChef = false;
             boolean canAdvanceBarista = false;
+            boolean canAdvanceParrillero = false;
             String nextPreparationStatus = null;
             if (staffRole) {
                 SystemConfiguration cfg = systemConfigurationService.getConfiguration();
                 if (cfg != null && Boolean.TRUE.equals(cfg.getEnableOrderStatusPermission())) {
                     boolean flagChef = Boolean.TRUE.equals(cfg.getStaffCanManageChefItems());
                     boolean flagBar = Boolean.TRUE.equals(cfg.getStaffCanManageBaristaItems());
+                    boolean flagPar = Boolean.TRUE.equals(cfg.getStaffCanManageParrilleroItems());
                     boolean anyChefActionable = flagChef && order.getOrderDetails().stream()
                         .anyMatch(d -> d.getItemMenu() != null
                             && Boolean.TRUE.equals(d.getItemMenu().getRequiresPreparation())
@@ -2394,26 +2453,34 @@ public class OrderController {
                             && Boolean.TRUE.equals(d.getItemMenu().getRequiresBaristaPreparation())
                             && (d.getItemStatus() == OrderStatus.PENDING
                                 || d.getItemStatus() == OrderStatus.IN_PREPARATION));
+                    boolean anyParrilleroActionable = flagPar && order.getOrderDetails().stream()
+                        .anyMatch(d -> d.getItemMenu() != null
+                            && Boolean.TRUE.equals(d.getItemMenu().getRequiresParrilleroPreparation())
+                            && (d.getItemStatus() == OrderStatus.PENDING
+                                || d.getItemStatus() == OrderStatus.IN_PREPARATION));
                     canAdvanceChef = anyChefActionable;
                     canAdvanceBarista = anyBaristaActionable;
+                    canAdvanceParrillero = anyParrilleroActionable;
 
                     // Resolve "next" label: READY wins if any actionable item is already IN_PREP,
                     // otherwise IN_PREPARATION.
                     boolean anyInPrep = order.getOrderDetails().stream()
                         .filter(d -> d.getItemMenu() != null)
                         .filter(d -> (flagChef && Boolean.TRUE.equals(d.getItemMenu().getRequiresPreparation()))
-                            || (flagBar && Boolean.TRUE.equals(d.getItemMenu().getRequiresBaristaPreparation())))
+                            || (flagBar && Boolean.TRUE.equals(d.getItemMenu().getRequiresBaristaPreparation()))
+                            || (flagPar && Boolean.TRUE.equals(d.getItemMenu().getRequiresParrilleroPreparation())))
                         .anyMatch(d -> d.getItemStatus() == OrderStatus.IN_PREPARATION);
-                    if (canAdvanceChef || canAdvanceBarista) {
+                    if (canAdvanceChef || canAdvanceBarista || canAdvanceParrillero) {
                         nextPreparationStatus = anyInPrep
                             ? OrderStatus.READY.name()
                             : OrderStatus.IN_PREPARATION.name();
                     }
                 }
             }
-            response.put("canAdvancePreparation", canAdvanceChef || canAdvanceBarista);
+            response.put("canAdvancePreparation", canAdvanceChef || canAdvanceBarista || canAdvanceParrillero);
             response.put("canAdvanceChef", canAdvanceChef);
             response.put("canAdvanceBarista", canAdvanceBarista);
+            response.put("canAdvanceParrillero", canAdvanceParrillero);
             response.put("nextPreparationStatus", nextPreparationStatus);
         } catch (Exception e) {
             log.error("Error getting valid statuses", e);
@@ -2683,6 +2750,7 @@ public class OrderController {
                     
                     boolean childRequiresChef = Boolean.TRUE.equals(childItem.getRequiresPreparation());
                     boolean childRequiresBarista = Boolean.TRUE.equals(childItem.getRequiresBaristaPreparation());
+                    boolean childRequiresParrillero = Boolean.TRUE.equals(childItem.getRequiresParrilleroPreparation());
                     
                     OrderDetail childDetail = OrderDetail.builder()
                         .itemMenu(childItem)
@@ -2690,7 +2758,9 @@ public class OrderController {
                         .quantity(childQty)
                         .unitPrice(BigDecimal.ZERO) // Children have $0 price (combo price is on parent)
                         .comments(comment)
-                        .itemStatus((childRequiresChef || childRequiresBarista) ? OrderStatus.PENDING : OrderStatus.READY)
+                        // NOTE: itemStatus is set authoritatively by OrderServiceImpl.createInternal
+                        // based on the item's preparation flags (chef/barista/parrillero).
+                        .itemStatus((childRequiresChef || childRequiresBarista || childRequiresParrillero) ? OrderStatus.PENDING : OrderStatus.READY)
                         .comboGroupId(comboGroupId)
                         .build();
                     childDetail.calculateSubtotal();
@@ -2755,19 +2825,8 @@ public class OrderController {
                 .unitPrice(item.getPrice())
                 .comments(comment);
             
-            // Set item status based on whether it requires ANY preparation (chef or barista)
-            // ONLY items requiring NO preparation at all go directly to READY
-            // Items requiring barista preparation MUST start as PENDING
-            boolean requiresChefPreparation = Boolean.TRUE.equals(item.getRequiresPreparation());
-            boolean requiresBaristaPreparation = Boolean.TRUE.equals(item.getRequiresBaristaPreparation());
-            
-            if (requiresChefPreparation || requiresBaristaPreparation) {
-                // Item requires preparation by chef OR barista - starts PENDING
-                detailBuilder.itemStatus(OrderStatus.PENDING);
-            } else {
-                // Item requires NO preparation - goes directly to READY
-                detailBuilder.itemStatus(OrderStatus.READY);
-            }
+            // NOTE: itemStatus is set authoritatively by OrderServiceImpl.createInternal
+            // based on the item's preparation flags (chef/barista/parrillero).
             
             // BACKEND VALIDATION: Validate and recalculate promotion price
             if (promotionIdStr != null && !promotionIdStr.trim().isEmpty()) {
@@ -3471,12 +3530,13 @@ public class OrderController {
                 if (detail.getItemMenu() != null) {
                     boolean requiresChef = Boolean.TRUE.equals(detail.getItemMenu().getRequiresPreparation());
                     boolean requiresBarista = Boolean.TRUE.equals(detail.getItemMenu().getRequiresBaristaPreparation());
+                    boolean requiresParrillero = Boolean.TRUE.equals(detail.getItemMenu().getRequiresParrilleroPreparation());
                     
                     // Only count as automatic if NO ONE needed to prepare it
-                    if (!requiresChef && !requiresBarista) {
+                    if (!requiresChef && !requiresBarista && !requiresParrillero) {
                         automaticItems++;
                     } else {
-                        // Chef or Barista prepared it, used ingredients
+                        // Chef, Barista or Parrillero prepared it, used ingredients
                         manualItems++;
                     }
                 } else {
@@ -3516,17 +3576,18 @@ public class OrderController {
             return "✅ Stock devuelto automáticamente (item nunca fue preparado)";
         }
         
-        // READY -> check if requires preparation (Chef or Barista)
+        // READY -> check if requires preparation (Chef, Barista or Parrillero)
         if (itemStatus == OrderStatus.READY) {
             if (detail.getItemMenu() != null) {
                 boolean requiresChef = Boolean.TRUE.equals(detail.getItemMenu().getRequiresPreparation());
                 boolean requiresBarista = Boolean.TRUE.equals(detail.getItemMenu().getRequiresBaristaPreparation());
+                boolean requiresParrillero = Boolean.TRUE.equals(detail.getItemMenu().getRequiresParrilleroPreparation());
                 
                 // Only automatic if NO ONE needed to prepare it
-                if (!requiresChef && !requiresBarista) {
+                if (!requiresChef && !requiresBarista && !requiresParrillero) {
                     return "✅ Stock devuelto automáticamente (item no requiere preparación)";
                 } else {
-                    return "⚠️ Stock debe ser devuelto manualmente (chef/barista ya preparó el item)";
+                    return "⚠️ Stock debe ser devuelto manualmente (chef/barista/parrillero ya preparó el item)";
                 }
             } else {
                 return "⚠️ Stock debe ser devuelto manualmente (item ya preparado)";

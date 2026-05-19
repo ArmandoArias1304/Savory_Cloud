@@ -485,8 +485,49 @@
                       requiere preparación de barista.
                       <br />
                       <span class="text-orange-600 font-medium">Nota:</span> Un
-                      item solo puede ser preparado por Chef O Barista, no
-                      ambos.
+                      item solo puede ser preparado por Chef, Barista o
+                      Parrillero, no varios.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Requiere Preparación del Parrillero -->
+              <div class="md:col-span-2">
+                <div
+                  class="flex items-center gap-3 p-4 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800"
+                >
+                  <!-- Spring MVC checkbox convention: hidden field with prefix _ -->
+                  <input
+                    type="hidden"
+                    name="_requiresParrilleroPreparation"
+                    value="on"
+                  />
+                  <input
+                    type="checkbox"
+                    id="requiresParrilleroPreparation"
+                    name="requiresParrilleroPreparation"
+                    th:checked="${itemMenu.requiresParrilleroPreparation}"
+                    class="w-5 h-5 text-red-600 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-red-500"
+                  />
+                  <div>
+                    <label
+                      for="requiresParrilleroPreparation"
+                      class="text-sm font-semibold text-gray-900 dark:text-white block"
+                    >
+                      ¿Requiere preparación del parrillero?
+                    </label>
+                    <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                      <span class="font-medium">Marcado:</span> El parrillero
+                      debe preparar este item (cortes a la parrilla, asados,
+                      brochetas).
+                      <br />
+                      <span class="font-medium">Desmarcado:</span> Item no
+                      requiere preparación de parrillero.
+                      <br />
+                      <span class="text-orange-600 font-medium">Nota:</span> Un
+                      item solo puede ser preparado por Chef, Barista o
+                      Parrillero, no varios.
                     </p>
                   </div>
                 </div>
@@ -1832,6 +1873,7 @@
                   let icon = "📦";
                   if (item.requiresPreparation) icon = "👨‍🍳";
                   else if (item.requiresBaristaPreparation) icon = "☕";
+                  else if (item.requiresParrilleroPreparation) icon = "🔥";
                   else if (item.isCombo) icon = "🍱";
                   else if (item.requiresIngredients === false) icon = "🍽️";
 
@@ -2882,10 +2924,13 @@
 
       // ========== Inicialización ==========
       window.addEventListener("DOMContentLoaded", function () {
-        // Mutual exclusion logic for Chef vs Barista vs Combo (only one can be selected)
+        // Mutual exclusion logic for Chef vs Barista vs Parrillero vs Combo (only one can be selected)
         const chefCheckbox = document.getElementById("requiresPreparation");
         const baristaCheckbox = document.getElementById(
           "requiresBaristaPreparation",
+        );
+        const parrilleroCheckbox = document.getElementById(
+          "requiresParrilleroPreparation",
         );
         const comboCheckbox = document.getElementById("isCombo");
 
@@ -2893,6 +2938,7 @@
           if (
             !chefCheckbox ||
             !baristaCheckbox ||
+            !parrilleroCheckbox ||
             !comboCheckbox
           )
             return;
@@ -2900,6 +2946,7 @@
           const allBoxes = [
             chefCheckbox,
             baristaCheckbox,
+            parrilleroCheckbox,
             comboCheckbox,
           ];
           const anyChecked = allBoxes.some((cb) => cb.checked);
@@ -2926,11 +2973,13 @@
         if (
           chefCheckbox &&
           baristaCheckbox &&
+          parrilleroCheckbox &&
           comboCheckbox
         ) {
           chefCheckbox.addEventListener("change", function () {
             if (this.checked) {
               baristaCheckbox.checked = false;
+              parrilleroCheckbox.checked = false;
               comboCheckbox.checked = false;
               toggleComboMode();
             }
@@ -2940,6 +2989,17 @@
           baristaCheckbox.addEventListener("change", function () {
             if (this.checked) {
               chefCheckbox.checked = false;
+              parrilleroCheckbox.checked = false;
+              comboCheckbox.checked = false;
+              toggleComboMode();
+            }
+            updateExclusionState();
+          });
+
+          parrilleroCheckbox.addEventListener("change", function () {
+            if (this.checked) {
+              chefCheckbox.checked = false;
+              baristaCheckbox.checked = false;
               comboCheckbox.checked = false;
               toggleComboMode();
             }
@@ -2950,6 +3010,7 @@
             if (this.checked) {
               chefCheckbox.checked = false;
               baristaCheckbox.checked = false;
+              parrilleroCheckbox.checked = false;
               // Combos no usan receta: forzar requiresIngredients = false
               const reqCb = document.getElementById("requiresIngredients");
               if (reqCb && reqCb.checked) {
@@ -3072,6 +3133,8 @@
         if (chefCb) chefCb.disabled = false;
         const baristaCb = document.getElementById("requiresBaristaPreparation");
         if (baristaCb) baristaCb.disabled = false;
+        const parrilleroCb = document.getElementById("requiresParrilleroPreparation");
+        if (parrilleroCb) parrilleroCb.disabled = false;
         const comboCbSubmit = document.getElementById("isCombo");
         if (comboCbSubmit) comboCbSubmit.disabled = false;
 

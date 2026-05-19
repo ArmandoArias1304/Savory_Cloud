@@ -202,16 +202,20 @@
         <h1
           class="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 dark:text-white mb-3"
         >
-          <span th:if="${isBarista}">☕ Panel de Control de Barra</span>
-          <span th:unless="${isBarista}">👨‍🍳 Panel de Control de Cocina</span>
+          <span th:if="${currentRole == 'barista'}">☕ Panel de Control de Barra</span>
+          <span th:if="${currentRole == 'parrillero'}">🔥 Panel de Control de Parrilla</span>
+          <span th:if="${currentRole == 'chef'}">👨‍🍳 Panel de Control de Cocina</span>
         </h1>
         <p
           class="text-base sm:text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto"
         >
-          <span th:if="${isBarista}"
+          <span th:if="${currentRole == 'barista'}"
             >Gestiona las bebidas y preparaciones de la barra</span
           >
-          <span th:unless="${isBarista}"
+          <span th:if="${currentRole == 'parrillero'}"
+            >Gestiona los cortes y preparaciones de la parrilla</span
+          >
+          <span th:if="${currentRole == 'chef'}"
             >Gestiona los pedidos de la cocina y prepara deliciosos
             platillos</span
           >
@@ -344,7 +348,7 @@
               Ranking
             </h3>
             <p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400"
-              th:text="${isBarista ? 'Top baristas' : 'Top chefs'}">
+              th:text="${currentRole == 'barista' ? 'Top baristas' : (currentRole == 'parrillero' ? 'Top parrilleros' : 'Top chefs')}">
               Top chef
             </p>
           </div>
@@ -473,7 +477,7 @@
     <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
     <script th:inline="javascript">
       /*<![CDATA[*/
-      const currentRole = /*[[${isBarista ? 'barista' : 'chef'}]]*/ "chef";
+      const currentRole = /*[[${currentRole}]]*/ "chef";
       const companyId = /*[[${systemConfig.company != null ? systemConfig.company.idCompany : 0}]]*/ 0;
       /*]]>*/
 

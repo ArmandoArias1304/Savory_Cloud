@@ -103,6 +103,16 @@ public class ItemMenu implements Serializable {
     private Boolean requiresBaristaPreparation = false;
 
     /**
+     * Indicates if this item requires preparation by the parrillero (grill cook)
+     * TRUE: Items like grilled steaks, BBQ, asados (parrillero must prepare)
+     * FALSE: Items that don't require parrillero preparation
+     * Mutually exclusive with requiresPreparation (chef) and requiresBaristaPreparation.
+     */
+    @Column(name = "requires_parrillero_preparation", nullable = false)
+    @Builder.Default
+    private Boolean requiresParrilleroPreparation = false;
+
+    /**
      * Indicates if this item requires a recipe (ingredient list) for stock management.
      * TRUE: Item has at least one ingredient; stock is discounted on order accept.
      * FALSE: Item has no ingredients (e.g., buffet plates, bread, items with no stock tracking).

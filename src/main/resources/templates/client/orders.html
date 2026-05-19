@@ -500,7 +500,7 @@
                     <!-- Cancelar Pedido 
                          Rules for customer cancellation:
                          - Order must not be in final states (CANCELLED, PAID, DELIVERED, ON_THE_WAY)
-                         - All items with preparation (Chef/Barista) must be PENDING
+                         - All items with preparation (Chef/Barista/Parrillero) must be PENDING
                          - All items without preparation must be READY
                     -->
                     <th:block
@@ -511,8 +511,8 @@
                                   order.status.name() != 'ON_THE_WAY'},
                       allItemsValid=${order.orderDetails.?[
                         itemStatus.name() != 'TO_ACCEPT' and (
-                          ((itemMenu.requiresPreparation == true or itemMenu.requiresBaristaPreparation == true) and itemStatus.name() != 'PENDING') or
-                          ((itemMenu.requiresPreparation == false and itemMenu.requiresBaristaPreparation == false) and itemStatus.name() != 'READY')
+                          ((itemMenu.requiresPreparation == true or itemMenu.requiresBaristaPreparation == true or itemMenu.requiresParrilleroPreparation == true) and itemStatus.name() != 'PENDING') or
+                          ((itemMenu.requiresPreparation == false and itemMenu.requiresBaristaPreparation == false and itemMenu.requiresParrilleroPreparation == false) and itemStatus.name() != 'READY')
                         )
                       ].empty}
                     "

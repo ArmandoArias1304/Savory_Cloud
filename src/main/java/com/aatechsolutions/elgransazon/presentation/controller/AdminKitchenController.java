@@ -87,6 +87,13 @@ public class AdminKitchenController {
             .map(o -> o.getPreparedByBarista().getIdEmpleado())
             .distinct()
             .count();
+
+        // Count active parrilleros (parrilleros with orders in preparation)
+        long activeParrillerosCount = allActiveOrders.stream()
+            .filter(o -> o.getPreparedByParrillero() != null)
+            .map(o -> o.getPreparedByParrillero().getIdEmpleado())
+            .distinct()
+            .count();
         
         // Apply filter for pagination
         List<Order> displayOrders = switch (filter) {
@@ -113,13 +120,14 @@ public class AdminKitchenController {
         model.addAttribute("inPreparationCount", inPreparationOrders.size());
         model.addAttribute("activeChefsCount", activeChefsCount);
         model.addAttribute("activeBaristasCount", activeBaristasCount);
+        model.addAttribute("activeParrillerosCount", activeParrillerosCount);
         model.addAttribute("currentPage", currentPage);
         model.addAttribute("totalPages", totalPages);
         model.addAttribute("totalOrders", totalOrders);
         model.addAttribute("pageSize", pageSize);
         
         log.info("Kitchen dashboard: {} pending, {} in preparation, {} active chefs, {} active baristas, page {}/{}",
-                 pendingOrders.size(), inPreparationOrders.size(), activeChefsCount, activeBaristasCount, currentPage + 1, totalPages);
+                 pendingOrders.size(), inPreparationOrders.size(), activeChefsCount, activeBaristasCount, activeParrillerosCount, currentPage + 1, totalPages);
         
         return "admin/kitchen/index";
     }
@@ -135,11 +143,12 @@ public class AdminKitchenController {
             @RequestParam(required = false) OrderStatus status,
             @RequestParam(required = false) Long chefId,
             @RequestParam(required = false) Long baristaId,
+            @RequestParam(required = false) Long parrilleroId,
             @RequestParam(defaultValue = "0") int page,
             Model model) {
         
-        log.info("Admin accessing all orders view - filters: startDate={}, endDate={}, status={}, chefId={}, baristaId={}, page={}",
-                 startDate, endDate, status, chefId, baristaId, page);
+        log.info("Admin accessing all orders view - filters: startDate={}, endDate={}, status={}, chefId={}, baristaId={}, parrilleroId={}, page={}",
+                 startDate, endDate, status, chefId, baristaId, parrilleroId, page);
         
         // Get system configuration
         SystemConfiguration config = configurationService.getConfiguration();
@@ -165,6 +174,9 @@ public class AdminKitchenController {
             .filter(order -> baristaId == null || 
                            (order.getPreparedByBarista() != null && 
                             order.getPreparedByBarista().getIdEmpleado().equals(baristaId)))
+            .filter(order -> parrilleroId == null || 
+                           (order.getPreparedByParrillero() != null && 
+                            order.getPreparedByParrillero().getIdEmpleado().equals(parrilleroId)))
             .sorted((o1, o2) -> o2.getCreatedAt().compareTo(o1.getCreatedAt()))
             .toList();
         
@@ -202,6 +214,18 @@ public class AdminKitchenController {
                 return name1.compareTo(name2);
             })
             .toList();
+
+        // Get all parrilleros for filter dropdown
+        List<Employee> allParrilleros = employeeService.findAll().stream()
+            .filter(emp -> emp.hasRole("ROLE_PARRILLERO"))
+            .sorted((e1, e2) -> {
+                String name1 = (e1.getNombre() != null ? e1.getNombre() : "") + " " + 
+                              (e1.getApellido() != null ? e1.getApellido() : "");
+                String name2 = (e2.getNombre() != null ? e2.getNombre() : "") + " " + 
+                              (e2.getApellido() != null ? e2.getApellido() : "");
+                return name1.compareTo(name2);
+            })
+            .toList();
         
         // Statistics by status
         Map<OrderStatus, Long> statusCounts = filteredOrders.stream()
@@ -211,12 +235,14 @@ public class AdminKitchenController {
         model.addAttribute("orders", paginatedOrders);
         model.addAttribute("allChefs", allChefs);
         model.addAttribute("allBaristas", allBaristas);
+        model.addAttribute("allParrilleros", allParrilleros);
         model.addAttribute("statusCounts", statusCounts);
         model.addAttribute("startDate", startDate);
         model.addAttribute("endDate", endDate);
         model.addAttribute("selectedStatus", status);
         model.addAttribute("selectedChefId", chefId);
         model.addAttribute("selectedBaristaId", baristaId);
+        model.addAttribute("selectedParrilleroId", parrilleroId);
         model.addAttribute("currentPage", currentPage);
         model.addAttribute("totalPages", totalPages);
         model.addAttribute("totalOrders", totalOrders);

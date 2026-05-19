@@ -236,6 +236,8 @@ public class CustomAuthenticationSuccessHandler implements AuthenticationSuccess
                 return "/chef/dashboard";
             } else if (Role.BARISTA.equals(role)) {
                 return "/barista/dashboard";
+            } else if (Role.PARRILLERO.equals(role)) {
+                return "/parrillero/dashboard";
             } else if (Role.WAITER.equals(role)) {
                 return "/waiter/dashboard";
             } else if (Role.CASHIER.equals(role)) {

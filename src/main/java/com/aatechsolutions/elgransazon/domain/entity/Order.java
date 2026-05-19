@@ -115,6 +115,11 @@ public class Order implements Serializable {
     @JoinColumn(name = "id_prepared_by_barista", nullable = true)
     private Employee preparedByBarista;
 
+    // Employee who prepared grilled items (parrillero)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_prepared_by_parrillero", nullable = true)
+    private Employee preparedByParrillero;
+
     // Employee who collected payment (cashier or waiter, depending on payment method)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_paid_by", nullable = true)

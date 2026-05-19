@@ -279,6 +279,7 @@ public class ItemMenuServiceImpl implements ItemMenuService {
         existing.setActive(item.getActive());
         existing.setRequiresPreparation(item.getRequiresPreparation());
         existing.setRequiresBaristaPreparation(item.getRequiresBaristaPreparation());
+        existing.setRequiresParrilleroPreparation(item.getRequiresParrilleroPreparation());
         existing.setRequiresIngredients(item.getRequiresIngredients());
         existing.setIsCombo(item.getIsCombo());
         existing.setDineInOnly(item.getDineInOnly());

@@ -305,9 +305,12 @@ public class CashierController {
                 && Boolean.TRUE.equals(listCfg.getStaffCanManageChefItems());
         boolean staffBaristaEnabled = staffOrderStatusEnabled
                 && Boolean.TRUE.equals(listCfg.getStaffCanManageBaristaItems());
+        boolean staffParrilleroEnabled = staffOrderStatusEnabled
+                && Boolean.TRUE.equals(listCfg.getStaffCanManageParrilleroItems());
         model.addAttribute("staffOrderStatusEnabled", staffOrderStatusEnabled);
         model.addAttribute("staffChefEnabled", staffChefEnabled);
         model.addAttribute("staffBaristaEnabled", staffBaristaEnabled);
+        model.addAttribute("staffParrilleroEnabled", staffParrilleroEnabled);
 
         return "cashier/orders/list";
     }
@@ -1414,13 +1417,8 @@ public class CashierController {
                         .quantity(quantity)
                         .unitPrice(item.getPrice())
                         .comments(comment);
-                
-                // Set item status based on whether it requires preparation
-                if (Boolean.TRUE.equals(item.getRequiresPreparation())) {
-                    detailBuilder.itemStatus(OrderStatus.PENDING);
-                } else {
-                    detailBuilder.itemStatus(OrderStatus.READY);
-                }
+                // NOTE: itemStatus is set authoritatively by OrderServiceImpl.createInternal
+                // based on the item's preparation flags (chef/barista/parrillero).
                 
                 // BACKEND VALIDATION: Validate and recalculate promotion price
                 if (promotionIdStr != null && !promotionIdStr.trim().isEmpty()) {
@@ -1575,17 +1573,18 @@ public class CashierController {
                 continue;
             }
             
-            // READY -> check if requires preparation (Chef or Barista)
+            // READY -> check if requires preparation (Chef, Barista or Parrillero)
             if (itemStatus == OrderStatus.READY) {
                 if (detail.getItemMenu() != null) {
                     boolean requiresChef = Boolean.TRUE.equals(detail.getItemMenu().getRequiresPreparation());
                     boolean requiresBarista = Boolean.TRUE.equals(detail.getItemMenu().getRequiresBaristaPreparation());
+                    boolean requiresParrillero = Boolean.TRUE.equals(detail.getItemMenu().getRequiresParrilleroPreparation());
                     
                     // Only count as automatic if NO ONE needed to prepare it
-                    if (!requiresChef && !requiresBarista) {
+                    if (!requiresChef && !requiresBarista && !requiresParrillero) {
                         automaticItems++;
                     } else {
-                        // Chef or Barista prepared it, used ingredients
+                        // Chef, Barista or Parrillero prepared it, used ingredients
                         manualItems++;
                     }
                 } else {
@@ -1625,17 +1624,18 @@ public class CashierController {
             return "✅ Stock devuelto automáticamente (item nunca fue preparado)";
         }
         
-        // READY -> check if requires preparation (Chef or Barista)
+        // READY -> check if requires preparation (Chef, Barista or Parrillero)
         if (itemStatus == OrderStatus.READY) {
             if (detail.getItemMenu() != null) {
                 boolean requiresChef = Boolean.TRUE.equals(detail.getItemMenu().getRequiresPreparation());
                 boolean requiresBarista = Boolean.TRUE.equals(detail.getItemMenu().getRequiresBaristaPreparation());
+                boolean requiresParrillero = Boolean.TRUE.equals(detail.getItemMenu().getRequiresParrilleroPreparation());
                 
                 // Only automatic if NO ONE needed to prepare it
-                if (!requiresChef && !requiresBarista) {
+                if (!requiresChef && !requiresBarista && !requiresParrillero) {
                     return "✅ Stock devuelto automáticamente (item no requiere preparación)";
                 } else {
-                    return "⚠️ Stock debe ser devuelto manualmente (chef/barista ya preparó el item)";
+                    return "⚠️ Stock debe ser devuelto manualmente (chef/barista/parrillero ya preparó el item)";
                 }
             } else {
                 return "⚠️ Stock debe ser devuelto manualmente (item ya preparado)";
