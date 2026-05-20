@@ -161,6 +161,22 @@ public class OrderDetail implements Serializable {
     @Column(name = "combo_group_id", length = 50)
     private String comboGroupId;
 
+    /**
+     * Snapshot of {@code itemMenu.isCombo} at the time this OrderDetail was persisted.
+     * Frozen on @PrePersist so that the parent/child classification of historical
+     * order rows is NOT affected if the ItemMenu later toggles its {@code isCombo} flag.
+     *
+     * - TRUE  -> this row was inserted as a combo parent.
+     * - FALSE -> this row was inserted as a non-combo (regular item or combo child).
+     * - NULL  -> legacy row created before this field existed; readers fall back to
+     *            the live {@code itemMenu.isCombo} value (previous behavior).
+     *
+     * Should only be meaningful when {@link #comboGroupId} is set; outside a combo
+     * group both {@link #isComboParent()} and {@link #isComboChild()} return false.
+     */
+    @Column(name = "is_combo_parent_snapshot")
+    private Boolean isComboParentSnapshot;
+
     // ========== Timestamps ==========
 
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -183,6 +199,11 @@ public class OrderDetail implements Serializable {
         }
         if (this.addedAt == null) {
             this.addedAt = LocalDateTime.now();
+        }
+        // Freeze the combo-parent role at insertion time so that later changes to
+        // ItemMenu.isCombo do NOT reclassify historical order rows.
+        if (this.isComboParentSnapshot == null && this.itemMenu != null) {
+            this.isComboParentSnapshot = Boolean.TRUE.equals(this.itemMenu.getIsCombo());
         }
     }
 
@@ -325,17 +346,35 @@ public class OrderDetail implements Serializable {
     }
 
     /**
-     * Check if this order detail is a combo child (part of combo, itemMenu is not a combo type)
+     * Check if this order detail is a combo child (part of a combo group and NOT the parent row).
+     * Uses the frozen {@link #isComboParentSnapshot} so that later changes to
+     * {@code itemMenu.isCombo} do not reclassify this row. For legacy rows where
+     * the snapshot is {@code null}, falls back to the live {@code itemMenu.isCombo}
+     * value (previous behavior) to keep backward compatibility.
      */
     public boolean isComboChild() {
-        return isComboMember() && itemMenu != null && !Boolean.TRUE.equals(itemMenu.getIsCombo());
+        if (!isComboMember()) return false;
+        if (isComboParentSnapshot != null) {
+            return !Boolean.TRUE.equals(isComboParentSnapshot);
+        }
+        // Legacy fallback (rows created before the snapshot column existed)
+        return itemMenu != null && !Boolean.TRUE.equals(itemMenu.getIsCombo());
     }
 
     /**
-     * Check if this order detail is a combo parent (part of combo, itemMenu.isCombo = true)
+     * Check if this order detail is a combo parent (part of a combo group and the parent row).
+     * Uses the frozen {@link #isComboParentSnapshot} so that later changes to
+     * {@code itemMenu.isCombo} do not reclassify this row. For legacy rows where
+     * the snapshot is {@code null}, falls back to the live {@code itemMenu.isCombo}
+     * value (previous behavior) to keep backward compatibility.
      */
     public boolean isComboParent() {
-        return isComboMember() && itemMenu != null && Boolean.TRUE.equals(itemMenu.getIsCombo());
+        if (!isComboMember()) return false;
+        if (isComboParentSnapshot != null) {
+            return Boolean.TRUE.equals(isComboParentSnapshot);
+        }
+        // Legacy fallback (rows created before the snapshot column existed)
+        return itemMenu != null && Boolean.TRUE.equals(itemMenu.getIsCombo());
     }
 
     /**

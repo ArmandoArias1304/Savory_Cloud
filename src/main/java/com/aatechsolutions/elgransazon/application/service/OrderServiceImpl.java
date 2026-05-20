@@ -2547,7 +2547,9 @@ public class OrderServiceImpl implements OrderService {
                 .orElseThrow(() -> new IllegalArgumentException("Item no encontrado en el pedido"));
 
         // ===== COMBO PROTECTION: Prevent deleting individual combo children =====
-        if (itemToDelete.isComboChild() && !Boolean.TRUE.equals(itemToDelete.getItemMenu().getIsCombo())) {
+        // Uses the frozen snapshot in OrderDetail (isComboChild / isComboParent) so that
+        // historical rows are NOT reclassified if the ItemMenu later toggles its isCombo flag.
+        if (itemToDelete.isComboChild()) {
             throw new IllegalStateException(
                 "No se puede eliminar un item individual del combo. " +
                 "Para eliminar este item, debe eliminar el combo completo."
@@ -2556,7 +2558,7 @@ public class OrderServiceImpl implements OrderService {
 
         // ===== COMBO PARENT: Collect all combo children for group deletion =====
         List<OrderDetail> comboChildrenToDelete = new ArrayList<>();
-        if (itemToDelete.getComboGroupId() != null && Boolean.TRUE.equals(itemToDelete.getItemMenu().getIsCombo())) {
+        if (itemToDelete.isComboParent()) {
             String comboGroupId = itemToDelete.getComboGroupId();
             comboChildrenToDelete = order.getOrderDetails().stream()
                 .filter(d -> comboGroupId.equals(d.getComboGroupId()) && !d.getIdOrderDetail().equals(itemDetailId))

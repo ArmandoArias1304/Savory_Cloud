@@ -109,6 +109,7 @@ public class SystemConfigurationController {
             @RequestParam(value = "enableOrderStatusPermission", required = false) Boolean enableOrderStatusPermission,
             @RequestParam(value = "staffCanManageChefItems", required = false) Boolean staffCanManageChefItems,
             @RequestParam(value = "staffCanManageBaristaItems", required = false) Boolean staffCanManageBaristaItems,
+            @RequestParam(value = "staffCanManageParrilleroItems", required = false) Boolean staffCanManageParrilleroItems,
             RedirectAttributes redirectAttributes,
             Model model) {
 
@@ -163,14 +164,16 @@ public class SystemConfigurationController {
             boolean parentEnabled = Boolean.TRUE.equals(enableOrderStatusPermission);
             boolean chefChild = Boolean.TRUE.equals(staffCanManageChefItems);
             boolean baristaChild = Boolean.TRUE.equals(staffCanManageBaristaItems);
-            if (parentEnabled && !chefChild && !baristaChild) {
+            boolean parrilleroChild = Boolean.TRUE.equals(staffCanManageParrilleroItems);
+            if (parentEnabled && !chefChild && !baristaChild && !parrilleroChild) {
                 throw new IllegalArgumentException(
-                    "Si activas 'Habilitar permiso de estado de orden', debes habilitar al menos uno de los dos sub-permisos (chef o barista).");
+                    "Si activas 'Habilitar permiso de estado de orden', debes habilitar al menos uno de los sub-permisos (chef, barista o parrillero).");
             }
             configuration.setEnableOrderStatusPermission(parentEnabled);
             // Persist child values as received; they are only evaluated by business logic when parent is TRUE.
             configuration.setStaffCanManageChefItems(chefChild);
             configuration.setStaffCanManageBaristaItems(baristaChild);
+            configuration.setStaffCanManageParrilleroItems(parrilleroChild);
 
             configurationService.updateConfiguration(configuration);
             

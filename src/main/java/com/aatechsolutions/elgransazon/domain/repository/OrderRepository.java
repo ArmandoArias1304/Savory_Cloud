@@ -276,7 +276,7 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     /**
      * Find orders by date range and company
      */
-    @Query("SELECT o FROM Order o WHERE o.company = :company AND o.createdAt BETWEEN :startDate AND :endDate ORDER BY o.createdAt DESC")
+    @Query("SELECT DISTINCT o FROM Order o LEFT JOIN FETCH o.orderDetails WHERE o.company = :company AND o.createdAt BETWEEN :startDate AND :endDate ORDER BY o.createdAt DESC")
     List<Order> findByDateRangeAndCompany(@Param("company") Company company,
                                            @Param("startDate") LocalDateTime startDate, 
                                            @Param("endDate") LocalDateTime endDate);
@@ -395,7 +395,7 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     /**
      * Find all orders by company ordered by created date desc
      */
-    @Query("SELECT o FROM Order o WHERE o.company = :company ORDER BY o.createdAt DESC")
+    @Query("SELECT DISTINCT o FROM Order o LEFT JOIN FETCH o.orderDetails WHERE o.company = :company ORDER BY o.createdAt DESC")
     List<Order> findAllByCompanyOrderByCreatedAtDesc(@Param("company") Company company);
 
     /**
