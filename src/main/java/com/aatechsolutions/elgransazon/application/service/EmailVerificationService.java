@@ -40,8 +40,13 @@ public class EmailVerificationService {
      * @param customer Cliente destino (debe tener company asignada)
      * @return true si se generó y envió un NUEVO token, false si ya existía uno
      *         vigente y no se reenvió.
+     *
+     * IMPORTANT: This method is transactional WITHOUT noRollbackFor, so if the
+     * email provider fails (e.g. SendGrid/Brevo throws), the token insert is rolled
+     * back. This guarantees we never persist a "valid" token whose email was not
+     * actually delivered (which would block resends for 15 minutes).
      */
-    @Transactional(noRollbackFor = Exception.class)
+    @Transactional
     public boolean createOrReuseToken(Customer customer) {
         log.info("Creating or reusing verification token for customer: {} in company: {}", 
             customer.getEmail(), customer.getCompany().getIdCompany());

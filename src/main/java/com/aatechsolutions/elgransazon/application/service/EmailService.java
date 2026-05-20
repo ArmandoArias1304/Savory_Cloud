@@ -1,28 +1,29 @@
 package com.aatechsolutions.elgransazon.application.service;
 
-import java.io.IOException;
-
 import com.aatechsolutions.elgransazon.domain.entity.Company;
 import com.aatechsolutions.elgransazon.infrastructure.context.CompanyContext;
+import com.aatechsolutions.elgransazon.infrastructure.email.EmailSender;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import com.sendgrid.*;
-import com.sendgrid.helpers.mail.Mail;
-import com.sendgrid.helpers.mail.objects.Content;
-import com.sendgrid.helpers.mail.objects.Email;
-
 /**
- * Email service using SendGrid
- * MULTI-TENANT: Uses CompanyContext to get sender email/name from the current company
+ * Email service
+ * MULTI-TENANT: Uses CompanyContext to get sender email/name from the current company.
+ *
+ * The actual transport is delegated to an {@link EmailSender} implementation
+ * (SendGrid, Brevo, ...) selected via the {@code app.email.provider} property,
+ * so swapping providers requires no changes here.
  */
 @Service
 @Slf4j
 public class EmailService {
 
-    @Value("${spring.email.password}")
-    private String sendGridApiKey;
+    private final EmailSender emailSender;
+
+    public EmailService(EmailSender emailSender) {
+        this.emailSender = emailSender;
+    }
 
     // Fallback values when no company context (e.g., PROGRAMMER operations)
     @Value("${mail.from.email}")
@@ -139,19 +140,15 @@ public class EmailService {
      */
     public void sendPasswordResetEmail(String toEmail, String token) {
         log.info("Sending password reset email to: {}", toEmail);
-        
+
         // Build reset URL dynamically from environment variables
         String resetUrl = getBaseUrl() + "/client/reset-password?token=" + token;
         String companyName = getSenderName();
 
-        Email from = new Email(getSenderEmail(), companyName);
-        Email to = new Email(toEmail);
         String subject = "Recupera tu acceso - " + companyName;
-        
         String htmlContent = buildPasswordResetEmailHtml(resetUrl, companyName);
-        Content content = new Content("text/html", htmlContent);
 
-        sendEmail(from, to, subject, content);
+        emailSender.send(getSenderEmail(), companyName, toEmail, subject, htmlContent);
     }
 
     /**
@@ -159,53 +156,15 @@ public class EmailService {
      */
     public void sendEmailVerification(String toEmail, String token) {
         log.info("Sending email verification to: {}", toEmail);
-        
+
         // Build verification URL dynamically from environment variables
         String verificationUrl = getBaseUrl() + "/client/verify-email?token=" + token;
         String companyName = getSenderName();
 
-        Email from = new Email(getSenderEmail(), companyName);
-        Email to = new Email(toEmail);
         String subject = "Confirma tu correo - " + companyName;
-        
         String htmlContent = buildEmailVerificationHtml(verificationUrl, companyName);
-        Content content = new Content("text/html", htmlContent);
 
-        sendEmail(from, to, subject, content);
-    }
-
-    /**
-     * Send email using SendGrid
-     */
-    private void sendEmail(Email from, Email to, String subject, Content content) {
-        Mail mail = new Mail(from, subject, to, content);
-        SendGrid sg = new SendGrid(sendGridApiKey);
-        Request request = new Request();
-
-        try {
-            request.setMethod(Method.POST);
-            request.setEndpoint("mail/send");
-            request.setBody(mail.build());
-            Response response = sg.api(request);
-
-            log.info("SendGrid Response Status: {}", response.getStatusCode());
-
-            if (response.getStatusCode() >= 400) {
-                log.error("Error sending email. Status: {}, Body: {}", 
-                    response.getStatusCode(), response.getBody());
-                if (response.getStatusCode() == 403) {
-                    log.error("SendGrid 403: The 'from' address '{}' is not a verified Sender Identity. " +
-                              "Verify it at SendGrid > Settings > Sender Authentication.", from.getEmail());
-                }
-                throw new RuntimeException("Error al enviar email. Status: " + response.getStatusCode());
-            }
-            
-            log.info("Email sent successfully to: {}", to.getEmail());
-            
-        } catch (IOException e) {
-            log.error("Error sending email via SendGrid", e);
-            throw new RuntimeException("Error al enviar email a través de SendGrid", e);
-        }
+        emailSender.send(getSenderEmail(), companyName, toEmail, subject, htmlContent);
     }
 
     /**
