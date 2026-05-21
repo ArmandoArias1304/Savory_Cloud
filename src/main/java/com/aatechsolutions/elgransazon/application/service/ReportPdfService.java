@@ -23,7 +23,7 @@ import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+//import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -199,19 +199,31 @@ public class ReportPdfService {
 
         // Payment Methods
         addSectionTitle(document, boldFont, "Métodos de Pago");
-        Table paymentTable = new Table(new float[]{3, 2, 2});
+        Table paymentTable = new Table(new float[]{3, 2, 2, 2});
         paymentTable.setWidth(UnitValue.createPercentValue(100));
-        addTableHeader(paymentTable, boldFont, "Método", "Órdenes", "% Part.");
-        
+        addTableHeader(paymentTable, boldFont, "Método", "Órdenes", "Total", "% Part.");
+
+        // Calculate total sales per payment method
+        Map<String, BigDecimal> totalByPaymentMethod = paidOrders.stream()
+            .filter(o -> o.getPaymentMethod() != null)
+            .collect(Collectors.groupingBy(
+                o -> o.getPaymentMethod().getDisplayName(),
+                Collectors.reducing(BigDecimal.ZERO,
+                    o -> o.getTotal() != null ? o.getTotal() : BigDecimal.ZERO,
+                    BigDecimal::add)
+            ));
+
         ordersByPaymentMethod.entrySet().stream()
             .sorted(Map.Entry.<String, Long>comparingByValue().reversed())
             .forEach(entry -> {
                 double percentage = totalOrders > 0 
                     ? (entry.getValue() * 100.0 / totalOrders) 
                     : 0.0;
+                BigDecimal methodTotal = totalByPaymentMethod.getOrDefault(entry.getKey(), BigDecimal.ZERO);
                 addTableRow(paymentTable, regularFont,
                     entry.getKey(),
                     String.valueOf(entry.getValue()),
+                    String.format("$%,.2f", methodTotal),
                     String.format("%.2f%%", percentage)
                 );
             });
@@ -247,12 +259,14 @@ public class ReportPdfService {
             
             document.add(webSummaryTable);
             document.add(new Paragraph("\n"));
-            
-            // Web orders detail table
+
+            // Web orders detail table — commented out to avoid saturating the PDF with too many rows.
+            // Uncomment the block below to re-enable the order-by-order breakdown.
+            /*
             Table webOrdersTable = new Table(new float[]{2, 3, 2, 2, 2});
             webOrdersTable.setWidth(UnitValue.createPercentValue(100));
             addTableHeader(webOrdersTable, boldFont, "Orden", "Cliente", "Tipo", "Total", "Pago");
-            
+
             webOrders.stream()
                 .sorted((o1, o2) -> {
                     LocalDateTime date1 = o1.getPaidAt() != null ? o1.getPaidAt() : (o1.getUpdatedAt() != null ? o1.getUpdatedAt() : o1.getCreatedAt());
@@ -260,16 +274,16 @@ public class ReportPdfService {
                     return date2.compareTo(date1); // Most recent first
                 })
                 .forEach(order -> {
-                    String customerName = order.getCustomer() != null 
+                    String customerName = order.getCustomer() != null
                         ? order.getCustomer().getFullName()
                         : "N/A";
-                    String orderType = order.getOrderType() != null 
+                    String orderType = order.getOrderType() != null
                         ? order.getOrderType().getDisplayName()
                         : "N/A";
                     String paymentMethod = order.getPaymentMethod() != null
                         ? order.getPaymentMethod().getDisplayName()
                         : "N/A";
-                    
+
                     addTableRow(webOrdersTable, regularFont,
                         order.getOrderNumber(),
                         customerName,
@@ -278,9 +292,10 @@ public class ReportPdfService {
                         paymentMethod
                     );
                 });
-            
+
             document.add(webOrdersTable);
             document.add(new Paragraph("\n"));
+            */
         }
 
         // Footer
@@ -626,21 +641,18 @@ public class ReportPdfService {
             int rank = 1;
             
             for (Employee emp : deliveryPersons) {
-                // Count DELIVERY orders delivered by this person
+                // Count DELIVERY orders physically delivered by this person
                 long deliveries = paidOrders.stream()
                     .filter(o -> o.getOrderType() == OrderType.DELIVERY)
                     .filter(o -> o.getDeliveredBy() != null && o.getDeliveredBy().getIdEmpleado().equals(emp.getIdEmpleado()))
                     .count();
-                
-                BigDecimal totalDelivered = paidOrders.stream()
-                    .filter(o -> o.getOrderType() == OrderType.DELIVERY)
-                    .filter(o -> o.getDeliveredBy() != null && o.getDeliveredBy().getIdEmpleado().equals(emp.getIdEmpleado()))
-                    .map(o -> o.getTotal() != null ? o.getTotal() : BigDecimal.ZERO)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-                
+
+                // Total Cobrado: sum of orders where this person collected payment (paidBy), same as list.html
+                BigDecimal totalDelivered = getEmployeeSales(salesByEmployee, emp.getFullName());
+
+                // Propinas: only from orders this person actually collected payment for (paidBy)
                 BigDecimal tips = paidOrders.stream()
-                    .filter(o -> o.getOrderType() == OrderType.DELIVERY)
-                    .filter(o -> o.getDeliveredBy() != null && o.getDeliveredBy().getIdEmpleado().equals(emp.getIdEmpleado()))
+                    .filter(o -> o.getPaidBy() != null && o.getPaidBy().getIdEmpleado().equals(emp.getIdEmpleado()))
                     .map(o -> o.getTip() != null ? o.getTip() : BigDecimal.ZERO)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
                 

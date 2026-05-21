@@ -282,8 +282,11 @@ public class TicketEscPosService {
         out.write(FONT_A);
 
         // ── Fiscal disclaimer / Autofactura billing info ──
+        // A zero-total order cannot be invoiced (SAT does not allow CFDI for $0),
+        // so we only show the QR / autofactura link when there is an actual amount to invoice.
+        boolean canInvoice = order.getTotal() != null && order.getTotal().compareTo(BigDecimal.ZERO) > 0;
         out.write(FONT_B);
-        if (order.getAutofacturaKey() != null && !order.getAutofacturaKey().isBlank()) {
+        if (canInvoice && order.getAutofacturaKey() != null && !order.getAutofacturaKey().isBlank()) {
             // Order has an autofactura key — show QR code
             printSeparator(out);
             printLine(out, "Facture este ticket");

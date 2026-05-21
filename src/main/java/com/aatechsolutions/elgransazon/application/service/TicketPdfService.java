@@ -508,7 +508,10 @@ public class TicketPdfService {
         document.add(visitAgain);
 
         // Fiscal disclaimer / Autofactura billing info
-        if (order.getAutofacturaKey() != null && !order.getAutofacturaKey().isBlank()) {
+        // A zero-total order cannot be invoiced (SAT does not allow CFDI for $0),
+        // so we only show the QR / autofactura link when there is an actual amount to invoice.
+        boolean canInvoice = order.getTotal() != null && order.getTotal().compareTo(BigDecimal.ZERO) > 0;
+        if (canInvoice && order.getAutofacturaKey() != null && !order.getAutofacturaKey().isBlank()) {
             // Order has an autofactura key — show billing section with QR code
             document.add(new Paragraph("━━━━━━━━━━━━━━━━━━━━━━━━━━")
                     .setTextAlignment(TextAlignment.CENTER)

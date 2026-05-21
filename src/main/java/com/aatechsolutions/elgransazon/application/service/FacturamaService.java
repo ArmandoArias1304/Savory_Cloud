@@ -222,8 +222,14 @@ public class FacturamaService {
                 // FIXED_AMOUNT_DISCOUNT, BUY_X_PAY_Y, combo, etc.).
                 BigDecimal lineSubtotal = detail.getSubtotal();
 
-                // Add the item only if subtotal > 0 (skip combo sub-items at $0)
-                if (lineSubtotal != null && lineSubtotal.compareTo(BigDecimal.ZERO) > 0) {
+                // Add the item only if it is not a combo child AND its subtotal > 0.
+                // Combo children always carry $0 (price lives on the parent), so the
+                // subtotal check alone already excludes them. The explicit isComboChild()
+                // guard is defense-in-depth: it prevents a future bug where a child is
+                // accidentally given a price > 0, which would double-count the combo.
+                if (!detail.isComboChild()
+                        && lineSubtotal != null
+                        && lineSubtotal.compareTo(BigDecimal.ZERO) > 0) {
                     candidateLines.add(new CfdiLine(detail.getDisplayName(),
                             detail.getQuantity(), lineSubtotal, PROD_CODE_RESTAURANT));
                 }
