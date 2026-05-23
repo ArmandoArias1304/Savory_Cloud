@@ -1,6 +1,7 @@
 package com.aatechsolutions.elgransazon.presentation.controller;
 
 import com.aatechsolutions.elgransazon.application.service.CustomerService;
+import com.aatechsolutions.elgransazon.application.service.DateTimeService;
 import com.aatechsolutions.elgransazon.application.service.LicenseService;
 import com.aatechsolutions.elgransazon.domain.entity.Company;
 import com.aatechsolutions.elgransazon.domain.entity.Customer;
@@ -31,6 +32,7 @@ import java.util.Optional;
 public class AdminCustomerController {
 
     private final CustomerService customerService;
+    private final DateTimeService dateTimeService;
     private final LicenseService licenseService;
 
     /**
@@ -225,8 +227,8 @@ public class AdminCustomerController {
                 customerData.put("phone", customer.getPhone());
                 customerData.put("active", customer.getActive());
                 customerData.put("emailVerified", customer.getEmailVerified());
-                customerData.put("createdAt", customer.getCreatedAt() != null ? customer.getCreatedAt().toString() : null);
-                customerData.put("lastAccess", customer.getLastAccess() != null ? customer.getLastAccess().toString() : null);
+                customerData.put("createdAt", customer.getCreatedAt() != null ? dateTimeService.formatToCompanyTime(customer.getCreatedAt(), "dd/MM/yyyy HH:mm") : null);
+                customerData.put("lastAccess", customer.getLastAccess() != null ? dateTimeService.formatToCompanyTime(customer.getLastAccess(), "dd/MM/yyyy HH:mm") : null);
                 
                 response.put("success", true);
                 response.put("customer", customerData);

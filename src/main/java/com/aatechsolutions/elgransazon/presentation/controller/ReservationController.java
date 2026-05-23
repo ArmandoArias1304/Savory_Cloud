@@ -158,7 +158,7 @@ public class ReservationController {
 
             return "admin/reservations/form";
         } catch (IllegalArgumentException e) {
-            log.error("Reservation not found: {}", id, e);
+            log.warn("Reservation not found with id: {} - possible cross-tenant access attempt", id);
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
             return "redirect:/admin/reservations";
         }

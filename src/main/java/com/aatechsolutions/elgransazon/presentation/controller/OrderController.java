@@ -718,8 +718,13 @@ public class OrderController {
 
         // Get the order
         OrderService orderService = getOrderService(role);
-        Order order = orderService.findById(orderId)
-            .orElseThrow(() -> new IllegalArgumentException("Pedido no encontrado"));
+        Optional<Order> orderOpt = orderService.findById(orderId);
+        if (orderOpt.isEmpty()) {
+            log.warn("Order not found with id: {} - possible cross-tenant access attempt by user: {}", orderId, username);
+            redirectAttributes.addFlashAttribute("errorMessage", "Pedido no encontrado");
+            return "redirect:/" + role + "/orders";
+        }
+        Order order = orderOpt.get();
 
         // Validate order can accept new items using canAcceptNewItems() method
         // This checks: DINE_IN until PAID, TAKEOUT until READY, DELIVERY until READY (not ON_THE_WAY)
