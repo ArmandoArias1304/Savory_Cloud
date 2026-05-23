@@ -1,7 +1,7 @@
 services:
   # --- Backend Spring Boot ---
-  elgransazon:
-    container_name: elgransazon_api
+  savorycloud:
+    container_name: savorycloud_api
     build:
       context: .
       dockerfile: Dockerfile
@@ -24,7 +24,9 @@ services:
       - DB_PASSWORDSECRET=${DB_PASSWORDSECRET}
 
       # Email
+      - EMAIL_PROVIDER=${EMAIL_PROVIDER}
       - SENDGRID_API_KEY=${SENDGRID_API_KEY}
+      - BREVO_API_KEY=${BREVO_API_KEY}
       - FROM_EMAIL=${FROM_EMAIL}
       - FROM_NAME=${FROM_NAME}
 
@@ -50,24 +52,25 @@ services:
     volumes:
       # Persists database backups across container restarts and deployments.
       # Path must match getBackupDirectory() in BackupServiceImpl:
-      # System.getProperty("user.home") + "/elgransazon_backups" = /root/elgransazon_backups
-      - backup_data:/root/elgransazon_backups
+      # System.getProperty("user.home") + "/savorycloud_backups" = /root/savorycloud_backups
+      - backup_data:/root/savorycloud_backups
       # QZ Tray signing keys (read-only). The host folder must contain
       # digital-certificate.txt and private-key.pem.
       - ./qz-keys:/qz-keys:ro
     networks:
-      - elgransazon-network
+      - savorycloud-network
 
   # --- Base de Datos MySQL ---
   mysqldb:
     image: mysql:8.0.33
-    container_name: elgransazon_db
+    container_name: savorycloud_db
     # Use mysql_native_password so MariaDB client (Alpine) can authenticate for backups.
     # caching_sha2_password (MySQL 8 default) is not supported by mariadb-dump.
     command: --default-authentication-plugin=mysql_native_password
+    mem_limit: 512m
     ports:
-      # Acceso externo para tu Workbench/DBeaver en el puerto 3307
-      - "3307:${DB_PORT}"
+      # Solo accesible desde localhost — usar SSH tunnel para Workbench/DBeaver
+      - "127.0.0.1:3307:${DB_PORT}"
     environment:
       - MYSQL_ROOT_PASSWORD=${DB_PASSWORDSECRET}
       - MYSQL_DATABASE=${DB_NAME}
@@ -81,12 +84,12 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - elgransazon-network
+      - savorycloud-network
 
 volumes:
   mysql_data:
   backup_data:
 
 networks:
-  elgransazon-network:
+  savorycloud-network:
     driver: bridge

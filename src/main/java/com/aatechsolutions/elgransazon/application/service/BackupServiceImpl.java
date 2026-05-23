@@ -45,8 +45,8 @@ public class BackupServiceImpl implements BackupService {
     private final AtomicBoolean isAutomaticBackup = new AtomicBoolean(false);
     
     // Default backup directory — must match the Docker volume mount in docker-compose.yml
-    // Volume: backup_data:/root/elgransazon_backups
-    private static final String DEFAULT_BACKUP_DIR = "elgransazon_backups";
+    // Volume: backup_data:/root/savorycloud_backups
+    private static final String DEFAULT_BACKUP_DIR = "savorycloud_backups";
     
     public BackupServiceImpl(BackupConfigurationRepository configRepository,
                             BackupNotificationService notificationService,

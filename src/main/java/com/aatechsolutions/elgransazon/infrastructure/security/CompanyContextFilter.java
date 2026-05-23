@@ -147,7 +147,8 @@ public class CompanyContextFilter extends OncePerRequestFilter {
                path.startsWith("/help") ||
                path.startsWith("/support") ||
                path.startsWith("/license-expired") ||
-               path.startsWith("/system-landing");
+               path.startsWith("/system-landing") ||
+               path.startsWith("/ws");  // WebSocket — auth is handled by Spring Security session
     }
 
     /**

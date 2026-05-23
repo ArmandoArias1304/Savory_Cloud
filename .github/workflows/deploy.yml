@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 env:
-  IMAGE_NAME: elgransazon
+  IMAGE_NAME: savorycloud
 
 jobs:
   # ============================
@@ -32,7 +32,7 @@ jobs:
         run: chmod +x mvnw && ./mvnw clean package -DskipTests
 
       - name: Verificar que el JAR se generó
-        run: ls -lh target/elgransazon-0.0.1.jar
+        run: ls -lh target/savorycloud-0.0.1.jar
 
       - name: Build Docker Image
         run: docker build -t ${{ env.IMAGE_NAME }}:latest .
@@ -103,7 +103,7 @@ jobs:
           username: ${{ secrets.SERVER_USERNAME }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           port: ${{ secrets.SERVER_SSH_PORT || 22 }}
-          source: "target/elgransazon-0.0.1.jar,docker-compose.yml,Dockerfile"
+          source: "target/savorycloud-0.0.1.jar,docker-compose.yml,Dockerfile"
           target: "/home/${{ secrets.SERVER_USERNAME }}/savorycloud"
 
       - name: Deploy con Docker Compose
@@ -127,7 +127,9 @@ jobs:
             DB_NAME=${{ secrets.DB_NAME }}
             DB_USER=root
             DB_PASSWORDSECRET=${{ secrets.DB_PASSWORDSECRET }}
+            EMAIL_PROVIDER=${{ secrets.EMAIL_PROVIDER }}
             SENDGRID_API_KEY=${{ secrets.SENDGRID_API_KEY }}
+            BREVO_API_KEY=${{ secrets.BREVO_API_KEY }}
             FROM_EMAIL=${{ secrets.FROM_EMAIL }}
             FROM_NAME=${{ secrets.FROM_NAME }}
             CLOUDFLARE_ACCOUNT_ID=${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -152,7 +154,7 @@ jobs:
             # (installed via Alpine apk mysql-client) can authenticate for backups.
             # Idempotent: safe to run on both fresh and existing installations.
             echo "Updating MySQL root auth plugin..."
-            docker exec elgransazon_db mysql -u root \
+            docker exec savorycloud_db mysql -u root \
               -p'${{ secrets.DB_PASSWORDSECRET }}' \
               -e "ALTER USER 'root'@'%' IDENTIFIED WITH mysql_native_password BY '${{ secrets.DB_PASSWORDSECRET }}'; FLUSH PRIVILEGES;" \
               2>/dev/null && echo "Auth plugin updated" || echo "Auth plugin update skipped"
