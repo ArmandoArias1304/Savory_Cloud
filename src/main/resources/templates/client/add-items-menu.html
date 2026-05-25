@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="es" xmlns:th="http://www.thymeleaf.org">
   <head>
     <meta charset="utf-8" />
@@ -219,13 +219,14 @@
             <!-- Order Type Badge -->
             <span
               class="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-lg text-xs font-semibold whitespace-nowrap"
-              th:classappend="${orderType.name() == 'TAKEOUT'} ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300' : 
+              th:classappend="${orderType.name() == 'TAKEOUT'} ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/60 dark:text-purple-300' : 
                              'bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-300'"
             >
               <span
                 class="material-symbols-outlined"
+                th:classappend="${orderType.name() == 'TAKEOUT'} ? 'text-purple-500' : 'text-orange-500'"
                 style="font-size: 14px"
-                th:text="${orderType.name() == 'TAKEOUT'} ? 'shopping_bag' : 'delivery_dining'"
+                th:text="${orderType.name() == 'TAKEOUT'} ? 'shopping_bag' : 'local_shipping'"
               >
                 shopping_bag
               </span>
@@ -452,12 +453,13 @@
               <!-- Order Type Badge -->
               <div
                 class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold"
-                th:classappend="${orderType.name() == 'TAKEOUT'} ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300' : 'bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-300'"
+                th:classappend="${orderType.name() == 'TAKEOUT'} ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/60 dark:text-purple-300' : 'bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-300'"
               >
                 <span
                   class="material-symbols-outlined"
+                  th:classappend="${orderType.name() == 'TAKEOUT'} ? 'text-purple-500' : 'text-orange-500'"
                   style="font-size: 16px"
-                  th:text="${orderType.name() == 'TAKEOUT'} ? 'shopping_bag' : 'delivery_dining'"
+                  th:text="${orderType.name() == 'TAKEOUT'} ? 'shopping_bag' : 'local_shipping'"
                 >
                   shopping_bag
                 </span>
@@ -3239,8 +3241,12 @@
                 showConfirmButton: false,
                 timer: 3000,
                 timerProgressBar: true,
-                background: document.documentElement.classList.contains("dark") ? "#1f2937" : "#ffffff",
-                color: document.documentElement.classList.contains("dark") ? "#f3f4f6" : "#1f2937",
+                background: document.documentElement.classList.contains("dark")
+                  ? "#1f2937"
+                  : "#ffffff",
+                color: document.documentElement.classList.contains("dark")
+                  ? "#f3f4f6"
+                  : "#1f2937",
               });
               Toast.fire({
                 icon: "info",
@@ -3994,6 +4000,75 @@
             passive: true,
           });
         });
+        // === Categoría activa dinámica por scroll ===
+        const menuContainer = document.querySelector(
+          "main.flex-1.overflow-y-auto",
+        );
+        const categorySections = Array.from(
+          document.querySelectorAll('[id^="category-"]'),
+        );
+        const categoryButtons = Array.from(
+          document.querySelectorAll(".category-btn"),
+        );
+        if (
+          menuContainer &&
+          categorySections.length &&
+          categoryButtons.length
+        ) {
+          menuContainer.addEventListener("scroll", () => {
+            // Encuentra la categoría más cercana al top visible
+            let activeIdx = 0;
+            let minDist = Infinity;
+            const containerRect = menuContainer.getBoundingClientRect();
+            categorySections.forEach((section, idx) => {
+              const rect = section.getBoundingClientRect();
+              // Distancia desde el top del contenedor scrolleable
+              const dist = Math.abs(rect.top - containerRect.top - 16); // 16px padding
+              if (dist < minDist) {
+                minDist = dist;
+                activeIdx = idx;
+              }
+            });
+            // Actualiza clases de los botones
+            categoryButtons.forEach((btn, idx) => {
+              if (idx === activeIdx) {
+                btn.classList.add(
+                  "active",
+                  "bg-gradient-to-r",
+                  "from-primary",
+                  "to-primary-dark",
+                  "text-white",
+                  "shadow-green",
+                  "font-bold",
+                );
+                btn.classList.remove(
+                  "text-gray-700",
+                  "dark:text-gray-300",
+                  "font-semibold",
+                );
+                const icon = btn.querySelector(".material-symbols-outlined");
+                if (icon) icon.classList.add("filled");
+              } else {
+                btn.classList.remove(
+                  "active",
+                  "bg-gradient-to-r",
+                  "from-primary",
+                  "to-primary-dark",
+                  "text-white",
+                  "shadow-green",
+                  "font-bold",
+                );
+                btn.classList.add(
+                  "text-gray-700",
+                  "dark:text-gray-300",
+                  "font-semibold",
+                );
+                const icon = btn.querySelector(".material-symbols-outlined");
+                if (icon) icon.classList.remove("filled");
+              }
+            });
+          });
+        }
       });
     </script>
 

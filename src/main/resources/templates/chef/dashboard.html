@@ -194,17 +194,37 @@
             class="inline-block p-4 rounded-full bg-primary/10 dark:bg-primary/20"
           >
             <span
+              th:if="${currentRole == 'barista'}"
               class="material-symbols-outlined text-primary text-5xl sm:text-6xl"
-              >restaurant</span
             >
+              liquor
+            </span>
+            <span
+              th:if="${currentRole == 'parrillero'}"
+              class="material-symbols-outlined text-primary text-5xl sm:text-6xl"
+            >
+              outdoor_grill
+            </span>
+            <span
+              th:if="${currentRole == 'chef'}"
+              class="material-symbols-outlined text-primary text-5xl sm:text-6xl"
+            >
+              chef_hat
+            </span>
           </span>
         </div>
         <h1
           class="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 dark:text-white mb-3"
         >
-          <span th:if="${currentRole == 'barista'}">☕ Panel de Control de Barra</span>
-          <span th:if="${currentRole == 'parrillero'}">🔥 Panel de Control de Parrilla</span>
-          <span th:if="${currentRole == 'chef'}">👨‍🍳 Panel de Control de Cocina</span>
+          <span th:if="${currentRole == 'barista'}"
+            >Panel de Control de Barra</span
+          >
+          <span th:if="${currentRole == 'parrillero'}"
+            >Panel de Control de Parrilla</span
+          >
+          <span th:if="${currentRole == 'chef'}"
+            >Panel de Control de Cocina</span
+          >
         </h1>
         <p
           class="text-base sm:text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto"
@@ -347,8 +367,10 @@
             >
               Ranking
             </h3>
-            <p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400"
-              th:text="${currentRole == 'barista' ? 'Top baristas' : (currentRole == 'parrillero' ? 'Top parrilleros' : 'Top chefs')}">
+            <p
+              class="text-xs sm:text-sm text-gray-500 dark:text-gray-400"
+              th:text="${currentRole == 'barista' ? 'Top baristas' : (currentRole == 'parrillero' ? 'Top parrilleros' : 'Top chefs')}"
+            >
               Top chef
             </p>
           </div>
@@ -437,8 +459,11 @@
         class="mt-12 text-center text-sm text-gray-500 dark:text-gray-400 animate-fadeInUp"
         style="animation-delay: 0.5s"
       >
-        <p th:text="'Sistema de Gestión de Restaurante © ' + ${#dates.year(#dates.createNow())} + ' SavoryCloud. Todos los derechos reservados.'">
-          Sistema de Gestión de Restaurante © 2026 SavoryCloud. Todos los derechos reservados.
+        <p
+          th:text="'Sistema de Gestión de Restaurante © ' + ${#dates.year(#dates.createNow())} + ' SavoryCloud. Todos los derechos reservados.'"
+        >
+          Sistema de Gestión de Restaurante © 2026 SavoryCloud. Todos los
+          derechos reservados.
         </p>
       </div>
     </div>
@@ -582,16 +607,12 @@
 
           audio
             .play()
-            .then(() => {
-            })
-            .catch((error) => {
-            });
+            .then(() => {})
+            .catch((error) => {});
 
           // Handle audio errors
-          audio.onerror = function (e) {
-          };
-        } catch (e) {
-        }
+          audio.onerror = function (e) {};
+        } catch (e) {}
       }
 
       function requestBrowserNotification(title, body) {

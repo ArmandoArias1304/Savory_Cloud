@@ -131,19 +131,19 @@
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        width: 70px;
-        height: 70px;
+        width: 170px;
+        height: 170px;
         border-radius: 50%;
         background: linear-gradient(135deg, #38e07b 0%, #2bc866 100%);
         box-shadow: 0 8px 20px rgba(56, 224, 123, 0.4);
-        margin-bottom: 12px;
+        margin-bottom: 28px;
       }
 
       @media (min-width: 768px) {
         .logo-circle {
-          width: 96px;
-          height: 96px;
-          margin-bottom: 24px;
+          width: 230px;
+          height: 230px;
+          margin-bottom: 48px;
         }
       }
 
@@ -673,11 +673,6 @@
             style="font-size: 1rem; opacity: 0.9; margin-bottom: 0.5rem"
           ></p>
 
-          <!-- Subtítulo -->
-          <p>
-            Accede a tu cuenta y déjanos consentirte con un servicio especial.
-          </p>
-
           <!-- Características -->
           <div class="features-list">
             <div class="feature-item">
@@ -740,20 +735,23 @@
                 th:if="${param.emailSent != null and param.emailSent[0] == 'true'}"
               >
                 Te hemos enviado un nuevo correo de verificación. Por favor
-                revisa tu bandeja de entrada o carpeta de spam y haz clic en el enlace para
-                activar tu cuenta.
+                revisa tu bandeja de entrada o carpeta de spam y haz clic en el
+                enlace para activar tu cuenta.
               </span>
               <span
                 th:if="${param.emailSent != null and param.emailSent[0] == 'false'}"
               >
                 Ya tienes un correo de verificación pendiente. Por favor revisa
-                tu bandeja de entrada o carpeta de spam. Si no lo encuentras, espera
-                <strong th:text="${param.minutesLeft != null and param.minutesLeft[0] != '0' ? param.minutesLeft[0] : 'menos de 1'}">15</strong>
-                minuto(s) e intenta iniciar sesión nuevamente para recibir un nuevo correo.
+                tu bandeja de entrada o carpeta de spam. Si no lo encuentras,
+                espera
+                <strong
+                  th:text="${param.minutesLeft != null and param.minutesLeft[0] != '0' ? param.minutesLeft[0] : 'menos de 1'}"
+                  >15</strong
+                >
+                minuto(s) e intenta iniciar sesión nuevamente para recibir un
+                nuevo correo.
               </span>
-              <span
-                th:if="${param.emailError != null}"
-              >
+              <span th:if="${param.emailError != null}">
                 Hubo un problema al enviar el correo de verificación. Por favor
                 intenta iniciar sesión nuevamente en unos momentos.
               </span>

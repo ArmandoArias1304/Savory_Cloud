@@ -252,26 +252,28 @@
 
               <!-- Order Type -->
               <div class="flex items-start gap-3">
-                <div
+
+                <!-- DINE_IN -->
+                <div th:if="${order.orderType.name() == 'DINE_IN'}"
                   class="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center flex-shrink-0"
                 >
-                  <span
-                    class="material-symbols-outlined text-blue-600 dark:text-blue-400 text-xl"
-                  >
-                    <!-- DINE_IN icon -->
-                    <span th:if="${order.orderType.name() == 'DINE_IN'}"
-                      >table_restaurant</span
-                    >
-                    <!-- TAKEOUT icon -->
-                    <span th:if="${order.orderType.name() == 'TAKEOUT'}"
-                      >shopping_bag</span
-                    >
-                    <!-- DELIVERY icon -->
-                    <span th:if="${order.orderType.name() == 'DELIVERY'}"
-                      >local_shipping</span
-                    >
-                  </span>
+                  <span class="material-symbols-outlined text-blue-600 dark:text-blue-400 text-xl">table_restaurant</span>
                 </div>
+
+                <!-- TAKEOUT -->
+                <div th:if="${order.orderType.name() == 'TAKEOUT'}"
+                  class="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center flex-shrink-0"
+                >
+                  <span class="material-symbols-outlined text-purple-600 dark:text-purple-400 text-xl">shopping_bag</span>
+                </div>
+
+                <!-- DELIVERY -->
+                <div th:if="${order.orderType.name() == 'DELIVERY'}"
+                  class="w-10 h-10 bg-orange-100 dark:bg-orange-900/30 rounded-lg flex items-center justify-center flex-shrink-0"
+                >
+                  <span class="material-symbols-outlined text-orange-600 dark:text-orange-400 text-xl">local_shipping</span>
+                </div>
+
                 <div>
                   <p class="text-sm text-gray-600 dark:text-gray-400">
                     Tipo de Pedido

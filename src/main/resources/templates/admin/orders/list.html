@@ -638,7 +638,10 @@
                           th:data-has-pending="${hasPending}"
                           th:title="${anyInPrep ? 'Marcar items de EN PREPARACIÓN como LISTOS' : 'Avanzar items de PENDIENTE a EN PREPARACIÓN'}"
                         >
-                          <i th:if="${anyInPrep}" class="fas fa-check-double"></i>
+                          <i
+                            th:if="${anyInPrep}"
+                            class="fas fa-check-double"
+                          ></i>
                           <i th:unless="${anyInPrep}" class="fas fa-play"></i>
                         </button>
 
@@ -876,7 +879,12 @@
       // Advance ALL preparation items (chef + barista) of an order in one click.
       // Used by Staff (admin/manager/cashier/waiter) when the SystemConfiguration
       // flag "enableOrderStatusPermission" is enabled.
-      function advancePreparationItems(button, orderId, orderNumber, nextStatus) {
+      function advancePreparationItems(
+        button,
+        orderId,
+        orderNumber,
+        nextStatus,
+      ) {
         const isDarkMode = document.documentElement.classList.contains("dark");
         const darkBg = "#1f2937"; // gray-800 (matches getSwalDarkModeClasses popup)
         const hasPending = button.dataset.hasPending === "true";
@@ -900,15 +908,30 @@
             customClass: getSwalDarkModeClasses(),
           }).then((res) => {
             if (res.isConfirmed) {
-              advancePreparationItemsConfirmed(button, orderId, orderNumber, nextStatus);
+              advancePreparationItemsConfirmed(
+                button,
+                orderId,
+                orderNumber,
+                nextStatus,
+              );
             }
           });
           return;
         }
-        advancePreparationItemsConfirmed(button, orderId, orderNumber, nextStatus);
+        advancePreparationItemsConfirmed(
+          button,
+          orderId,
+          orderNumber,
+          nextStatus,
+        );
       }
 
-      function advancePreparationItemsConfirmed(button, orderId, orderNumber, nextStatus) {
+      function advancePreparationItemsConfirmed(
+        button,
+        orderId,
+        orderNumber,
+        nextStatus,
+      ) {
         const isDarkMode = document.documentElement.classList.contains("dark");
         const darkBg = "#1f2937"; // gray-800 (matches getSwalDarkModeClasses popup)
         const confirmTitle =

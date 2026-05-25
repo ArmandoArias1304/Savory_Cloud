@@ -3,7 +3,9 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title th:text="${globalSystemConfig.systemName + ' - Información del Cliente'}">
+    <title
+      th:text="${globalSystemConfig.systemName + ' - Información del Cliente'}"
+    >
       El Gran Sazón - Información del Cliente
     </title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -126,12 +128,12 @@
                   <div
                     class="w-12 h-12 rounded-xl flex items-center justify-center"
                     th:classappend="${orderType.name() == 'DINE_IN'} ? 'bg-green-500' : 
-                                   (${orderType.name() == 'TAKEOUT'} ? 'bg-blue-500' : 'bg-orange-500')"
+                                   (${orderType.name() == 'TAKEOUT'} ? 'bg-purple-700' : 'bg-orange-500')"
                   >
                     <span
                       class="material-symbols-outlined text-white text-2xl"
                       th:text="${orderType.name() == 'DINE_IN'} ? 'restaurant' : 
-                               (${orderType.name() == 'TAKEOUT'} ? 'shopping_bag' : 'delivery_dining')"
+                               (${orderType.name() == 'TAKEOUT'} ? 'shopping_bag' : 'local_shipping')"
                     >
                       restaurant
                     </span>
@@ -142,9 +144,15 @@
                     </p>
                     <p
                       class="text-sm font-semibold text-gray-900 dark:text-white"
-                      th:text="${orderType.displayName}"
                     >
-                      Para Comer Aquí
+                      <span
+                        class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold"
+                        th:classappend="${orderType.name() == 'DINE_IN'} ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300' : 
+                                       (${orderType.name() == 'TAKEOUT'} ? 'bg-purple-700 text-white dark:bg-purple-800/90' : 'bg-orange-500 text-white dark:bg-orange-700/90')"
+                        th:text="${orderType.displayName}"
+                      >
+                        Para Comer Aquí
+                      </span>
                     </p>
                   </div>
                 </div>
@@ -372,7 +380,8 @@
                         >
                           <span
                             class="material-symbols-outlined text-gray-400 text-xl"
-                            >payments</span>
+                            >payments</span
+                          >
                         </div>
                         <input
                           type="number"
@@ -388,7 +397,8 @@
                         />
                       </div>
                       <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                        Monto a cobrar por el envío a domicilio (incluye IVA). Se prellenó con el valor configurado por defecto.
+                        Monto a cobrar por el envío a domicilio (incluye IVA).
+                        Se prellenó con el valor configurado por defecto.
                       </p>
                     </div>
 
@@ -559,7 +569,7 @@
           this.querySelectorAll('input[type="text"], textarea').forEach(
             function (el) {
               el.value = el.value.trim();
-            }
+            },
           );
         });
     </script>

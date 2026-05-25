@@ -126,24 +126,25 @@
         z-index: 10;
       }
 
-      /* Logo circular */
+      /* Logo circular con fondo blanco y menos separación */
       .logo-circle {
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        width: 70px;
-        height: 70px;
+        width: 170px;
+        height: 170px;
         border-radius: 50%;
-        background: linear-gradient(135deg, #38e07b 0%, #2bc866 100%);
-        box-shadow: 0 8px 20px rgba(56, 224, 123, 0.4);
-        margin-bottom: 12px;
+        background: #fff;
+        box-shadow: 0 8px 20px rgba(56, 224, 123, 0.18);
+        margin-bottom: 8px;
+        border: 4px solid #38e07b33; /* Borde verde semitransparente para resaltar */
       }
 
       @media (min-width: 768px) {
         .logo-circle {
-          width: 96px;
-          height: 96px;
-          margin-bottom: 24px;
+          width: 230px;
+          height: 230px;
+          margin-bottom: 16px;
         }
       }
 
@@ -652,7 +653,7 @@
       <div class="login-header">
         <div class="login-header-content">
           <!-- Logo - Dynamic from configuration -->
-          <div class="logo-circle" style="background: white; overflow: hidden">
+          <div class="logo-circle">
             <img
               th:if="${globalSystemConfig != null and globalSystemConfig.systemLogoUrl != null and !globalSystemConfig.systemLogoUrl.isEmpty()}"
               th:src="${@cloudinaryUrl.logoLarge(globalSystemConfig.systemLogoUrl)}"
@@ -783,11 +784,6 @@
                 >visibility_off</span
               >
             </div>
-          </div>
-
-          <!-- Recordarme y Olvidaste contraseña -->
-          <div class="form-options">
-            <a href="#" class="forgot-password">¿Olvidaste tu contraseña?</a>
           </div>
 
           <!-- Botón de login -->

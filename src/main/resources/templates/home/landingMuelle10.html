@@ -2359,6 +2359,8 @@
         color: #888;
         font-size: 0.95rem;
         line-height: 1.5;
+        word-break: break-all;
+        white-space: normal;
       }
 
       /* Mapa de Google */
@@ -3314,6 +3316,30 @@
     </style>
   </head>
   <body>
+    <!-- Logo solo para móvil (arriba de todo) -->
+    <div class="d-block d-lg-none text-center mt-3 mb-2">
+      <div
+        style="
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          width: 100%;
+        "
+      >
+        <img
+          th:if="${systemConfig != null and systemConfig.restaurantLogoUrl != null and !systemConfig.restaurantLogoUrl.isEmpty()}"
+          th:src="${@cloudinaryUrl.logoHero(systemConfig.restaurantLogoUrl)}"
+          th:alt="${systemConfig.restaurantName + ' Logo'}"
+          style="
+            max-width: 180px;
+            width: 80vw;
+            height: auto;
+            border-radius: 16px;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+          "
+        />
+      </div>
+    </div>
     <!-- Badge de Estado del Restaurante -->
     <div
       th:class="${isOpen ? 'status-badge open' : 'status-badge closed'}"
@@ -3377,7 +3403,7 @@
               >
             </div>
           </div>
-          <div class="hero-logo">
+          <div class="hero-logo d-none d-lg-block">
             <div class="hero-logo-circle">
               <img
                 th:if="${systemConfig != null and systemConfig.restaurantLogoUrl != null and !systemConfig.restaurantLogoUrl.isEmpty()}"
@@ -3484,7 +3510,7 @@
                   alt="Postres"
                 />
                 <div class="carousel-caption">
-                  <h2 class="carousel-title">isitos</h2>
+                  <h2 class="carousel-title">Postres Deliciosos</h2>
                   <p class="carousel-subtitle">
                     Dulces tentaciones hechas en casa para endulzar tu día
                   </p>
@@ -4826,7 +4852,7 @@
                   <i class="fas fa-mobile-alt"></i>
                 </div>
                 <div class="step-text">
-                  <h3>Point No. 1</h3>
+                  <h3>Paso No. 1</h3>
                   <p>Visita nuestro sitio web</p>
                 </div>
               </div>
@@ -4836,10 +4862,10 @@
               <!-- Step 2 -->
               <div class="step-item scroll-animation">
                 <div class="step-icon">
-                  <i class="fas fa-motorcycle"></i>
+                  <i class="fas fa-pizza-slice"></i>
                 </div>
                 <div class="step-text">
-                  <h3>Point No. 2</h3>
+                  <h3>Paso No. 2</h3>
                   <p>Elige tu platillo favorito y realiza tu pedido</p>
                 </div>
               </div>
@@ -4849,10 +4875,10 @@
               <!-- Step 3 -->
               <div class="step-item scroll-animation">
                 <div class="step-icon">
-                  <i class="fas fa-pizza-slice"></i>
+                  <i class="fas fa-motorcycle"></i>
                 </div>
                 <div class="step-text">
-                  <h3>Point No. 3</h3>
+                  <h3>Paso No. 3</h3>
                   <p>Recibe tu comida caliente en tu puerta</p>
                 </div>
               </div>
@@ -5201,7 +5227,10 @@
               <!-- Primera copia de los logos -->
               <div class="logo-loop-track">
                 <div class="logo-item">
-                  <img src="images/LogoNombre.png" alt="El Buen Sazón" />
+                  <img
+                    src="/src/main/resources/static/images/savoryCloudLogo.png"
+                    alt=""
+                  />
                 </div>
                 <div class="logo-item">
                   <img
@@ -5249,7 +5278,10 @@
               <!-- Segunda copia para el loop infinito -->
               <div class="logo-loop-track">
                 <div class="logo-item">
-                  <img src="images/LogoNombre.png" alt="El Buen Sazón" />
+                  <img
+                    src="/src/main/resources/static/images/savoryCloudLogo.png"
+                    alt="Savory cloud"
+                  />
                 </div>
                 <div class="logo-item">
                   <img

@@ -127,7 +127,7 @@
           <!-- Logo -->
           <div class="flex items-center gap-3">
             <div
-              class="w-10 h-10 sm:w-12 sm:h-12 bg-white rounded-full flex items-center justify-center shadow-lg overflow-hidden"
+              class="w-14 h-14 sm:w-16 sm:h-16 bg-white rounded-full flex items-center justify-center shadow-lg overflow-hidden"
             >
               <img
                 th:if="${systemConfig != null and systemConfig.restaurantLogoUrl != null and !systemConfig.restaurantLogoUrl.isEmpty()}"
@@ -138,20 +138,28 @@
             </div>
             <div class="hidden sm:block">
               <h1
-                class="text-2xl font-bold text-white"
+                class="text-3xl sm:text-4xl font-extrabold text-white drop-shadow-lg restaurant-title"
+                style="
+                  text-shadow:
+                    0 2px 8px rgba(44, 44, 44, 0.25),
+                    0 1px 0 #0004;
+                "
                 th:text="${systemConfig != null and systemConfig.restaurantName != null and !systemConfig.restaurantName.isEmpty()} ? ${systemConfig.restaurantName} : ''"
-              >
-              </h1>
+              ></h1>
               <p class="text-sm text-white/90">Panel de Cliente</p>
             </div>
           </div>
 
           <!-- Nombre centrado en móvil -->
           <h1
-            class="sm:hidden absolute left-1/2 -translate-x-1/2 text-lg font-bold text-white truncate max-w-[60%] text-center"
+            class="sm:hidden absolute left-1/2 -translate-x-1/2 text-2xl font-extrabold text-white drop-shadow-lg restaurant-title text-center truncate max-w-[60%]"
+            style="
+              text-shadow:
+                0 2px 8px rgba(44, 44, 44, 0.25),
+                0 1px 0 #0004;
+            "
             th:text="${systemConfig != null and systemConfig.restaurantName != null and !systemConfig.restaurantName.isEmpty()} ? ${systemConfig.restaurantName} : ''"
-          >
-          </h1>
+          ></h1>
 
           <!-- User Menu -->
           <div class="flex items-center gap-3">
@@ -189,7 +197,7 @@
             <span
               class="material-symbols-outlined text-5xl sm:text-6xl text-white"
             >
-              restaurant_menu
+              person_outline
             </span>
           </div>
         </div>
@@ -223,7 +231,7 @@
               class="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center"
             >
               <span class="material-symbols-outlined text-4xl">
-                shopping_bag
+                receipt_long
               </span>
             </div>
           </div>
@@ -245,7 +253,7 @@
               class="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center"
             >
               <span class="material-symbols-outlined text-4xl">
-                local_shipping
+                pending_actions
               </span>
             </div>
           </div>
@@ -405,10 +413,12 @@
           Sistema de Gestión de Restaurante -
           <span
             th:text="${systemConfig != null and systemConfig.restaurantName != null and !systemConfig.restaurantName.isEmpty()} ? ${systemConfig.restaurantName} : ''"
-            ></span
-          >
+          ></span>
           &copy; <span id="footerYear">2024</span>
-          <script>document.getElementById('footerYear').textContent = new Date().getFullYear();</script>
+          <script>
+            document.getElementById("footerYear").textContent =
+              new Date().getFullYear();
+          </script>
         </p>
       </div>
     </div>

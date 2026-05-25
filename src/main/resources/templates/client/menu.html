@@ -173,6 +173,47 @@
       .swal-cancel-dark:hover {
         background-color: #4b5563 !important;
       }
+
+      #order-success-overlay {
+        position: fixed;
+        inset: 0;
+        background: #000;
+        z-index: 99999;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s ease;
+      }
+      #order-success-overlay.active {
+        opacity: 1;
+        pointer-events: all;
+      }
+      #order-rocket-trail {
+        position: absolute;
+        bottom: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 100%;
+        height: 0;
+        background: linear-gradient(to top, #38e07b, transparent);
+        transition: none;
+      }
+      #order-rocket {
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        filter: drop-shadow(0 0 18px #fff);
+      }
+      #order-rocket svg {
+        width: 72px;
+        height: 72px;
+      }
     </style>
   </head>
   <body
@@ -710,6 +751,206 @@
     <div th:replace="~{fragments/sidebar :: sidebarScripts}"></div>
 
     <script th:inline="javascript">
+      // ========== ORDER SUCCESS ANIMATION ==========
+      (function () {
+        const overlay = document.createElement("div");
+        overlay.id = "order-success-overlay";
+        overlay.innerHTML = `
+          <canvas id="order-trail-canvas" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;"></canvas>
+          <div id="order-bag" style="position:absolute;left:50%;transform:translateX(-50%);bottom:-140px;">
+            <svg width="90" height="110" viewBox="0 0 90 110" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M30 30 Q30 12 45 12 Q60 12 60 30" stroke="white" stroke-width="5.5" stroke-linecap="round" fill="none"/>
+              <rect x="10" y="30" width="70" height="70" rx="11" fill="white"/>
+              <rect x="10" y="30" width="70" height="20" rx="11" fill="#d1fae5"/>
+              <rect x="10" y="40" width="70" height="10" fill="#d1fae5"/>
+              <line x1="33" y1="58" x2="33" y2="84" stroke="#38e07b" stroke-width="3.5" stroke-linecap="round"/>
+              <path d="M29 58 Q29 66 33 66 Q37 66 37 58" fill="#38e07b"/>
+              <line x1="52" y1="58" x2="52" y2="84" stroke="#38e07b" stroke-width="3.5" stroke-linecap="round"/>
+              <path d="M52 58 Q56 61 57 67 Q57 72 52 73 L52 58Z" fill="#38e07b"/>
+              <circle cx="44" cy="71" r="3" fill="#38e07b" opacity="0.4"/>
+            </svg>
+          </div>
+        `;
+        document.body.appendChild(overlay);
+
+        const style = document.createElement("style");
+        style.textContent = `
+          #order-success-overlay {
+            position: fixed;
+            inset: 0;
+            background: #000;
+            z-index: 99999;
+            overflow: hidden;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+          }
+          #order-success-overlay.active {
+            opacity: 1;
+            pointer-events: all;
+          }
+        `;
+        document.head.appendChild(style);
+
+        window.playOrderSuccessAnimation = function (callback) {
+          const bag = document.getElementById("order-bag");
+          const canvas = document.getElementById("order-trail-canvas");
+          const ctx = canvas.getContext("2d");
+
+          overlay.style.background = "#000";
+          overlay.style.opacity = "0";
+          overlay.style.transition = "opacity 0.3s ease";
+          bag.style.bottom = "-140px";
+          overlay.classList.add("active");
+
+          canvas.width = window.innerWidth;
+          canvas.height = window.innerHeight;
+
+          const vh = window.innerHeight;
+          const cx = window.innerWidth / 2;
+          let particles = [];
+
+          function spawnParticles(y) {
+            for (let i = 0; i < 4; i++) {
+              particles.push({
+                x: cx + (Math.random() - 0.5) * 40,
+                y: y,
+                r: 3 + Math.random() * 7,
+                life: 1.0,
+                vy: 1.5 + Math.random() * 2.5,
+              });
+            }
+          }
+
+          function drawTrail(bagBottomY) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const grad = ctx.createLinearGradient(
+              cx,
+              canvas.height,
+              cx,
+              bagBottomY,
+            );
+            grad.addColorStop(0, "rgba(56,224,123,0.9)");
+            grad.addColorStop(0.5, "rgba(56,224,123,0.4)");
+            grad.addColorStop(1, "rgba(56,224,123,0)");
+            ctx.beginPath();
+            ctx.moveTo(cx - 20, canvas.height);
+            ctx.lineTo(cx + 20, canvas.height);
+            ctx.lineTo(cx + 8, bagBottomY);
+            ctx.lineTo(cx - 8, bagBottomY);
+            ctx.closePath();
+            ctx.fillStyle = grad;
+            ctx.fill();
+
+            particles = particles.filter((p) => p.life > 0.05);
+            particles.forEach((p) => {
+              p.y += p.vy;
+              p.life -= 0.035;
+              ctx.beginPath();
+              ctx.arc(p.x, p.y, p.r * p.life, 0, Math.PI * 2);
+              ctx.fillStyle = `rgba(56,224,123,${p.life * 0.8})`;
+              ctx.fill();
+            });
+          }
+
+          function easeIn(t) {
+            return t * t * t;
+          }
+          function easeOut(t) {
+            return 1 - Math.pow(1 - t, 3);
+          }
+
+          // Fases: fadeIn → aparecer → impulsoAbajo → lanzar → salida
+          const phases = {
+            fadeIn: { dur: 220 },
+            appear: { dur: 260 }, // sube hasta bottom=70px
+            impulse: { dur: 340 }, // baja a bottom=10px (preparar impulso)
+            launch: { dur: 1000 }, // sube off-screen
+          };
+
+          let phase = "fadeIn";
+          let phaseStart = null;
+
+          // Posiciones de referencia
+          const appearBottom = 70; // px visible al aparecer
+          const impulseBottom = 10; // px bajando para impulso
+          const launchEnd = vh + 220; // destino fuera de pantalla
+
+          function animate(now) {
+            if (!phaseStart) phaseStart = now;
+            const elapsed = now - phaseStart;
+
+            if (phase === "fadeIn") {
+              const p = Math.min(elapsed / phases.fadeIn.dur, 1);
+              overlay.style.opacity = p.toString();
+              if (p >= 1) {
+                phase = "appear";
+                phaseStart = now;
+              }
+              requestAnimationFrame(animate);
+            } else if (phase === "appear") {
+              const p = Math.min(elapsed / phases.appear.dur, 1);
+              const bottom = -140 + (appearBottom + 140) * easeOut(p);
+              bag.style.bottom = bottom + "px";
+              const bagTopY = vh - bottom - 110;
+              spawnParticles(vh - bottom);
+              drawTrail(bagTopY + 110);
+              if (p >= 1) {
+                phase = "impulse";
+                phaseStart = now;
+              }
+              requestAnimationFrame(animate);
+            } else if (phase === "impulse") {
+              const p = Math.min(elapsed / phases.impulse.dur, 1);
+              // Seno: baja suavemente y vuelve, dejando sensación de carga
+              const wave = Math.sin(p * Math.PI); // 0 → 1 → 0
+              const bottom =
+                appearBottom - wave * (appearBottom - impulseBottom);
+              bag.style.bottom = bottom + "px";
+              const bagTopY = vh - bottom - 110;
+              spawnParticles(vh - bottom);
+              drawTrail(bagTopY + 110);
+              // Fondo empieza a virar ligeramente al verde
+              const colorP = p * 0.15;
+              const r = Math.round(56 * colorP);
+              const g = Math.round(224 * colorP);
+              const bv = Math.round(123 * colorP);
+              overlay.style.background = `rgb(${r},${g},${bv})`;
+              if (p >= 1) {
+                phase = "launch";
+                phaseStart = now;
+              }
+              requestAnimationFrame(animate);
+            } else if (phase === "launch") {
+              const p = Math.min(elapsed / phases.launch.dur, 1);
+              const bottom =
+                appearBottom + (launchEnd - appearBottom) * easeIn(p);
+              bag.style.bottom = bottom + "px";
+              const bagTopY = vh - bottom - 110;
+              spawnParticles(Math.max(vh - bottom, 0));
+              drawTrail(Math.max(bagTopY + 110, 0));
+              // Negro → verde completo
+              const colorP = Math.min(p * 1.4, 1);
+              const r = Math.round(56 * colorP);
+              const g = Math.round(224 * colorP);
+              const bv = Math.round(123 * colorP);
+              overlay.style.background = `rgb(${r},${g},${bv})`;
+              if (p >= 1) {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                overlay.classList.remove("active");
+                overlay.style.opacity = "";
+                overlay.style.transition = "";
+                overlay.style.background = "#000";
+                bag.style.bottom = "-140px";
+                if (typeof callback === "function") callback();
+              }
+              requestAnimationFrame(animate);
+            }
+          }
+
+          requestAnimationFrame(animate);
+        };
+      })();
       // Data from server
       const orderData = {
         orderType: /*[[${orderType.name()}]]*/ "DINE_IN",
@@ -3585,6 +3826,9 @@
           return;
         }
 
+        // Haptic feedback on confirm (short pulse)
+        if (navigator.vibrate) navigator.vibrate(50);
+
         // Lock submission immediately
         isSubmitting = true;
         const submitBtn = document.getElementById("submitOrderBtn");
@@ -3668,21 +3912,51 @@
           .then((response) => response.json())
           .then((data) => {
             if (data.success) {
-              // Clear cart and localStorage on success
               cart = [];
               clearCartFromStorage();
-              Swal.fire({
-                title: "¡Pedido creado!",
-                text: `Pedido #${data.orderNumber} creado exitosamente`,
-                icon: "success",
-                background: document.documentElement.classList.contains("dark")
-                  ? "#1f2937"
-                  : "#ffffff",
-                color: document.documentElement.classList.contains("dark")
-                  ? "#f3f4f6"
-                  : "#1f2937",
-              }).then(() => {
-                window.location.href = "/client/orders";
+              // Haptic feedback on success animation (triple pulse)
+              if (navigator.vibrate) navigator.vibrate([100, 60, 100, 60, 200]);
+              playOrderSuccessAnimation(function () {
+                if (document.getElementById("thank-you-overlay")) return;
+
+                const thankYouOverlay = document.createElement("div");
+                thankYouOverlay.id = "thank-you-overlay";
+                thankYouOverlay.style.cssText = `
+    position:fixed;inset:0;z-index:99999;
+    background:linear-gradient(135deg,#0f1a12 0%,#1a3a22 50%,#0f1a12 100%);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    opacity:0;transition:opacity 0.4s ease;
+  `;
+                thankYouOverlay.innerHTML = `
+    <div style="text-align:center;padding:2rem;">
+      <div style="font-size:5rem;margin-bottom:1rem;animation:bounceIn 0.6s ease forwards;">🧾</div>
+      <h1 style="font-family:'Work Sans',sans-serif;font-size:2.5rem;font-weight:900;color:#38e07b;margin-bottom:0.5rem;animation:slideUp 0.5s ease 0.2s both;">¡Gracias por tu compra!</h1>
+      <p style="font-family:'Work Sans',sans-serif;color:#a3e4b8;font-size:1.1rem;font-weight:500;animation:slideUp 0.5s ease 0.4s both;">Pedido #${data.orderNumber} creado exitosamente</p>
+      <p style="font-family:'Work Sans',sans-serif;color:#6b9e7e;font-size:0.9rem;margin-top:0.5rem;animation:slideUp 0.5s ease 0.6s both;">Redirigiendo a tus pedidos...</p>
+      <div style="margin-top:2rem;width:180px;height:4px;background:rgba(56,224,123,0.2);border-radius:999px;overflow:hidden;animation:slideUp 0.5s ease 0.6s both;margin-left:auto;margin-right:auto;">
+        <div id="progress-bar" style="height:100%;width:0%;background:linear-gradient(90deg,#38e07b,#2bc866);border-radius:999px;transition:width 2.5s linear;"></div>
+      </div>
+    </div>
+    <style>
+      @keyframes bounceIn{0%{transform:scale(0);opacity:0}60%{transform:scale(1.2);opacity:1}100%{transform:scale(1)}}
+      @keyframes slideUp{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
+    </style>
+  `;
+                document.body.appendChild(thankYouOverlay);
+
+                requestAnimationFrame(() => {
+                  requestAnimationFrame(() => {
+                    thankYouOverlay.style.opacity = "1";
+                    setTimeout(() => {
+                      const bar = document.getElementById("progress-bar");
+                      if (bar) bar.style.width = "100%";
+                    }, 100);
+                  });
+                });
+
+                setTimeout(() => {
+                  window.location.replace("/client/orders");
+                }, 2800);
               });
             } else {
               // Reset submission guard on error
@@ -3845,8 +4119,12 @@
                 showConfirmButton: false,
                 timer: 3000,
                 timerProgressBar: true,
-                background: document.documentElement.classList.contains("dark") ? "#1f2937" : "#ffffff",
-                color: document.documentElement.classList.contains("dark") ? "#f3f4f6" : "#1f2937",
+                background: document.documentElement.classList.contains("dark")
+                  ? "#1f2937"
+                  : "#ffffff",
+                color: document.documentElement.classList.contains("dark")
+                  ? "#f3f4f6"
+                  : "#1f2937",
               });
               Toast.fire({
                 icon: "info",
@@ -4579,8 +4857,12 @@
               showConfirmButton: false,
               timer: 3000,
               timerProgressBar: true,
-              background: document.documentElement.classList.contains("dark") ? "#1f2937" : "#ffffff",
-              color: document.documentElement.classList.contains("dark") ? "#f3f4f6" : "#1f2937",
+              background: document.documentElement.classList.contains("dark")
+                ? "#1f2937"
+                : "#ffffff",
+              color: document.documentElement.classList.contains("dark")
+                ? "#f3f4f6"
+                : "#1f2937",
             });
             Toast.fire({
               icon: "success",
@@ -4617,6 +4899,76 @@
             passive: true,
           });
         });
+
+        // === Categoría activa dinámica por scroll ===
+        const menuContainer = document.querySelector(
+          "main.flex-1.overflow-y-auto",
+        );
+        const categorySections = Array.from(
+          document.querySelectorAll('[id^="category-"]'),
+        );
+        const categoryButtons = Array.from(
+          document.querySelectorAll(".category-btn"),
+        );
+        if (
+          menuContainer &&
+          categorySections.length &&
+          categoryButtons.length
+        ) {
+          menuContainer.addEventListener("scroll", () => {
+            // Encuentra la categoría más cercana al top visible
+            let activeIdx = 0;
+            let minDist = Infinity;
+            const containerRect = menuContainer.getBoundingClientRect();
+            categorySections.forEach((section, idx) => {
+              const rect = section.getBoundingClientRect();
+              // Distancia desde el top del contenedor scrolleable
+              const dist = Math.abs(rect.top - containerRect.top - 16); // 16px padding
+              if (dist < minDist) {
+                minDist = dist;
+                activeIdx = idx;
+              }
+            });
+            // Actualiza clases de los botones
+            categoryButtons.forEach((btn, idx) => {
+              if (idx === activeIdx) {
+                btn.classList.add(
+                  "active",
+                  "bg-gradient-to-r",
+                  "from-primary",
+                  "to-primary-dark",
+                  "text-white",
+                  "shadow-green",
+                  "font-bold",
+                );
+                btn.classList.remove(
+                  "text-gray-700",
+                  "dark:text-gray-300",
+                  "font-semibold",
+                );
+                const icon = btn.querySelector(".material-symbols-outlined");
+                if (icon) icon.classList.add("filled");
+              } else {
+                btn.classList.remove(
+                  "active",
+                  "bg-gradient-to-r",
+                  "from-primary",
+                  "to-primary-dark",
+                  "text-white",
+                  "shadow-green",
+                  "font-bold",
+                );
+                btn.classList.add(
+                  "text-gray-700",
+                  "dark:text-gray-300",
+                  "font-semibold",
+                );
+                const icon = btn.querySelector(".material-symbols-outlined");
+                if (icon) icon.classList.remove("filled");
+              }
+            });
+          });
+        }
       });
     </script>
 

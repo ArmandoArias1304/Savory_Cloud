@@ -77,7 +77,7 @@
           <!-- Logo -->
           <div class="flex items-center gap-3">
             <div
-              class="w-10 h-10 sm:w-12 sm:h-12 bg-white rounded-full flex items-center justify-center shadow-lg overflow-hidden"
+              class="w-14 h-14 sm:w-16 sm:h-16 bg-white rounded-full flex items-center justify-center shadow-lg overflow-hidden"
             >
               <img
                 th:if="${systemConfig != null and systemConfig.restaurantLogoUrl != null and !systemConfig.restaurantLogoUrl.isEmpty()}"
@@ -87,8 +87,11 @@
               />
             </div>
             <div>
-              <h1 class="text-white font-bold text-lg sm:text-xl" th:text="${systemConfig != null and systemConfig.restaurantName != null and !systemConfig.restaurantName.isEmpty()} ? ${systemConfig.restaurantName} : ''">
-              </h1>
+              <h1
+                class="text-white font-extrabold text-2xl sm:text-3xl drop-shadow-lg restaurant-title"
+                style="text-shadow: 0 2px 8px rgba(44,44,44,0.25), 0 1px 0 #0004;"
+                th:text="${systemConfig != null and systemConfig.restaurantName != null and !systemConfig.restaurantName.isEmpty()} ? ${systemConfig.restaurantName} : ''"
+              ></h1>
               <p class="text-white/80 text-xs sm:text-sm">Mi Reseña</p>
             </div>
           </div>

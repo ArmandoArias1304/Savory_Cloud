@@ -201,16 +201,17 @@
           <div class="flex items-center gap-1.5 flex-wrap mt-1">
             <!-- Order Type Badge -->
             <span
-              class="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-lg text-xs font-semibold whitespace-nowrap"
+              class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-semibold whitespace-nowrap"
               th:classappend="${orderType.name() == 'DINE_IN'} ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300' : 
-                             (${orderType.name() == 'TAKEOUT'} ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300' : 
-                             'bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-300')"
+                             (${orderType.name() == 'TAKEOUT'} ? 'bg-purple-700 text-white dark:bg-purple-800/90' : 
+                             'bg-orange-500 text-white dark:bg-orange-700/90')"
             >
               <span
                 class="material-symbols-outlined"
                 style="font-size: 14px"
+                th:classappend="${orderType.name() == 'TAKEOUT'} ? 'text-white' : (${orderType.name() == 'DINE_IN'} ? 'text-green-600' : 'text-white')"
                 th:text="${orderType.name() == 'DINE_IN'} ? 'restaurant' : 
-                         (${orderType.name() == 'TAKEOUT'} ? 'shopping_bag' : 'delivery_dining')"
+                         (${orderType.name() == 'TAKEOUT'} ? 'shopping_bag' : 'local_shipping')"
               >
                 restaurant
               </span>
@@ -448,9 +449,17 @@
             <p
               class="text-xs font-medium text-text-light-secondary dark:text-text-dark-secondary"
             >
-              <span th:text="${orderType.displayName}">Tipo de Pedido</span>
+              <span
+                class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold"
+                th:classappend="${orderType.name() == 'DINE_IN'} ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300' : 
+                                (${orderType.name() == 'TAKEOUT'} ? 'bg-purple-700 text-white dark:bg-purple-800/90' : 'bg-orange-500 text-white dark:bg-orange-700/90')"
+                th:text="${orderType.displayName}"
+              >
+                Tipo de Pedido
+              </span>
               <span th:if="${selectedTable != null}">
-                - Mesa #<span th:text="${selectedTable.tableNumber}">1</span>
+                <span class="ml-2">- Mesa #</span
+                ><span th:text="${selectedTable.tableNumber}">1</span>
               </span>
             </p>
           </div>
@@ -694,6 +703,79 @@
                 itemPromotionsMap.get(itemId).push(promo);
               });
             });
+            // === Categoría activa dinámica por scroll ===
+            const menuContainer = document.querySelector(
+              "main.flex-1.overflow-y-auto",
+            );
+            const categorySections = Array.from(
+              document.querySelectorAll('[id^="category-"]'),
+            );
+            const categoryButtons = Array.from(
+              document.querySelectorAll(".category-btn"),
+            );
+            if (
+              menuContainer &&
+              categorySections.length &&
+              categoryButtons.length
+            ) {
+              menuContainer.addEventListener("scroll", () => {
+                // Encuentra la categoría más cercana al top visible
+                let activeIdx = 0;
+                let minDist = Infinity;
+                const containerRect = menuContainer.getBoundingClientRect();
+                categorySections.forEach((section, idx) => {
+                  const rect = section.getBoundingClientRect();
+                  // Distancia desde el top del contenedor scrolleable
+                  const dist = Math.abs(rect.top - containerRect.top - 16); // 16px padding
+                  if (dist < minDist) {
+                    minDist = dist;
+                    activeIdx = idx;
+                  }
+                });
+                // Actualiza clases de los botones
+                categoryButtons.forEach((btn, idx) => {
+                  if (idx === activeIdx) {
+                    btn.classList.add(
+                      "active",
+                      "bg-gradient-to-r",
+                      "from-primary",
+                      "to-primary-dark",
+                      "text-white",
+                      "shadow-green",
+                      "font-bold",
+                    );
+                    btn.classList.remove(
+                      "text-gray-700",
+                      "dark:text-gray-300",
+                      "font-semibold",
+                    );
+                    const icon = btn.querySelector(
+                      ".material-symbols-outlined",
+                    );
+                    if (icon) icon.classList.add("filled");
+                  } else {
+                    btn.classList.remove(
+                      "active",
+                      "bg-gradient-to-r",
+                      "from-primary",
+                      "to-primary-dark",
+                      "text-white",
+                      "shadow-green",
+                      "font-bold",
+                    );
+                    btn.classList.add(
+                      "text-gray-700",
+                      "dark:text-gray-300",
+                      "font-semibold",
+                    );
+                    const icon = btn.querySelector(
+                      ".material-symbols-outlined",
+                    );
+                    if (icon) icon.classList.remove("filled");
+                  }
+                });
+              });
+            }
 
             promotionsLoaded = true; // Mark as loaded
 

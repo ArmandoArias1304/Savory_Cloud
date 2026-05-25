@@ -849,21 +849,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  /* ─── Features: hide scroll hint on scroll ─── */
-  const featuresRow = document.querySelector(".features .row.g-4");
-  const scrollHint = document.getElementById("featuresScrollHint");
-  if (featuresRow && scrollHint) {
-    featuresRow.addEventListener(
-      "scroll",
-      () => {
-        if (featuresRow.scrollLeft > 30) {
-          scrollHint.classList.add("is-hidden");
-        }
-      },
-      { passive: true },
-    );
-  }
-
   /* ─── Data en Vivo: organic equalizer bars (paused off-screen) ─── */
   const eqContainer = document.getElementById("dlEqualizer");
   if (eqContainer) {
@@ -950,4 +935,148 @@ document.addEventListener("DOMContentLoaded", () => {
       },
     });
   }
+  /* ─── Features Carousel (fc) ─── */
+  (function initFeaturesCarousel() {
+    const track = document.getElementById("fcTrack");
+    if (!track) return;
+
+    const cards = Array.from(track.querySelectorAll(".fc__card"));
+    const dotsContainer = document.getElementById("fcDots");
+    const prevBtn = document.getElementById("fcPrev");
+    const nextBtn = document.getElementById("fcNext");
+    const TOTAL = cards.length;
+    let current = 0;
+    let fcAnimating = false;
+    const ANIM_DURATION = 620;
+
+    /* Crear dots */
+    cards.forEach((_, i) => {
+      const dot = document.createElement("button");
+      dot.className = "fc__dot" + (i === 0 ? " is-active" : "");
+      dot.setAttribute("aria-label", `Función ${i + 1}`);
+      dot.addEventListener("click", () => goTo(i));
+      dotsContainer.appendChild(dot);
+    });
+
+    function getDots() {
+      return Array.from(dotsContainer.querySelectorAll(".fc__dot"));
+    }
+
+    function applyState(idx) {
+      cards.forEach((card, i) => {
+        if (i === idx) {
+          card.classList.remove("fc--inactive");
+        } else {
+          card.classList.add("fc--inactive");
+        }
+      });
+      getDots().forEach((d, i) => d.classList.toggle("is-active", i === idx));
+    }
+
+    function goTo(idx) {
+      if (fcAnimating || idx === current || idx < 0 || idx >= TOTAL) return;
+      fcAnimating = true;
+      current = idx;
+      applyState(current);
+
+      // --- Scroll automático en móvil para centrar la tarjeta activa ---
+      // Solo aplica si el ancho de la pantalla es menor a 768px
+      if (window.innerWidth < 768) {
+        const activeCard = cards[current];
+        const trackRect = track.getBoundingClientRect();
+        const cardRect = activeCard.getBoundingClientRect();
+        // Calcula el scroll para centrar la tarjeta activa
+        const scrollLeft =
+          activeCard.offsetLeft - trackRect.width / 2 + cardRect.width / 2;
+        track.scrollTo({ left: scrollLeft, behavior: "smooth" });
+      }
+
+      setTimeout(() => {
+        fcAnimating = false;
+      }, ANIM_DURATION);
+    }
+
+    /* Hover en inactiva → no cambia el estado del carrusel, solo CSS */
+    cards.forEach((card, i) => {
+      card.addEventListener("click", () => {
+        if (card.classList.contains("fc--inactive")) goTo(i);
+      });
+    });
+
+    prevBtn.addEventListener("click", () =>
+      goTo(current === 0 ? TOTAL - 1 : current - 1),
+    );
+    nextBtn.addEventListener("click", () =>
+      goTo(current === TOTAL - 1 ? 0 : current + 1),
+    );
+
+    /* Autoplay: avanza cada 5s si el usuario no interactúa */
+    let autoplayTimer = setInterval(autoplay, 5000);
+    function autoplay() {
+      goTo(current === TOTAL - 1 ? 0 : current + 1);
+    }
+    function resetAutoplay() {
+      clearInterval(autoplayTimer);
+      autoplayTimer = setInterval(autoplay, 5000);
+    }
+    [prevBtn, nextBtn].forEach((b) =>
+      b.addEventListener("click", resetAutoplay),
+    );
+    cards.forEach((c) => c.addEventListener("click", resetAutoplay));
+
+    /* Activar al entrar en viewport (IntersectionObserver) */
+    const fcSection = document.getElementById("features");
+    const fcObserver = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            applyState(current);
+            fcObserver.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.25 },
+    );
+    fcObserver.observe(fcSection);
+
+    /* Teclado: flechas cuando el foco está en la sección */
+    track.setAttribute("tabindex", "0");
+    track.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+        e.preventDefault();
+        goTo(current === TOTAL - 1 ? 0 : current + 1);
+        resetAutoplay();
+      }
+      if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+        e.preventDefault();
+        goTo(current === 0 ? TOTAL - 1 : current - 1);
+        resetAutoplay();
+      }
+    });
+
+    /* Swipe táctil (desktop también lo soporta con pointer events) */
+    let touchStartX = 0;
+    track.addEventListener("pointerdown", (e) => {
+      touchStartX = e.clientX;
+    });
+    track.addEventListener("pointerup", (e) => {
+      const diff = touchStartX - e.clientX;
+      if (Math.abs(diff) > 50) {
+        diff > 0
+          ? goTo(current === TOTAL - 1 ? 0 : current + 1)
+          : goTo(current === 0 ? TOTAL - 1 : current - 1);
+        resetAutoplay();
+      }
+    });
+  })();
+  /* ── About Us cards: tap en móvil activa animación ── */
+  document.querySelectorAll(".about-us__icon-item").forEach((card) => {
+    card.addEventListener("click", () => {
+      const isActive = card.classList.contains("is-active");
+      document
+        .querySelectorAll(".about-us__icon-item")
+        .forEach((c) => c.classList.remove("is-active"));
+      if (!isActive) card.classList.add("is-active");
+    });
+  });
 });
