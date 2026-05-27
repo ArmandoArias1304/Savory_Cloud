@@ -460,7 +460,7 @@
       </div>
 
       <!-- Card 3 -->
-      <div class="fc__card" style="--bg: url('https://postimg.cc/vxYBZTzH')">
+      <div class="fc__card" style="--bg: url('https://feyma.com/blog/wp-content/uploads/2024/01/tipos-de-mesas-para-restaurantes.jpg')">
         <div class="fc__overlay"></div>
         <div class="fc__content">
           <div class="fc__icon-wrap">
@@ -515,7 +515,7 @@
       </div>
 
       <!-- Card 6 -->
-      <div class="fc__card" style="--bg: url('https://photos.app.goo.gl/s2iprJKWs9Mnrmci6')">
+      <div class="fc__card" style="--bg: url('https://www.shutterstock.com/image-photo/young-adult-waiter-taking-order-600nw-2772738075.jpg')">
         <div class="fc__overlay"></div>
         <div class="fc__content">
           <div class="fc__icon-wrap">
@@ -905,6 +905,1322 @@
         </div>
       </section>
 
+      <!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Demo Pedido – Savory Cloud</title>
+<style>
+/* ===== VARIABLES DE TEMA ===== */
+:root {
+  --sc-bg:           #f8faf9;
+  --sc-surface:      #ffffff;
+  --sc-surface2:     #f1f5f2;
+  --sc-border:       rgba(0,0,0,0.08);
+  --sc-border2:      rgba(0,0,0,0.14);
+  --sc-text:         #111827;
+  --sc-text2:        #4b5563;
+  --sc-text3:        #9ca3af;
+  --sc-primary:      #38e07b;
+  --sc-primary-d:    #2bc866;
+  --sc-primary-t:    rgba(56,224,123,0.12);
+  --sc-sidebar:      #ffffff; /* light by default */
+  --sc-sidebar-t:    rgba(0,0,0,0.06);
+  --sc-sidebar-text: rgba(17,24,39,0.75);
+  --sc-sidebar-act:  rgba(56,224,123,0.18);
+  --sc-badge-avail-bg:  rgba(0,195,102,0.12);
+  --sc-badge-avail:     #00c366;
+  --sc-badge-occ-bg:    rgba(247,144,9,0.12);
+  --sc-badge-occ:       #f79009;
+  --sc-badge-block-bg:  rgba(240,68,56,0.12);
+  --sc-badge-block:     #f04438;
+  --sc-shadow:       0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --sc-shadow2:      0 4px 16px rgba(0,0,0,0.08);
+}
+
+[data-theme="dark"] .sc-demo-section {
+  --sc-bg:           #0f1713;
+  --sc-surface:      #1a2420;
+  --sc-surface2:     #222e28;
+  --sc-border:       rgba(255,255,255,0.07);
+  --sc-border2:      rgba(255,255,255,0.12);
+  --sc-text:         #f0fdf4;
+  --sc-text2:        #9ca3af;
+  --sc-text3:        #6b7280;
+  --sc-sidebar:      #0d1610;
+  --sc-sidebar-t:    rgba(255,255,255,0.06);
+  --sc-sidebar-text: rgba(255,255,255,0.60);
+  --sc-sidebar-act:  rgba(56,224,123,0.20);
+  --sc-badge-avail-bg:  rgba(0,195,102,0.15);
+  --sc-badge-avail:     #34d375;
+  --sc-badge-occ-bg:    rgba(247,144,9,0.15);
+  --sc-badge-occ:       #fbbf24;
+  --sc-badge-block-bg:  rgba(240,68,56,0.15);
+  --sc-badge-block:     #f87171;
+  --sc-shadow:       0 1px 3px rgba(0,0,0,0.30);
+  --sc-shadow2:      0 4px 20px rgba(0,0,0,0.40);
+}
+
+/* ===== WRAPPER DE LA SECCIÓN ===== */
+.sc-demo-section {
+  padding: 6rem 0 7rem;
+  background: var(--sc-bg);
+  transition: background 0.4s;
+  overflow: hidden;
+}
+
+/* ===== HEADER DE SECCIÓN (usa tus clases existentes) ===== */
+.sc-demo-section .section__header {
+  text-align: center;
+  margin-bottom: 3.5rem;
+}
+
+/* ===== CONTAINER PRINCIPAL DEL DEMO ===== */
+.demo-shell {
+  max-width: 1160px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}
+
+/* ===== TABS DE PASO ===== */
+.demo-tabs {
+  display: flex;
+  justify-content: center;
+  gap: 0;
+  margin-bottom: 2.5rem;
+  background: var(--sc-surface);
+  border: 1px solid var(--sc-border2);
+  border-radius: 999px;
+  padding: 5px;
+  width: fit-content;
+  margin-left: auto;
+  margin-right: auto;
+  box-shadow: var(--sc-shadow);
+}
+.demo-tab {
+  cursor: pointer;
+  padding: 0.55rem 1.4rem;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--sc-text2);
+  transition: all 0.22s;
+  border: none;
+  background: transparent;
+  white-space: nowrap;
+  font-family: inherit;
+  letter-spacing: 0.01em;
+}
+.demo-tab:hover { color: var(--sc-text); }
+.demo-tab.active {
+  background: var(--sc-primary);
+  color: #0a1f12;
+  box-shadow: 0 2px 8px rgba(56,224,123,0.35);
+}
+
+/* ===== VENTANA DEL SISTEMA (browser frame) ===== */
+.demo-browser {
+  background: var(--sc-surface);
+  border: 1px solid var(--sc-border2);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: var(--sc-shadow2);
+  min-height: 600px;
+  display: flex;
+  flex-direction: column;
+  position: relative; /* allow absolute children like mobile comanda */
+}
+.demo-browser__bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: var(--sc-surface2);
+  border-bottom: 1px solid var(--sc-border);
+  flex-shrink: 0;
+}
+.demo-browser__dot {
+  width: 10px; height: 10px; border-radius: 50%;
+}
+.demo-browser__dot:nth-child(1) { background: #f04438; }
+.demo-browser__dot:nth-child(2) { background: #f79009; }
+.demo-browser__dot:nth-child(3) { background: #38e07b; }
+.demo-browser__url {
+  flex: 1;
+  font-size: 0.72rem;
+  color: var(--sc-text3);
+  background: var(--sc-bg);
+  border: 1px solid var(--sc-border);
+  border-radius: 6px;
+  padding: 4px 10px;
+  margin-left: 8px;
+  font-family: monospace;
+}
+
+/* hide cart toggle by default (only show on mobile via media query) */
+.demo-cart-toggle { display: none; }
+
+/* ===== LAYOUT APP (sidebar + main) ===== */
+.demo-app {
+  display: flex;
+  flex: 1;
+  min-height: 560px;
+}
+
+/* ===== SIDEBAR ===== */
+.demo-sidebar {
+  width: 224px;
+  flex-shrink: 0;
+  background: var(--sc-sidebar);
+  display: flex;
+  flex-direction: column;
+  padding: 1.25rem 0.75rem;
+  gap: 2px;
+  border-right: 1px solid var(--sc-border);
+}
+.demo-sidebar__brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 0.5rem 1.25rem;
+  border-bottom: 1px solid var(--sc-sidebar-t);
+  margin-bottom: 0.5rem;
+}
+.demo-sidebar__logo {
+  width: 28px; height: 28px; border-radius: 8px;
+  background: var(--sc-primary);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; font-weight: 800; color: #0a1f12;
+}
+.demo-sidebar__name {
+  font-size: 0.82rem; font-weight: 700; color: var(--sc-sidebar-text);
+  letter-spacing: 0.01em;
+}
+.demo-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  color: var(--sc-sidebar-text);
+  cursor: pointer;
+  transition: background 0.18s, color 0.18s;
+}
+.demo-nav-item:hover { background: var(--sc-sidebar-t); color: var(--sc-sidebar-text); }
+.demo-nav-item.active {
+  background: var(--sc-sidebar-act);
+  color: var(--sc-primary);
+  font-weight: 600;
+}
+.demo-nav-item svg { width:16px; height:16px; flex-shrink:0; }
+.demo-nav-section {
+  font-size: 0.64rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(255,255,255,0.30);
+  padding: 0.75rem 10px 0.25rem;
+  font-weight: 600;
+}
+
+/* ===== CONTENIDO PRINCIPAL ===== */
+.demo-main {
+  flex: 1;
+  overflow-y: auto;
+  background: var(--sc-bg);
+  padding: 1.75rem 2rem 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+/* ===== VISTA 1: SELECCIONAR MESA ===== */
+.demo-step { display: none; flex-direction: column; gap: 1.25rem; }
+.demo-step.active { display: flex; }
+
+.demo-page-title { font-size: 1.35rem; font-weight: 700; color: var(--sc-text); margin: 0 0 2px; }
+.demo-page-sub   { font-size: 0.79rem; color: var(--sc-text2); margin: 0; }
+
+.demo-quick-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.demo-qa-card {
+  background: var(--sc-surface);
+  border: 1.5px solid var(--sc-border2);
+  border-radius: 14px;
+  padding: 1rem 1.1rem;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: all 0.22s;
+  box-shadow: var(--sc-shadow);
+}
+.demo-qa-card:hover { transform: translateY(-2px); box-shadow: var(--sc-shadow2); }
+.demo-qa-icon {
+  width: 48px; height: 48px; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.demo-qa-icon svg { width:24px; height:24px; }
+.demo-qa-title { font-size: 0.88rem; font-weight: 700; color: var(--sc-text); margin: 0 0 2px; }
+.demo-qa-sub   { font-size: 0.72rem; color: var(--sc-text2); margin: 0; }
+
+.demo-divider {
+  display: flex; align-items: center; gap: 12px;
+  font-size: 0.74rem; color: var(--sc-text3);
+}
+.demo-divider::before, .demo-divider::after {
+  content: ''; flex: 1; height: 1px; background: var(--sc-border2);
+}
+
+.demo-stats {
+  display: grid;
+  grid-template-columns: repeat(4,1fr);
+  gap: 10px;
+}
+.demo-stat-card {
+  background: var(--sc-surface);
+  border: 1px solid var(--sc-border);
+  border-radius: 12px;
+  padding: 0.85rem 1rem;
+  box-shadow: var(--sc-shadow);
+}
+.demo-stat-card__hdr { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+.demo-stat-card__label { font-size:0.72rem; color:var(--sc-text2); font-weight:600; }
+.demo-stat-card__ico { width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center; }
+.demo-stat-card__ico svg { width:16px;height:16px; }
+.demo-stat-card__num { font-size:1.5rem; font-weight:800; color:var(--sc-text); }
+
+.demo-tables-box {
+  background: var(--sc-surface);
+  border: 1px solid var(--sc-border);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: var(--sc-shadow);
+}
+.demo-tables-box__hdr {
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--sc-border);
+}
+.demo-tables-box__hdr h3 { font-size:0.95rem;font-weight:700;color:var(--sc-text);margin:0 0 8px; }
+.demo-legend { display:flex;flex-wrap:wrap;gap:10px; }
+.demo-legend-item { display:flex;align-items:center;gap:6px;font-size:0.70rem;color:var(--sc-text2); }
+.demo-legend-dot { width:8px;height:8px;border-radius:50%;flex-shrink:0; }
+.demo-tables-grid { display:grid;grid-template-columns:repeat(5,1fr);gap:10px;padding:1.1rem 1.25rem; }
+.demo-table-card {
+  border: 1px solid var(--sc-border2);
+  border-radius: 12px;
+  padding: 0.75rem 0.5rem;
+  display: flex; flex-direction:column; align-items:center; text-align:center;
+  cursor: pointer; transition: all 0.22s;
+  background: var(--sc-surface);
+}
+.demo-table-card:hover { transform:translateY(-2px); box-shadow:var(--sc-shadow2); }
+.demo-table-card.available { border-color: var(--sc-badge-avail); background: var(--sc-badge-avail-bg); }
+.demo-table-card.occupied  { border-color: var(--sc-badge-occ);   background: var(--sc-badge-occ-bg); opacity:0.75; }
+.demo-table-card.blocked   { border-color: var(--sc-badge-block); background: var(--sc-badge-block-bg); opacity:0.65; }
+.demo-table-card svg { width:28px;height:28px;margin-bottom:4px; }
+.demo-table-card__num { font-size:0.80rem;font-weight:700;color:var(--sc-text);margin:0 0 2px; }
+.demo-table-card__cap { font-size:0.65rem;color:var(--sc-text2);margin:0 0 5px; }
+.demo-table-badge {
+  font-size:0.60rem;font-weight:700;padding:2px 8px;border-radius:999px;
+}
+.badge-avail { background:var(--sc-badge-avail-bg);color:var(--sc-badge-avail); }
+.badge-occ   { background:var(--sc-badge-occ-bg);  color:var(--sc-badge-occ);   }
+.badge-block { background:var(--sc-badge-block-bg);color:var(--sc-badge-block); }
+
+/* ===== VISTA 2: DATOS DEL CLIENTE ===== */
+.demo-breadcrumb { display:flex;align-items:center;gap:6px;font-size:0.72rem;color:var(--sc-text2); }
+.demo-breadcrumb span { color:var(--sc-text3); }
+
+.demo-order-info-card {
+  background: var(--sc-primary-t);
+  border: 1.5px solid rgba(56,224,123,0.30);
+  border-radius: 14px;
+  padding: 1rem 1.25rem;
+}
+.demo-order-info-card h4 { font-size:0.82rem;font-weight:700;color:var(--sc-text);margin:0 0 10px;display:flex;align-items:center;gap:7px; }
+.demo-order-info-card svg { width:16px;height:16px;color:var(--sc-primary); }
+.demo-info-chips { display:flex;gap:10px; }
+.demo-info-chip {
+  background:var(--sc-surface);border-radius:10px;
+  padding:0.6rem 0.8rem;display:flex;align-items:center;gap:8px;
+  border:1px solid var(--sc-border);flex:1;
+}
+.demo-info-chip svg { width:18px;height:18px;flex-shrink:0; }
+.demo-info-chip__lbl { font-size:0.65rem;color:var(--sc-text2); }
+.demo-info-chip__val { font-size:0.78rem;font-weight:700;color:var(--sc-text); }
+
+.demo-form-card {
+  background:var(--sc-surface);border:1px solid var(--sc-border);
+  border-radius:14px;padding:1.25rem;box-shadow:var(--sc-shadow);
+}
+.demo-form-card h4 { font-size:0.88rem;font-weight:700;color:var(--sc-text);margin:0 0 1rem;display:flex;align-items:center;gap:7px; }
+.demo-form-card h4 svg { width:18px; height:18px; flex-shrink:0; }
+.demo-form-row { display:grid;grid-template-columns:1fr 1fr;gap:12px; }
+.demo-field { display:flex;flex-direction:column;gap:5px; }
+.demo-field label { font-size:0.71rem;font-weight:600;color:var(--sc-text2); }
+.demo-field-input {
+  background:var(--sc-surface2);border:1.5px solid var(--sc-border2);
+  border-radius:10px;padding:0.55rem 0.85rem;font-size:0.80rem;
+  color:var(--sc-text);font-family:inherit;outline:none;
+  transition:border-color 0.18s;
+}
+.demo-field-input:focus { border-color:var(--sc-primary); }
+.demo-info-box {
+  background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.20);
+  border-radius:10px;padding:0.65rem 0.85rem;font-size:0.74rem;
+  color: #3b82f6; display:flex;gap:8px;align-items:flex-start;
+}
+[data-theme="dark"] .demo-info-box { color:#93c5fd; background:rgba(59,130,246,0.12);border-color:rgba(59,130,246,0.25); }
+.demo-info-box svg { width:14px;height:14px;flex-shrink:0;margin-top:1px; }
+.demo-form-actions { display:flex;justify-content:space-between;align-items:center;margin-top:1rem; }
+.demo-btn {
+  display:inline-flex;align-items:center;gap:7px;
+  padding:0.6rem 1.3rem;border-radius:10px;font-size:0.79rem;
+  font-weight:700;font-family:inherit;cursor:pointer;
+  transition:all 0.20s;border:none;
+}
+.demo-btn-primary {
+  background:var(--sc-primary);color:#0a1f12;
+  box-shadow:0 2px 8px rgba(56,224,123,0.30);
+}
+.demo-btn-primary:hover { background:var(--sc-primary-d);transform:translateY(-1px); }
+.demo-btn-outline {
+  background:transparent;color:var(--sc-text2);
+  border:1.5px solid var(--sc-border2);
+}
+.demo-btn-outline:hover { background:var(--sc-surface2);color:var(--sc-text); }
+.demo-btn svg { width:15px;height:15px; }
+
+/* ===== VISTA 3: MENÚ + COMANDA ===== */
+.demo-menu-layout { display:flex;gap:0;flex:1;min-height:520px; }
+.demo-menu-panel {
+  flex:1;display:flex;flex-direction:column;overflow:hidden;
+  border-right:1px solid var(--sc-border);
+}
+.demo-cats {
+  display:flex;gap:6px;padding:0.7rem 1rem;overflow-x:auto;
+  background:var(--sc-surface);border-bottom:1px solid var(--sc-border);
+  flex-shrink:0;
+}
+.demo-cat-btn {
+  display:flex;align-items:center;gap:5px;padding:5px 12px;
+  border-radius:10px;font-size:0.72rem;font-weight:600;
+  white-space:nowrap;cursor:pointer;transition:all 0.18s;
+  border:none;font-family:inherit;
+  background:transparent;color:var(--sc-text2);
+}
+.demo-cat-btn.active {
+  background:var(--sc-primary);color:#0a1f12;
+  box-shadow:0 2px 6px rgba(56,224,123,0.30);
+}
+.demo-cat-btn svg { width:13px;height:13px; }
+
+.demo-items-grid {
+  display:grid;grid-template-columns:repeat(3,1fr);gap:10px;
+  padding:0.85rem 1rem;overflow-y:auto;flex:1;
+  align-content:start; /* prevent single row from stretching to fill container */
+  grid-auto-rows: auto;
+}
+.demo-menu-item {
+  background:var(--sc-surface);border:1px solid var(--sc-border);
+  border-radius:12px;overflow:hidden;cursor:pointer;
+  transition:all 0.22s;box-shadow:var(--sc-shadow);
+}
+.demo-menu-item:hover { transform:translateY(-2px);box-shadow:var(--sc-shadow2); }
+.demo-menu-item__img {
+  width:100%;aspect-ratio:1;object-fit:cover;display:flex;
+  align-items:center;justify-content:center;
+  background:var(--sc-surface2);
+}
+.demo-menu-item__img svg { width:56px;height:56px; display:block; margin:14px auto 6px; }
+.demo-menu-item__img { overflow:hidden; border-top-left-radius:12px; border-top-right-radius:12px; }
+.demo-menu-item__img img { display:block; width:100%; height:100%; object-fit:cover; border:0; }
+.demo-menu-item__body { padding:8px 9px; }
+.demo-menu-item__name { font-size:0.72rem;font-weight:700;color:var(--sc-text);margin:0 0 3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+.demo-menu-item__price { font-size:0.82rem;font-weight:800;color:var(--sc-primary); }
+
+/* comanda */
+.demo-comanda {
+  width: 224px; flex-shrink:0;display:flex;flex-direction:column;
+  background:var(--sc-surface);
+}
+
+/* allow absolutely positioned toasts inside the comanda */
+.demo-comanda { position: relative; }
+.demo-comanda__hdr {
+  padding:0.8rem 0.9rem;border-bottom:1px solid var(--sc-border);
+  background:var(--sc-primary-t);flex-shrink:0;
+}
+.demo-comanda__title { font-size:0.88rem;font-weight:800;color:var(--sc-text);margin:0 0 4px;display:flex;align-items:center;gap:7px; }
+.demo-comanda__title svg { width:16px;height:16px; }
+.demo-comanda__badge {
+  display:inline-flex;align-items:center;justify-content:center;
+  background:var(--sc-primary);color:#0a1f12;font-size:0.64rem;
+  font-weight:800;border-radius:999px;width:18px;height:18px;
+}
+.demo-comanda__type {
+  display:inline-flex;align-items:center;gap:5px;padding:3px 9px;
+  border-radius:999px;font-size:0.65rem;font-weight:700;
+  background:rgba(34,197,94,0.12);color:#16a34a;
+}
+[data-theme="dark"] .demo-comanda__type { background:rgba(34,197,94,0.18);color:#4ade80; }
+.demo-comanda__items { flex:1;overflow-y:auto;padding:0.6rem 0.75rem;display:flex;flex-direction:column;gap:6px; }
+.demo-cart-item {
+  background:var(--sc-surface2);border:1px solid var(--sc-border);
+  border-radius:10px;padding:8px 9px;
+}
+.demo-cart-item__top { display:flex;align-items:flex-start;justify-content:space-between;gap:6px; }
+.demo-cart-item__name { font-size:0.72rem;font-weight:700;color:var(--sc-text);flex:1;min-width:0; }
+.demo-cart-qty { display:flex;align-items:center;gap:4px; }
+.demo-cart-qty__btn {
+  width:18px;height:18px;border-radius:5px;border:none;background:var(--sc-border2);
+  color:var(--sc-text2);display:flex;align-items:center;justify-content:center;
+  cursor:pointer;font-size:11px;font-weight:700;flex-shrink:0;
+}
+.demo-cart-qty__n { font-size:0.72rem;font-weight:800;color:var(--sc-text);width:14px;text-align:center; }
+.demo-cart-item__price { font-size:0.72rem;font-weight:800;color:var(--sc-primary);margin-top:3px; }
+
+.demo-comanda__footer { border-top:1px solid var(--sc-border);padding:0.75rem 0.9rem; }
+.demo-total-row { display:flex;justify-content:space-between;align-items:center;margin-bottom:4px; }
+.demo-total-label { font-size:0.70rem;color:var(--sc-text2);font-weight:600; }
+.demo-total-val { font-size:0.72rem;font-weight:700;color:var(--sc-text); }
+.demo-grand-total {
+  display:flex;justify-content:space-between;align-items:center;
+  background:var(--sc-primary-t);border-radius:9px;padding:7px 10px;
+  margin:8px 0 10px;
+}
+.demo-grand-total__label { font-size:0.78rem;font-weight:800;color:var(--sc-text); }
+.demo-grand-total__val { font-size:1.1rem;font-weight:900;color:var(--sc-primary); }
+.demo-submit-btn {
+  width:100%;padding:9px;border-radius:10px;border:none;
+  background:var(--sc-primary);color:#0a1f12;font-weight:800;
+  font-size:0.78rem;font-family:inherit;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:6px;
+  transition:all 0.20s;
+}
+.demo-submit-btn:hover { background:var(--sc-primary-d);transform:translateY(-1px); }
+.demo-submit-btn svg { width:14px;height:14px; }
+
+/* toast / mensaje in-app dentro del demo */
+.demo-toast {
+  position: absolute; top: 12px; right: 12px; z-index: 60;
+  min-width: 180px; max-width: 300px; padding: 12px 14px; border-radius: 10px;
+  box-shadow: 0 8px 20px rgba(10,10,10,0.12); background: rgba(10,10,10,0.9);
+  color: #fff; font-weight:700; font-size:0.95rem; display:flex;flex-direction:column;gap:6px;
+  transform: translateY(-8px) scale(0.98); opacity:0; transition: all 260ms cubic-bezier(.2,.9,.2,1);
+}
+.demo-toast.show { transform: translateY(0) scale(1); opacity:1; }
+.demo-toast .demo-toast__meta { font-size:0.82rem; font-weight:600; color: rgba(255,255,255,0.92); }
+.demo-toast.success { background: var(--sc-primary); color: #0a1f12; }
+.demo-toast.error { background: #f43f5e; color: #fff; }
+
+/* ===== PASOS BREADCRUMB ANIMADO ===== */
+.demo-steps-indicator {
+  display:flex;align-items:center;justify-content:center;gap:0;
+  margin-bottom:2rem;
+}
+.demo-step-dot {
+  display:flex;align-items:center;gap:0;
+}
+.demo-step-circle {
+  width:32px;height:32px;border-radius:50%;display:flex;
+  align-items:center;justify-content:center;font-size:0.72rem;font-weight:800;
+  transition:all 0.30s;background:var(--sc-surface);
+  border:2px solid var(--sc-border2);color:var(--sc-text3);
+  flex-shrink:0;
+}
+.demo-step-circle.active {
+  background:var(--sc-primary);border-color:var(--sc-primary);color:#0a1f12;
+  box-shadow:0 0 0 4px rgba(56,224,123,0.20);
+}
+.demo-step-circle.done {
+  background:var(--sc-primary-t);border-color:var(--sc-primary);color:var(--sc-primary);
+}
+.demo-step-line {
+  width:60px;height:2px;background:var(--sc-border2);transition:background 0.30s;
+}
+.demo-step-line.done { background:var(--sc-primary); }
+.demo-step-label {
+  font-size:0.68rem;font-weight:600;color:var(--sc-text3);
+  text-align:center;margin-top:5px;
+}
+.demo-step-dot.active-dot .demo-step-label { color:var(--sc-primary); }
+.demo-step-wrapper { display:flex;flex-direction:column;align-items:center; }
+
+/* ===== RESPONSIVE ===== */
+@media(max-width:900px) {
+  .demo-tabs { flex-wrap:wrap; border-radius:14px; }
+  .demo-quick-actions { grid-template-columns:1fr; }
+  .demo-stats { grid-template-columns:1fr 1fr; }
+  .demo-tables-grid { grid-template-columns:repeat(3,1fr); }
+  .demo-items-grid { grid-template-columns:repeat(2,1fr); }
+  .demo-sidebar { display:none; }
+
+  /* Mobile cart toggle (appears on the browser bar) */
+  .demo-cart-toggle { display:none; align-items:center; gap:8px; border:none; cursor:pointer; padding:6px 8px; border-radius:8px; background:var(--sc-primary); color:#0a1f12; font-weight:700; }
+  .demo-cart-toggle svg { width:16px; height:16px; }
+  .demo-cart-toggle .demo-cart-badge { display:inline-flex; align-items:center; justify-content:center; width:18px; height:18px; border-radius:999px; background:#ffffff; color:#0a1f12; font-weight:800; font-size:0.72rem; margin-left:4px; }
+  .demo-browser__bar { position:relative; }
+  .demo-cart-toggle { display:inline-flex; position:absolute; right:12px; bottom:12px; top:auto; z-index:70; }
+
+    /* Comanda should be hidden by default on small screens and openable via toggle.
+      Use absolute positioning inside the .demo-browser so it appears 'inside' the frame. */
+    .demo-comanda { width: 100%; position: absolute; right: 0; left: 0; top: 0; bottom: 0; height: auto; max-width: none; transform: translateY(8px) scale(0.99); opacity: 0; pointer-events: none; transition: all 260ms cubic-bezier(.2,.9,.2,1); border-radius:12px; box-shadow: var(--sc-shadow2); z-index:40; }
+    .demo-comanda.open { transform: translateY(0) scale(1); opacity:1; pointer-events:auto; }
+
+    /* backdrop for when comanda is open (inside .demo-browser) */
+    .demo-comanda-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.45); z-index: 30; opacity:0; pointer-events:none; transition: opacity 220ms ease; }
+    .demo-comanda-backdrop.show { opacity:1; pointer-events:auto; }
+
+    /* Fix demo frame height on mobile and make inner app scrollable */
+    .demo-browser { height: 720px; max-height: 80vh; overflow: hidden; }
+    .demo-browser__bar { height: 52px; padding: 10px 12px; }
+    .demo-app { height: calc(100% - 52px); overflow: auto; }
+
+  /* close button inside comanda header */
+  .demo-comanda__close { display:inline-flex; align-items:center; justify-content:center; width:34px; height:34px; border-radius:8px; border:none; background:transparent; color:var(--sc-text2); cursor:pointer; margin-left:auto; }
+  .demo-comanda__close svg { width:14px; height:14px; }
+}
+@media(max-width:640px) {
+  .demo-main { padding:1rem; }
+  .demo-tables-grid { grid-template-columns:repeat(2,1fr); }
+  .demo-form-row { grid-template-columns:1fr; }
+  .demo-info-chips { flex-direction:column; }
+  .demo-step-line { width:30px; }
+  .demo-items-grid { grid-template-columns:repeat(2,1fr); }
+}
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     SECCIÓN DEMO DE PEDIDO
+     Pégala DESPUÉS de la sección #gallery en tu landing
+============================================================ -->
+<section class="section sc-demo-section" id="demoFlow">
+  <div class="container">
+
+    <!-- Header (usa las mismas clases que el resto de secciones) -->
+    <div class="section__header anim-fade-in-up">
+      <p class="section__tag">Flujo completo en acción</p>
+      <h2 class="section__title titulo-revelado">
+        Así se crea un pedido en<br/>
+        <span class="text-accent-serif">Savory Cloud</span>
+      </h2>
+      <p class="section__subtitle">
+        Desde elegir la mesa hasta enviar la comanda a cocina — todo en segundos.
+      </p>
+    </div>
+
+    <div class="demo-shell anim-fade-in-up" style="--delay:0.2s">
+
+      <!-- Indicador de pasos -->
+      <div class="demo-steps-indicator" id="stepsIndicator">
+        <div class="demo-step-wrapper demo-step-dot active-dot" data-step="0">
+          <div class="demo-step-circle active" id="sc0">1</div>
+          <div class="demo-step-label">Seleccionar mesa</div>
+        </div>
+        <div class="demo-step-line" id="sl0"></div>
+        <div class="demo-step-wrapper demo-step-dot" data-step="1">
+          <div class="demo-step-circle" id="sc1">2</div>
+          <div class="demo-step-label">Datos del cliente</div>
+        </div>
+        <div class="demo-step-line" id="sl1"></div>
+        <div class="demo-step-wrapper demo-step-dot" data-step="2">
+          <div class="demo-step-circle" id="sc2">3</div>
+          <div class="demo-step-label">Elegir platillos</div>
+        </div>
+      </div>
+
+      <!-- Tabs -->
+      <div class="demo-tabs">
+        <button class="demo-tab active" onclick="switchTab(0)">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:-1px;margin-right:5px"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          Seleccionar Mesa
+        </button>
+        <button class="demo-tab" onclick="switchTab(1)">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:-1px;margin-right:5px"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+          Datos del Cliente
+        </button>
+        <button class="demo-tab" onclick="switchTab(2)">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:-1px;margin-right:5px"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+          Menú y Comanda
+        </button>
+      </div>
+
+      <!-- Browser frame -->
+      <div class="demo-browser">
+
+        <!-- Mobile cart toggle (moved outside the top bar so it can float at bottom) -->
+        <button id="demoCartToggle" class="demo-cart-toggle" aria-label="Mostrar comanda">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h2l.4 2M7 13h10l4-8H5.4"/><circle cx="10" cy="20" r="1"/><circle cx="18" cy="20" r="1"/></svg>
+          <span class="demo-cart-badge" id="cartCountMobile">0</span>
+        </button>
+
+        <!-- Barra del navegador -->
+        <div class="demo-browser__bar">
+          <span class="demo-browser__dot"></span>
+          <span class="demo-browser__dot"></span>
+          <span class="demo-browser__dot"></span>
+          <span class="demo-browser__url" id="demoUrl">savorycloud.app/admin/orders/select-table</span>
+        </div>
+
+        <!-- App layout -->
+        <div class="demo-app">
+
+          <!-- Sidebar -->
+          <div class="demo-sidebar">
+            <div class="demo-sidebar__brand">
+              <div class="demo-sidebar__logo">S</div>
+              <span class="demo-sidebar__name">Savory Cloud</span>
+            </div>
+            <span class="demo-nav-section">General</span>
+            <div class="demo-nav-item">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+              Dashboard
+            </div>
+            <div class="demo-nav-item active">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="m9 14 2 2 4-4"/></svg>
+              Nuevo Pedido
+            </div>
+            <span class="demo-nav-section">Gestión</span>
+            <div class="demo-nav-item">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9h18M3 15h18M9 3v18M15 3v18" opacity=".6"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+              Mesas
+            </div>
+            <div class="demo-nav-item">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7H4a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+              Inventario
+            </div>
+            <div class="demo-nav-item">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              Empleados
+            </div>
+            <span class="demo-nav-section">Reportes</span>
+            <div class="demo-nav-item">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+              Analítica
+            </div>
+          </div>
+
+          <!-- Main content -->
+          <div class="demo-main">
+
+            <!-- ====== PASO 1: SELECCIONAR MESA ====== -->
+            <div class="demo-step active" id="step0">
+
+              <div>
+                <p class="demo-page-title">Nuevo Pedido — Seleccionar Mesa</p>
+                <p class="demo-page-sub">Selecciona una mesa disponible para comenzar el pedido</p>
+              </div>
+
+              <!-- Acciones rápidas -->
+              <div class="demo-quick-actions">
+                <button type="button" class="demo-qa-card" onclick="setOrderAndGo('takeaway')" style="cursor:pointer;text-align:left;width:100%;border:1px solid rgba(168,85,247,0.18);border-radius:10px;padding:10px;background:transparent;display:flex;align-items:center;gap:12px;">
+                  <div class="demo-qa-icon" style="background:rgba(168,85,247,0.12);">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#a855f7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+                  </div>
+                  <div>
+                    <p class="demo-qa-title">Para pasar a recoger</p>
+                    <p class="demo-qa-sub">Pedido para llevar</p>
+                  </div>
+                </button>
+                <button type="button" class="demo-qa-card" onclick="setOrderAndGo('delivery')" style="cursor:pointer;text-align:left;width:100%;border:1px solid rgba(249,115,22,0.18);border-radius:10px;padding:10px;background:transparent;display:flex;align-items:center;gap:12px;">
+                  <div class="demo-qa-icon" style="background:rgba(249,115,22,0.12);">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13" rx="2"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+                  </div>
+                  <div>
+                    <p class="demo-qa-title">Entrega a Domicilio</p>
+                    <p class="demo-qa-sub">Delivery al cliente</p>
+                  </div>
+                </button>
+              </div>
+
+              <div class="demo-divider">o selecciona una mesa para comer aquí</div>
+
+              <!-- Stats -->
+              <div class="demo-stats">
+                <div class="demo-stat-card">
+                  <div class="demo-stat-card__hdr">
+                    <span class="demo-stat-card__label">Disponibles</span>
+                    <div class="demo-stat-card__ico" style="background:rgba(0,195,102,0.10);">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="#00c366" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+                    </div>
+                  </div>
+                  <div class="demo-stat-card__num">7</div>
+                </div>
+                <div class="demo-stat-card">
+                  <div class="demo-stat-card__hdr">
+                    <span class="demo-stat-card__label">Ocupadas</span>
+                    <div class="demo-stat-card__ico" style="background:rgba(247,144,9,0.10);">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="#f79009" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                    </div>
+                  </div>
+                  <div class="demo-stat-card__num">3</div>
+                </div>
+                <div class="demo-stat-card">
+                  <div class="demo-stat-card__hdr">
+                    <span class="demo-stat-card__label">Fuera Servicio</span>
+                    <div class="demo-stat-card__ico" style="background:rgba(107,114,128,0.10);">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+                    </div>
+                  </div>
+                  <div class="demo-stat-card__num">1</div>
+                </div>
+                <div class="demo-stat-card">
+                  <div class="demo-stat-card__hdr">
+                    <span class="demo-stat-card__label">Total Mesas</span>
+                    <div class="demo-stat-card__ico" style="background:rgba(56,224,123,0.10);">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="#38e07b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9h18M3 15h18"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+                    </div>
+                  </div>
+                  <div class="demo-stat-card__num">11</div>
+                </div>
+              </div>
+
+              <!-- Tabla de mesas -->
+              <div class="demo-tables-box">
+                <div class="demo-tables-box__hdr">
+                  <h3>Selecciona una Mesa</h3>
+                  <div class="demo-legend">
+                    <div class="demo-legend-item"><div class="demo-legend-dot" style="background:#00c366;"></div>Disponible</div>
+                    <div class="demo-legend-item"><div class="demo-legend-dot" style="background:#f79009;"></div>Ocupada</div>
+                    <div class="demo-legend-item"><div class="demo-legend-dot" style="background:#f04438;"></div>Bloqueada</div>
+                    <div class="demo-legend-item"><div class="demo-legend-dot" style="background:#6b7280;"></div>Fuera de servicio</div>
+                  </div>
+                </div>
+                <div class="demo-tables-grid">
+                  <!-- Mesas disponibles -->
+                  <div class="demo-table-card available" onclick="selectTable(this,'Mesa 3','4')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#00c366" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9h18M3 15h18"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+                    <p class="demo-table-card__num">Mesa 3</p>
+                    <p class="demo-table-card__cap">4 personas</p>
+                    <span class="demo-table-badge badge-avail">Disponible</span>
+                  </div>
+                  <div class="demo-table-card occupied">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#f79009" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                    <p class="demo-table-card__num">Mesa 1</p>
+                    <p class="demo-table-card__cap">6 personas</p>
+                    <span class="demo-table-badge badge-occ">Ocupada</span>
+                  </div>
+                  <div class="demo-table-card available" onclick="selectTable(this,'Mesa 5','2')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#00c366" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9h18M3 15h18"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+                    <p class="demo-table-card__num">Mesa 5</p>
+                    <p class="demo-table-card__cap">2 personas</p>
+                    <span class="demo-table-badge badge-avail">Disponible</span>
+                  </div>
+                  <div class="demo-table-card blocked">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#f04438" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                    <p class="demo-table-card__num">Mesa 2</p>
+                    <p class="demo-table-card__cap">4 personas</p>
+                    <span class="demo-table-badge badge-block">Bloqueada</span>
+                  </div>
+                  <div class="demo-table-card available" onclick="selectTable(this,'Mesa 7','8')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#00c366" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9h18M3 15h18"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+                    <p class="demo-table-card__num">Mesa 7</p>
+                    <p class="demo-table-card__cap">8 personas</p>
+                    <span class="demo-table-badge badge-avail">Disponible</span>
+                  </div>
+                  <div class="demo-table-card occupied">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#f79009" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                    <p class="demo-table-card__num">Mesa 4</p>
+                    <p class="demo-table-card__cap">4 personas</p>
+                    <span class="demo-table-badge badge-occ">Ocupada</span>
+                  </div>
+                  <div class="demo-table-card available" onclick="selectTable(this,'Mesa 8','4')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#00c366" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9h18M3 15h18"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+                    <p class="demo-table-card__num">Mesa 8</p>
+                    <p class="demo-table-card__cap">4 personas</p>
+                    <span class="demo-table-badge badge-avail">Disponible</span>
+                  </div>
+                  <div class="demo-table-card occupied">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#f79009" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                    <p class="demo-table-card__num">Mesa 6</p>
+                    <p class="demo-table-card__cap">2 personas</p>
+                    <span class="demo-table-badge badge-occ">Ocupada</span>
+                  </div>
+                  <div class="demo-table-card available" onclick="selectTable(this,'Mesa 9','6')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#00c366" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9h18M3 15h18"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+                    <p class="demo-table-card__num">Mesa 9</p>
+                    <p class="demo-table-card__cap">6 personas</p>
+                    <span class="demo-table-badge badge-avail">Disponible</span>
+                  </div>
+                  <div class="demo-table-card available" onclick="selectTable(this,'Mesa 10','4')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#00c366" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9h18M3 15h18"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+                    <p class="demo-table-card__num">Mesa 10</p>
+                    <p class="demo-table-card__cap">4 personas</p>
+                    <span class="demo-table-badge badge-avail">Disponible</span>
+                  </div>
+                </div>
+              </div>
+
+            </div><!-- /step0 -->
+
+            <!-- ====== PASO 2: DATOS DEL CLIENTE ====== -->
+            <div class="demo-step" id="step1">
+
+              <div class="demo-breadcrumb">
+                <span>Pedidos</span><span>›</span>
+                <span>Selección</span><span>›</span>
+                <strong style="color:var(--sc-text)">Datos del Cliente</strong>
+              </div>
+
+              <div>
+                <p class="demo-page-title">Nuevo Pedido — Datos del Cliente</p>
+                <p class="demo-page-sub">Ingresa los datos del cliente para continuar</p>
+              </div>
+
+              <!-- Chip info de orden -->
+              <div class="demo-order-info-card">
+                <h4>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  Información del Pedido
+                </h4>
+                <div class="demo-info-chips">
+                  <div class="demo-info-chip">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#38e07b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9h18M3 15h18"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+                    <div>
+                      <div class="demo-info-chip__lbl">Tipo de Pedido</div>
+                      <div class="demo-info-chip__val" id="orderInfoType" style="color:#38e07b;">Para Comer Aquí</div>
+                    </div>
+                  </div>
+                  <div class="demo-info-chip">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#a855f7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9h18M3 15h18"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+                    <div>
+                      <div class="demo-info-chip__lbl">Mesa</div>
+                      <div class="demo-info-chip__val" id="selectedTableLabel">Mesa #3</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Formulario -->
+              <div class="demo-form-card">
+                <h4>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#38e07b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+                  Datos del Cliente
+                </h4>
+                <div class="demo-form-row" style="margin-bottom:12px;">
+                  <div class="demo-field">
+                    <label>Nombre del Cliente <span style="color:var(--sc-text3)">(opcional)</span></label>
+                    <input class="demo-field-input" id="clientName" type="text" placeholder="Ej: Juan Pérez" maxlength="100"/>
+                  </div>
+                  <div class="demo-field">
+                    <label>Teléfono <span style="color:var(--sc-text3)">(opcional)</span></label>
+                    <input class="demo-field-input" id="clientPhone" type="tel" placeholder="10 dígitos" maxlength="10" oninput="this.value=this.value.replace(/[^0-9]/g,'').substring(0,10)"/>
+                  </div>
+                </div>
+                <div class="demo-info-box">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                  Los datos del cliente son <strong>opcionales</strong> para pedidos de tipo "Para Comer Aquí".
+                </div>
+                <div class="demo-form-actions">
+                  <button class="demo-btn demo-btn-outline" onclick="switchTab(0)">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+                    Volver
+                  </button>
+                  <button class="demo-btn demo-btn-primary" onclick="goToMenu()">
+                    Siguiente
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                  </button>
+                </div>
+              </div>
+
+            </div><!-- /step1 -->
+
+            <!-- ====== PASO 3: MENÚ Y COMANDA ====== -->
+            <div class="demo-step" id="step2" style="padding:0;gap:0;flex:1;min-height:540px;">
+              <div class="demo-menu-layout" style="flex:1;">
+
+                <!-- Panel de menú -->
+                <div class="demo-menu-panel">
+
+                  <!-- Header con back -->
+                  <div style="padding:0.7rem 1rem;border-bottom:1px solid var(--sc-border);background:var(--sc-surface);display:flex;align-items:center;gap:10px;flex-shrink:0;">
+                    <button class="demo-btn demo-btn-outline" style="padding:4px 10px;font-size:0.70rem;" onclick="switchTab(1)">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+                      Volver
+                    </button>
+                    <span style="font-size:0.88rem;font-weight:800;color:var(--sc-text);">
+                      Nuevo Pedido
+                    </span>
+                    <span id="orderTypeBadge" style="padding:3px 10px;border-radius:999px;font-size:0.65rem;font-weight:700;background:rgba(34,197,94,0.12);color:#16a34a;margin-left:4px;">
+                      Para Comer Aquí
+                    </span>
+                    <span id="orderTableBadge" style="padding:3px 9px;border-radius:9px;font-size:0.65rem;font-weight:700;background:rgba(168,85,247,0.12);color:#a855f7;">
+                      Mesa #3
+                    </span>
+                    <span id="orderClientBadge" style="padding:3px 9px;border-radius:9px;font-size:0.65rem;font-weight:700;background:var(--sc-surface2);color:var(--sc-text2);display:none;">
+                    </span>
+                  </div>
+
+                  <!-- Categorías -->
+                  <div class="demo-cats">
+                    <button class="demo-cat-btn active" onclick="filterCat(this,'all')">
+                      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/></svg>
+                      Todo
+                    </button>
+                    <button class="demo-cat-btn" onclick="filterCat(this,'tacos')">
+                      🌮 Tacos
+                    </button>
+                    <button class="demo-cat-btn" onclick="filterCat(this,'bebidas')">
+                      🥤 Bebidas
+                    </button>
+                    <button class="demo-cat-btn" onclick="filterCat(this,'postres')">
+                      🍮 Postres
+                    </button>
+                    <button class="demo-cat-btn" onclick="filterCat(this,'extras')">
+                      🫙 Extras
+                    </button>
+                  </div>
+
+                  <!-- Items grid -->
+                  <div class="demo-items-grid">
+                    <div class="demo-menu-item" data-cat="tacos" onclick="addToCart('Taco al Pastor','68.00')">
+                      <div class="demo-menu-item__img">
+                        <img loading="lazy" src="https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Nnx8cGxhdGlsbG9zJTIwZGUlMjBjb21pZGF8ZW58MHx8MHx8fDA%3D" alt="Taco al Pastor"/>
+                      </div>
+                      <div class="demo-menu-item__body">
+                        <p class="demo-menu-item__name">Taco al Pastor</p>
+                        <p class="demo-menu-item__price">$68.00</p>
+                      </div>
+                    </div>
+                    <div class="demo-menu-item" data-cat="tacos" onclick="addToCart('Taco de Bistek','72.00')">
+                      <div class="demo-menu-item__img">
+                        <img loading="lazy" src="https://images.unsplash.com/photo-1519996409144-56c88c9aa612?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTB8fHBsYXRpbGxvcyUyMGRlJTIwY29taWRhfGVufDB8fDB8fHww" alt="Taco de Bistek"/>
+                      </div>
+                      <div class="demo-menu-item__body">
+                        <p class="demo-menu-item__name">Taco de Bistek</p>
+                        <p class="demo-menu-item__price">$72.00</p>
+                      </div>
+                    </div>
+                    <div class="demo-menu-item" data-cat="bebidas" onclick="addToCart('Agua de Jamaica','35.00')">
+                      <div class="demo-menu-item__img">
+                        <img loading="lazy" src="https://images.unsplash.com/photo-1509482560494-4126f8225994?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTV8fHBsYXRpbGxvcyUyMGRlJTIwY29taWRhfGVufDB8fDB8fHww" alt="Agua de Jamaica"/>
+                      </div>
+                      <div class="demo-menu-item__body">
+                        <p class="demo-menu-item__name">Agua de Jamaica</p>
+                        <p class="demo-menu-item__price">$35.00</p>
+                      </div>
+                    </div>
+                    <div class="demo-menu-item" data-cat="bebidas" onclick="addToCart('Refresco','30.00')">
+                      <div class="demo-menu-item__img">
+                        <img loading="lazy" src="https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Nnx8cGxhdGlsbG9zJTIwZGUlMjBjb21pZGF8ZW58MHx8MHx8fDA%3D" alt="Refresco"/>
+                      </div>
+                      <div class="demo-menu-item__body">
+                        <p class="demo-menu-item__name">Refresco</p>
+                        <p class="demo-menu-item__price">$30.00</p>
+                      </div>
+                    </div>
+                    <div class="demo-menu-item" data-cat="postres" onclick="addToCart('Flan Napolitano','55.00')">
+                      <div class="demo-menu-item__img">
+                        <img loading="lazy" src="https://images.unsplash.com/photo-1519996409144-56c88c9aa612?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTB8fHBsYXRpbGxvcyUyMGRlJTIwY29taWRhfGVufDB8fDB8fHww" alt="Flan Napolitano"/>
+                      </div>
+                      <div class="demo-menu-item__body">
+                        <p class="demo-menu-item__name">Flan Napolitano</p>
+                        <p class="demo-menu-item__price">$55.00</p>
+                      </div>
+                    </div>
+                    <div class="demo-menu-item" data-cat="extras" onclick="addToCart('Guacamole','45.00')">
+                      <div class="demo-menu-item__img">
+                        <img loading="lazy" src="https://images.unsplash.com/photo-1509482560494-4126f8225994?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTV8fHBsYXRpbGxvcyUyMGRlJTIwY29taWRhfGVufDB8fDB8fHww" alt="Guacamole"/>
+                      </div>
+                      <div class="demo-menu-item__body">
+                        <p class="demo-menu-item__name">Guacamole</p>
+                        <p class="demo-menu-item__price">$45.00</p>
+                      </div>
+                    </div>
+                  </div>
+
+                </div><!-- /menu panel -->
+
+                <!-- Comanda sidebar -->
+                <div class="demo-comanda">
+                  <div class="demo-comanda__hdr">
+                    <div class="demo-comanda__title">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                      Comanda
+                      <span class="demo-comanda__badge" id="cartCount">0</span>
+                    </div>
+                    <span class="demo-comanda__type" id="comandaType">Para Comer Aquí</span>
+                    <button id="demoComandaClose" class="demo-comanda__close" aria-label="Cerrar comanda">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </button>
+                  </div>
+
+                  <div class="demo-comanda__items" id="cartItems">
+                    <div style="text-align:center;padding:2rem 0.5rem;color:var(--sc-text3);">
+                      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto 8px;display:block;"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+                      <p style="font-size:0.72rem;margin:0;">Agrega items del menú</p>
+                    </div>
+                  </div>
+
+                  <div class="demo-comanda__footer">
+                    <div class="demo-total-row">
+                      <span class="demo-total-label">Subtotal</span>
+                      <span class="demo-total-val" id="cartSubtotal">$0.00</span>
+                    </div>
+                    <div class="demo-total-row">
+                      <span class="demo-total-label">IVA (16%)</span>
+                      <span class="demo-total-val" id="cartIva">$0.00</span>
+                    </div>
+                    <div class="demo-grand-total">
+                      <span class="demo-grand-total__label">Total</span>
+                      <span class="demo-grand-total__val" id="cartTotal">$0.00</span>
+                    </div>
+                    <!-- Método de pago -->
+                    <select style="width:100%;padding:6px 8px;border-radius:8px;border:1px solid var(--sc-border2);background:var(--sc-surface);color:var(--sc-text);font-size:0.72rem;font-family:inherit;margin-bottom:8px;">
+                      <option>💵 Efectivo</option>
+                      <option>💳 Tarjeta</option>
+                      <option>📱 Transferencia</option>
+                    </select>
+                    <button class="demo-submit-btn" id="submitBtn" onclick="createOrder()" disabled style="opacity:0.5;cursor:not-allowed;">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                      Crear Pedido
+                    </button>
+                  </div>
+                </div>
+
+              </div>
+            </div><!-- /step2 -->
+
+          </div><!-- /demo-main -->
+        </div><!-- /demo-app -->
+      </div><!-- /demo-browser -->
+
+    </div><!-- /demo-shell -->
+  </div><!-- /container -->
+</section>
+
+<script>
+(function(){
+  var currentStep = 0;
+  var selectedTable = 'Mesa 3';
+  var cart = {};
+
+  var urls = [
+    'savorycloud.app/admin/orders/select-table',
+    'savorycloud.app/admin/orders/customer-info?orderType=DINE_IN&tableId=3',
+    'savorycloud.app/admin/orders/menu?orderType=DINE_IN&tableId=3'
+  ];
+
+  function switchTab(n) {
+    currentStep = n;
+    document.querySelectorAll('.demo-tab').forEach(function(t,i){ t.classList.toggle('active', i===n); });
+    document.querySelectorAll('.demo-step').forEach(function(s,i){ s.classList.toggle('active', i===n); });
+    document.getElementById('demoUrl').textContent = urls[n];
+    updateStepDots();
+    updateMenuHeader();
+  }
+
+  function updateStepDots() {
+    for(var i=0;i<3;i++){
+      var c = document.getElementById('sc'+i);
+      var w = c.parentElement.parentElement;
+      c.classList.toggle('done',   i < currentStep);
+      c.classList.toggle('active', i === currentStep);
+      if(i < currentStep){ c.textContent='✓'; } else { c.textContent = i+1; }
+      w.classList.toggle('active-dot', i === currentStep);
+    }
+    for(var j=0;j<2;j++){
+      var l = document.getElementById('sl'+j);
+      l.classList.toggle('done', j < currentStep);
+    }
+  }
+
+  function selectTable(el, name, cap) {
+    selectedTable = name;
+    document.getElementById('selectedTableLabel').textContent = name + ' (' + cap + ' p.)';
+    switchTab(1);
+  }
+  window.setOrderAndGo = setOrderAndGo;
+
+  function goToMenu() {
+    var n = document.getElementById('clientName').value.trim();
+    if(n){
+      document.getElementById('orderClientBadge').textContent = '👤 ' + n;
+      document.getElementById('orderClientBadge').style.display = 'inline-flex';
+    } else {
+      document.getElementById('orderClientBadge').style.display = 'none';
+    }
+    updateMenuHeader();
+    switchTab(2);
+  }
+
+  function updateMenuHeader() {
+    var tbl = document.getElementById('orderTableBadge');
+    if(tbl) tbl.textContent = selectedTable;
+  }
+
+  function filterCat(btn, cat) {
+    document.querySelectorAll('.demo-cat-btn').forEach(function(b){ b.classList.remove('active'); });
+    btn.classList.add('active');
+    document.querySelectorAll('.demo-menu-item').forEach(function(item){
+      if(cat==='all'){ item.style.display=''; }
+      else { item.style.display = (item.dataset.cat===cat) ? '' : 'none'; }
+    });
+  }
+
+  function addToCart(name, price) {
+    var p = parseFloat(price);
+    if(cart[name]){ cart[name].qty++; cart[name].total += p; }
+    else { cart[name] = {qty:1, price:p, total:p}; }
+    renderCart();
+  }
+
+  function changeQty(name, delta){
+    if(!cart[name]) return;
+    cart[name].qty += delta;
+    cart[name].total += delta * cart[name].price;
+    if(cart[name].qty <= 0) delete cart[name];
+    renderCart();
+  }
+
+  function renderCart(){
+    var keys = Object.keys(cart);
+    var el = document.getElementById('cartItems');
+    var count = keys.reduce(function(s,k){ return s + cart[k].qty; }, 0);
+    document.getElementById('cartCount').textContent = count;
+    var _m = document.getElementById('cartCountMobile'); if(_m) _m.textContent = count;
+
+    if(keys.length === 0){
+      el.innerHTML = '<div style="text-align:center;padding:2rem 0.5rem;color:var(--sc-text3);"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto 8px;display:block;"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg><p style="font-size:0.72rem;margin:0;">Agrega items del menú</p></div>';
+      document.getElementById('cartSubtotal').textContent = '$0.00';
+      document.getElementById('cartIva').textContent = '$0.00';
+      document.getElementById('cartTotal').textContent = '$0.00';
+      var btn = document.getElementById('submitBtn');
+      btn.disabled=true; btn.style.opacity='0.5'; btn.style.cursor='not-allowed';
+      return;
+    }
+
+    var html = '';
+    keys.forEach(function(name){
+      var it = cart[name];
+      html += '<div class="demo-cart-item">'
+        + '<div class="demo-cart-item__top">'
+        + '<span class="demo-cart-item__name">' + name + '</span>'
+        + '<div class="demo-cart-qty">'
+        + '<button class="demo-cart-qty__btn" onclick="changeQty(\''+name+'\',-1)">−</button>'
+        + '<span class="demo-cart-qty__n">' + it.qty + '</span>'
+        + '<button class="demo-cart-qty__btn" onclick="changeQty(\''+name+'\',1)">+</button>'
+        + '</div>'
+        + '</div>'
+        + '<div class="demo-cart-item__price">$' + it.total.toFixed(2) + '</div>'
+        + '</div>';
+    });
+    el.innerHTML = html;
+
+    var total = keys.reduce(function(s,k){ return s + cart[k].total; }, 0);
+    var base  = total / 1.16;
+    var iva   = total - base;
+    document.getElementById('cartSubtotal').textContent = '$' + base.toFixed(2);
+    document.getElementById('cartIva').textContent      = '$' + iva.toFixed(2);
+    document.getElementById('cartTotal').textContent    = '$' + total.toFixed(2);
+
+    var btn = document.getElementById('submitBtn');
+    btn.disabled=false; btn.style.opacity='1'; btn.style.cursor='pointer';
+  }
+
+  window.switchTab   = switchTab;
+  window.selectTable = selectTable;
+  window.goToMenu    = goToMenu;
+  window.filterCat   = filterCat;
+  window.addToCart   = addToCart;
+  window.changeQty   = changeQty;
+  
+  function setOrderAndGo(type){
+    var text, color, bg;
+    if(type==='takeaway'){ text='Para Llevar'; color='#a855f7'; bg='rgba(168,85,247,0.12)'; }
+    else if(type==='delivery'){ text='Entrega a Domicilio'; color='#f97316'; bg='rgba(249,115,22,0.12)'; }
+    else { text='Para Comer Aquí'; color='#16a34a'; bg='rgba(34,197,94,0.12)'; }
+
+    var badge = document.getElementById('orderTypeBadge');
+    if(badge){ badge.textContent = text; badge.style.background = bg; badge.style.color = color; }
+    var info = document.getElementById('orderInfoType');
+    if(info){ info.textContent = text; info.style.color = color; }
+    var comanda = document.getElementById('comandaType');
+    if(comanda){ comanda.textContent = text; }
+
+    window.orderType = type;
+    // update demo URL and menu header state for customer-info
+    if(urls && urls.length>1){
+      // adjust the customer-info url to include orderType
+      var q = (type==='takeaway')? 'TAKEAWAY' : (type==='delivery')? 'DELIVERY' : 'DINE_IN';
+      urls[1] = 'savorycloud.app/admin/orders/customer-info?orderType=' + q + '&tableId=3';
+      document.getElementById('demoUrl').textContent = urls[1];
+    }
+
+    switchTab(1);
+  }
+  function showToast(html, type){
+    var app = document.querySelector('.demo-comanda') || document.querySelector('.demo-browser') || document.body;
+    var t = document.getElementById('demoToast');
+    if(!t){
+      t = document.createElement('div'); t.id = 'demoToast'; t.className = 'demo-toast';
+      app.appendChild(t);
+    }
+    t.className = 'demo-toast ' + (type||'');
+    t.innerHTML = html;
+    // ensure visible
+    setTimeout(function(){ t.classList.add('show'); }, 10);
+    // auto-hide
+    clearTimeout(t._hideTimer);
+    t._hideTimer = setTimeout(function(){ t.classList.remove('show'); }, 4200);
+  }
+  function createOrder(){
+    var keys = Object.keys(cart);
+    if(keys.length === 0){
+      showToast('Agrega items del menú antes de crear el pedido', 'error');
+      return;
+    }
+    var payload = {
+      orderType: window.orderType || 'DINE_IN',
+      table: selectedTable,
+      items: cart
+    };
+    var itemsCount = keys.reduce(function(s,k){ return s + cart[k].qty; }, 0);
+    var title = 'Pedido creado con éxito';
+    var details = (selectedTable? selectedTable + ' · ' : '') + itemsCount + ' item' + (itemsCount!==1? 's' : '');
+    showToast('<div style="font-weight:800;">' + title + '</div><div class="demo-toast__meta">' + details + '</div>', 'success');
+    console.log('Demo createOrder payload:', payload);
+  }
+  // Mobile comanda open/close helpers
+  function openMobileComanda(open){
+    var c = document.querySelector('.demo-comanda');
+    if(!c) return;
+    if(open){
+      c.classList.add('open');
+      var container = document.querySelector('.demo-browser') || c.parentElement || document.body;
+      var b = document.getElementById('demoComandaBackdrop');
+      if(!b){ b = document.createElement('div'); b.id = 'demoComandaBackdrop'; b.className = 'demo-comanda-backdrop'; container.appendChild(b); b.addEventListener('click', function(){ openMobileComanda(false); }); }
+      setTimeout(function(){ b.classList.add('show'); }, 10);
+    } else {
+      c.classList.remove('open');
+      var b = document.getElementById('demoComandaBackdrop');
+      if(b){ b.classList.remove('show'); setTimeout(function(){ if(b && b.parentNode) b.parentNode.removeChild(b); }, 260); }
+    }
+  }
+  // Wire toggle & close buttons (may be present only on mobile)
+  setTimeout(function(){
+    var t = document.getElementById('demoCartToggle');
+    var close = document.getElementById('demoComandaClose');
+    if(t){ t.addEventListener('click', function(e){ e.stopPropagation(); var c = document.querySelector('.demo-comanda'); openMobileComanda(!c.classList.contains('open')); }); }
+    if(close){ close.addEventListener('click', function(){ openMobileComanda(false); }); }
+  }, 80);
+
+  window.createOrder = createOrder;
+})();
+</script>
+
+</body>
+</html>
+
       <!-- ===================== BENEFITS ===================== -->
       <section class="section benefits" id="benefits">
         <div class="container">
@@ -1155,6 +2471,8 @@
         </div>
       </section>
 
+      
+
       <!-- ===================== PRICING ===================== -->
       <section class="section pricing" id="pricing">
         <div class="container">
@@ -1167,6 +2485,15 @@
             <p class="section__subtitle">
               Sin letras chiquitas. Sin sorpresas. Cancela cuando quieras.
             </p>
+            <div class="pricing-toggle">
+              <span style="font-weight:600;color:var(--sc-text2);">Mensual</span>
+              <label class="sc-switch">
+                <input id="pricingToggleInput" type="checkbox" aria-label="Alternar mensual anual">
+                <span class="sc-switch-track"></span>
+                <span class="sc-switch-knob"></span>
+              </label>
+              <span style="font-weight:600;color:var(--sc-text2);">Anual</span>
+            </div>
           </div>
           <div class="row g-4 mt-4 justify-content-center">
             <!-- ── BASIC CLOUD ── -->
@@ -1174,9 +2501,9 @@
               class="col-12 col-md-6 col-lg-4 anim-fade-in-up"
               style="--delay: 0.1s"
             >
-              <div class="pricing-card">
+              <div class="pricing-card" data-plan="basic">
                 <p class="pricing-card__name">Basic Cloud</p>
-                <p class="pricing-card__price">$----<span>/mes + IVA</span></p>
+                <p class="pricing-card__price" data-month="1,162" data-year="11,621">$<span>/mes + IVA</span></p>
                 <p class="pricing-card__desc">
                   El sistema completo de gestión interna para tu restaurante. Sin
                   landing page ni ecommerce.
@@ -1194,7 +2521,7 @@
                   <li>Facturación</li>
                   <li>Reportes y analítica</li>
                   <li>Flyers: Crea tus propios anuncios personalizados</li>
-                  <li>Roles: Admin, Gerente, Cajero, Mesero, Chef, Barista, Parrillero, Repartidor</li>
+                  <li>Roles: Admin, Gerente, Cajero, Mesero, Chef, Barista, Repartidor</li>
                   <li>Soporte técnico</li>
                 </ul>
                 <a
@@ -1210,10 +2537,10 @@
               class="col-12 col-md-6 col-lg-4 anim-fade-in-up"
               style="--delay: 0.2s"
             >
-              <div class="pricing-card pricing-card--popular">
+              <div class="pricing-card pricing-card--popular" data-plan="all-in-one">
                 <span class="pricing-card__badge">Más completo</span>
                 <p class="pricing-card__name">All in One</p>
-                <p class="pricing-card__price">$----<span>/mes + IVA</span></p>
+                <p class="pricing-card__price" data-month="1,552" data-year="15,517">$<span>/mes + IVA</span></p>
                 <p class="pricing-card__desc">
                   La solución completa: sistema + landing page + ecommerce con
                   pedidos y clientes online.
@@ -1244,9 +2571,9 @@
               class="col-12 col-md-6 col-lg-4 anim-fade-in-up"
               style="--delay: 0.3s"
             >
-              <div class="pricing-card">
+              <div class="pricing-card" data-plan="advanced">
                 <p class="pricing-card__name">Advanced Cloud</p>
-                <p class="pricing-card__price">$----<span>/mes + IVA</span></p>
+                <p class="pricing-card__price" data-month="1,379" data-year="13,793">$<span>/mes + IVA</span></p>
                 <p class="pricing-card__desc">
                   Todo el sistema + una landing page profesional para tu
                   restaurante. Sin ecommerce.
@@ -1355,6 +2682,201 @@
           </div>
         </div>
       </section>
+
+      <!-- ===================== VIDEOS ARLEX ===================== -->
+<section class="section arlex-videos" id="arlexVideos" style="
+  background: var(--color-bg, #0f1713);
+  padding: 5rem 0 6rem;
+  overflow: hidden;
+">
+  <div class="container">
+
+    <!-- Header de sección -->
+    <div class="section__header anim-fade-in-up" style="text-align:center; margin-bottom:3rem;">
+      <p class="section__tag">Tutoriales en video</p>
+      <h2 class="section__title titulo-revelado">
+        Aprende con<br /><span class="text-accent-serif">Arlex</span>
+      </h2>
+
+      <!-- Tarjeta del mensaje de Arlex -->
+      <div style="
+        display: inline-flex;
+        align-items: flex-start;
+        gap: 1rem;
+        background: rgba(56,224,123,0.06);
+        border: 1.5px solid rgba(56,224,123,0.20);
+        border-radius: 20px;
+        padding: 1.25rem 1.5rem;
+        margin: 1.5rem auto 0;
+        max-width: 620px;
+        text-align: left;
+      ">
+        <!-- Avatar Arlex -->
+        <div style="
+          width: 52px; height: 52px; border-radius: 50%;
+          background: linear-gradient(135deg,#38e07b 0%,#1db954 100%);
+          display: flex; align-items: center; justify-content: center;
+          flex-shrink: 0; font-size: 1.5rem;
+        ">🤖</div>
+        <div>
+          <p style="
+            font-size: 0.78rem; font-weight: 700;
+            color: var(--color-primary, #38e07b);
+            margin: 0 0 4px;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+          ">Arlex · Asistente de Savory Cloud</p>
+          <p style="
+            font-size: 0.92rem;
+            color: var(--color-text, #f0fdf4);
+            margin: 0 0 8px;
+            line-height: 1.55;
+          ">
+            ¡Hola! 👋 Soy <strong style="color:var(--color-primary,#38e07b);">Arlex</strong> y aquí te dejo unos videos que preparé especialmente para ti, donde te explico cómo sacarle el máximo provecho a cada función de Savory Cloud. ¡Dale play cuando quieras!
+          </p>
+          <p style="
+            font-size: 0.82rem;
+            color: rgba(240,253,244,0.60);
+            margin: 0;
+            line-height: 1.5;
+          ">
+            Para más tutoriales en video visita nuestro
+            <a
+              href="https://www.youtube.com/@SavoryCloud-Saas"
+              target="_blank"
+              rel="noopener"
+              role="button"
+              style="
+                color: var(--color-primary, #38e07b);
+                font-weight: 700;
+                text-decoration: none;
+                padding: 6px 10px;
+                border-radius: 8px;
+                background: rgba(56,224,123,0.06);
+                margin-left: 8px;
+                display: inline-block;
+              "
+            >Canal de YouTube 🎬</a>
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Grid de 2 video cards -->
+    <div style="
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1.75rem;
+      max-width: 960px;
+      margin: 0 auto;
+    " class="arlex-video-grid">
+
+      <!-- ── VIDEO CARD 1 ── -->
+      <div style="
+        background: rgba(255,255,255,0.03);
+        border: 1.5px solid rgba(56,224,123,0.15);
+        border-radius: 20px;
+        overflow: hidden;
+        transition: transform 0.28s cubic-bezier(.2,.9,.2,1), box-shadow 0.28s;
+        box-shadow: 0 4px 24px rgba(0,0,0,0.25);
+      "
+        onmouseover="this.style.transform='translateY(-6px)';this.style.boxShadow='0 12px 40px rgba(56,224,123,0.12)'"
+        onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 4px 24px rgba(0,0,0,0.25)'"
+      >
+        <!-- Reproductor embebido (con fallback) -->
+        <div style="position:relative; width:100%; padding-top:56.25%; background:#000;">
+          <a href="https://www.youtube.com/watch?v=SwG_8jDCzvk" target="_blank" rel="noopener" style="display:block;position:absolute;top:0;left:0;width:100%;height:100%;z-index:2;text-align:center;">
+            <img src="https://img.youtube.com/vi/SwG_8jDCzvk/hqdefault.jpg" alt="Ver en YouTube" style="width:100%;height:100%;object-fit:cover;filter:brightness(0.7);border-radius:0;">
+            <span style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.6);color:#fff;padding:12px 24px;border-radius:24px;font-size:1.1rem;font-weight:700;box-shadow:0 2px 12px #0003;">▶ Ver en YouTube</span>
+          </a>
+        </div>
+        <!-- Info del video -->
+        <div style="padding: 1rem 1.25rem 1.25rem;">
+          <span style="
+            display: inline-block;
+            background: rgba(56,224,123,0.12);
+            color: var(--color-primary,#38e07b);
+            font-size: 0.65rem; font-weight: 700;
+            padding: 3px 10px; border-radius: 999px;
+            text-transform: uppercase; letter-spacing: 0.06em;
+            margin-bottom: 8px;
+          ">Tutorial #1</span>
+          <h3 style="
+            font-size: 0.98rem; font-weight: 800;
+            color: var(--color-text,#f0fdf4);
+            margin: 0 0 6px;
+            line-height: 1.35;
+          ">Creación de empleados y turnos</h3>
+          <p style="
+            font-size: 0.78rem;
+            color: rgba(240,253,244,0.55);
+            margin: 0;
+            line-height: 1.5;
+          ">Aprende cómo dar de alta a tus empleados, asignarles roles y gestionar sus turnos de trabajo de manera eficiente en Savory Cloud.</p>
+        </div>
+      </div>
+
+      <!-- ── VIDEO CARD 2 ── -->
+      <div style="
+        background: rgba(255,255,255,0.03);
+        border: 1.5px solid rgba(56,224,123,0.15);
+        border-radius: 20px;
+        overflow: hidden;
+        transition: transform 0.28s cubic-bezier(.2,.9,.2,1), box-shadow 0.28s;
+        box-shadow: 0 4px 24px rgba(0,0,0,0.25);
+      "
+        onmouseover="this.style.transform='translateY(-6px)';this.style.boxShadow='0 12px 40px rgba(56,224,123,0.12)'"
+        onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 4px 24px rgba(0,0,0,0.25)'"
+      >
+        <div style="position:relative; width:100%; padding-top:56.25%; background:#000;">
+          <a href="https://www.youtube.com/watch?v=SwG_8jDCzvk" target="_blank" rel="noopener" style="display:block;position:absolute;top:0;left:0;width:100%;height:100%;z-index:2;text-align:center;">
+            <img src="https://img.youtube.com/vi/SwG_8jDCzvk/hqdefault.jpg" alt="Ver en YouTube" style="width:100%;height:100%;object-fit:cover;filter:brightness(0.7);border-radius:0;">
+            <span style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.6);color:#fff;padding:12px 24px;border-radius:24px;font-size:1.1rem;font-weight:700;box-shadow:0 2px 12px #0003;">▶ Ver en YouTube</span>
+          </a>
+        </div>
+        <div style="padding: 1rem 1.25rem 1.25rem;">
+          <span style="
+            display: inline-block;
+            background: rgba(56,224,123,0.12);
+            color: var(--color-primary,#38e07b);
+            font-size: 0.65rem; font-weight: 700;
+            padding: 3px 10px; border-radius: 999px;
+            text-transform: uppercase; letter-spacing: 0.06em;
+            margin-bottom: 8px;
+          ">Tutorial #2</span>
+          <h3 style="
+            font-size: 0.98rem; font-weight: 800;
+            color: var(--color-text,#f0fdf4);
+            margin: 0 0 6px;
+            line-height: 1.35;
+          ">Gestión de pedidos y comanda</h3>
+          <p style="
+            font-size: 0.78rem;
+            color: rgba(240,253,244,0.55);
+            margin: 0;
+            line-height: 1.5;
+          ">Descubre cómo crear pedidos, asignar mesas, gestionar la comanda y enviar órdenes a cocina en tiempo real.</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- CSS responsivo para el grid de videos -->
+  <style>
+    @media (max-width: 768px) {
+      .arlex-video-grid {
+        grid-template-columns: 1fr !important;
+        gap: 1.25rem !important;
+      }
+    }
+    @media (max-width: 480px) {
+      .arlex-videos .section__title {
+        font-size: clamp(1.6rem, 6vw, 2.2rem);
+      }
+    }
+  </style>
+</section>
 
       <!-- ===================== SCROLL PINNED MESSAGES ===================== -->
       <section class="pinned-section" id="pinnedMessages">
@@ -1490,22 +3012,38 @@
                   </svg>
                 </a>
                 <a
+                  href="https://www.facebook.com/profile.php?id=61590128481466"
+                  target="_blank"
+                  rel="noopener"
+                  aria-label="Facebook"
+                  class="footer__social-link"
+                >
+                  <svg width="20" height="20" viewBox="0 0 40 40" fill="none">
+                    <circle cx="20" cy="20" r="20" fill="#1877F3"/>
+                    <path d="M25.5 21.5l.5-4h-4v-2c0-1.1.3-1.8 1.9-1.8H26V10.7C25.7 10.7 24.6 10.5 23.3 10.5c-3 0-5 1.8-5 5.1v2.4h-3v4h3v10h5v-10h3.3z" fill="#fff"/>
+                  </svg>
+                </a>
+                <a
                   href="mailto:contacto@savorycloud.com"
                   aria-label="Email"
                   class="footer__social-link"
                 >
-                  <svg
-                    width="20"
-                    height="20"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  >
-                    <rect x="2" y="4" width="20" height="16" rx="2" />
-                    <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+                  <svg width="20" height="20" viewBox="0 0 40 40" fill="none">
+                    <circle cx="20" cy="20" r="20" fill="#fff"/>
+                    <rect x="10" y="14" width="20" height="12" rx="3" fill="#38e07b"/>
+                    <polyline points="10,14 20,24 30,14" fill="none" stroke="#fff" stroke-width="2"/>
+                  </svg>
+                </a>
+                <a
+                  href="https://www.youtube.com/@SavoryCloud-Saas"
+                  target="_blank"
+                  rel="noopener"
+                  aria-label="YouTube"
+                  class="footer__social-link"
+                >
+                  <svg width="20" height="20" viewBox="0 0 40 40" fill="none">
+                    <circle cx="20" cy="20" r="20" fill="#FF0000"/>
+                    <path d="M27.5 20.1c0-.7-.1-1.4-.2-2-.2-.7-.7-1.2-1.3-1.4-1.1-.4-5.5-.4-5.5-.4s-4.4 0-5.5.4c-.6.2-1.1.7-1.3 1.4-.1.6-.2 1.3-.2 2s.1 1.4.2 2c.2.7.7 1.2 1.3 1.4 1.1.4 5.5.4 5.5.4s4.4 0 5.5-.4c.6-.2 1.1-.7 1.3-1.4.1-.6.2-1.3.2-2zm-7.1 2.1v-4.2l3.7 2.1-3.7 2.1z" fill="#fff"/>
                   </svg>
                 </a>
               </div>

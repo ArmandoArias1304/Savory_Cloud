@@ -400,6 +400,98 @@ svg {
   font-size: 0.85rem;
 }
 
+/* Pricing toggle styles */
+.pricing-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin: 12px 0 6px;
+}
+
+.sc-switch {
+  --switch-w: 48px;
+  --switch-h: 28px;
+  --knob: 22px;
+  --pad: 3px;
+  position: relative;
+  width: var(--switch-w);
+  height: var(--switch-h);
+  display: inline-block;
+  cursor: pointer;
+}
+
+.sc-switch input {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  left: 0;
+  top: 0;
+  opacity: 0;
+  z-index: 2;
+  margin: 0;
+  cursor: pointer;
+}
+
+.sc-switch-track {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  transition:
+    background 0.22s ease,
+    box-shadow 0.22s ease,
+    border-color 0.22s ease;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.sc-switch-knob {
+  position: absolute;
+  top: var(--pad);
+  left: var(--pad);
+  width: var(--knob);
+  height: var(--knob);
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 6px 18px rgba(10, 10, 10, 0.12);
+  transition:
+    transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    background 0.18s ease;
+  will-change: transform;
+}
+
+.sc-switch input:checked + .sc-switch-track {
+  background: var(--color-primary);
+  box-shadow: 0 10px 30px var(--color-primary-glow-strong);
+  border-color: rgba(0, 0, 0, 0.05);
+}
+
+.sc-switch input:checked + .sc-switch-track + .sc-switch-knob {
+  transform: translateX(calc(var(--switch-w) - var(--knob) - (var(--pad) * 2)));
+  animation: knobMove 360ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes knobMove {
+  0% {
+    transform: translateX(0);
+  }
+  60% {
+    transform: translateX(
+      calc(var(--switch-w) - var(--knob) - (var(--pad) * 2) + 6px)
+    );
+  }
+  100% {
+    transform: translateX(
+      calc(var(--switch-w) - var(--knob) - (var(--pad) * 2))
+    );
+  }
+}
+
+.sc-switch:focus-within .sc-switch-track {
+  box-shadow: 0 0 0 4px rgba(56, 224, 123, 0.08);
+}
+
 .btn--lg {
   padding: 16px 36px;
   font-size: 1rem;

@@ -947,6 +947,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const TOTAL = cards.length;
     let current = 0;
     let fcAnimating = false;
+    let pinnedIndex = null; // when non-null, autoplay is suspended and carousel stays on this index
+    let isPausedByHover = false; // desktop hover pause
     const ANIM_DURATION = 620;
 
     /* Crear dots */
@@ -996,10 +998,48 @@ document.addEventListener("DOMContentLoaded", () => {
       }, ANIM_DURATION);
     }
 
-    /* Hover en inactiva → no cambia el estado del carrusel, solo CSS */
+    /* Interaction behaviours:
+       - Mobile/Tablet (<=900px): tap a card to "pin" it (pause autoplay and stay on it).
+       - Desktop (>900px): hover/focus a card to pause autoplay and keep that card visible while hovered.
+    */
     cards.forEach((card, i) => {
-      card.addEventListener("click", () => {
-        if (card.classList.contains("fc--inactive")) goTo(i);
+      // common click: navigate to the card
+      card.addEventListener("click", (ev) => {
+        goTo(i);
+        // mobile/tablet: pin on tap
+        if (window.innerWidth <= 900) {
+          pinnedIndex = i;
+          track.classList.add("fc--pinned");
+        } else {
+          // desktop click should not pin; just reset autoplay timer
+          resetAutoplay();
+        }
+      });
+
+      // desktop hover / focus -> pause autoplay while hovering or focused
+      card.addEventListener("mouseenter", () => {
+        if (window.innerWidth > 900) {
+          isPausedByHover = true;
+          goTo(i);
+        }
+      });
+      card.addEventListener("mouseleave", () => {
+        if (window.innerWidth > 900) {
+          isPausedByHover = false;
+          resetAutoplay();
+        }
+      });
+      card.addEventListener("focus", () => {
+        if (window.innerWidth > 900) {
+          isPausedByHover = true;
+          goTo(i);
+        }
+      });
+      card.addEventListener("blur", () => {
+        if (window.innerWidth > 900) {
+          isPausedByHover = false;
+          resetAutoplay();
+        }
       });
     });
 
@@ -1013,16 +1053,35 @@ document.addEventListener("DOMContentLoaded", () => {
     /* Autoplay: avanza cada 5s si el usuario no interactúa */
     let autoplayTimer = setInterval(autoplay, 5000);
     function autoplay() {
+      // do not advance if user pinned a card or paused by hover
+      if (pinnedIndex !== null || isPausedByHover) return;
       goTo(current === TOTAL - 1 ? 0 : current + 1);
     }
     function resetAutoplay() {
+      // if pinned, keep paused until unpinned
+      if (pinnedIndex !== null) return;
       clearInterval(autoplayTimer);
       autoplayTimer = setInterval(autoplay, 5000);
     }
     [prevBtn, nextBtn].forEach((b) =>
-      b.addEventListener("click", resetAutoplay),
+      b.addEventListener("click", () => {
+        // navigational clicks should unpin (user explicitly changed slide)
+        pinnedIndex = null;
+        track.classList.remove("fc--pinned");
+        resetAutoplay();
+      }),
     );
-    cards.forEach((c) => c.addEventListener("click", resetAutoplay));
+
+    // clicking cards handled in the card handlers; a click outside the carousel should unpin
+    document.addEventListener("click", (e) => {
+      if (!track.contains(e.target)) {
+        if (pinnedIndex !== null) {
+          pinnedIndex = null;
+          track.classList.remove("fc--pinned");
+          resetAutoplay();
+        }
+      }
+    });
 
     /* Activar al entrar en viewport (IntersectionObserver) */
     const fcSection = document.getElementById("features");
@@ -1065,10 +1124,49 @@ document.addEventListener("DOMContentLoaded", () => {
         diff > 0
           ? goTo(current === TOTAL - 1 ? 0 : current + 1)
           : goTo(current === 0 ? TOTAL - 1 : current - 1);
+        // user swiped: consider this an explicit interaction -> unpin and reset autoplay
+        pinnedIndex = null;
+        track.classList.remove("fc--pinned");
         resetAutoplay();
       }
     });
   })();
+
+  /* ─── Pricing toggle: mensual / anual ─── */
+  function initPricingToggle() {
+    var toggle = document.getElementById("pricingToggleInput");
+    if (!toggle) return;
+    var priceEls = document.querySelectorAll(".pricing-card__price");
+
+    function applyMode(isAnnual) {
+      priceEls.forEach(function (p) {
+        var month = p.getAttribute("data-month");
+        var year = p.getAttribute("data-year");
+        if (!month || !year) return;
+        if (isAnnual) {
+          p.firstChild &&
+            p.firstChild.nodeType === 3 &&
+            (p.firstChild.nodeValue = "$" + year);
+          var span = p.querySelector("span");
+          if (span) span.textContent = "/año + IVA";
+        } else {
+          p.firstChild &&
+            p.firstChild.nodeType === 3 &&
+            (p.firstChild.nodeValue = "$" + month);
+          var span = p.querySelector("span");
+          if (span) span.textContent = "/mes + IVA";
+        }
+      });
+    }
+
+    // initialize from unchecked = mensual
+    applyMode(false);
+
+    toggle.addEventListener("change", function () {
+      applyMode(!!toggle.checked);
+    });
+  }
+  initPricingToggle();
   /* ── About Us cards: tap en móvil activa animación ── */
   document.querySelectorAll(".about-us__icon-item").forEach((card) => {
     card.addEventListener("click", () => {

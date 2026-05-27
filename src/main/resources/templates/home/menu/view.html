@@ -290,7 +290,10 @@
                   </div>
 
                   <!-- Item Image -->
-                  <div class="relative h-44 w-full overflow-hidden bg-gray-100" th:classappend="${item.imageUrl != null && !item.imageUrl.isEmpty()} ? 'img-skeleton' : ''">
+                  <div
+                    class="relative h-44 w-full overflow-hidden bg-gray-100"
+                    th:classappend="${item.imageUrl != null && !item.imageUrl.isEmpty()} ? 'img-skeleton' : ''"
+                  >
                     <img
                       th:if="${item.imageUrl != null && !item.imageUrl.isEmpty()}"
                       th:src="${@cloudinaryUrl.card(item.imageUrl)}"
@@ -301,7 +304,10 @@
                       th:classappend="${!item.available} ? 'grayscale' : ''"
                       loading="lazy"
                       decoding="async"
-                      onload="this.classList.add('loaded');this.parentElement.classList.remove('img-skeleton')"
+                      onload="
+                        this.classList.add('loaded');
+                        this.parentElement.classList.remove('img-skeleton');
+                      "
                     />
                     <div
                       th:unless="${item.imageUrl != null && !item.imageUrl.isEmpty()}"
@@ -465,6 +471,7 @@
             "hover:bg-primary/10",
             "hover:text-primary",
           );
+          btn.style.color = "";
           // Remove filled from icons
           const icon = btn.querySelector(".material-symbols-outlined");
           if (icon) icon.classList.remove("filled");
@@ -483,6 +490,12 @@
           "hover:bg-primary/10",
           "hover:text-primary",
         );
+        // Ajustar color de texto según modo
+        if (document.documentElement.classList.contains("dark")) {
+          button.style.color = "#fff";
+        } else {
+          button.style.color = "#111";
+        }
         // Add filled to icon
         const icon = button.querySelector(".material-symbols-outlined");
         if (icon) icon.classList.add("filled");
@@ -499,6 +512,75 @@
           });
         }
       }
+
+      // --- Sincronización automática de categoría activa al hacer scroll ---
+      document.addEventListener("DOMContentLoaded", function () {
+        const scrollContainer = document.querySelector(
+          ".flex-1.overflow-y-auto",
+        );
+        const categorySections = Array.from(
+          document.querySelectorAll(".category-section"),
+        );
+        const categoryBtns = Array.from(
+          document.querySelectorAll(".category-btn"),
+        );
+
+        // Si no hay scrollContainer, busca el más interno
+        let scrollEl = scrollContainer;
+        if (!scrollEl) {
+          // fallback: busca el primer overflow-y-auto dentro de .flex-1
+          const flex1 = document.querySelector(
+            ".flex-1.flex.flex-col.overflow-hidden",
+          );
+          if (flex1) scrollEl = flex1.querySelector(".overflow-y-auto");
+        }
+        if (!scrollEl) return;
+
+        let ticking = false;
+        scrollEl.addEventListener("scroll", function () {
+          if (!ticking) {
+            window.requestAnimationFrame(() => {
+              updateActiveCategoryOnScroll();
+              ticking = false;
+            });
+            ticking = true;
+          }
+        });
+
+        function updateActiveCategoryOnScroll() {
+          // Centro del contenedor visible
+          const containerRect = scrollEl.getBoundingClientRect();
+          const containerCenter = containerRect.top + containerRect.height / 2;
+
+          let bestSection = null;
+          let minDist = Infinity;
+          categorySections.forEach((section) => {
+            const rect = section.getBoundingClientRect();
+            // Solo se consideran secciones visibles
+            if (
+              rect.bottom < containerRect.top ||
+              rect.top > containerRect.bottom
+            )
+              return;
+            // Distancia del centro del contenedor al centro de la sección
+            const sectionCenter = rect.top + rect.height / 2;
+            const dist = Math.abs(sectionCenter - containerCenter);
+            if (dist < minDist) {
+              minDist = dist;
+              bestSection = section;
+            }
+          });
+          if (bestSection) {
+            const id = bestSection.id.replace("category-", "");
+            // Activar el botón correspondiente
+            categoryBtns.forEach((btn) => {
+              if (btn.dataset.categoryId === id) {
+                if (!btn.classList.contains("active")) filterByCategory(btn);
+              }
+            });
+          }
+        }
+      });
 
       // Open item modal with SweetAlert2 (simplified - visual only)
       function openItemModal(card) {
@@ -548,9 +630,9 @@
                     <img src="${imageUrl}" alt="${itemName}" style="width:100%;height:280px;object-fit:cover;border-radius:12px;" />
                 </div>
                 <div style="flex:1;min-width:200px;display:flex;flex-direction:column;">
-                    <h2 style="font-size:1.875rem;font-weight:900;color:${isDark ? '#f9fafb' : '#111827'};margin-bottom:8px;">${itemName}</h2>
+                    <h2 style="font-size:1.875rem;font-weight:900;color:${isDark ? "#f9fafb" : "#111827"};margin-bottom:8px;">${itemName}</h2>
                     <p style="font-size:2.5rem;font-weight:900;color:#38e07b;margin-bottom:16px;">$${itemPrice.toFixed(2)}</p>
-                    <p style="color:${isDark ? '#9ca3af' : '#4b5563'};margin-bottom:24px;flex:1;">${itemDescription || "Sin descripción disponible"}</p>
+                    <p style="color:${isDark ? "#9ca3af" : "#4b5563"};margin-bottom:24px;flex:1;">${itemDescription || "Sin descripción disponible"}</p>
                 </div>
             </div>
           `,
