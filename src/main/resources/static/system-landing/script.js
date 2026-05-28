@@ -1113,8 +1113,11 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
 
-    /* Swipe táctil (desktop también lo soporta con pointer events) */
+    /* Swipe táctil (desktop también lo soporta con pointer events) y scroll manual */
     let touchStartX = 0;
+    let isManualScroll = false;
+    let scrollPauseTimeout = null;
+
     track.addEventListener("pointerdown", (e) => {
       touchStartX = e.clientX;
     });
@@ -1129,6 +1132,36 @@ document.addEventListener("DOMContentLoaded", () => {
         track.classList.remove("fc--pinned");
         resetAutoplay();
       }
+    });
+
+    // --- Scroll manual: si el usuario scrollea el track, pausa el autoplay y "fija" la card más cercana ---
+    track.addEventListener("scroll", () => {
+      if (window.innerWidth >= 768) return; // solo móvil
+      if (scrollPauseTimeout) clearTimeout(scrollPauseTimeout);
+      // Pausa autoplay y "fija" la card más cercana
+      isManualScroll = true;
+      // Encuentra la card más centrada
+      const trackRect = track.getBoundingClientRect();
+      let minDist = Infinity;
+      let closestIdx = 0;
+      cards.forEach((card, i) => {
+        const cardRect = card.getBoundingClientRect();
+        const cardCenter = cardRect.left + cardRect.width / 2;
+        const trackCenter = trackRect.left + trackRect.width / 2;
+        const dist = Math.abs(cardCenter - trackCenter);
+        if (dist < minDist) {
+          minDist = dist;
+          closestIdx = i;
+        }
+      });
+      pinnedIndex = closestIdx;
+      current = closestIdx;
+      applyState(current);
+      track.classList.add("fc--pinned");
+      // Si el usuario deja de scrollear por 2s, sigue "fijado" hasta que toque fuera
+      scrollPauseTimeout = setTimeout(() => {
+        isManualScroll = false;
+      }, 2000);
     });
   })();
 

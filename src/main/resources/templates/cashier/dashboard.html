@@ -164,9 +164,15 @@
               </span>
             </div>
 
-            <form th:action="@{/logout}" method="post" class="inline">
+            <form
+              th:action="@{/logout}"
+              method="post"
+              class="inline"
+              id="logoutForm"
+            >
               <button
-                type="submit"
+                type="button"
+                id="logoutBtn"
                 class="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/20 hover:bg-white/30 text-white font-semibold transition-all border border-white/30 text-sm sm:text-base"
               >
                 <span class="material-symbols-outlined text-lg">logout</span>
@@ -174,6 +180,47 @@
                 <span class="sm:hidden">Salir</span>
               </button>
             </form>
+            <!-- SweetAlert2 (solo si no está ya incluido globalmente) -->
+            <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+            <!-- Modal de confirmación para cerrar sesión -->
+            <script>
+              document.addEventListener("DOMContentLoaded", function () {
+                const logoutBtn = document.getElementById("logoutBtn");
+                const logoutForm = document.getElementById("logoutForm");
+                if (logoutBtn && logoutForm) {
+                  logoutBtn.addEventListener("click", function (e) {
+                    e.preventDefault();
+                    const isDark =
+                      document.documentElement.classList.contains("dark");
+                    Swal.fire({
+                      title: "¿Cerrar sesión?",
+                      text: "¿Estás seguro de que deseas cerrar sesión?",
+                      icon: "warning",
+                      showCancelButton: true,
+                      confirmButtonText: "Sí, cerrar sesión",
+                      cancelButtonText: "Cancelar",
+                      focusCancel: true,
+                      background: isDark ? "#1f2937" : "#fff",
+                      color: isDark ? "#f3f4f6" : "#1f2937",
+                      confirmButtonColor: "#e53e3e",
+                      cancelButtonColor: isDark ? "#374151" : "#e5e7eb",
+                      customClass: {
+                        popup: "rounded-2xl",
+                        confirmButton: "rounded-lg px-6 py-2 font-bold",
+                        cancelButton: "rounded-lg px-6 py-2 font-bold",
+                      },
+                      reverseButtons: true,
+                      backdrop: "rgba(0,0,0,0.6)",
+                    }).then((result) => {
+                      if (result.isConfirmed) {
+                        logoutForm.submit();
+                      }
+                    });
+                  });
+                }
+              });
+            </script>
           </div>
         </div>
       </div>
@@ -420,8 +467,11 @@
         class="mt-12 text-center text-sm text-gray-500 dark:text-gray-400 animate-fadeInUp"
         style="animation-delay: 0.5s"
       >
-        <p th:text="'Sistema de Gestión de Restaurante © ' + ${#dates.year(#dates.createNow())} + ' SavoryCloud. Todos los derechos reservados.'">
-          Sistema de Gestión de Restaurante © 2026 SavoryCloud. Todos los derechos reservados.
+        <p
+          th:text="'Sistema de Gestión de Restaurante © ' + ${#dates.year(#dates.createNow())} + ' SavoryCloud. Todos los derechos reservados.'"
+        >
+          Sistema de Gestión de Restaurante © 2026 SavoryCloud. Todos los
+          derechos reservados.
         </p>
       </div>
     </div>

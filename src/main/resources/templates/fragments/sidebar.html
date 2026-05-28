@@ -366,12 +366,14 @@
                 </div>
               </div>
               <form
+                id="logoutForm"
                 action="/logout"
                 method="post"
                 style="display: inline; width: 100%"
               >
                 <button
-                  type="submit"
+                  id="logoutBtn"
+                  type="button"
                   class="w-full flex items-center justify-center gap-2 px-3 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium text-xs sm:text-sm transition-colors shadow-md hover:shadow-lg"
                 >
                   <span class="material-symbols-outlined text-lg">logout</span>
@@ -414,6 +416,42 @@
             });
           });
         }
+        // Modal de confirmación para cerrar sesión
+        document.addEventListener("DOMContentLoaded", function () {
+          const logoutBtn = document.getElementById("logoutBtn");
+          const logoutForm = document.getElementById("logoutForm");
+          if (logoutBtn && logoutForm) {
+            logoutBtn.addEventListener("click", function (e) {
+              e.preventDefault();
+              const isDark =
+                document.documentElement.classList.contains("dark");
+              Swal.fire({
+                title: "¿Cerrar sesión?",
+                text: "¿Estás seguro de que deseas cerrar sesión?",
+                icon: "warning",
+                showCancelButton: true,
+                confirmButtonText: "Sí, cerrar sesión",
+                cancelButtonText: "Cancelar",
+                focusCancel: true,
+                background: isDark ? "#1f2937" : "#fff",
+                color: isDark ? "#f3f4f6" : "#1f2937",
+                confirmButtonColor: "#e53e3e",
+                cancelButtonColor: isDark ? "#374151" : "#e5e7eb",
+                customClass: {
+                  popup: "rounded-2xl",
+                  confirmButton: "rounded-lg px-6 py-2 font-bold",
+                  cancelButton: "rounded-lg px-6 py-2 font-bold",
+                },
+                reverseButtons: true,
+                backdrop: "rgba(0,0,0,0.6)",
+              }).then((result) => {
+                if (result.isConfirmed) {
+                  logoutForm.submit();
+                }
+              });
+            });
+          }
+        });
       </script>
 
       <!-- User Limit Enforcement Script (only for ADMIN when limit is exceeded) -->

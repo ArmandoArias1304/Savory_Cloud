@@ -380,7 +380,85 @@
       /*<![CDATA[*/
       let currentItem = null;
 
-      // Search items by name (starting with search term)
+      // --- Scroll Spy para categorías ---
+      document.addEventListener("DOMContentLoaded", function () {
+        const categorySections = Array.from(
+          document.querySelectorAll(".category-section"),
+        );
+        const categoryBtns = Array.from(
+          document.querySelectorAll(".category-btn"),
+        );
+        const menuScroll = document.querySelector(".flex-1.overflow-y-auto");
+
+        function onScrollSpy() {
+          let minDist = Infinity;
+          let currentId = null;
+          const scrollTop = menuScroll ? menuScroll.scrollTop : window.scrollY;
+          const offset = menuScroll
+            ? menuScroll.getBoundingClientRect().top
+            : 0;
+          categorySections.forEach((section) => {
+            const rect = section.getBoundingClientRect();
+            const dist = Math.abs(rect.top - offset - 80);
+            if (rect.top - offset < 120 && dist < minDist) {
+              minDist = dist;
+              currentId = section.id.replace("category-", "");
+            }
+          });
+          if (currentId) {
+            categoryBtns.forEach((btn) => {
+              if (btn.dataset.categoryId === currentId) {
+                btn.classList.add(
+                  "active",
+                  "bg-gradient-to-r",
+                  "from-primary",
+                  "to-primary-dark",
+                  "text-white",
+                  "shadow-green",
+                );
+                btn.classList.remove(
+                  "text-text-light-secondary",
+                  "hover:bg-primary/10",
+                  "hover:text-primary",
+                );
+                const icon = btn.querySelector(".material-symbols-outlined");
+                if (icon) icon.classList.add("filled");
+                if (document.documentElement.classList.contains("dark")) {
+                  btn.style.color = "#fff";
+                } else {
+                  btn.style.color = "#111";
+                }
+              } else {
+                btn.classList.remove(
+                  "active",
+                  "bg-gradient-to-r",
+                  "from-primary",
+                  "to-primary-dark",
+                  "text-white",
+                  "shadow-green",
+                );
+                btn.classList.add(
+                  "text-text-light-secondary",
+                  "hover:bg-primary/10",
+                  "hover:text-primary",
+                );
+                btn.style.color = "";
+                const icon = btn.querySelector(".material-symbols-outlined");
+                if (icon) icon.classList.remove("filled");
+              }
+            });
+          }
+        }
+
+        if (menuScroll) {
+          menuScroll.addEventListener("scroll", onScrollSpy, { passive: true });
+        } else {
+          window.addEventListener("scroll", onScrollSpy, { passive: true });
+        }
+        setTimeout(onScrollSpy, 300);
+      });
+
+      // Search items by name (substring match)
       function searchItems(searchTerm) {
         const term = searchTerm.trim().toLowerCase();
         const cards = document.querySelectorAll(".menu-item-card");
@@ -402,8 +480,8 @@
         cards.forEach((card) => {
           const itemName = card.dataset.itemName.toLowerCase();
 
-          // Check if name starts with the search term
-          if (term === "" || itemName.startsWith(term)) {
+          // Mostrar si el nombre contiene el término de búsqueda en cualquier parte
+          if (term === "" || itemName.includes(term)) {
             card.style.display = "";
             visibleCount++;
           } else {
@@ -548,9 +626,9 @@
                     <img src="${imageUrl}" alt="${itemName}" style="width:100%;height:280px;object-fit:cover;border-radius:12px;" />
                 </div>
                 <div style="flex:1;min-width:200px;display:flex;flex-direction:column;">
-                    <h2 style="font-size:1.875rem;font-weight:900;color:${isDark ? '#f9fafb' : '#111827'};margin-bottom:8px;">${itemName}</h2>
+                    <h2 style="font-size:1.875rem;font-weight:900;color:${isDark ? "#f9fafb" : "#111827"};margin-bottom:8px;">${itemName}</h2>
                     <p style="font-size:2.5rem;font-weight:900;color:#38e07b;margin-bottom:16px;">$${itemPrice.toFixed(2)}</p>
-                    <p style="color:${isDark ? '#9ca3af' : '#4b5563'};margin-bottom:24px;flex:1;">${itemDescription || "Sin descripción disponible"}</p>
+                    <p style="color:${isDark ? "#9ca3af" : "#4b5563"};margin-bottom:24px;flex:1;">${itemDescription || "Sin descripción disponible"}</p>
                 </div>
             </div>
           `,

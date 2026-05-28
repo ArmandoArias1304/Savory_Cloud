@@ -408,8 +408,8 @@
         cards.forEach((card) => {
           const itemName = card.dataset.itemName.toLowerCase();
 
-          // Check if name starts with the search term
-          if (term === "" || itemName.startsWith(term)) {
+          // Mostrar si el nombre contiene el término de búsqueda en cualquier parte
+          if (term === "" || itemName.includes(term)) {
             card.style.display = "";
             visibleCount++;
           } else {
@@ -513,7 +513,7 @@
         }
       }
 
-      // --- Sincronización automática de categoría activa al hacer scroll ---
+      // --- Sincronización en tiempo real de categoría activa al hacer scroll ---
       document.addEventListener("DOMContentLoaded", function () {
         const scrollContainer = document.querySelector(
           ".flex-1.overflow-y-auto",
@@ -528,7 +528,6 @@
         // Si no hay scrollContainer, busca el más interno
         let scrollEl = scrollContainer;
         if (!scrollEl) {
-          // fallback: busca el primer overflow-y-auto dentro de .flex-1
           const flex1 = document.querySelector(
             ".flex-1.flex.flex-col.overflow-hidden",
           );
@@ -536,22 +535,14 @@
         }
         if (!scrollEl) return;
 
-        let ticking = false;
         scrollEl.addEventListener("scroll", function () {
-          if (!ticking) {
-            window.requestAnimationFrame(() => {
-              updateActiveCategoryOnScroll();
-              ticking = false;
-            });
-            ticking = true;
-          }
+          // Se ejecuta en cada frame de scroll
+          updateActiveCategoryOnScroll();
         });
 
         function updateActiveCategoryOnScroll() {
-          // Centro del contenedor visible
+          // Encuentra la sección cuyo borde superior está más cerca de la parte superior del contenedor visible
           const containerRect = scrollEl.getBoundingClientRect();
-          const containerCenter = containerRect.top + containerRect.height / 2;
-
           let bestSection = null;
           let minDist = Infinity;
           categorySections.forEach((section) => {
@@ -562,9 +553,8 @@
               rect.top > containerRect.bottom
             )
               return;
-            // Distancia del centro del contenedor al centro de la sección
-            const sectionCenter = rect.top + rect.height / 2;
-            const dist = Math.abs(sectionCenter - containerCenter);
+            // Distancia del borde superior de la sección al borde superior del contenedor
+            const dist = Math.abs(rect.top - containerRect.top);
             if (dist < minDist) {
               minDist = dist;
               bestSection = section;
@@ -572,10 +562,54 @@
           });
           if (bestSection) {
             const id = bestSection.id.replace("category-", "");
-            // Activar el botón correspondiente
+            // Activar el botón correspondiente y hacer scroll automático para que esté visible
             categoryBtns.forEach((btn) => {
               if (btn.dataset.categoryId === id) {
-                if (!btn.classList.contains("active")) filterByCategory(btn);
+                if (!btn.classList.contains("active")) {
+                  btn.classList.add(
+                    "active",
+                    "bg-gradient-to-r",
+                    "from-primary",
+                    "to-primary-dark",
+                    "text-white",
+                    "shadow-green",
+                  );
+                  btn.classList.remove(
+                    "text-text-light-secondary",
+                    "hover:bg-primary/10",
+                    "hover:text-primary",
+                  );
+                  if (document.documentElement.classList.contains("dark")) {
+                    btn.style.color = "#fff";
+                  } else {
+                    btn.style.color = "#111";
+                  }
+                  const icon = btn.querySelector(".material-symbols-outlined");
+                  if (icon) icon.classList.add("filled");
+                  // Scroll automático del botón activo en la barra de categorías
+                  btn.scrollIntoView({
+                    behavior: "smooth",
+                    block: "nearest",
+                    inline: "center",
+                  });
+                }
+              } else {
+                btn.classList.remove(
+                  "active",
+                  "bg-gradient-to-r",
+                  "from-primary",
+                  "to-primary-dark",
+                  "text-white",
+                  "shadow-green",
+                );
+                btn.classList.add(
+                  "text-text-light-secondary",
+                  "hover:bg-primary/10",
+                  "hover:text-primary",
+                );
+                btn.style.color = "";
+                const icon = btn.querySelector(".material-symbols-outlined");
+                if (icon) icon.classList.remove("filled");
               }
             });
           }
