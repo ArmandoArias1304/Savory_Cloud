@@ -13,6 +13,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
+import com.aatechsolutions.elgransazon.infrastructure.context.CompanyContext;
 
 /**
  * Service implementation for managing employee monthly statistics
@@ -126,7 +127,9 @@ public class EmployeeMonthlyStatsServiceImpl implements EmployeeMonthlyStatsServ
     @Transactional(readOnly = true)
     public Optional<EmployeeMonthlyStats> getWaiterOfMonth(Integer month, Integer year) {
         log.debug("Finding waiter of the month for {}/{}", month, year);
-        return statsRepository.findTopWaiterOfMonth(month, year);
+        if (CompanyContext.getCurrentCompany() == null) return Optional.empty();
+        Long companyId = CompanyContext.getCurrentCompany().getIdCompany();
+        return statsRepository.findTopWaiterOfMonth(month, year, companyId);
     }
 
     @Override
@@ -140,7 +143,9 @@ public class EmployeeMonthlyStatsServiceImpl implements EmployeeMonthlyStatsServ
     @Transactional(readOnly = true)
     public Optional<EmployeeMonthlyStats> getChefOfMonth(Integer month, Integer year) {
         log.debug("Finding chef of the month for {}/{}", month, year);
-        return statsRepository.findTopChefOfMonth(month, year);
+        if (CompanyContext.getCurrentCompany() == null) return Optional.empty();
+        Long companyId = CompanyContext.getCurrentCompany().getIdCompany();
+        return statsRepository.findTopChefOfMonth(month, year, companyId);
     }
 
     @Override
@@ -154,7 +159,9 @@ public class EmployeeMonthlyStatsServiceImpl implements EmployeeMonthlyStatsServ
     @Transactional(readOnly = true)
     public Optional<EmployeeMonthlyStats> getBaristaOfMonth(Integer month, Integer year) {
         log.debug("Finding barista of the month for {}/{}", month, year);
-        return statsRepository.findTopBaristaOfMonth(month, year);
+        if (CompanyContext.getCurrentCompany() == null) return Optional.empty();
+        Long companyId = CompanyContext.getCurrentCompany().getIdCompany();
+        return statsRepository.findTopBaristaOfMonth(month, year, companyId);
     }
 
     @Override
@@ -168,7 +175,9 @@ public class EmployeeMonthlyStatsServiceImpl implements EmployeeMonthlyStatsServ
     @Transactional(readOnly = true)
     public Optional<EmployeeMonthlyStats> getCashierOfMonth(Integer month, Integer year) {
         log.debug("Finding cashier of the month for {}/{}", month, year);
-        return statsRepository.findTopCashierOfMonth(month, year);
+        if (CompanyContext.getCurrentCompany() == null) return Optional.empty();
+        Long companyId = CompanyContext.getCurrentCompany().getIdCompany();
+        return statsRepository.findTopCashierOfMonth(month, year, companyId);
     }
 
     @Override
@@ -182,7 +191,9 @@ public class EmployeeMonthlyStatsServiceImpl implements EmployeeMonthlyStatsServ
     @Transactional(readOnly = true)
     public List<EmployeeMonthlyStats> getTopWaitersOfMonth(Integer month, Integer year, Integer limit) {
         log.debug("Finding top {} waiters for {}/{}", limit, month, year);
-        return statsRepository.findTopWaitersOfMonth(month, year).stream()
+        if (CompanyContext.getCurrentCompany() == null) return java.util.Collections.emptyList();
+        Long companyId = CompanyContext.getCurrentCompany().getIdCompany();
+        return statsRepository.findTopWaitersOfMonth(month, year, companyId).stream()
             .limit(limit)
             .collect(java.util.stream.Collectors.toList());
     }
@@ -191,7 +202,9 @@ public class EmployeeMonthlyStatsServiceImpl implements EmployeeMonthlyStatsServ
     @Transactional(readOnly = true)
     public List<EmployeeMonthlyStats> getTopChefsOfMonth(Integer month, Integer year, Integer limit) {
         log.debug("Finding top {} chefs for {}/{}", limit, month, year);
-        return statsRepository.findTopChefsOfMonth(month, year).stream()
+        if (CompanyContext.getCurrentCompany() == null) return java.util.Collections.emptyList();
+        Long companyId = CompanyContext.getCurrentCompany().getIdCompany();
+        return statsRepository.findTopChefsOfMonth(month, year, companyId).stream()
             .limit(limit)
             .collect(java.util.stream.Collectors.toList());
     }
@@ -200,7 +213,9 @@ public class EmployeeMonthlyStatsServiceImpl implements EmployeeMonthlyStatsServ
     @Transactional(readOnly = true)
     public List<EmployeeMonthlyStats> getTopCashiersOfMonth(Integer month, Integer year, Integer limit) {
         log.debug("Finding top {} cashiers for {}/{}", limit, month, year);
-        return statsRepository.findTopCashiersOfMonth(month, year).stream()
+        if (CompanyContext.getCurrentCompany() == null) return java.util.Collections.emptyList();
+        Long companyId = CompanyContext.getCurrentCompany().getIdCompany();
+        return statsRepository.findTopCashiersOfMonth(month, year, companyId).stream()
             .limit(limit)
             .collect(java.util.stream.Collectors.toList());
     }

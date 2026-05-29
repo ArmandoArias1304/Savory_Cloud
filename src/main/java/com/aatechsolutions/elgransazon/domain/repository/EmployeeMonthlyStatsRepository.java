@@ -51,12 +51,14 @@ public interface EmployeeMonthlyStatsRepository extends JpaRepository<EmployeeMo
         AND ems.year = :year 
         AND r.nombre_rol = 'ROLE_WAITER'
         AND ems.total_sales > 0
+        AND e.company_id = :companyId
         ORDER BY ems.total_sales DESC
         LIMIT 1
         """, nativeQuery = true)
     Optional<EmployeeMonthlyStats> findTopWaiterOfMonth(
         @Param("month") Integer month,
-        @Param("year") Integer year
+        @Param("year") Integer year,
+        @Param("companyId") Long companyId
     );
 
     /**
@@ -73,12 +75,14 @@ public interface EmployeeMonthlyStatsRepository extends JpaRepository<EmployeeMo
         AND ems.year = :year 
         AND r.nombre_rol = 'ROLE_CHEF'
         AND ems.total_orders > 0
+        AND e.company_id = :companyId
         ORDER BY ems.total_orders DESC
         LIMIT 1
         """, nativeQuery = true)
     Optional<EmployeeMonthlyStats> findTopChefOfMonth(
         @Param("month") Integer month,
-        @Param("year") Integer year
+        @Param("year") Integer year,
+        @Param("companyId") Long companyId
     );
 
     /**
@@ -94,12 +98,14 @@ public interface EmployeeMonthlyStatsRepository extends JpaRepository<EmployeeMo
         AND ems.year = :year 
         AND r.nombre_rol = 'ROLE_BARISTA'
         AND ems.total_orders > 0
+        AND e.company_id = :companyId
         ORDER BY ems.total_orders DESC
         LIMIT 1
         """, nativeQuery = true)
     Optional<EmployeeMonthlyStats> findTopBaristaOfMonth(
         @Param("month") Integer month,
-        @Param("year") Integer year
+        @Param("year") Integer year,
+        @Param("companyId") Long companyId
     );
 
     /**
@@ -115,12 +121,14 @@ public interface EmployeeMonthlyStatsRepository extends JpaRepository<EmployeeMo
         AND ems.year = :year 
         AND r.nombre_rol = 'ROLE_PARRILLERO'
         AND ems.total_orders > 0
+        AND e.company_id = :companyId
         ORDER BY ems.total_orders DESC
         LIMIT 1
         """, nativeQuery = true)
     Optional<EmployeeMonthlyStats> findTopParrilleroOfMonth(
         @Param("month") Integer month,
-        @Param("year") Integer year
+        @Param("year") Integer year,
+        @Param("companyId") Long companyId
     );
 
     /**
@@ -136,11 +144,13 @@ public interface EmployeeMonthlyStatsRepository extends JpaRepository<EmployeeMo
         AND ems.year = :year 
         AND r.nombre_rol = 'ROLE_WAITER'
         AND ems.total_sales > 0
+        AND e.company_id = :companyId
         ORDER BY ems.total_sales DESC
         """, nativeQuery = true)
     List<EmployeeMonthlyStats> findTopWaitersOfMonth(
         @Param("month") Integer month,
-        @Param("year") Integer year
+        @Param("year") Integer year,
+        @Param("companyId") Long companyId
     );
 
     /**
@@ -156,11 +166,13 @@ public interface EmployeeMonthlyStatsRepository extends JpaRepository<EmployeeMo
         AND ems.year = :year 
         AND r.nombre_rol = 'ROLE_CHEF'
         AND ems.total_orders > 0
+        AND e.company_id = :companyId
         ORDER BY ems.total_orders DESC
         """, nativeQuery = true)
     List<EmployeeMonthlyStats> findTopChefsOfMonth(
         @Param("month") Integer month,
-        @Param("year") Integer year
+        @Param("year") Integer year,
+        @Param("companyId") Long companyId
     );
 
     /**
@@ -176,11 +188,13 @@ public interface EmployeeMonthlyStatsRepository extends JpaRepository<EmployeeMo
         AND ems.year = :year 
         AND r.nombre_rol = 'ROLE_PARRILLERO'
         AND ems.total_orders > 0
+        AND e.company_id = :companyId
         ORDER BY ems.total_orders DESC
         """, nativeQuery = true)
     List<EmployeeMonthlyStats> findTopParrillerosOfMonth(
         @Param("month") Integer month,
-        @Param("year") Integer year
+        @Param("year") Integer year,
+        @Param("companyId") Long companyId
     );
 
     /**
@@ -197,12 +211,14 @@ public interface EmployeeMonthlyStatsRepository extends JpaRepository<EmployeeMo
         AND ems.year = :year 
         AND r.nombre_rol = 'ROLE_CASHIER'
         AND ems.total_sales > 0
+        AND e.company_id = :companyId
         ORDER BY ems.total_sales DESC
         LIMIT 1
         """, nativeQuery = true)
     Optional<EmployeeMonthlyStats> findTopCashierOfMonth(
         @Param("month") Integer month,
-        @Param("year") Integer year
+        @Param("year") Integer year,
+        @Param("companyId") Long companyId
     );
 
     /**
@@ -218,11 +234,13 @@ public interface EmployeeMonthlyStatsRepository extends JpaRepository<EmployeeMo
         AND ems.year = :year 
         AND r.nombre_rol = 'ROLE_CASHIER'
         AND ems.total_sales > 0
+        AND e.company_id = :companyId
         ORDER BY ems.total_sales DESC
         """, nativeQuery = true)
     List<EmployeeMonthlyStats> findTopCashiersOfMonth(
         @Param("month") Integer month,
-        @Param("year") Integer year
+        @Param("year") Integer year,
+        @Param("companyId") Long companyId
     );
 
     /**
