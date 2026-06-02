@@ -246,14 +246,66 @@
                     <span class="material-symbols-outlined text-lg"
                       >local_fire_department</span
                     >
-                    ¿Es una Salsa o Especialidad?
+                    ¿Es una Salsa?
                   </label>
                   <p class="text-sm text-orange-600 dark:text-orange-400">
-                    Marcar si este complemento es una salsa o especialidad. Las salsas y especialidades tienen
-                    un límite máximo por item del menú.
+                    Marcar si este complemento es una salsa. Las salsas tienen
+                    un límite máximo por item del menú y son mutuamente
+                    excluyentes con "Especialidad".
                   </p>
                 </div>
               </div>
+
+              <!-- Es Especialidad -->
+              <div
+                class="flex items-center gap-3 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-200 dark:border-purple-800"
+              >
+                <input type="hidden" name="_isSpeciality" value="on" />
+                <input
+                  type="checkbox"
+                  id="isSpeciality"
+                  th:field="*{isSpeciality}"
+                  class="w-5 h-5 rounded border-purple-300 dark:border-purple-600 text-purple-500 focus:ring-purple-500 focus:ring-offset-0"
+                />
+                <div>
+                  <label
+                    for="isSpeciality"
+                    class="font-semibold text-purple-700 dark:text-purple-300 flex items-center gap-2"
+                  >
+                    <span class="material-symbols-outlined text-lg">star</span>
+                    ¿Es una Especialidad?
+                  </label>
+                  <p class="text-sm text-purple-600 dark:text-purple-400">
+                    Marcar si este complemento es una especialidad. Las
+                    especialidades tienen su propio límite por item y son
+                    mutuamente excluyentes con "Salsa".
+                  </p>
+                </div>
+              </div>
+
+              <!-- Mutex JS for isSauce / isSpeciality -->
+              <script>
+                (function () {
+                  function bindMutex() {
+                    var sauceEl = document.getElementById("isSauce");
+                    var specEl = document.getElementById("isSpeciality");
+                    if (!sauceEl || !specEl) return;
+                    function apply(source) {
+                      if (source === sauceEl && sauceEl.checked) specEl.checked = false;
+                      if (source === specEl && specEl.checked) sauceEl.checked = false;
+                    }
+                    sauceEl.addEventListener("change", function () { apply(sauceEl); });
+                    specEl.addEventListener("change", function () { apply(specEl); });
+                    // Initial guard: if both are somehow true, prefer isSauce.
+                    if (sauceEl.checked && specEl.checked) specEl.checked = false;
+                  }
+                  if (document.readyState === "loading") {
+                    document.addEventListener("DOMContentLoaded", bindMutex);
+                  } else {
+                    bindMutex();
+                  }
+                })();
+              </script>
             </div>
           </div>
 

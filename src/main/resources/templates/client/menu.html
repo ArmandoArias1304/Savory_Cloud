@@ -1516,11 +1516,17 @@
       // Cache for combo children API responses
       let comboChildrenCache = new Map();
 
+      // Per-child selected complements for combo modals: { [childItemId]: { specialities, sauces, regulars } }
+      let comboChildSelectedComplements = {};
+
       // Selected complements for current item in modal
       let selectedComplements = [];
       let currentItemMaxSauces = null; // Limit of sauces for current item
       let currentItemMinSauces = null; // Minimum required sauces for current item
       let selectedSaucesCount = 0; // Counter for selected sauces
+      let currentItemMaxSpecialities = null;
+      let currentItemMinSpecialities = null;
+      let selectedSpecialitiesCount = 0;
 
       /**
        * Fetch available complements for an item (separated into sauces and regular)
@@ -1543,9 +1549,13 @@
             const result = {
               sauces: data.sauces || [],
               complements: data.complements || [],
+              specialities: data.specialities || [],
               maxSauces: data.maxSauces,
               minSauces: data.minSauces,
               totalSaucesAvailable: data.totalSaucesAvailable || 0,
+              maxSpecialities: data.maxSpecialities,
+              minSpecialities: data.minSpecialities,
+              totalSpecialitiesAvailable: data.totalSpecialitiesAvailable || 0,
             };
             itemComplementsCache.set(parseInt(itemId), result);
             return result;
@@ -1553,17 +1563,25 @@
           return {
             sauces: [],
             complements: [],
+            specialities: [],
             maxSauces: null,
             minSauces: null,
             totalSaucesAvailable: 0,
+            maxSpecialities: null,
+            minSpecialities: null,
+            totalSpecialitiesAvailable: 0,
           };
         } catch (error) {
           return {
             sauces: [],
             complements: [],
+            specialities: [],
             maxSauces: null,
             minSauces: null,
             totalSaucesAvailable: 0,
+            maxSpecialities: null,
+            minSpecialities: null,
+            totalSpecialitiesAvailable: 0,
           };
         }
       }
@@ -1572,9 +1590,9 @@
        * Generate HTML for a single complement item
        * Note: Sauces don't show quantity controls (always qty=1)
        */
-      function generateComplementItemHTML(comp, isSauce = false) {
-        // Sauces always have maxQuantity = 1 and don't show quantity controls
-        const showQtyControls = !isSauce && comp.maxQuantity > 1;
+      function generateComplementItemHTML(comp, isSauce = false, isSpeciality = false) {
+        // Sauces/specialities always have maxQuantity = 1 and don't show quantity controls
+        const showQtyControls = !isSauce && !isSpeciality && comp.maxQuantity > 1;
 
         // Detect dark mode
         const isDarkMode = document.documentElement.classList.contains("dark");
@@ -1589,10 +1607,10 @@
           ? ""
           : 'onclick="toggleComplement(this)"';
 
-        // Price display logic: only show if price > 0
-        const showPrice = parseFloat(comp.complementExtraPrice) > 0;
+        // Price display logic: only show if price > 0 and item is available
+        const showPrice = isAvailable && parseFloat(comp.complementExtraPrice) > 0;
         const priceHTML = showPrice
-          ? `<p class="text-xs ${isSauce ? "text-orange-500" : "text-purple-500"} font-bold">+$${parseFloat(comp.complementExtraPrice).toFixed(2)}</p>`
+          ? `<p class="text-xs ${isSauce ? "text-orange-500" : isSpeciality ? "text-purple-500" : "text-pink-500"} font-bold">+$${parseFloat(comp.complementExtraPrice).toFixed(2)}</p>`
           : "";
 
         return `
@@ -1600,21 +1618,23 @@
                data-complement-id="${comp.complementId}"
                data-complement-name="${comp.complementName}"
                data-complement-price="${comp.complementExtraPrice}"
-               data-max-qty="${isSauce ? 1 : comp.maxQuantity}"
+               data-max-qty="${(isSauce || isSpeciality) ? 1 : comp.maxQuantity}"
                data-is-sauce="${isSauce}"
+               data-is-speciality="${isSpeciality}"
                data-show-qty-controls="${showQtyControls}"
+               data-available="${isAvailable}"
                ${disabledAttr}
                ${clickHandler}>
             <div class="flex items-center gap-3">
-              <div class="w-10 h-10 rounded-lg ${isSauce ? (isDarkMode ? "bg-orange-900/50" : "bg-orange-100") : isDarkMode ? "bg-gray-700" : "bg-gray-100"} overflow-hidden flex-shrink-0">
+              <div class="w-10 h-10 rounded-lg ${isSauce ? (isDarkMode ? "bg-orange-900/50" : "bg-orange-100") : isSpeciality ? (isDarkMode ? "bg-purple-900/50" : "bg-purple-100") : isDarkMode ? "bg-gray-700" : "bg-gray-100"} overflow-hidden flex-shrink-0">
                 ${
                   comp.complementImageUrl
                     ? `<img src="${comp.complementImageUrl}" alt="${comp.complementName}" class="w-full h-full object-cover" />`
-                    : `<div class="w-full h-full flex items-center justify-center"><span class="material-symbols-outlined ${isSauce ? "text-orange-400" : isDarkMode ? "text-purple-400" : "text-purple-500"} text-lg">${isSauce ? "local_fire_department" : "skillet"}</span></div>`
+                    : `<div class="w-full h-full flex items-center justify-center"><span class="material-symbols-outlined ${isSauce ? "text-orange-400" : isSpeciality ? "text-purple-400" : isDarkMode ? "text-purple-400" : "text-purple-500"} text-lg">${isSauce ? "local_fire_department" : isSpeciality ? "star" : "skillet"}</span></div>`
                 }
               </div>
               <div>
-                <p class="font-semibold ${isDarkMode ? "text-white" : "text-gray-900"} text-sm">${comp.complementName}${!isAvailable ? ' <span class="text-red-500 text-xs">(Sin stock)</span>' : ""}</p>
+                <p class="font-semibold ${isDarkMode ? "text-white" : "text-gray-900"} text-sm">${comp.complementName}${!isAvailable ? ' <span class="text-red-500 text-xs font-semibold">(Sin stock)</span>' : ""}</p>
                 ${priceHTML}
               </div>
             </div>
@@ -1643,14 +1663,32 @@
         if (!complementsData) return "";
 
         const isDarkMode = document.documentElement.classList.contains("dark");
-        const { sauces, complements, maxSauces } = complementsData;
+        const { sauces, complements, specialities, maxSauces, maxSpecialities } = complementsData;
 
         const hasSauces = sauces && sauces.length > 0;
+        const hasSpecialities = specialities && specialities.length > 0;
         const hasComplements = complements && complements.length > 0;
 
-        if (!hasSauces && !hasComplements) return "";
+        if (!hasSauces && !hasSpecialities && !hasComplements) return "";
 
         let html = `<div class="grid grid-cols-1 gap-2">`;
+
+        // Specialities button
+        if (hasSpecialities) {
+          const selectedSpecialities = selectedComplements.filter((c) => c.isSpeciality);
+          html += `
+            <button type="button" onclick="openSpecialitiesModal()" class="w-full flex items-center justify-between p-2 rounded-lg border-2 ${isDarkMode ? "border-purple-600 bg-purple-900/20 hover:bg-purple-900/30" : "border-purple-400 bg-purple-50 hover:bg-purple-100"} transition-all">
+              <div class="flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-purple-500 text-base">star</span>
+                <span class="font-semibold text-xs ${isDarkMode ? "text-white" : "text-gray-900"}">Especialidades</span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <span id="specialities-count-badge" class="px-2 py-0.5 rounded-full text-xs font-bold ${isDarkMode ? "bg-purple-700 text-white" : "bg-purple-200 text-purple-800"}">${selectedSpecialities.length} ${maxSpecialities && maxSpecialities > 0 ? "/ " + maxSpecialities : ""}</span>
+                <span class="material-symbols-outlined text-gray-400 text-base">chevron_right</span>
+              </div>
+            </button>
+          `;
+        }
 
         // Sauce button
         if (hasSauces) {
@@ -1659,7 +1697,7 @@
             <button type="button" onclick="openSaucesModal()" class="w-full flex items-center justify-between p-2 rounded-lg border-2 ${isDarkMode ? "border-orange-600 bg-orange-900/20 hover:bg-orange-900/30" : "border-orange-400 bg-orange-50 hover:bg-orange-100"} transition-all">
               <div class="flex items-center gap-1.5">
                 <span class="material-symbols-outlined text-orange-500 text-base">local_fire_department</span>
-                <span class="font-semibold text-xs ${isDarkMode ? "text-white" : "text-gray-900"}">Elegir Salsas/Especialidades</span>
+                <span class="font-semibold text-xs ${isDarkMode ? "text-white" : "text-gray-900"}">Elegir Salsas</span>
               </div>
               <div class="flex items-center gap-1.5">
                 <span id="sauces-count-badge" class="px-2 py-0.5 rounded-full text-xs font-bold ${isDarkMode ? "bg-orange-700 text-white" : "bg-orange-200 text-orange-800"}">${selectedSauces.length} ${maxSauces && maxSauces > 0 ? "/ " + maxSauces : ""}</span>
@@ -1671,19 +1709,19 @@
 
         // Complements button
         if (hasComplements) {
-          const selectedComps = selectedComplements.filter((c) => !c.isSauce);
+          const selectedComps = selectedComplements.filter((c) => !c.isSauce && !c.isSpeciality);
           const totalCompsQty = selectedComps.reduce(
             (sum, c) => sum + c.quantity,
             0,
           );
           html += `
-            <button type="button" onclick="openComplementsModal()" class="w-full flex items-center justify-between p-2 rounded-lg border-2 ${isDarkMode ? "border-purple-600 bg-purple-900/20 hover:bg-purple-900/30" : "border-purple-400 bg-purple-50 hover:bg-purple-100"} transition-all">
+            <button type="button" onclick="openComplementsModal()" class="w-full flex items-center justify-between p-2 rounded-lg border-2 ${isDarkMode ? "border-pink-600 bg-pink-900/20 hover:bg-pink-900/30" : "border-pink-400 bg-pink-50 hover:bg-pink-100"} transition-all">
               <div class="flex items-center gap-1.5">
-                <span class="material-symbols-outlined text-purple-500 text-base">skillet</span>
+                <span class="material-symbols-outlined text-pink-500 text-base">skillet</span>
                 <span class="font-semibold text-xs ${isDarkMode ? "text-white" : "text-gray-900"}">Elegir Extras</span>
               </div>
               <div class="flex items-center gap-1.5">
-                <span id="complements-count-badge" class="px-2 py-0.5 rounded-full text-xs font-bold ${isDarkMode ? "bg-purple-700 text-white" : "bg-purple-200 text-purple-800"}">${totalCompsQty}</span>
+                <span id="complements-count-badge" class="px-2 py-0.5 rounded-full text-xs font-bold ${isDarkMode ? "bg-pink-700 text-white" : "bg-pink-200 text-pink-800"}">${totalCompsQty}</span>
                 <span class="material-symbols-outlined text-gray-400 text-lg">chevron_right</span>
               </div>
             </button>
@@ -1726,7 +1764,7 @@
                 <div class="flex items-center justify-between">
                   <div class="flex items-center gap-2">
                     <span class="material-symbols-outlined text-orange-500 text-2xl">local_fire_department</span>
-                    <h3 class="text-xl font-bold ${isDarkMode ? "text-white" : "text-gray-900"}">Salsas/Especialidades Disponibles</h3>
+                    <h3 class="text-xl font-bold ${isDarkMode ? "text-white" : "text-gray-900"}">Salsas Disponibles</h3>
                   </div>
                   <button onclick="closeSaucesOverlay()" class="${isDarkMode ? "text-gray-400 hover:text-white" : "text-gray-400 hover:text-gray-600"} transition-colors">
                     <span class="material-symbols-outlined text-2xl">close</span>
@@ -1813,6 +1851,111 @@
       }
 
       /**
+       * Open specialities selection modal
+       */
+      async function openSpecialitiesModal() {
+        if (!currentItem) return;
+
+        const isDarkMode = document.documentElement.classList.contains("dark");
+        const itemComplements = await fetchItemComplements(currentItem.id);
+        const { specialities, maxSpecialities, minSpecialities } = itemComplements;
+
+        if (!specialities || specialities.length === 0) return;
+
+        currentItemMaxSpecialities = maxSpecialities;
+        currentItemMinSpecialities = minSpecialities;
+        selectedSpecialitiesCount = selectedComplements.filter(
+          (c) => c.isSpeciality,
+        ).length;
+
+        const specialityLimitText =
+          maxSpecialities && maxSpecialities > 0 ? `(Máximo ${maxSpecialities})` : "(Ilimitadas)";
+        const specialitiesHTML = specialities
+          .map((s) => generateComplementItemHTML(s, false, true))
+          .join("");
+
+        const overlayHTML = `
+          <div id="specialities-overlay" class="fixed inset-0 ${isDarkMode ? "bg-black/80" : "bg-black/50"} flex items-center justify-center z-[9999]" style="margin: 0;">
+            <div class="${isDarkMode ? "bg-slate-800" : "bg-white"} rounded-2xl shadow-2xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-hidden">
+              <div class="${isDarkMode ? "bg-slate-700" : "bg-gray-50"} px-6 py-4 border-b ${isDarkMode ? "border-slate-600" : "border-gray-200"}">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-2">
+                    <span class="material-symbols-outlined text-purple-500 text-2xl">star</span>
+                    <h3 class="text-xl font-bold ${isDarkMode ? "text-white" : "text-gray-900"}">Especialidades Disponibles</h3>
+                  </div>
+                  <button onclick="closeSpecialitiesOverlay()" class="${isDarkMode ? "text-gray-400 hover:text-white" : "text-gray-400 hover:text-gray-600"} transition-colors">
+                    <span class="material-symbols-outlined text-2xl">close</span>
+                  </button>
+                </div>
+              </div>
+              <div class="p-6 overflow-y-auto" style="max-height: calc(90vh - 180px);">
+                <div id="specialities-counter" class="text-sm ${isDarkMode ? "text-purple-400" : "text-purple-600"} mb-3 font-semibold ${!maxSpecialities || maxSpecialities <= 0 ? "hidden" : ""}">
+                  Seleccionadas: <span id="selected-specialities-count">${selectedSpecialitiesCount}</span> de ${maxSpecialities || "∞"} ${specialityLimitText}
+                </div>
+                <div id="specialities-container" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                  ${specialitiesHTML}
+                </div>
+              </div>
+              <div class="${isDarkMode ? "bg-slate-700" : "bg-gray-50"} px-6 py-4 border-t ${isDarkMode ? "border-slate-600" : "border-gray-200"} flex justify-end gap-3">
+                <button onclick="closeSpecialitiesOverlay()" class="px-6 py-3 rounded-xl font-bold ${isDarkMode ? "bg-gray-600 hover:bg-gray-500" : "bg-gray-200 hover:bg-gray-300"} ${isDarkMode ? "text-white" : "text-gray-700"} transition-colors">
+                  Cancelar
+                </button>
+                <button onclick="confirmSpecialitiesSelection()" class="px-6 py-3 rounded-xl font-bold bg-purple-500 hover:bg-purple-600 text-white transition-colors">
+                  Confirmar
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+
+        const swalContainer = document.querySelector(".swal2-container");
+        if (swalContainer) {
+          const overlayDiv = document.createElement("div");
+          overlayDiv.innerHTML = overlayHTML;
+          swalContainer.appendChild(overlayDiv.firstElementChild);
+
+          setTimeout(() => {
+            selectedComplements
+              .filter((c) => c.isSpeciality)
+              .forEach((selectedSpec) => {
+                const specElement = document.querySelector(
+                  `[data-complement-id="${selectedSpec.id}"][data-is-speciality="true"]`,
+                );
+                if (specElement) {
+                  specElement.classList.add(
+                    "border-purple-500",
+                    isDarkMode ? "bg-purple-900/30" : "bg-purple-100/30",
+                  );
+                  specElement.classList.remove(
+                    isDarkMode ? "border-gray-700" : "border-gray-200",
+                  );
+                  const checkIcon = specElement.querySelector(".complement-check");
+                  if (checkIcon) {
+                    checkIcon.textContent = "check_circle";
+                    checkIcon.classList.remove(
+                      isDarkMode ? "text-gray-600" : "text-gray-300",
+                    );
+                    checkIcon.classList.add("text-purple-500");
+                  }
+                }
+              });
+            updateSpecialitiesCounter();
+          }, 50);
+        }
+      }
+
+      function closeSpecialitiesOverlay() {
+        const overlay = document.getElementById("specialities-overlay");
+        if (overlay) overlay.remove();
+      }
+
+      function confirmSpecialitiesSelection() {
+        updateComplementsBadges();
+        updateModalComplementsTotal();
+        closeSpecialitiesOverlay();
+      }
+
+      /**
        * Open complements selection modal
        */
       async function openComplementsModal() {
@@ -1825,6 +1968,7 @@
         if (!complements || complements.length === 0) return;
 
         const complementsHTML = complements
+          .filter((c) => !c.isSauce && !c.isSpeciality)
           .map((comp) => generateComplementItemHTML(comp, false))
           .join("");
 
@@ -1870,10 +2014,10 @@
           // Restore previously selected complements - set visual state directly
           setTimeout(() => {
             selectedComplements
-              .filter((c) => !c.isSauce)
+              .filter((c) => !c.isSauce && !c.isSpeciality)
               .forEach((selectedComp) => {
                 const compElement = document.querySelector(
-                  `[data-complement-id="${selectedComp.id}"][data-is-sauce="false"]`,
+                  `[data-complement-id="${selectedComp.id}"][data-is-sauce="false"][data-is-speciality="false"]`,
                 );
                 if (compElement) {
                   // Set visual state to selected
@@ -1934,6 +2078,7 @@
        */
       function updateComplementsBadges() {
         const saucesBadge = document.getElementById("sauces-count-badge");
+        const specialitiesBadge = document.getElementById("specialities-count-badge");
         const complementsBadge = document.getElementById(
           "complements-count-badge",
         );
@@ -1944,8 +2089,14 @@
           saucesBadge.textContent = `${selectedSauces.length}${maxSauces && maxSauces > 0 ? " / " + maxSauces : ""}`;
         }
 
+        if (specialitiesBadge) {
+          const selSpecs = selectedComplements.filter((c) => c.isSpeciality);
+          const maxSpecs = currentItemMaxSpecialities;
+          specialitiesBadge.textContent = `${selSpecs.length}${maxSpecs && maxSpecs > 0 ? " / " + maxSpecs : ""}`;
+        }
+
         if (complementsBadge) {
-          const selectedComps = selectedComplements.filter((c) => !c.isSauce);
+          const selectedComps = selectedComplements.filter((c) => !c.isSauce && !c.isSpeciality);
           const totalQty = selectedComps.reduce(
             (sum, c) => sum + c.quantity,
             0,
@@ -1963,18 +2114,26 @@
         const {
           sauces,
           complements,
+          specialities,
           maxSauces,
           minSauces,
           totalSaucesAvailable,
+          maxSpecialities,
+          minSpecialities,
+          totalSpecialitiesAvailable,
         } = complementsData;
         currentItemMaxSauces = maxSauces;
         currentItemMinSauces = minSauces;
+        currentItemMaxSpecialities = maxSpecialities;
+        currentItemMinSpecialities = minSpecialities;
         selectedSaucesCount = 0;
+        selectedSpecialitiesCount = 0;
 
         const hasSauces = sauces && sauces.length > 0;
+        const hasSpecialities = specialities && specialities.length > 0;
         const hasComplements = complements && complements.length > 0;
 
-        if (!hasSauces && !hasComplements) return "";
+        if (!hasSauces && !hasSpecialities && !hasComplements) return "";
 
         // Detect dark mode
         const isDarkMode = document.documentElement.classList.contains("dark");
@@ -2004,12 +2163,35 @@
           `;
         }
 
+        // Specialities section
+        if (hasSpecialities) {
+          const specialityLimitText =
+            maxSpecialities && maxSpecialities > 0
+              ? `<span class="text-purple-600 font-medium">(máx. ${maxSpecialities})</span>`
+              : "";
+
+          html += `
+            <div class="mb-4">
+              <label class="block text-sm font-bold ${isDarkMode ? "text-gray-200" : "text-gray-700"} mb-2">
+                <span class="material-symbols-outlined text-purple-500 align-middle text-sm mr-1">star</span>
+                Especialidades disponibles (${specialities.length}) ${specialityLimitText}
+              </label>
+              <div id="specialities-counter" class="text-xs ${isDarkMode ? "text-purple-400" : "text-purple-600"} mb-2 ${!maxSpecialities || maxSpecialities <= 0 ? "hidden" : ""}">
+                Seleccionadas: <span id="selected-specialities-count">0</span> de ${maxSpecialities || "∞"}
+              </div>
+              <div class="space-y-2 max-h-32 overflow-y-auto pr-2" id="specialities-container">
+                ${specialities.map((s) => generateComplementItemHTML(s, false, true)).join("")}
+              </div>
+            </div>
+          `;
+        }
+
         // Regular complements section
         if (hasComplements) {
           html += `
             <div>
               <label class="block text-sm font-bold ${isDarkMode ? "text-gray-200" : "text-gray-700"} mb-2">
-                <span class="material-symbols-outlined ${isDarkMode ? "text-purple-400" : "text-purple-500"} align-middle text-sm mr-1">skillet</span>
+                <span class="material-symbols-outlined ${isDarkMode ? "text-pink-400" : "text-pink-500"} align-middle text-sm mr-1">skillet</span>
                 Complementos (${complements.length})
               </label>
               <div class="space-y-2 max-h-32 overflow-y-auto pr-2" id="complements-container">
@@ -2039,6 +2221,7 @@
         const compPrice = parseFloat(element.dataset.complementPrice);
         const maxQty = parseInt(element.dataset.maxQty);
         const isSauce = element.dataset.isSauce === "true";
+        const isSpeciality = element.dataset.isSpeciality === "true";
 
         // Detect dark mode
         const isDarkMode = document.documentElement.classList.contains("dark");
@@ -2066,9 +2249,13 @@
             "bg-orange-50",
             "dark:border-orange-500",
             "dark:bg-orange-900/30",
+            "border-pink-400",
+            "bg-pink-50",
+            "dark:border-pink-500",
+            "dark:bg-pink-900/30",
           );
           checkIcon.textContent = "radio_button_unchecked";
-          checkIcon.classList.remove("text-purple-500", "text-orange-500");
+          checkIcon.classList.remove("text-purple-500", "text-orange-500", "text-pink-500");
           checkIcon.classList.add(
             isDarkMode ? "text-gray-600" : "text-gray-300",
           );
@@ -2077,10 +2264,13 @@
             if (qtySpan) qtySpan.textContent = "0";
           }
 
-          // Update sauce counter if it was a sauce
+          // Update sauce/speciality counter if it was a sauce or speciality
           if (isSauce) {
             selectedSaucesCount--;
             updateSaucesCounter();
+          } else if (isSpeciality) {
+            selectedSpecialitiesCount--;
+            updateSpecialitiesCounter();
           }
         } else {
           // Validate sauce limit before selecting (should be blocked visually, but double-check)
@@ -2090,17 +2280,42 @@
             currentItemMaxSauces > 0 &&
             selectedSaucesCount >= currentItemMaxSauces
           ) {
-            return; // Blocked - limit reached
+            if (currentItemMaxSauces === 1) {
+              const prevSauce = selectedComplements.find((c) => c.isSauce);
+              if (prevSauce) {
+                const prevEl = document.querySelector(`[data-complement-id="${prevSauce.id}"][data-is-sauce="true"]`);
+                if (prevEl) toggleComplement(prevEl);
+              }
+            } else {
+              return; // Blocked - limit reached
+            }
+          }
+          if (
+            isSpeciality &&
+            currentItemMaxSpecialities &&
+            currentItemMaxSpecialities > 0 &&
+            selectedSpecialitiesCount >= currentItemMaxSpecialities
+          ) {
+            if (currentItemMaxSpecialities === 1) {
+              const prevSpec = selectedComplements.find((c) => c.isSpeciality);
+              if (prevSpec) {
+                const prevEl = document.querySelector(`[data-complement-id="${prevSpec.id}"][data-is-speciality="true"]`);
+                if (prevEl) toggleComplement(prevEl);
+              }
+            } else {
+              return; // Blocked - speciality limit reached
+            }
           }
 
-          // Select - sauces always have quantity 1
+          // Select - sauces/specialities always have quantity 1
           selectedComplements.push({
             id: compId,
             name: compName,
             extraPrice: compPrice,
             quantity: 1,
-            maxQuantity: isSauce ? 1 : maxQty,
+            maxQuantity: (isSauce || isSpeciality) ? 1 : maxQty,
             isSauce: isSauce,
+            isSpeciality: isSpeciality,
           });
 
           if (isSauce) {
@@ -2121,8 +2336,8 @@
             selectedSaucesCount++;
             updateSaucesCounter();
             // Sauces don't show qty controls
-          } else {
-            // Regular complement selection with purple colors
+          } else if (isSpeciality) {
+            // Speciality selection with purple colors
             if (isDarkMode) {
               element.classList.add(
                 "border-purple-500",
@@ -2136,7 +2351,25 @@
               isDarkMode ? "text-gray-600" : "text-gray-300",
             );
             checkIcon.classList.add("text-purple-500");
-            // Only show qty controls for non-sauces with maxQty > 1
+            selectedSpecialitiesCount++;
+            updateSpecialitiesCounter();
+            // Specialities don't show qty controls
+          } else {
+            // Regular complement selection with pink colors
+            if (isDarkMode) {
+              element.classList.add(
+                "border-pink-500",
+                "dark:bg-pink-900/30",
+              );
+            } else {
+              element.classList.add("border-pink-400", "bg-pink-50");
+            }
+            checkIcon.textContent = "check_circle";
+            checkIcon.classList.remove(
+              isDarkMode ? "text-gray-600" : "text-gray-300",
+            );
+            checkIcon.classList.add("text-pink-500");
+            // Only show qty controls for non-sauces/specialities with maxQty > 1
             if (showQtyControls && qtyControls) {
               qtyControls.classList.remove("hidden");
               if (qtySpan) qtySpan.textContent = "1";
@@ -2208,17 +2441,55 @@
               "cursor-pointer",
             );
           } else {
-            // Unblock sauces
-            sauceElement.classList.remove(
-              "opacity-40",
-              "pointer-events-none",
-              "cursor-not-allowed",
-            );
-            sauceElement.classList.add(
-              "hover:border-primary",
-              "hover:bg-primary/5",
-              "cursor-pointer",
-            );
+            // Only restore if item is available (not out of stock)
+            sauceElement.classList.remove("opacity-40", "pointer-events-none");
+            if (sauceElement.dataset.available !== "false") {
+              sauceElement.classList.remove("cursor-not-allowed");
+              sauceElement.classList.add("hover:border-primary", "hover:bg-primary/5", "cursor-pointer");
+            }
+          }
+        });
+      }
+
+      function updateSpecialitiesCounter() {
+        const counterSpan = document.getElementById("selected-specialities-count");
+        if (counterSpan) {
+          counterSpan.textContent = selectedSpecialitiesCount;
+          const counterContainer = document.getElementById("specialities-counter");
+          if (counterContainer) {
+            if (currentItemMaxSpecialities && selectedSpecialitiesCount >= currentItemMaxSpecialities) {
+              counterContainer.classList.add("text-red-600", "font-bold");
+              counterContainer.classList.remove("text-purple-600");
+            } else {
+              counterContainer.classList.remove("text-red-600", "font-bold");
+              counterContainer.classList.add("text-purple-600");
+            }
+          }
+        }
+        updateSpecialitiesDisabledState();
+      }
+
+      function updateSpecialitiesDisabledState() {
+        const container = document.getElementById("specialities-container");
+        if (!container) return;
+        const items = container.querySelectorAll('.complement-item[data-is-speciality="true"]');
+        const limitReached =
+          currentItemMaxSpecialities &&
+          currentItemMaxSpecialities > 0 &&
+          selectedSpecialitiesCount >= currentItemMaxSpecialities;
+        items.forEach((el) => {
+          const compId = parseInt(el.dataset.complementId);
+          const isSelected = selectedComplements.some((c) => c.id === compId);
+          if (limitReached && !isSelected) {
+            el.classList.add("opacity-40", "pointer-events-none", "cursor-not-allowed");
+            el.classList.remove("hover:border-primary", "hover:bg-primary/5", "cursor-pointer");
+          } else {
+            // Only restore if item is available (not out of stock)
+            el.classList.remove("opacity-40", "pointer-events-none");
+            if (el.dataset.available !== "false") {
+              el.classList.remove("cursor-not-allowed");
+              el.classList.add("hover:border-primary", "hover:bg-primary/5", "cursor-pointer");
+            }
           }
         });
       }
@@ -2258,7 +2529,7 @@
         const qty = window.modalQuantity || 1;
         return selectedComplements.reduce(
           (sum, comp) =>
-            sum + comp.extraPrice * comp.quantity * (comp.isSauce ? qty : 1),
+            sum + comp.extraPrice * comp.quantity * ((comp.isSauce || comp.isSpeciality) ? qty : 1),
           0,
         );
       }
@@ -2323,7 +2594,7 @@
               item.complementsTotal = item.complements.reduce(
                 (sum, c) =>
                   sum +
-                  c.extraPrice * c.quantity * (c.isSauce ? item.quantity : 1),
+                  c.extraPrice * c.quantity * ((c.isSauce || c.isSpeciality) ? item.quantity : 1),
                 0,
               );
               updateCartUI();
@@ -2356,7 +2627,7 @@
         // Recalculate complements total for this cart item
         item.complementsTotal = item.complements.reduce(
           (sum, c) =>
-            sum + c.extraPrice * c.quantity * (c.isSauce ? item.quantity : 1),
+            sum + c.extraPrice * c.quantity * ((c.isSauce || c.isSpeciality) ? item.quantity : 1),
           0,
         );
 
@@ -2599,6 +2870,7 @@
             item.quantity = newQuantity;
 
             // Recalculate complementsTotal (sauces multiply by item quantity)
+            // Recalculate complementsTotal (sauces/specialities multiply by item quantity)
             if (item.isCombo && item.comboChildren) {
               item.complementsTotal = 0;
               item.comboChildren.forEach((child) => {
@@ -2606,14 +2878,14 @@
                   item.complementsTotal +=
                     (c.extraPrice || 0) *
                     c.quantity *
-                    (c.isSauce ? (child.quantity || 1) * newQuantity : 1);
+                    ((c.isSauce || c.isSpeciality) ? (child.quantity || 1) * newQuantity : 1);
                 });
               });
             } else if (item.complements && item.complements.length > 0) {
               item.complementsTotal = item.complements.reduce(
                 (sum, c) =>
                   sum +
-                  c.extraPrice * c.quantity * (c.isSauce ? newQuantity : 1),
+                  c.extraPrice * c.quantity * ((c.isSauce || c.isSpeciality) ? newQuantity : 1),
                 0,
               );
             }
@@ -3261,9 +3533,44 @@
         const isDarkMode = document.documentElement.classList.contains("dark");
         await Swal.fire({
           icon: "warning",
-          title: "Salsas/Especialidades requeridas",
-          html: `Para el item <b>${currentItem.name}</b> debes seleccionar al menos <b>${minSauces}</b> salsa(s)/especialidad(es). Has seleccionado <b>${selectedSaucesNow}</b>.`,
+          title: "Salsas requeridas",
+          html: `Para el item <b>${currentItem.name}</b> debes seleccionar al menos <b>${minSauces}</b> salsa(s). Has seleccionado <b>${selectedSaucesNow}</b>.`,
           confirmButtonColor: "#f59e0b",
+          background: isDarkMode ? "#1F2937" : "#FFFFFF",
+          color: isDarkMode ? "#F3F4F6" : "#1F2937",
+        });
+        const savedQuantity = window.modalQuantity || quantity || 1;
+        const savedComments = comments || "";
+        const savedComplements = [...selectedComplements];
+        if (typeof reopenItemModal === "function") {
+          reopenItemModal(
+            savedQuantity,
+            savedComments,
+            selectedPromotionId,
+            savedComplements,
+          );
+        }
+        return true;
+      }
+
+      async function validateMinSpecialities(
+        itemComplements,
+        quantity,
+        comments,
+        selectedPromotionId,
+      ) {
+        const minSpecialities = itemComplements && itemComplements.minSpecialities;
+        if (!minSpecialities || minSpecialities <= 0) return false;
+        const selectedSpecialitiesNow = selectedComplements.filter(
+          (c) => c.isSpeciality,
+        ).length;
+        if (selectedSpecialitiesNow >= minSpecialities) return false;
+        const isDarkMode = document.documentElement.classList.contains("dark");
+        await Swal.fire({
+          icon: "warning",
+          title: "Especialidades requeridas",
+          html: `Para el item <b>${currentItem.name}</b> debes seleccionar al menos <b>${minSpecialities}</b> especialidad(es). Has seleccionado <b>${selectedSpecialitiesNow}</b>.`,
+          confirmButtonColor: "#a855f7",
           background: isDarkMode ? "#1F2937" : "#FFFFFF",
           color: isDarkMode ? "#F3F4F6" : "#1F2937",
         });
@@ -3301,6 +3608,18 @@
           return;
         }
 
+        // Validate minimum specialities required
+        if (
+          await validateMinSpecialities(
+            itemComplements,
+            quantity,
+            comments,
+            selectedPromotionId,
+          )
+        ) {
+          return;
+        }
+
         const hasSaucesAvailable =
           itemComplements.sauces && itemComplements.sauces.length > 0;
         const selectedSauces = selectedComplements.filter((c) => c.isSauce);
@@ -3312,14 +3631,14 @@
             document.documentElement.classList.contains("dark");
 
           const result = await Swal.fire({
-            title: "¿Sin salsa o especialidad?",
-            html: `Para el item <b>${currentItem.name}</b> no seleccionaste ninguna salsa o especialidad, se irá natural por defecto.<br><br>¿Deseas continuar sin salsa o especialidad?`,
+            title: "¿Sin salsa?",
+            html: `Para el item <b>${currentItem.name}</b> no seleccionaste ninguna salsa, se irá natural por defecto.<br><br>¿Deseas continuar sin salsa?`,
             icon: "question",
             showCancelButton: true,
             confirmButtonColor: "#38e07b",
             cancelButtonColor: "#f59e0b",
             confirmButtonText: "Sí, continuar",
-            cancelButtonText: "No, elegir salsa o especialidad",
+            cancelButtonText: "No, elegir salsa",
             customClass: {
               popup: isDarkMode ? "swal2-dark" : "",
               title: isDarkMode ? "text-white" : "",
@@ -3821,7 +4140,7 @@
                           .map(
                             (sc) => `
                           <span class="inline-flex items-center text-[10px] text-purple-600 dark:text-purple-400 mr-1">
-                            ${sc.isSauce ? "🫙" : "➕"} ${sc.name}${(sc.isSauce ? sc.quantity * (child.quantity || 1) * item.quantity : sc.quantity) > 1 ? " x" + (sc.isSauce ? sc.quantity * (child.quantity || 1) * item.quantity : sc.quantity) : ""}${sc.extraPrice > 0 ? " (+$" + (sc.extraPrice * sc.quantity * (sc.isSauce ? (child.quantity || 1) * item.quantity : 1)).toFixed(2) + ")" : ""}
+                            ${sc.isSauce ? "🫙" : sc.isSpeciality ? "⭐" : "➕"} ${sc.name}${((sc.isSauce || sc.isSpeciality) ? sc.quantity * (child.quantity || 1) * item.quantity : sc.quantity) > 1 ? " x" + ((sc.isSauce || sc.isSpeciality) ? sc.quantity * (child.quantity || 1) * item.quantity : sc.quantity) : ""}${sc.extraPrice > 0 ? " (+$" + (sc.extraPrice * sc.quantity * ((sc.isSauce || sc.isSpeciality) ? (child.quantity || 1) * item.quantity : 1)).toFixed(2) + ")" : ""}
                           </span>
                         `,
                           )
@@ -3855,8 +4174,8 @@
                         comp.extraPrice > 0
                           ? `
                       <p class="text-xs text-purple-600 dark:text-purple-400 font-semibold">
-                        $${(comp.extraPrice * comp.quantity * (comp.isSauce ? item.quantity : 1)).toFixed(2)}
-                        ${comp.isSauce && item.quantity > 1 ? `<span class="text-gray-400 font-normal">(${item.quantity}x$${(comp.extraPrice * comp.quantity).toFixed(2)})</span>` : comp.quantity > 1 ? `<span class="text-gray-400 font-normal">($${comp.extraPrice.toFixed(2)} c/u)</span>` : ""}
+                        $${(comp.extraPrice * comp.quantity * ((comp.isSauce || comp.isSpeciality) ? item.quantity : 1)).toFixed(2)}
+                        ${(comp.isSauce || comp.isSpeciality) && item.quantity > 1 ? `<span class="text-gray-400 font-normal">(${item.quantity}x$${(comp.extraPrice * comp.quantity).toFixed(2)})</span>` : comp.quantity > 1 ? `<span class="text-gray-400 font-normal">($${comp.extraPrice.toFixed(2)} c/u)</span>` : ""}
                       </p>
                       `
                           : ""
@@ -4431,6 +4750,7 @@
           window._lastOpenedCard = card;
 
           window._comboData = { comboItems: null, childComplementsMap: {} };
+          comboChildSelectedComplements = {};
 
           Swal.fire({
             html: `
@@ -4574,6 +4894,10 @@
               let childItemsHTML = "";
               for (const ci of comboItems) {
                 const childComps = childComplementsMap[ci.childItemId];
+                const hasSpecialities =
+                  childComps &&
+                  childComps.specialities &&
+                  childComps.specialities.length > 0;
                 const hasSauces =
                   childComps &&
                   childComps.sauces &&
@@ -4584,7 +4908,7 @@
                   childComps.complements.length > 0;
 
                 childItemsHTML += `
-                <div class="combo-child-item p-3 rounded-xl border ${isDarkMode ? "border-gray-700 bg-gray-800" : "border-gray-200 bg-gray-50"} mb-3" data-child-id="${ci.childItemId}" data-max-sauces="${childComps.maxSauces != null ? childComps.maxSauces : 99}">
+                <div class="combo-child-item p-3 rounded-xl border ${isDarkMode ? "border-gray-700 bg-gray-800" : "border-gray-200 bg-gray-50"} mb-3" data-child-id="${ci.childItemId}">
                   <div class="flex items-center justify-between mb-2">
                     <div class="flex items-center gap-2">
                       <span class="font-semibold ${isDarkMode ? "text-white" : "text-gray-900"}">${ci.childItemName}</span>
@@ -4592,50 +4916,33 @@
                     </div>
                    <!--<span class="text-xs ${isDarkMode ? "text-gray-400" : "text-gray-500"}">${ci.childRequiresPreparation ? "👨‍🍳 Chef" : ci.childRequiresBaristaPreparation ? "☕ Barista" : "📦 Listo"}</span>-->
                   </div>
-                  ${
-                    hasSauces || hasComplements
-                      ? `
-                    <div class="mt-2">
-                      <p class="text-xs font-medium ${isDarkMode ? "text-gray-400" : "text-gray-600"} mb-1">Complementos disponibles:</p>
-                      ${hasSauces && childComps.maxSauces != null ? `<p class="text-[10px] ${isDarkMode ? "text-amber-400" : "text-amber-600"} mb-1 combo-sauces-counter" data-child-id="${ci.childItemId}">🫙 Salsas: <span class="combo-sauce-count">0</span>/${childComps.maxSauces} máx.</p>` : ""}
-                      <div class="combo-child-complements space-y-1" data-child-id="${ci.childItemId}">
-                        ${(childComps.sauces || [])
-                          .map(
-                            (s) => `
-                          <div class="combo-comp-item flex items-center justify-between text-xs px-2 py-1 rounded-lg border transition-all ${isDarkMode ? "border-gray-600 text-gray-300" : "border-gray-300 text-gray-700"}"
-                            data-comp-id="${s.complementId}" data-comp-name="${s.complementName}" data-comp-price="${s.complementExtraPrice}" data-is-sauce="true"
-                            data-child-id="${ci.childItemId}" data-child-qty="${ci.quantity}" data-qty="0" data-max-qty="1">
-                            <span>🫙 ${s.complementName} ${s.complementExtraPrice > 0 ? "+$" + parseFloat(s.complementExtraPrice).toFixed(2) : ""}</span>
-                            <button type="button" class="combo-sauce-toggle ml-2 px-2 py-0.5 rounded ${isDarkMode ? "bg-gray-700 hover:bg-amber-600" : "bg-gray-200 hover:bg-amber-400"} transition-colors"
-                              onclick="toggleComboSauce(this.parentElement)">
-                              Agregar
-                            </button>
+                  ${hasSpecialities || hasSauces || hasComplements ? `
+                    <div class="grid grid-cols-1 gap-1.5 mt-1">
+                      ${hasSpecialities ? `
+                        <button type="button" onclick="openComboChildOverlay(${ci.childItemId}, 'specialities')" class="w-full flex items-center justify-between p-2 rounded-lg border-2 ${isDarkMode ? "border-purple-600 bg-purple-900/20 hover:bg-purple-900/30" : "border-purple-400 bg-purple-50 hover:bg-purple-100"} transition-all">
+                          <div class="flex items-center gap-1.5">
+                            <span class="material-symbols-outlined text-purple-500 text-sm">star</span>
+                            <span class="text-xs font-semibold ${isDarkMode ? "text-white" : "text-gray-900"}">Especialidades</span>
                           </div>
-                        `,
-                          )
-                          .join("")}
-                        ${(childComps.complements || [])
-                          .map((c) => {
-                            const maxQ = c.maxQuantity || 1;
-                            return `
-                          <div class="combo-comp-item flex items-center justify-between text-xs px-2 py-1 rounded-lg border transition-all ${isDarkMode ? "border-gray-600 text-gray-300" : "border-gray-300 text-gray-700"}"
-                            data-comp-id="${c.complementId}" data-comp-name="${c.complementName}" data-comp-price="${c.complementExtraPrice}" data-is-sauce="false"
-                            data-child-id="${ci.childItemId}" data-child-qty="${ci.quantity}" data-qty="0" data-max-qty="${maxQ}">
-                            <span>➕ ${c.complementName} ${c.complementExtraPrice > 0 ? "+$" + parseFloat(c.complementExtraPrice).toFixed(2) : ""}</span>
-                            <div class="flex items-center gap-1 ml-2">
-                              <button type="button" class="px-1.5 py-0.5 rounded ${isDarkMode ? "bg-gray-700 hover:bg-blue-600" : "bg-gray-200 hover:bg-blue-400"} transition-colors" onclick="changeComboCompQty(this.parentElement.parentElement, -1)">−</button>
-                              <span class="combo-comp-qty w-5 text-center font-semibold">0</span>
-                              <button type="button" class="px-1.5 py-0.5 rounded ${isDarkMode ? "bg-gray-700 hover:bg-blue-600" : "bg-gray-200 hover:bg-blue-400"} transition-colors" onclick="changeComboCompQty(this.parentElement.parentElement, 1)">+</button>
-                              <span class="text-[10px] ${isDarkMode ? "text-gray-500" : "text-gray-400"}">max ${maxQ}</span>
-                            </div>
-                          </div>`;
-                          })
-                          .join("")}
-                      </div>
-                    </div>
-                  `
-                      : ""
-                  }
+                          <span id="combo-child-specialities-badge-${ci.childItemId}" data-max="${childComps.maxSpecialities || ""}" class="px-2 py-0.5 rounded-full text-xs font-bold ${isDarkMode ? "bg-purple-700 text-white" : "bg-purple-200 text-purple-800"}">0${childComps.maxSpecialities ? " / " + childComps.maxSpecialities : ""}</span>
+                        </button>` : ""}
+                      ${hasSauces ? `
+                        <button type="button" onclick="openComboChildOverlay(${ci.childItemId}, 'sauces')" class="w-full flex items-center justify-between p-2 rounded-lg border-2 ${isDarkMode ? "border-orange-600 bg-orange-900/20 hover:bg-orange-900/30" : "border-orange-400 bg-orange-50 hover:bg-orange-100"} transition-all">
+                          <div class="flex items-center gap-1.5">
+                            <span class="material-symbols-outlined text-orange-500 text-sm">local_fire_department</span>
+                            <span class="text-xs font-semibold ${isDarkMode ? "text-white" : "text-gray-900"}">Salsas</span>
+                          </div>
+                          <span id="combo-child-sauces-badge-${ci.childItemId}" data-max="${childComps.maxSauces || ""}" class="px-2 py-0.5 rounded-full text-xs font-bold ${isDarkMode ? "bg-orange-700 text-white" : "bg-orange-200 text-orange-800"}">0${childComps.maxSauces ? " / " + childComps.maxSauces : ""}</span>
+                        </button>` : ""}
+                      ${hasComplements ? `
+                        <button type="button" onclick="openComboChildOverlay(${ci.childItemId}, 'regulars')" class="w-full flex items-center justify-between p-2 rounded-lg border-2 ${isDarkMode ? "border-pink-600 bg-pink-900/20 hover:bg-pink-900/30" : "border-pink-400 bg-pink-50 hover:bg-pink-100"} transition-all">
+                          <div class="flex items-center gap-1.5">
+                            <span class="material-symbols-outlined text-pink-500 text-sm">skillet</span>
+                            <span class="text-xs font-semibold ${isDarkMode ? "text-white" : "text-gray-900"}">Extras</span>
+                          </div>
+                          <span id="combo-child-regulars-badge-${ci.childItemId}" class="px-2 py-0.5 rounded-full text-xs font-bold ${isDarkMode ? "bg-pink-700 text-white" : "bg-pink-200 text-pink-800"}">0</span>
+                        </button>` : ""}
+                    </div>` : ""}
                 </div>
               `;
               }
@@ -4834,6 +5141,218 @@
         updateComboComplementsTotal();
       }
 
+      function openComboChildOverlay(childItemId, type) {
+        const childId = parseInt(childItemId);
+        const childComplementsMap = window._comboData && window._comboData.childComplementsMap;
+        if (!childComplementsMap) return;
+        const childComps = childComplementsMap[childId];
+        if (!childComps) return;
+        const isDarkMode = document.documentElement.classList.contains("dark");
+        if (!comboChildSelectedComplements[childId]) {
+          comboChildSelectedComplements[childId] = { specialities: [], sauces: [], regulars: [] };
+        }
+        const existing = comboChildSelectedComplements[childId];
+        let items = [], maxVal = null, title = "", icon = "", color = "";
+        const overlayId = `combo-child-overlay-${childId}-${type}`;
+        if (type === "specialities") {
+          items = childComps.specialities || []; maxVal = childComps.maxSpecialities;
+          title = "Especialidades"; icon = "star"; color = "purple";
+        } else if (type === "sauces") {
+          items = childComps.sauces || []; maxVal = childComps.maxSauces;
+          title = "Salsas"; icon = "local_fire_department"; color = "orange";
+        } else {
+          items = childComps.complements || [];
+          title = "Extras"; icon = "skillet"; color = "pink";
+        }
+        if (items.length === 0) return;
+        const isToggle = type !== "regulars";
+        const selectedIds = isToggle ? existing[type].map((s) => s.id) : [];
+        const counterId = `combo-child-counter-${childId}-${type}`;
+        const currentCount = existing[type].length;
+        const limitReached = maxVal && maxVal > 0 && currentCount >= maxVal;
+        const itemsHTML = items.map((item) => {
+          const compId = item.complementId;
+          const compName = item.complementName;
+          const extraPrice = item.complementExtraPrice || 0;
+          const maxQty = item.maxQuantity || 1;
+          const isAvailable = item.available !== false;
+          if (isToggle) {
+            const isSelected = selectedIds.includes(compId);
+            const isDisabled = !isAvailable || (limitReached && !isSelected);
+            return `<div class="combo-child-comp-item flex items-center justify-between p-3 rounded-xl border-2 ${isDisabled ? "opacity-40 cursor-not-allowed" : "cursor-pointer"} transition-all ${isDarkMode ? (isSelected ? "border-" + color + "-500 bg-" + color + "-900/30" : "border-gray-700 bg-gray-800") : (isSelected ? "border-" + color + "-400 bg-" + color + "-50" : "border-gray-200 bg-white")}"
+              data-comp-id="${compId}" data-comp-name="${compName}" data-comp-price="${extraPrice}" data-type="${type}" data-child-id="${childId}" data-selected="${isSelected}" data-available="${isAvailable}"
+              ${isDisabled ? "" : `onclick="toggleComboChildComp(this, '${childId}', '${type}', ${maxVal || 99})"`}>
+              <div class="flex items-center gap-2 flex-1 min-w-0">
+                <span class="material-symbols-outlined text-${color}-500 text-sm">${icon}</span>
+                <span class="text-sm font-medium ${isDarkMode ? "text-gray-200" : "text-gray-800"} truncate">${compName}</span>
+                ${!isAvailable ? `<span class="text-xs text-red-500 font-semibold">(Sin stock)</span>` : (extraPrice > 0 ? `<span class="text-xs text-amber-600 dark:text-amber-400 font-semibold">+$${parseFloat(extraPrice).toFixed(2)}</span>` : "")}
+              </div>
+              <span class="combo-child-check material-symbols-outlined text-${color}-500 text-xl">${isSelected ? "check_circle" : "radio_button_unchecked"}</span>
+            </div>`;
+          } else {
+            const existingItem = existing.regulars.find((r) => r.id === compId);
+            const qty = existingItem ? existingItem.quantity : 0;
+            return `<div class="flex items-center justify-between p-3 rounded-xl border ${isDarkMode ? "border-gray-700 bg-gray-800" : "border-gray-200 bg-white"}${!isAvailable ? " opacity-40" : ""}"
+              data-comp-id="${compId}" data-comp-name="${compName}" data-comp-price="${extraPrice}" data-max-qty="${maxQty}" data-child-id="${childId}" data-available="${isAvailable}">
+              <div class="flex items-center gap-2 flex-1 min-w-0">
+                <span class="material-symbols-outlined text-pink-500 text-sm">skillet</span>
+                <span class="text-sm font-medium ${isDarkMode ? "text-gray-200" : "text-gray-800"} truncate">${compName}</span>
+                ${!isAvailable ? `<span class="text-xs text-red-500 font-semibold">(Sin stock)</span>` : (extraPrice > 0 ? `<span class="text-xs text-amber-600 dark:text-amber-400 font-semibold">+$${parseFloat(extraPrice).toFixed(2)}</span>` : "")}
+              </div>
+              <div class="flex items-center gap-1 ml-2${!isAvailable ? " pointer-events-none" : ""}">
+                <button type="button" onclick="changeComboChildQty(this.parentElement.parentElement, -1)" class="w-7 h-7 flex items-center justify-center rounded-md text-xs font-bold ${isDarkMode ? "bg-gray-700 text-gray-400 hover:bg-red-900/40 hover:text-red-300" : "bg-gray-100 text-gray-400 hover:bg-red-100 hover:text-red-600"}">−</button>
+                <span class="combo-child-comp-qty w-6 text-center text-sm font-bold ${isDarkMode ? "text-white" : "text-gray-900"}">${qty}</span>
+                <button type="button" onclick="changeComboChildQty(this.parentElement.parentElement, 1)" class="w-7 h-7 flex items-center justify-center rounded-md text-xs font-bold ${isDarkMode ? "bg-gray-700 text-gray-400 hover:bg-blue-900/40 hover:text-blue-300" : "bg-gray-100 text-gray-400 hover:bg-blue-100 hover:text-blue-600"}">+</button>
+              </div>
+            </div>`;
+          }
+        }).join("");
+        const overlayHTML = `<div id="${overlayId}" class="fixed inset-0 ${isDarkMode ? "bg-black/80" : "bg-black/50"} flex items-center justify-center z-[9999]" style="margin:0;">
+          <div class="${isDarkMode ? "bg-slate-800" : "bg-white"} rounded-2xl shadow-2xl max-w-lg w-full mx-4 max-h-[85vh] overflow-hidden">
+            <div class="${isDarkMode ? "bg-slate-700" : "bg-gray-50"} px-6 py-4 border-b ${isDarkMode ? "border-slate-600" : "border-gray-200"}">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <span class="material-symbols-outlined text-${color}-500 text-2xl">${icon}</span>
+                  <h3 class="text-xl font-bold ${isDarkMode ? "text-white" : "text-gray-900"}">${title}</h3>
+                </div>
+                <button onclick="closeComboChildOverlay('${overlayId}')" class="${isDarkMode ? "text-gray-400 hover:text-white" : "text-gray-400 hover:text-gray-600"} transition-colors">
+                  <span class="material-symbols-outlined text-2xl">close</span>
+                </button>
+              </div>
+              ${maxVal && maxVal > 0 ? `<p id="${counterId}" class="text-sm text-${color}-500 font-semibold mt-1">Seleccionados: ${currentCount} de ${maxVal}</p>` : ""}
+            </div>
+            <div class="p-4 overflow-y-auto" style="max-height: calc(85vh - 160px);">
+              <div class="space-y-2">${itemsHTML}</div>
+            </div>
+            <div class="${isDarkMode ? "bg-slate-700" : "bg-gray-50"} px-6 py-4 border-t ${isDarkMode ? "border-slate-600" : "border-gray-200"} flex justify-end gap-3">
+              <button onclick="closeComboChildOverlay('${overlayId}')" class="px-5 py-2.5 rounded-xl font-bold ${isDarkMode ? "bg-gray-600 hover:bg-gray-500 text-white" : "bg-gray-200 hover:bg-gray-300 text-gray-700"} transition-colors">Cancelar</button>
+              <button onclick="confirmComboChildOverlay('${childId}', '${type}', '${overlayId}')" class="px-5 py-2.5 rounded-xl font-bold bg-${color}-500 hover:bg-${color}-600 text-white transition-colors">Confirmar</button>
+            </div>
+          </div>
+        </div>`;
+        const swalContainer = document.querySelector(".swal2-container");
+        if (swalContainer) {
+          const div = document.createElement("div");
+          div.innerHTML = overlayHTML;
+          swalContainer.appendChild(div.firstElementChild);
+        }
+      }
+
+      function toggleComboChildComp(el, childId, type, maxVal) {
+        const childIdInt = parseInt(childId);
+        if (!comboChildSelectedComplements[childIdInt]) {
+          comboChildSelectedComplements[childIdInt] = { specialities: [], sauces: [], regulars: [] };
+        }
+        const arr = comboChildSelectedComplements[childIdInt][type];
+        const compId = parseInt(el.dataset.compId);
+        const isDarkMode = document.documentElement.classList.contains("dark");
+        const colorMap = { specialities: "purple", sauces: "orange" };
+        const color = colorMap[type] || "pink";
+        const idx = arr.findIndex((s) => s.id === compId);
+        if (idx >= 0) {
+          arr.splice(idx, 1);
+          el.dataset.selected = "false";
+          const check = el.querySelector(".combo-child-check");
+          if (check) check.textContent = "radio_button_unchecked";
+          el.classList.remove("border-" + color + "-500", "bg-" + color + "-900/30", "border-" + color + "-400", "bg-" + color + "-50");
+          el.classList.add(isDarkMode ? "border-gray-700" : "border-gray-200");
+        } else {
+          if (maxVal && maxVal > 0 && arr.length >= maxVal) {
+            if (maxVal === 1 && arr.length === 1) {
+              const prevId = arr[0].id;
+              const prevEl = document.querySelector(`.combo-child-comp-item[data-comp-id="${prevId}"][data-child-id="${childId}"]`);
+              if (prevEl) {
+                prevEl.dataset.selected = "false";
+                const prevCheck = prevEl.querySelector(".combo-child-check");
+                if (prevCheck) prevCheck.textContent = "radio_button_unchecked";
+                prevEl.classList.remove("border-" + color + "-500", "bg-" + color + "-900/30", "border-" + color + "-400", "bg-" + color + "-50");
+                prevEl.classList.add(isDarkMode ? "border-gray-700" : "border-gray-200");
+              }
+              arr.splice(0, 1);
+            } else {
+              return;
+            }
+          }
+          arr.push({ id: compId, name: el.dataset.compName, price: parseFloat(el.dataset.compPrice) || 0, quantity: 1 });
+          el.dataset.selected = "true";
+          const check = el.querySelector(".combo-child-check");
+          if (check) check.textContent = "check_circle";
+          el.classList.remove(isDarkMode ? "border-gray-700" : "border-gray-200");
+          el.classList.add(isDarkMode ? "border-" + color + "-500" : "border-" + color + "-400", isDarkMode ? "bg-" + color + "-900/30" : "bg-" + color + "-50");
+        }
+        const counter = document.getElementById(`combo-child-counter-${childId}-${type}`);
+        if (counter) counter.textContent = `Seleccionados: ${arr.length} de ${maxVal || "\u221e"}`;
+        updateComboChildDisabledState(childId, type, maxVal);
+      }
+
+      function updateComboChildDisabledState(childId, type, maxVal) {
+        const overlayId = `combo-child-overlay-${childId}-${type}`;
+        const overlay = document.getElementById(overlayId);
+        if (!overlay) return;
+        const childIdInt = parseInt(childId);
+        const arr = (comboChildSelectedComplements[childIdInt] && comboChildSelectedComplements[childIdInt][type]) || [];
+        const limitReached = maxVal && maxVal > 0 && arr.length >= maxVal;
+        overlay.querySelectorAll(".combo-child-comp-item").forEach((item) => {
+          const isSelected = item.dataset.selected === "true";
+          const isAvailable = item.dataset.available !== "false";
+          const shouldDisable = !isAvailable || (limitReached && !isSelected);
+          if (shouldDisable) {
+            item.classList.add("opacity-40", "cursor-not-allowed");
+            item.classList.remove("cursor-pointer");
+            item.removeAttribute("onclick");
+          } else {
+            item.classList.remove("opacity-40", "cursor-not-allowed");
+            item.classList.add("cursor-pointer");
+            item.setAttribute("onclick", `toggleComboChildComp(this, '${childId}', '${type}', ${maxVal || 99})`);
+          }
+        });
+      }
+
+      function changeComboChildQty(el, delta) {
+        const qtyEl = el.querySelector(".combo-child-comp-qty");
+        const qty = parseInt(qtyEl.textContent) || 0;
+        const maxQty = parseInt(el.dataset.maxQty) || 1;
+        qtyEl.textContent = Math.max(0, Math.min(maxQty, qty + delta));
+      }
+
+      function closeComboChildOverlay(overlayId) {
+        const overlay = document.getElementById(overlayId);
+        if (overlay) overlay.remove();
+      }
+
+      function confirmComboChildOverlay(childId, type, overlayId) {
+        const childIdInt = parseInt(childId);
+        if (!comboChildSelectedComplements[childIdInt]) {
+          comboChildSelectedComplements[childIdInt] = { specialities: [], sauces: [], regulars: [] };
+        }
+        if (type === "regulars") {
+          const overlay = document.getElementById(overlayId);
+          if (overlay) {
+            const regulars = [];
+            overlay.querySelectorAll("[data-comp-id][data-child-id]").forEach((item) => {
+              const qty = parseInt(item.querySelector(".combo-child-comp-qty")?.textContent) || 0;
+              if (qty > 0) regulars.push({ id: parseInt(item.dataset.compId), name: item.dataset.compName, price: parseFloat(item.dataset.compPrice) || 0, quantity: qty });
+            });
+            comboChildSelectedComplements[childIdInt].regulars = regulars;
+          }
+        }
+        updateComboChildBadge(childIdInt, type);
+        closeComboChildOverlay(overlayId);
+      }
+
+      function updateComboChildBadge(childId, type) {
+        const childIdInt = parseInt(childId);
+        const data = comboChildSelectedComplements[childIdInt];
+        if (!data) return;
+        const arr = data[type] || [];
+        const count = type === "regulars" ? arr.reduce((sum, r) => sum + r.quantity, 0) : arr.length;
+        const badge = document.getElementById(`combo-child-${type}-badge-${childIdInt}`);
+        if (badge) {
+          const maxPart = badge.dataset.max ? ` / ${badge.dataset.max}` : "";
+          badge.textContent = count + maxPart;
+        }
+      }
+
       /**
        * Update combo complements total display
        */
@@ -4846,8 +5365,9 @@
           const qty = parseInt(item.dataset.qty) || 0;
           const price = parseFloat(item.dataset.compPrice) || 0;
           const isSauce = item.dataset.isSauce === "true";
+          const isSpecialityComp = item.dataset.isSpeciality === "true";
           const childQty = parseInt(item.dataset.childQty) || 1;
-          total += price * qty * (isSauce ? childQty * comboQty : 1);
+          total += price * qty * ((isSauce || isSpecialityComp) ? childQty * comboQty : 1);
         });
         const label = document.getElementById("comboComplementsTotal");
         if (label) {
@@ -4906,26 +5426,17 @@
         childComplementsMap,
         selectedPromotionId = null,
       ) {
-        // Collect per-child complements from items with qty > 0
-        const allItems = document.querySelectorAll(".combo-comp-item");
-
-        // Group by childItemId
+        // Collect per-child complements from comboChildSelectedComplements state
         const compsByChild = {};
-        allItems.forEach((item) => {
-          const qty = parseInt(item.dataset.qty) || 0;
-          if (qty <= 0) return;
-          const childId = item.dataset.childId;
-          if (!compsByChild[childId]) compsByChild[childId] = [];
-          compsByChild[childId].push({
-            id: parseInt(item.dataset.compId),
-            quantity: qty,
-            name: item.dataset.compName,
-            price: parseFloat(item.dataset.compPrice) || 0,
-            isSauce: item.dataset.isSauce === "true",
-          });
-        });
-
-        // Build complements array for submission (per-child format)
+        for (const [childIdStr, data] of Object.entries(comboChildSelectedComplements)) {
+          const childId = parseInt(childIdStr);
+          const allComps = [
+            ...(data.specialities || []).map((s) => ({ ...s, isSauce: false, isSpeciality: true })),
+            ...(data.sauces || []).map((s) => ({ ...s, isSauce: true, isSpeciality: false })),
+            ...(data.regulars || []).filter((r) => r.quantity > 0).map((r) => ({ ...r, isSauce: false, isSpeciality: false })),
+          ];
+          if (allComps.length > 0) compsByChild[childId] = allComps;
+        }
         const perChildComplements = [];
         for (const [childId, comps] of Object.entries(compsByChild)) {
           perChildComplements.push({
@@ -4933,18 +5444,18 @@
             complements: comps.map((c) => ({ id: c.id, quantity: c.quantity })),
           });
         }
-
-        // Calculate complements total
         let complementsTotal = 0;
-        allItems.forEach((item) => {
-          const qty = parseInt(item.dataset.qty) || 0;
-          const isSauce = item.dataset.isSauce === "true";
-          const childQty = parseInt(item.dataset.childQty) || 1;
-          complementsTotal +=
-            (parseFloat(item.dataset.compPrice) || 0) *
-            qty *
-            (isSauce ? childQty * quantity : 1);
-        });
+        for (const [childIdStr, data] of Object.entries(comboChildSelectedComplements)) {
+          const childId = parseInt(childIdStr);
+          const ci = comboItems.find((c) => c.childItemId === childId);
+          const childQty = ci ? ci.quantity : 1;
+          [...(data.sauces || []), ...(data.specialities || [])].forEach((s) => {
+            complementsTotal += (s.price || 0) * s.quantity * childQty * quantity;
+          });
+          (data.regulars || []).forEach((r) => {
+            complementsTotal += (r.price || 0) * r.quantity;
+          });
+        }
 
         // Apply promotion automatically (same logic as updateCartItemQuantity)
         let subtotal = currentItem.price * quantity;
@@ -5013,18 +5524,17 @@
           promotionLabel: promotionLabel,
           isCombo: true,
           comboChildren: comboItems.map((ci) => {
-            const childComps = compsByChild[ci.childItemId.toString()] || [];
+            const childData = comboChildSelectedComplements[ci.childItemId] || { specialities: [], sauces: [], regulars: [] };
+            const childComps = [
+              ...(childData.specialities || []).map((s) => ({ id: s.id, name: s.name, quantity: s.quantity, extraPrice: s.price, isSauce: false, isSpeciality: true })),
+              ...(childData.sauces || []).map((s) => ({ id: s.id, name: s.name, quantity: s.quantity, extraPrice: s.price, isSauce: true, isSpeciality: false })),
+              ...(childData.regulars || []).filter((r) => r.quantity > 0).map((r) => ({ id: r.id, name: r.name, quantity: r.quantity, extraPrice: r.price, isSauce: false, isSpeciality: false })),
+            ];
             return {
               childItemId: ci.childItemId,
               name: ci.childItemName,
               quantity: ci.quantity,
-              selectedComplements: childComps.map((c) => ({
-                id: c.id,
-                name: c.name,
-                quantity: c.quantity,
-                extraPrice: c.price,
-                isSauce: c.isSauce,
-              })),
+              selectedComplements: childComps,
             };
           }),
           complements: perChildComplements,

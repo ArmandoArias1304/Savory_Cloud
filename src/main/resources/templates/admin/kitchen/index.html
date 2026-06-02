@@ -569,10 +569,21 @@
                             <span class="text-[10px] text-gray-500 dark:text-gray-400" th:text="'x' + ${comp.quantity}"></span>
                           </div>
                         </th:block>
+                        <!-- Specialities -->
+                        <th:block th:each="comp : ${detail.selectedComplements}">
+                          <div
+                            th:if="${comp.complement.isSpeciality != null && comp.complement.isSpeciality}"
+                            class="flex items-center gap-1"
+                          >
+                            <span class="material-symbols-outlined text-amber-500 dark:text-amber-400 !text-xs">star</span>
+                            <span class="text-xs text-amber-700 dark:text-amber-300 font-medium" th:text="${comp.complementName}"></span>
+                            <span class="text-[10px] text-gray-500 dark:text-gray-400" th:text="'x' + ${comp.quantity}"></span>
+                          </div>
+                        </th:block>
                         <!-- Regular Complements -->
                         <th:block th:each="comp : ${detail.selectedComplements}">
                           <div
-                            th:if="${comp.complement.isSauce == null || !comp.complement.isSauce}"
+                            th:if="${(comp.complement.isSauce == null || !comp.complement.isSauce) && (comp.complement.isSpeciality == null || !comp.complement.isSpeciality)}"
                             class="flex items-center gap-1"
                           >
                             <span class="material-symbols-outlined text-purple-500 dark:text-purple-400 !text-xs">add_circle</span>

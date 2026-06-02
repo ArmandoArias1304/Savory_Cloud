@@ -166,6 +166,25 @@ public class ItemMenu implements Serializable {
     @Column(name = "min_sauces")
     private Integer minSauces;
 
+    /**
+     * Maximum number of specialities that can be selected for this item.
+     * Mirrors {@link #maxSauces} for speciality-type complements.
+     * NULL or 0: No specialities allowed or unlimited.
+     * > 0: Maximum number of different specialities the customer can choose.
+     */
+    @Min(value = 0, message = "El número máximo de especialidades no puede ser negativo")
+    @Column(name = "max_specialities")
+    private Integer maxSpecialities;
+
+    /**
+     * Minimum number of specialities that must be selected for this item.
+     * Mirrors {@link #minSauces} for speciality-type complements.
+     * Must be less than or equal to {@link #maxSpecialities} when maxSpecialities > 0.
+     */
+    @Min(value = 0, message = "El número mínimo de especialidades no puede ser negativo")
+    @Column(name = "min_specialities")
+    private Integer minSpecialities;
+
     // ========== Availability Schedule ==========
 
     /**

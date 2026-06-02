@@ -55,6 +55,15 @@ public class ItemMenuServiceImpl implements ItemMenuService {
         }
     }
 
+    private void validateSpecialitiesRange(Integer minSpecialities, Integer maxSpecialities) {
+        if (minSpecialities != null && maxSpecialities != null
+                && minSpecialities > 0 && maxSpecialities > 0
+                && minSpecialities > maxSpecialities) {
+            throw new IllegalArgumentException(
+                "El número mínimo de especialidades (" + minSpecialities + ") no puede ser mayor al máximo (" + maxSpecialities + ").");
+        }
+    }
+
     @Override
     public List<ItemMenu> findAll() {
         log.debug("Fetching all menu items");
@@ -203,6 +212,7 @@ public class ItemMenuServiceImpl implements ItemMenuService {
 
         // Validate sauces range (min cannot exceed max)
         validateSaucesRange(item.getMinSauces(), item.getMaxSauces());
+        validateSpecialitiesRange(item.getMinSpecialities(), item.getMaxSpecialities());
 
         // Save the item first
         ItemMenu saved = itemMenuRepository.save(item);
@@ -286,6 +296,9 @@ public class ItemMenuServiceImpl implements ItemMenuService {
         existing.setMaxSauces(item.getMaxSauces());
         existing.setMinSauces(item.getMinSauces());
         validateSaucesRange(existing.getMinSauces(), existing.getMaxSauces());
+        existing.setMaxSpecialities(item.getMaxSpecialities());
+        existing.setMinSpecialities(item.getMinSpecialities());
+        validateSpecialitiesRange(existing.getMinSpecialities(), existing.getMaxSpecialities());
         existing.setUpdatedAt(LocalDateTime.now());
 
         // If switching FROM combo to another type, clear combo items

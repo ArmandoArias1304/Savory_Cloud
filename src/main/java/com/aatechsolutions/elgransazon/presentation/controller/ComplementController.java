@@ -272,42 +272,56 @@ public class ComplementController {
     public ResponseEntity<Map<String, Object>> getComplementsForItemMenuSeparated(
             @PathVariable Long itemMenuId) {
         
-        log.info("Getting separated complements (sauces/regular) for item menu ID: {}", itemMenuId);
+        log.info("Getting separated complements (sauces/specialities/regular) for item menu ID: {}", itemMenuId);
         
         // Get all complements for this item
         List<ItemMenuComplement> allComplements = complementService.getAvailableComplementsForItemMenu(itemMenuId);
         
-        // Separate sauces from regular complements
+        // Separate sauces, specialities, and regular complements
         List<ItemMenuComplementDTO> sauces = allComplements.stream()
                 .filter(imc -> Boolean.TRUE.equals(imc.getComplement().getIsSauce()))
                 .map(this::toItemMenuComplementDTO)
                 .collect(Collectors.toList());
-        
+
+        List<ItemMenuComplementDTO> specialities = allComplements.stream()
+                .filter(imc -> Boolean.TRUE.equals(imc.getComplement().getIsSpeciality()))
+                .map(this::toItemMenuComplementDTO)
+                .collect(Collectors.toList());
+
         List<ItemMenuComplementDTO> regularComplements = allComplements.stream()
-                .filter(imc -> !Boolean.TRUE.equals(imc.getComplement().getIsSauce()))
+                .filter(imc -> !Boolean.TRUE.equals(imc.getComplement().getIsSauce())
+                        && !Boolean.TRUE.equals(imc.getComplement().getIsSpeciality()))
                 .map(this::toItemMenuComplementDTO)
                 .collect(Collectors.toList());
         
-        // Get maxSauces from ItemMenu
+        // Get maxSauces / maxSpecialities from ItemMenu
         Integer maxSauces = null;
         Integer minSauces = null;
+        Integer maxSpecialities = null;
+        Integer minSpecialities = null;
         try {
             Optional<ItemMenu> itemOpt = itemMenuService.findById(itemMenuId);
             maxSauces = itemOpt.map(ItemMenu::getMaxSauces).orElse(null);
             minSauces = itemOpt.map(ItemMenu::getMinSauces).orElse(null);
+            maxSpecialities = itemOpt.map(ItemMenu::getMaxSpecialities).orElse(null);
+            minSpecialities = itemOpt.map(ItemMenu::getMinSpecialities).orElse(null);
         } catch (Exception e) {
-            log.warn("Could not get maxSauces/minSauces for item {}: {}", itemMenuId, e.getMessage());
+            log.warn("Could not get sauce/speciality limits for item {}: {}", itemMenuId, e.getMessage());
         }
         
         Map<String, Object> response = new HashMap<>();
         response.put("sauces", sauces);
+        response.put("specialities", specialities);
         response.put("complements", regularComplements);
         response.put("maxSauces", maxSauces);
         response.put("minSauces", minSauces);
+        response.put("maxSpecialities", maxSpecialities);
+        response.put("minSpecialities", minSpecialities);
         response.put("totalSaucesAvailable", sauces.size());
+        response.put("totalSpecialitiesAvailable", specialities.size());
         
-        log.info("Item {} has {} sauces and {} regular complements, maxSauces={}, minSauces={}", 
-                itemMenuId, sauces.size(), regularComplements.size(), maxSauces, minSauces);
+        log.info("Item {} has {} sauces, {} specialities, {} regular complements",
+                itemMenuId, sauces.size(), specialities.size(), regularComplements.size());
         
         return ResponseEntity.ok(response);
     }
@@ -480,6 +494,7 @@ public class ComplementController {
                 .available(complement.getAvailable()) // ✅ Use complement's availability, not ItemMenuComplement's
                 .hasEnoughStock(imc.hasEnoughStock(1))
                 .isSauce(complement.getIsSauce())
+                .isSpeciality(complement.getIsSpeciality())
                 .build();
     }
 }

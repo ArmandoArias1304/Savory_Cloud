@@ -141,6 +141,24 @@ public interface ComplementRepository extends JpaRepository<Complement, Long> {
     List<Complement> findByActiveTrueAndIsSauceFalse();
 
     /**
+     * Find specialities available for a specific item menu
+     */
+    @Query("SELECT c FROM Complement c " +
+           "JOIN c.itemMenuComplements imc " +
+           "WHERE imc.itemMenu.idItemMenu = :itemMenuId " +
+           "AND imc.active = true " +
+           "AND c.active = true " +
+           "AND c.available = true " +
+           "AND c.isSpeciality = true " +
+           "ORDER BY imc.displayOrder ASC")
+    List<Complement> findAvailableSpecialitiesForItemMenu(@Param("itemMenuId") Long itemMenuId);
+
+    /**
+     * Find all active specialities by company
+     */
+    List<Complement> findByActiveTrueAndIsSpecialityTrueAndCompany(Company company);
+
+    /**
      * Count active complements
      */
     long countByActiveTrue();

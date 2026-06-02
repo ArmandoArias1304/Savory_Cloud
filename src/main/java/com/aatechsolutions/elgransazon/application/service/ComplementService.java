@@ -47,7 +47,10 @@ public class ComplementService {
         if (complementRepository.existsByNameIgnoreCaseAndCompany(complement.getName(), company)) {
             throw new IllegalArgumentException("Ya existe un complemento con el nombre: " + complement.getName());
         }
-        
+
+        // Mutual exclusion: a complement cannot be both sauce and speciality.
+        enforceSauceSpecialityMutex(complement);
+
         complement.setActive(true);
         complement.setAvailable(true);
         
@@ -78,15 +81,27 @@ public class ComplementService {
 
         boolean wasSauce = Boolean.TRUE.equals(existing.getIsSauce());
         boolean nowSauce = updated.getIsSauce() != null && updated.getIsSauce();
+        boolean wasSpeciality = Boolean.TRUE.equals(existing.getIsSpeciality());
+        boolean nowSpeciality = updated.getIsSpeciality() != null && updated.getIsSpeciality();
+
+        // Mutual exclusion: only one of the two type flags may be true.
+        if (nowSauce && nowSpeciality) {
+            throw new IllegalArgumentException(
+                    "Un complemento no puede ser salsa y especialidad al mismo tiempo.");
+        }
+
         existing.setIsSauce(nowSauce);
+        existing.setIsSpeciality(nowSpeciality);
 
-        log.info("Updated complement '{}' - isSauce: {} (was: {})", existing.getName(), nowSauce, wasSauce);
+        log.info("Updated complement '{}' - isSauce: {} (was: {}), isSpeciality: {} (was: {})",
+                existing.getName(), nowSauce, wasSauce, nowSpeciality, wasSpeciality);
 
-        // When a complement transitions to sauce, force maxQuantity = 1 on every
-        // ItemMenuComplement association. Sauces are per-serving (1 portion per item
-        // unit), so allowing maxQuantity > 1 would let the customer pick invalid
-        // multiples of the same sauce per item.
-        if (nowSauce && !wasSauce) {
+        // When a complement transitions to sauce OR speciality, force maxQuantity = 1
+        // on every ItemMenuComplement association. Both types are per-serving (1
+        // portion per item unit), so allowing maxQuantity > 1 would let the customer
+        // pick invalid multiples of the same complement per item.
+        boolean becameSingleSelect = (nowSauce && !wasSauce) || (nowSpeciality && !wasSpeciality);
+        if (becameSingleSelect) {
             List<ItemMenuComplement> associations = itemMenuComplementRepository
                     .findByComplementIdComplement(existing.getIdComplement());
             int clamped = 0;
@@ -98,7 +113,7 @@ public class ComplementService {
                 }
             }
             if (clamped > 0) {
-                log.info("Clamped maxQuantity to 1 on {} item-menu association(s) after marking complement '{}' as sauce",
+                log.info("Clamped maxQuantity to 1 on {} item-menu association(s) after marking complement '{}' as sauce/speciality",
                         clamped, existing.getName());
             }
         }
@@ -236,6 +251,15 @@ public class ComplementService {
     public List<Complement> findAllActiveSauces() {
         Company company = CompanyContext.requireCurrentCompany();
         return complementRepository.findByActiveTrueAndIsSauceTrueAndCompany(company);
+    }
+
+    /**
+     * Find all active specialities (filtered by company)
+     */
+    @Transactional(readOnly = true)
+    public List<Complement> findAllActiveSpecialities() {
+        Company company = CompanyContext.requireCurrentCompany();
+        return complementRepository.findByActiveTrueAndIsSpecialityTrueAndCompany(company);
     }
 
     /**
@@ -406,11 +430,11 @@ public class ComplementService {
             throw new IllegalArgumentException("Este complemento ya está asociado al item de menú");
         }
         
-        // IMPORTANT: Sauces can only be selected once (maxQuantity = 1)
+        // IMPORTANT: Sauces and specialities can only be selected once (maxQuantity = 1)
         Integer finalMaxQuantity = maxQuantity;
-        if (Boolean.TRUE.equals(complement.getIsSauce())) {
+        if (Boolean.TRUE.equals(complement.getIsSauce()) || Boolean.TRUE.equals(complement.getIsSpeciality())) {
             finalMaxQuantity = 1;
-            log.info("Complement {} is a sauce, forcing maxQuantity to 1", complementId);
+            log.info("Complement {} is a sauce/speciality, forcing maxQuantity to 1", complementId);
         }
         
         ItemMenuComplement imc = ItemMenuComplement.builder()
@@ -455,11 +479,12 @@ public class ComplementService {
             if (maxQuantity < 1) {
                 throw new IllegalArgumentException("La cantidad máxima debe ser al menos 1");
             }
-            // Sauces are per-serving — only one portion of each sauce per item unit.
+            // Sauces and specialities are per-serving — only one portion per item unit.
             if (imc.getComplement() != null
-                    && Boolean.TRUE.equals(imc.getComplement().getIsSauce())
+                    && (Boolean.TRUE.equals(imc.getComplement().getIsSauce())
+                        || Boolean.TRUE.equals(imc.getComplement().getIsSpeciality()))
                     && maxQuantity > 1) {
-                log.info("Forcing maxQuantity to 1 for sauce complement '{}' (was {})",
+                log.info("Forcing maxQuantity to 1 for sauce/speciality complement '{}' (was {})",
                         imc.getComplement().getName(), maxQuantity);
                 maxQuantity = 1;
             }
@@ -544,5 +569,19 @@ public class ComplementService {
                 .orElseThrow(() -> new IllegalArgumentException("Complemento no encontrado"));
         
         return complement.calculateMaxPortions();
+    }
+
+    /**
+     * Enforce mutual exclusion between isSauce and isSpeciality.
+     * Normalizes nulls to false so persistence doesn't fail on NOT NULL columns.
+     */
+    private void enforceSauceSpecialityMutex(Complement complement) {
+        if (complement.getIsSauce() == null) complement.setIsSauce(false);
+        if (complement.getIsSpeciality() == null) complement.setIsSpeciality(false);
+        if (Boolean.TRUE.equals(complement.getIsSauce())
+                && Boolean.TRUE.equals(complement.getIsSpeciality())) {
+            throw new IllegalArgumentException(
+                    "Un complemento no puede ser salsa y especialidad al mismo tiempo.");
+        }
     }
 }

@@ -182,14 +182,15 @@
                   onchange="handleComplementChange(this)"
                   class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary focus:border-transparent"
                 >
-                  <option value="" data-is-sauce="false">
+                  <option value="" data-is-sauce="false" data-is-speciality="false">
                     -- Seleccionar Complemento --
                   </option>
                   <option
                     th:each="complement : ${availableComplements}"
                     th:value="${complement.idComplement}"
-                    th:text="${complement.name + ' (+$' + complement.extraPrice + ')' + (complement.isSauce ? ' 🌶️ Salsa' : '')}"
+                    th:text="${complement.name + ' (+$' + complement.extraPrice + ')' + (complement.isSauce ? ' 🌶️ Salsa' : (complement.isSpeciality ? ' ⭐ Especialidad' : ''))}"
                     th:data-is-sauce="${complement.isSauce}"
+                    th:data-is-speciality="${complement.isSpeciality}"
                   >
                     Complemento
                   </option>
@@ -217,6 +218,12 @@
                   class="text-xs text-orange-600 dark:text-orange-400 mt-1 hidden"
                 >
                   🌶️ Las salsas siempre tienen cantidad máxima de 1
+                </p>
+                <p
+                  id="specialityHint"
+                  class="text-xs text-purple-600 dark:text-purple-400 mt-1 hidden"
+                >
+                  ⭐ Las especialidades siempre tienen cantidad máxima de 1
                 </p>
               </div>
 
@@ -426,16 +433,17 @@
     </div>
 
     <script>
-      // Handle complement selection change - lock quantity for sauces
+      // Handle complement selection change - lock quantity for sauces/specialities
       function handleComplementChange(selectElement) {
         const selectedOption =
           selectElement.options[selectElement.selectedIndex];
         const isSauce = selectedOption.dataset.isSauce === "true";
+        const isSpeciality = selectedOption.dataset.isSpeciality === "true";
         const maxQuantityInput = document.getElementById("maxQuantityInput");
         const sauceHint = document.getElementById("sauceHint");
+        const specialityHint = document.getElementById("specialityHint");
 
         if (isSauce) {
-          // Lock quantity to 1 for sauces
           maxQuantityInput.value = 1;
           maxQuantityInput.disabled = true;
           maxQuantityInput.classList.add(
@@ -445,6 +453,30 @@
             "dark:border-orange-600",
           );
           sauceHint.classList.remove("hidden");
+          specialityHint && specialityHint.classList.add("hidden");
+          maxQuantityInput.classList.remove(
+            "bg-purple-50",
+            "dark:bg-purple-900/20",
+            "border-purple-300",
+            "dark:border-purple-600",
+          );
+        } else if (isSpeciality) {
+          maxQuantityInput.value = 1;
+          maxQuantityInput.disabled = true;
+          maxQuantityInput.classList.add(
+            "bg-purple-50",
+            "dark:bg-purple-900/20",
+            "border-purple-300",
+            "dark:border-purple-600",
+          );
+          specialityHint && specialityHint.classList.remove("hidden");
+          sauceHint.classList.add("hidden");
+          maxQuantityInput.classList.remove(
+            "bg-orange-50",
+            "dark:bg-orange-900/20",
+            "border-orange-300",
+            "dark:border-orange-600",
+          );
         } else {
           // Unlock for regular complements
           maxQuantityInput.disabled = false;
@@ -454,8 +486,13 @@
             "dark:bg-orange-900/20",
             "border-orange-300",
             "dark:border-orange-600",
+            "bg-purple-50",
+            "dark:bg-purple-900/20",
+            "border-purple-300",
+            "dark:border-purple-600",
           );
           sauceHint.classList.add("hidden");
+          specialityHint && specialityHint.classList.add("hidden");
         }
       }
 

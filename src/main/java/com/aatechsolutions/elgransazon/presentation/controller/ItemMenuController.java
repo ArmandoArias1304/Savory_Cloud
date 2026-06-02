@@ -131,6 +131,8 @@ public class ItemMenuController {
 
         // Add active sauces (multi-tenant) for the sauces selection list (no item yet → no preselection)
         loadSaucesFormData(model, null);
+        // Add active specialities (parallel to sauces)
+        loadSpecialitiesFormData(model, null);
 
         return "admin/menu-items/form";
     }
@@ -187,6 +189,8 @@ public class ItemMenuController {
 
                     // Add active sauces (multi-tenant) and currently associated sauce IDs for the selection list
                     loadSaucesFormData(model, id);
+                    // Add active specialities and currently associated speciality IDs (parallel to sauces)
+                    loadSpecialitiesFormData(model, id);
 
                     return "admin/menu-items/form";
                 })
@@ -216,6 +220,7 @@ public class ItemMenuController {
             @RequestParam(value = "comboItemIds", required = false) List<Long> comboItemIds,
             @RequestParam(value = "comboItemQuantities", required = false) List<Integer> comboItemQuantities,
             @RequestParam(value = "selectedSauceIds", required = false) List<Long> selectedSauceIds,
+            @RequestParam(value = "selectedSpecialityIds", required = false) List<Long> selectedSpecialityIds,
             @RequestParam(value = "hasCustomSchedule", required = false) Boolean hasCustomSchedule,
             @RequestParam Map<String, String> allParams,
             Model model,
@@ -371,10 +376,19 @@ public class ItemMenuController {
                 log.info("Associated {} sauces to item: {}", saucesAssociated, created.getName());
             }
 
+            // Associate the specialities explicitly selected in the form (if any)
+            int specialitiesAssociated = 0;
+            if (selectedSpecialityIds != null && !selectedSpecialityIds.isEmpty()) {
+                specialitiesAssociated = syncSpecialitiesForItem(created.getIdItemMenu(), selectedSpecialityIds);
+                log.info("Associated {} specialities to item: {}", specialitiesAssociated, created.getName());
+            }
+
             log.info("Menu item created successfully with ID: {}", created.getIdItemMenu());
+            StringBuilder extra = new StringBuilder();
+            if (saucesAssociated > 0) extra.append(" (").append(saucesAssociated).append(" salsas asociadas)");
+            if (specialitiesAssociated > 0) extra.append(" (").append(specialitiesAssociated).append(" especialidades asociadas)");
             redirectAttributes.addFlashAttribute("successMessage",
-                    "Item del menú '" + created.getName() + "' creado exitosamente" +
-                    (saucesAssociated > 0 ? " (" + saucesAssociated + " salsas asociadas)" : ""));
+                    "Item del menú '" + created.getName() + "' creado exitosamente" + extra.toString());
             return "redirect:/admin/menu-items";
 
 
@@ -421,6 +435,8 @@ public class ItemMenuController {
             @RequestParam(value = "comboItemQuantities", required = false) List<Integer> comboItemQuantities,
             @RequestParam(value = "selectedSauceIds", required = false) List<Long> selectedSauceIds,
             @RequestParam(value = "saucesSyncEnabled", required = false) Boolean saucesSyncEnabled,
+            @RequestParam(value = "selectedSpecialityIds", required = false) List<Long> selectedSpecialityIds,
+            @RequestParam(value = "specialitiesSyncEnabled", required = false) Boolean specialitiesSyncEnabled,
             @RequestParam(value = "hasCustomSchedule", required = false) Boolean hasCustomSchedule,
             @RequestParam Map<String, String> allParams,
             Model model,
@@ -628,9 +644,20 @@ public class ItemMenuController {
                 }
             }
 
+            // Sync specialities only if the user actually changed the selection (flag set by JS).
+            String specialitiesMessage = "";
+            if (Boolean.TRUE.equals(specialitiesSyncEnabled)) {
+                List<Long> desired = selectedSpecialityIds != null ? selectedSpecialityIds : new ArrayList<>();
+                int[] diff = syncSpecialitiesForItemDiff(id, desired);
+                log.info("Synced specialities for item {}: +{} added, -{} removed", updated.getName(), diff[0], diff[1]);
+                if (diff[0] > 0 || diff[1] > 0) {
+                    specialitiesMessage = " (especialidades: +" + diff[0] + " / -" + diff[1] + ")";
+                }
+            }
+
             log.info("Menu item updated successfully: {}", updated.getIdItemMenu());
             redirectAttributes.addFlashAttribute("successMessage",
-                    "Item del menú '" + updated.getName() + "' actualizado exitosamente" + saucesMessage);
+                    "Item del menú '" + updated.getName() + "' actualizado exitosamente" + saucesMessage + specialitiesMessage);
             return "redirect:/admin/menu-items";
 
         } catch (IllegalArgumentException e) {
@@ -1027,6 +1054,8 @@ public class ItemMenuController {
 
         // Add active sauces and currently associated sauce IDs (multi-tenant)
         loadSaucesFormData(model, itemMenu.getIdItemMenu());
+        // Add active specialities and currently associated speciality IDs (multi-tenant)
+        loadSpecialitiesFormData(model, itemMenu.getIdItemMenu());
     }
 
     /**
@@ -1237,6 +1266,87 @@ public class ItemMenuController {
             associatedSauceIds = new ArrayList<>();
         }
         model.addAttribute("associatedSauceIds", associatedSauceIds);
+    }
+
+    /**
+     * Add sauces logic mirror for specialities: only adds, never removes.
+     */
+    private int syncSpecialitiesForItem(Long itemMenuId, List<Long> selectedSpecialityIds) {
+        if (selectedSpecialityIds == null || selectedSpecialityIds.isEmpty()) return 0;
+
+        java.util.Set<Long> validSpecialityIds = complementService.findAllActiveSpecialities().stream()
+                .map(Complement::getIdComplement)
+                .collect(Collectors.toSet());
+
+        java.util.Set<Long> alreadyAssociated = itemMenuComplementRepository.findByItemMenuIdItemMenu(itemMenuId)
+                .stream()
+                .map(ic -> ic.getComplement().getIdComplement())
+                .collect(Collectors.toSet());
+
+        int count = 0;
+        for (Long specId : selectedSpecialityIds) {
+            if (!validSpecialityIds.contains(specId) || alreadyAssociated.contains(specId)) continue;
+            complementService.addComplementToItemMenu(itemMenuId, specId, 1, 0);
+            count++;
+        }
+        return count;
+    }
+
+    /**
+     * Reconcile speciality associations for the item to match the desired selection.
+     * Mirrors {@code syncSaucesForItemDiff} but operates on speciality complements only.
+     */
+    private int[] syncSpecialitiesForItemDiff(Long itemMenuId, List<Long> desiredSpecialityIds) {
+        java.util.Map<Long, Complement> companySpecialities = complementService.findAllActiveSpecialities().stream()
+                .collect(Collectors.toMap(Complement::getIdComplement, c -> c));
+
+        java.util.Set<Long> currentlyAssociatedSpecialities = itemMenuComplementRepository.findByItemMenuIdItemMenu(itemMenuId)
+                .stream()
+                .map(ic -> ic.getComplement())
+                .filter(c -> Boolean.TRUE.equals(c.getIsSpeciality()))
+                .map(Complement::getIdComplement)
+                .collect(Collectors.toSet());
+
+        java.util.Set<Long> desiredSet = desiredSpecialityIds.stream()
+                .filter(companySpecialities::containsKey)
+                .collect(Collectors.toSet());
+
+        int added = 0;
+        for (Long id : desiredSet) {
+            if (!currentlyAssociatedSpecialities.contains(id)) {
+                complementService.addComplementToItemMenu(itemMenuId, id, 1, 0);
+                added++;
+            }
+        }
+
+        int removed = 0;
+        for (Long id : currentlyAssociatedSpecialities) {
+            if (!desiredSet.contains(id)) {
+                complementService.removeComplementFromItemMenu(itemMenuId, id);
+                removed++;
+            }
+        }
+        return new int[]{added, removed};
+    }
+
+    /**
+     * Mirror of {@code loadSaucesFormData} for specialities.
+     */
+    private void loadSpecialitiesFormData(Model model, Long itemMenuId) {
+        List<Complement> allActiveSpecialities = complementService.findAllActiveSpecialities();
+        model.addAttribute("allActiveSpecialities", allActiveSpecialities);
+
+        List<Long> associatedSpecialityIds;
+        if (itemMenuId != null) {
+            associatedSpecialityIds = itemMenuComplementRepository.findByItemMenuIdItemMenu(itemMenuId).stream()
+                    .map(ic -> ic.getComplement())
+                    .filter(c -> Boolean.TRUE.equals(c.getIsSpeciality()))
+                    .map(Complement::getIdComplement)
+                    .collect(Collectors.toList());
+        } else {
+            associatedSpecialityIds = new ArrayList<>();
+        }
+        model.addAttribute("associatedSpecialityIds", associatedSpecialityIds);
     }
 
     // ========== Complement Management for ItemMenu ==========

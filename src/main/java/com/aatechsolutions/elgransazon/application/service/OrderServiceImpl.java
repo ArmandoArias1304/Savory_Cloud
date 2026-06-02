@@ -1783,33 +1783,98 @@ public class OrderServiceImpl implements OrderService {
     public Map<Long, String> validateStock(List<OrderDetail> orderDetails) {
         Map<Long, String> errors = new HashMap<>();
 
+        // Aggregate total ingredient requirements across ALL items and complements before
+        // checking stock. Checking each OrderDetail independently would miss cases where
+        // multiple details share the same ingredient: each individual check would pass
+        // against the same (not-yet-deducted) DB stock value, but the combined deductions
+        // would exceed it — causing partial deductions to commit via REQUIRES_NEW even
+        // when the order ultimately fails.
+        Map<Long, BigDecimal> aggregatedRequired = new HashMap<>();
+        // First item/complement name that uses each ingredient — used in error messages.
+        Map<Long, String> ingredientDisplayName = new HashMap<>();
+        // Ingredient entity instances captured during traversal — reused for stock check.
+        Map<Long, Ingredient> ingredientInstances = new HashMap<>();
+
         for (OrderDetail detail : orderDetails) {
             ItemMenu item = itemMenuRepository.findById(detail.getItemMenu().getIdItemMenu())
                 .orElseThrow(() -> new IllegalArgumentException(
                     "Item de menú no encontrado: " + detail.getItemMenu().getIdItemMenu()
                 ));
 
-            if (!item.hasEnoughStock(detail.getQuantity())) {
-                errors.put(item.getIdItemMenu(), item.getName());
-            }
-            
-            // Validate stock for selected complements
+            // Accumulate ingredient requirements for this item (recursively handles combos).
+            accumulateItemStockRequirements(item, detail.getQuantity(),
+                    aggregatedRequired, ingredientDisplayName, ingredientInstances);
+
+            // Accumulate ingredient requirements for this item's complements.
             if (detail.getSelectedComplements() != null) {
                 for (OrderDetailComplement odc : detail.getSelectedComplements()) {
                     Complement complement = odc.getComplement();
-                    if (complement != null) {
-                        // Stored quantity is already the real total (sauce multiplication
-                        // applied at insert time), so use it directly.
-                        if (!complement.hasEnoughStock(odc.getQuantity())) {
-                            // Use negative ID to distinguish complement errors from item errors
-                            errors.put(-complement.getIdComplement(), complement.getName());
+                    if (complement != null && complement.getIngredients() != null) {
+                        for (ComplementIngredient ci : complement.getIngredients()) {
+                            if (ci.getIngredient() != null) {
+                                Long ingId = ci.getIngredient().getIdIngredient();
+                                // odc.getQuantity() is already the effective total (sauce
+                                // multiplication applied at insert time), so use it directly.
+                                BigDecimal needed = ci.getQuantity()
+                                        .multiply(BigDecimal.valueOf(odc.getQuantity()));
+                                aggregatedRequired.merge(ingId, needed, BigDecimal::add);
+                                ingredientDisplayName.putIfAbsent(ingId, complement.getName());
+                                ingredientInstances.putIfAbsent(ingId, ci.getIngredient());
+                            }
                         }
                     }
                 }
             }
         }
 
+        // Check each ingredient's aggregated total requirement against current DB stock.
+        for (Map.Entry<Long, BigDecimal> entry : aggregatedRequired.entrySet()) {
+            Long ingId = entry.getKey();
+            BigDecimal required = entry.getValue();
+            Ingredient ingredient = ingredientInstances.get(ingId);
+            if (ingredient != null) {
+                BigDecimal available = ingredient.getCurrentStock() != null
+                        ? ingredient.getCurrentStock() : BigDecimal.ZERO;
+                if (available.compareTo(required) < 0) {
+                    // Use negative ingredient ID as key (prevents collision with positive item IDs).
+                    errors.put(-ingId,
+                            ingredientDisplayName.getOrDefault(ingId, "Ingrediente " + ingId));
+                }
+            }
+        }
+
         return errors;
+    }
+
+    /**
+     * Accumulates ingredient stock requirements from a menu item into the provided
+     * aggregation maps.
+     *
+     * Combo parent items are intentionally SKIPPED here. Both controllers (ClientController
+     * and OrderController) expand combos into individual child OrderDetails BEFORE calling
+     * validateStock, so each child is already present as its own OrderDetail in the list.
+     * Recursing into comboItems here would double-count every child ingredient.
+     */
+    private void accumulateItemStockRequirements(ItemMenu item, int quantity,
+            Map<Long, BigDecimal> aggregatedRequired,
+            Map<Long, String> ingredientDisplayName,
+            Map<Long, Ingredient> ingredientInstances) {
+        if (Boolean.TRUE.equals(item.getIsCombo())) {
+            // Combo parent is a shell — its children are already expanded as separate
+            // OrderDetails by the controller. Nothing to accumulate here.
+            return;
+        }
+        if (item.getIngredients() != null) {
+            for (ItemIngredient ii : item.getIngredients()) {
+                if (ii.getIngredient() != null) {
+                    Long ingId = ii.getIngredient().getIdIngredient();
+                    BigDecimal needed = ii.getQuantity().multiply(BigDecimal.valueOf(quantity));
+                    aggregatedRequired.merge(ingId, needed, BigDecimal::add);
+                    ingredientDisplayName.putIfAbsent(ingId, item.getName());
+                    ingredientInstances.putIfAbsent(ingId, ii.getIngredient());
+                }
+            }
+        }
     }
 
     @Override

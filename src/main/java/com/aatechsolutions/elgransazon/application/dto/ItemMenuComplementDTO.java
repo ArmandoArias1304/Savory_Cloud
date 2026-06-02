@@ -28,4 +28,5 @@ public class ItemMenuComplementDTO {
     private Boolean available;
     private Boolean hasEnoughStock;
     private Boolean isSauce;
+    private Boolean isSpeciality;
 }

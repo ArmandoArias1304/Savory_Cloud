@@ -81,10 +81,26 @@ public class Complement implements Serializable {
      * Sauces have special handling: they are limited per ItemMenu by maxSauces field
      * TRUE: This is a sauce (e.g., BBQ, Mango Habanero, Ranch)
      * FALSE: This is a regular complement (e.g., Extra Cheese, Onion Rings)
+     *
+     * MUTUALLY EXCLUSIVE with {@link #isSpeciality}: a complement can be either a
+     * sauce or a speciality, never both.
      */
     @Column(name = "is_sauce", nullable = false)
     @Builder.Default
     private Boolean isSauce = false;
+
+    /**
+     * Indicates if this complement is a speciality.
+     * Specialities have special handling: they are limited per ItemMenu by
+     * {@code maxSpecialities} / {@code minSpecialities} (mirrors sauces).
+     * TRUE: This is a speciality (e.g., "Receta de la casa", "Estilo Premium").
+     * FALSE: Not a speciality.
+     *
+     * MUTUALLY EXCLUSIVE with {@link #isSauce}: validated at the service layer.
+     */
+    @Column(name = "is_speciality", nullable = false)
+    @Builder.Default
+    private Boolean isSpeciality = false;
 
     // ========== Relationships ==========
 
