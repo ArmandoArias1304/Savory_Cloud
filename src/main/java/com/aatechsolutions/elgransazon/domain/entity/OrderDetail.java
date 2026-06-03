@@ -177,6 +177,23 @@ public class OrderDetail implements Serializable {
     @Column(name = "is_combo_parent_snapshot")
     private Boolean isComboParentSnapshot;
 
+    /**
+     * Snapshot of the preparation type of the ItemMenu at the time this OrderDetail was created.
+     * Frozen on @PrePersist so that later changes to the ItemMenu configuration do not
+     * affect historical kitchen comanda ticket routing.
+     *
+     * Possible values:
+     * - "CHEF"       → itemMenu.requiresPreparation = true (chef prepares it)
+     * - "BARISTA"    → itemMenu.requiresBaristaPreparation = true
+     * - "PARRILLERO" → itemMenu.requiresParrilleroPreparation = true
+     * - "COMBO"      → itemMenu.isCombo = true (this is the combo parent row; children
+     *                   carry their own preparation type snapshot)
+     * - "NONE"       → no preparation needed (e.g. sodas, bottled drinks)
+     * - NULL         → legacy row created before this field existed.
+     */
+    @Column(name = "preparation_type_snapshot", length = 20)
+    private String preparationTypeSnapshot;
+
     // ========== Timestamps ==========
 
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -204,6 +221,22 @@ public class OrderDetail implements Serializable {
         // ItemMenu.isCombo do NOT reclassify historical order rows.
         if (this.isComboParentSnapshot == null && this.itemMenu != null) {
             this.isComboParentSnapshot = Boolean.TRUE.equals(this.itemMenu.getIsCombo());
+        }
+        // Freeze the preparation type at insertion time for comanda ticket routing.
+        // Priority: COMBO > BARISTA > PARRILLERO > CHEF > NONE
+        // Combo children carry their own type (their itemMenu is the child item, not the combo parent).
+        if (this.preparationTypeSnapshot == null && this.itemMenu != null) {
+            if (Boolean.TRUE.equals(this.itemMenu.getIsCombo())) {
+                this.preparationTypeSnapshot = "COMBO";
+            } else if (Boolean.TRUE.equals(this.itemMenu.getRequiresBaristaPreparation())) {
+                this.preparationTypeSnapshot = "BARISTA";
+            } else if (Boolean.TRUE.equals(this.itemMenu.getRequiresParrilleroPreparation())) {
+                this.preparationTypeSnapshot = "PARRILLERO";
+            } else if (Boolean.TRUE.equals(this.itemMenu.getRequiresPreparation())) {
+                this.preparationTypeSnapshot = "CHEF";
+            } else {
+                this.preparationTypeSnapshot = "NONE";
+            }
         }
     }
 

@@ -545,6 +545,12 @@
                         >
                           Description
                         </span>
+                        <!-- Badge: tamaño de otro item -->
+                        <span th:if="${item.parentItem != null}"
+                              class="inline-flex items-center gap-1 mt-1.5 px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300 w-fit">
+                          <span class="material-symbols-outlined" style="font-size:13px">straighten</span>
+                          Tamaño de:&nbsp;<span th:text="${item.parentItem.name}" class="font-semibold">Padre</span>
+                        </span>
                       </div>
                     </td>
 
@@ -870,7 +876,8 @@
                     html += `<p><b>Complementos:</b> ${data.complementCount}</p>`;
                     html += `<p><b>En combos:</b> ${data.comboCount}</p>`;
                     html += `<p><b>Ventas registradas:</b> ${data.orderCount}</p>`;
-                    if (!data.canDelete) html += `<p class="text-red-500 font-bold mt-2">\u26a0 No se puede eliminar: tiene ventas registradas</p>`;
+                    if (data.sizeCount > 0) html += `<p class="text-amber-600 dark:text-amber-400 font-semibold mt-2">⚠ Tamaños vinculados: ${data.sizeCount} — se desvincularán automáticamente al eliminar.</p>`;
+                    if (!data.canDelete) html += `<p class="text-red-500 font-bold mt-2">⚠ No se puede eliminar: tiene ventas registradas</p>`;
                     html += `</div>`;
                     const result = await Swal.fire({
                         title: `\u00bfEliminar permanentemente "${name}"?`,

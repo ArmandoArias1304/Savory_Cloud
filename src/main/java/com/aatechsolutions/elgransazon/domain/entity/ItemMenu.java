@@ -32,7 +32,7 @@ import java.util.HashSet;
 @AllArgsConstructor
 @Builder
 @EqualsAndHashCode(of = {"idItemMenu"})
-@ToString(exclude = {"company", "category", "ingredients", "promotions", "availableComplements", "availabilityDays", "comboItems"})
+@ToString(exclude = {"company", "category", "ingredients", "promotions", "availableComplements", "availabilityDays", "comboItems", "parentItem", "sizeItems"})
 public class ItemMenu implements Serializable {
 
     @Id
@@ -266,6 +266,34 @@ public class ItemMenu implements Serializable {
     @Builder.Default
     private List<ItemMenuComboItem> comboItems = new ArrayList<>();
 
+    // ========== Size / Self-Reference ==========
+
+    /**
+     * Optional size label for this item when it acts as a size variant.
+     * Examples: "Chica", "Mediana", "Grande", "Jumbo"
+     * Only relevant when parentItem != null (this item is a child size) or
+     * when it is the parent itself (e.g. parent's own label "Chica" as the base size).
+     */
+    @Size(max = 50, message = "El nombre del tamaño no puede exceder 50 caracteres")
+    @Column(name = "size_name", length = 50)
+    private String sizeName;
+
+    /**
+     * Self-referencing Many-to-One: if non-null, this item is a size variant of the parent.
+     * E.g. "Pizza Grande" is a size variant of "Pizza".
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "parent_item_id")
+    private ItemMenu parentItem;
+
+    /**
+     * Self-referencing One-to-Many: the size variants that belong to this parent item.
+     * Ordered by price ascending for display purposes.
+     */
+    @OneToMany(mappedBy = "parentItem", fetch = FetchType.LAZY)
+    @Builder.Default
+    private List<ItemMenu> sizeItems = new ArrayList<>();
+
     // ========== Timestamps ==========
 
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -384,10 +412,19 @@ public class ItemMenu implements Serializable {
         return comboItems != null ? comboItems : new ArrayList<>();
     }
 
-    /**
-     * Get the total cost of all ingredients for this item
-     * Used for calculating profit margins
-     */
+    // ========== Size Helper Methods ==========
+
+    /** Returns true if this item has at least one size variant. */
+    public boolean hasSizeItems() {
+        return sizeItems != null && !sizeItems.isEmpty();
+    }
+
+    /** Returns true if this item is itself a size variant (child) of another item. */
+    public boolean isSizeItem() {
+        return parentItem != null;
+    }
+
+
     public BigDecimal calculateIngredientsCost() {
         if (!hasRecipe()) {
             return BigDecimal.ZERO;

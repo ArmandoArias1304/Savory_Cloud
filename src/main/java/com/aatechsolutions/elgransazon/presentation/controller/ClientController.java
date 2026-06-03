@@ -199,9 +199,34 @@ public class ClientController {
             
             // Get available items
             List<ItemMenu> availableItems = itemMenuService.findAvailableItems();
-            
-            // Group items by category
-            Map<Long, List<ItemMenu>> itemsByCategory = availableItems.stream()
+
+            // Separate root items (no parent) from size children
+            List<ItemMenu> rootItems = availableItems.stream()
+                    .filter(i -> i.getParentItem() == null)
+                    .collect(Collectors.toList());
+
+            // Build sizeItemsDto: parentId → sorted list of child DTOs for JS
+            Map<Long, List<Map<String, Object>>> sizeItemsDto = new HashMap<>();
+            availableItems.stream()
+                    .filter(i -> i.getParentItem() != null)
+                    .sorted(Comparator.comparing(ItemMenu::getPrice))
+                    .forEach(c -> {
+                        Long pid = c.getParentItem().getIdItemMenu();
+                        Map<String, Object> dto = new LinkedHashMap<>();
+                        dto.put("id", c.getIdItemMenu());
+                        dto.put("name", c.getName());
+                        dto.put("sizeName", c.getSizeName() != null ? c.getSizeName() : c.getName());
+                        dto.put("price", c.getPrice());
+                        dto.put("available", c.getAvailable());
+                        dto.put("imageUrl", c.getImageUrl());
+                        dto.put("description", c.getDescription());
+                        dto.put("isCombo", Boolean.TRUE.equals(c.getIsCombo()));
+                        dto.put("scheduleStatus", c.getScheduleStatus() != null ? c.getScheduleStatus().toString() : "available");
+                        sizeItemsDto.computeIfAbsent(pid, k -> new ArrayList<>()).add(dto);
+                    });
+
+            // Group ROOT items by category for display (hide size children from the grid)
+            Map<Long, List<ItemMenu>> itemsByCategory = rootItems.stream()
                     .collect(Collectors.groupingBy(item -> item.getCategory().getIdCategory()));
             
             // Get active categories - ONLY those with active items
@@ -248,6 +273,7 @@ public class ClientController {
             model.addAttribute("config", config);
             model.addAttribute("categories", categories);
             model.addAttribute("itemsByCategory", itemsByCategory);
+            model.addAttribute("sizeItemsDto", sizeItemsDto);
             model.addAttribute("currentRole", "client");
             model.addAttribute("customer", customer);
             model.addAttribute("orderTypes", Arrays.asList(OrderType.TAKEOUT, OrderType.DELIVERY));
@@ -882,9 +908,34 @@ public class ClientController {
             
             // Get available menu items grouped by category
             List<ItemMenu> availableItems = itemMenuService.findAvailableItems();
-            
-            // Group items by category for easier display
-            Map<Long, List<ItemMenu>> itemsByCategory = availableItems.stream()
+
+            // Separate root items (no parent) from size children
+            List<ItemMenu> rootItems = availableItems.stream()
+                .filter(i -> i.getParentItem() == null)
+                .collect(Collectors.toList());
+
+            // Build sizeItemsDto: parentId → sorted list of child DTOs for JS
+            Map<Long, List<Map<String, Object>>> sizeItemsDto = new HashMap<>();
+            availableItems.stream()
+                .filter(i -> i.getParentItem() != null)
+                .sorted(Comparator.comparing(ItemMenu::getPrice))
+                .forEach(c -> {
+                    Long pid = c.getParentItem().getIdItemMenu();
+                    Map<String, Object> dto = new LinkedHashMap<>();
+                    dto.put("id", c.getIdItemMenu());
+                    dto.put("name", c.getName());
+                    dto.put("sizeName", c.getSizeName() != null ? c.getSizeName() : c.getName());
+                    dto.put("price", c.getPrice());
+                    dto.put("available", c.getAvailable());
+                    dto.put("imageUrl", c.getImageUrl());
+                    dto.put("description", c.getDescription());
+                    dto.put("isCombo", Boolean.TRUE.equals(c.getIsCombo()));
+                    dto.put("scheduleStatus", c.getScheduleStatus() != null ? c.getScheduleStatus().toString() : "available");
+                    sizeItemsDto.computeIfAbsent(pid, k -> new ArrayList<>()).add(dto);
+                });
+
+            // Group ROOT items by category for display (hide size children from the grid)
+            Map<Long, List<ItemMenu>> itemsByCategory = rootItems.stream()
                 .collect(Collectors.groupingBy(item -> item.getCategory().getIdCategory()));
             
             // Get all active categories - ONLY those with active items
@@ -914,7 +965,8 @@ public class ClientController {
             model.addAttribute("deliveryReferences", order.getDeliveryReferences());
             model.addAttribute("categories", categories);
             model.addAttribute("itemsByCategory", itemsByCategory);
-            model.addAttribute("allItems", availableItems);
+            model.addAttribute("allItems", rootItems);
+            model.addAttribute("sizeItemsDto", sizeItemsDto);
             model.addAttribute("customer", customer);
             model.addAttribute("currentRole", "client");
             model.addAttribute("config", config);

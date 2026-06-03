@@ -361,6 +361,8 @@
                   th:data-schedule-info="${item.scheduleInfo}"
                   th:data-is-combo="${item.isCombo != null && item.isCombo}"
                   th:data-dine-in-only="${item.dineInOnly != null && item.dineInOnly}"
+                  th:data-has-sizes="${sizeItemsDto != null and sizeItemsDto.containsKey(item.idItemMenu)}"
+                  th:data-size-name="${item.sizeName}"
                   onclick="openItemModal(this)"
                 >
                   <!-- Promotion Badge (Top Right Corner) -->
@@ -668,6 +670,9 @@
       let activePromotions = [];
       let itemPromotionsMap = new Map();
       let promotionsLoaded = false; // Flag to track if promotions are loaded
+
+      // Size items mapping: parentItemId → list of size variant DTOs
+      const sizeItemsMapping = /*[[${sizeItemsDto}]]*/ {};
 
       // Stock cache para evitar llamadas repetidas al servidor
       let stockCache = {};
@@ -2472,10 +2477,112 @@
       }
 
       // Open item modal with SweetAlert2 (style from menu.html)
-      async function openItemModal(card) {
+      async function openSizeSelectorPanel(card) {
+        const parentId = parseInt(card.dataset.itemId);
+        const parentSizeName = card.dataset.sizeName || card.dataset.itemName;
+        const parentPrice = parseFloat(card.dataset.itemPrice);
+        const isDarkMode = document.documentElement.classList.contains('dark');
+
+        const children = (sizeItemsMapping && sizeItemsMapping[parentId]) || [];
+
+        const allOptions = [
+          {
+            id: parentId,
+            name: card.dataset.itemName,
+            sizeName: parentSizeName,
+            price: parentPrice,
+            available: card.dataset.itemAvailable === 'true',
+            imageUrl: card.dataset.itemImage,
+            scheduleStatus: card.dataset.scheduleStatus || 'available',
+            isCombo: card.dataset.isCombo === 'true',
+            dineInOnly: card.dataset.dineInOnly === 'true',
+            description: card.dataset.itemDescription || '',
+            isParent: true,
+          },
+          ...children.map(c => ({
+            id: c.id,
+            name: c.name,
+            sizeName: c.sizeName || c.name,
+            price: c.price,
+            available: c.available,
+            imageUrl: c.imageUrl || card.dataset.itemImage,
+            scheduleStatus: c.scheduleStatus || 'available',
+            isCombo: c.isCombo === true || c.isCombo === 'true',
+            dineInOnly: false,
+            description: c.description || card.dataset.itemDescription || '',
+            isParent: false,
+          })),
+        ].sort((a, b) => a.price - b.price);
+
+        const radiosHtml = allOptions.map((opt, idx) => {
+          const promos = itemPromotionsMap ? (itemPromotionsMap.get(opt.id) || []) : [];
+          const promoBadge = promos.length > 0
+            ? `<span class="ml-1 inline-flex items-center px-1.5 py-0.5 rounded-full text-xs bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 font-semibold">%</span>`
+            : '';
+          const unavailable = !opt.available || opt.scheduleStatus !== 'available';
+          return `
+            <label class="flex items-center gap-3 p-3 rounded-xl cursor-pointer border-2 transition-all ${idx === 0 ? 'border-primary' : 'border-gray-200 hover:border-primary/50'} ${unavailable ? 'opacity-50 cursor-not-allowed' : ''}">
+              <input type="radio" name="sizeOption" value="${idx}" ${idx === 0 ? 'checked' : ''} ${unavailable ? 'disabled' : ''} class="accent-primary" />
+              <div class="flex-1 min-w-0 text-left">
+                <div class="font-semibold text-gray-900 dark:text-white text-sm">${opt.sizeName}${promoBadge}</div>
+                <div class="text-primary font-bold text-sm">$${opt.price.toFixed(2)}</div>
+              </div>
+            </label>`;
+        }).join('');
+
+        let chosenIdx = 0;
+
+        const result = await Swal.fire({
+          title: 'Selecciona el tamaño',
+          html: `<div class="flex flex-col gap-2">${radiosHtml}</div>`,
+          showCancelButton: true,
+          confirmButtonText: 'Continuar →',
+          cancelButtonText: 'Cancelar',
+          confirmButtonColor: '#38e07b',
+          cancelButtonColor: '#6b7280',
+          background: isDarkMode ? '#1e293b' : '#ffffff',
+          color: isDarkMode ? '#F3F4F6' : '#1F2937',
+          preConfirm: () => {
+            const checked = document.querySelector('input[name="sizeOption"]:checked');
+            chosenIdx = checked ? parseInt(checked.value) : 0;
+            return true;
+          }
+        });
+
+        if (!result.isConfirmed) return;
+
+        const chosen = allOptions[chosenIdx];
+        const syntheticCard = {
+          dataset: {
+            itemId: String(chosen.id),
+            itemName: chosen.name || chosen.sizeName,
+            itemPrice: String(chosen.price),
+            itemDescription: chosen.description,
+            itemImage: chosen.imageUrl,
+            itemAvailable: String(chosen.available),
+            scheduleStatus: chosen.scheduleStatus,
+            scheduleInfo: '',
+            isCombo: String(chosen.isCombo),
+            dineInOnly: String(chosen.dineInOnly),
+            hasSizes: 'false',
+          }
+        };
+
+        isModalOpening = false;
+        await openItemModal(syntheticCard, true);
+      }
+
+      async function openItemModal(card, bypassSwalCheck = false) {
         // Guard: prevent double-click opening modal twice
-        if (isModalOpening || Swal.isVisible()) return;
+        if (isModalOpening || (!bypassSwalCheck && Swal.isVisible())) return;
         isModalOpening = true;
+
+        // If this item has size variants, show the size selector first
+        if (card.dataset.hasSizes === 'true') {
+          isModalOpening = false;
+          await openSizeSelectorPanel(card);
+          return;
+        }
 
         try {
           // Wait for promotions to load if not loaded yet

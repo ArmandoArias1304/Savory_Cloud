@@ -320,4 +320,46 @@ public interface ItemMenuService {
      * Check dependencies before hard-deleting an ItemMenu.
      */
     java.util.Map<String, Object> checkHardDeleteDependencies(Long id);
+
+    // ========== Size Management ==========
+
+    /**
+     * Find all size variants (children) of a parent item, ordered by price ascending.
+     */
+    java.util.List<ItemMenu> findSizeItems(Long parentId);
+
+    /**
+     * Add a size variant to a parent item.
+     * Copies configuration (category, preparation flags, schedule, complements, recipe) from parent.
+     * Sets item name to "parentName sizeName", sizeName field, parentItem reference, and the given price.
+     * Validates that parent + existing children + new child does not exceed 10.
+     * @return the newly created child ItemMenu
+     */
+    ItemMenu addSizeItem(Long parentId, String sizeName, java.math.BigDecimal price);
+
+    /**
+     * Detach a size variant from its parent.
+     * Sets parentItem = null and clears sizeName on the child (item is NOT deleted).
+     */
+    void detachSizeItem(Long childId);
+
+    /**
+     * Update a size variant's sizeName and/or price.
+     */
+    void updateSizeItem(Long childId, String newSizeName, java.math.BigDecimal newPrice);
+
+    /**
+     * Search for free items (no parent) of the current company whose name contains the query.
+     * Excludes the item with excludeId (the current parent being edited).
+     * Results are limited to 20 and ordered by name.
+     */
+    java.util.List<ItemMenu> searchFreeItems(Long excludeId, String query);
+
+    /**
+     * Link an existing free item as a size variant of the given parent.
+     * Sets parentItem, sizeName, and updates the child's name to "parentName sizeName".
+     * Validates: child has no parent, parent has fewer than 9 children, names are unique.
+     * @return the updated child ItemMenu
+     */
+    ItemMenu linkExistingItemAsSize(Long parentId, Long childId, String sizeName);
 }

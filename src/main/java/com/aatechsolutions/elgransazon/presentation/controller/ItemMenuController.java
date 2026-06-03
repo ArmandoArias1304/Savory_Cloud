@@ -134,6 +134,9 @@ public class ItemMenuController {
         // Add active specialities (parallel to sauces)
         loadSpecialitiesFormData(model, null);
 
+        // No size variants for a new item
+        model.addAttribute("sizeItems", new ArrayList<>());
+
         return "admin/menu-items/form";
     }
 
@@ -191,6 +194,9 @@ public class ItemMenuController {
                     loadSaucesFormData(model, id);
                     // Add active specialities and currently associated speciality IDs (parallel to sauces)
                     loadSpecialitiesFormData(model, id);
+
+                    // Add size variants for this item
+                    model.addAttribute("sizeItems", itemMenuService.findSizeItems(id));
 
                     return "admin/menu-items/form";
                 })
@@ -1536,5 +1542,196 @@ public class ItemMenuController {
             redirectAttributes.addFlashAttribute("errorMessage", "Error al eliminar: " + e.getMessage());
         }
         return "redirect:/admin/menu-items";
+    }
+
+    // ========== Size Management Endpoints ==========
+
+    /**
+     * Get size variants for a menu item (AJAX)
+     */
+    @GetMapping("/{id}/size-items")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> getSizeItems(@PathVariable Long id) {
+        log.debug("Getting size variants for item ID: {}", id);
+        Map<String, Object> response = new HashMap<>();
+        try {
+            List<ItemMenu> sizeItems = itemMenuService.findSizeItems(id);
+            List<Map<String, Object>> items = sizeItems.stream().map(si -> {
+                Map<String, Object> dto = new HashMap<>();
+                dto.put("id", si.getIdItemMenu());
+                dto.put("name", si.getName());
+                dto.put("sizeName", si.getSizeName());
+                dto.put("price", si.getPrice());
+                dto.put("available", si.getAvailable());
+                dto.put("active", si.getActive());
+                dto.put("imageUrl", si.getImageUrl());
+                return dto;
+            }).collect(Collectors.toList());
+            response.put("success", true);
+            response.put("sizeItems", items);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("Error fetching size items for {}: {}", id, e.getMessage());
+            response.put("success", false);
+            response.put("error", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    /**
+     * Add a size variant to a menu item (AJAX)
+     */
+    @PostMapping("/{id}/size-items")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> addSizeItem(
+            @PathVariable Long id,
+            @RequestParam("sizeName") String sizeName,
+            @RequestParam("price") java.math.BigDecimal price) {
+        log.info("Adding size variant '{}' to item ID: {}", sizeName, id);
+        Map<String, Object> response = new HashMap<>();
+        try {
+            ItemMenu child = itemMenuService.addSizeItem(id, sizeName, price);
+            response.put("success", true);
+            response.put("message", "Tamaño '" + sizeName + "' agregado exitosamente");
+            response.put("id", child.getIdItemMenu());
+            response.put("name", child.getName());
+            response.put("sizeName", child.getSizeName());
+            response.put("price", child.getPrice());
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            log.error("Validation error adding size item: {}", e.getMessage());
+            response.put("success", false);
+            response.put("error", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        } catch (Exception e) {
+            log.error("Error adding size item: {}", e.getMessage());
+            response.put("success", false);
+            response.put("error", "Error al agregar tamaño: " + e.getMessage());
+            return ResponseEntity.internalServerError().body(response);
+        }
+    }
+
+    /**
+     * Detach a size variant from its parent (AJAX).
+     * The child item is NOT deleted — it becomes a free-standing item.
+     */
+    @PostMapping("/{id}/size-items/{childId}/detach")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> detachSizeItem(
+            @PathVariable Long id,
+            @PathVariable Long childId) {
+        log.info("Detaching size variant ID: {} from parent ID: {}", childId, id);
+        Map<String, Object> response = new HashMap<>();
+        try {
+            itemMenuService.detachSizeItem(childId);
+            response.put("success", true);
+            response.put("message", "Tamaño desvinculado exitosamente. El item permanece en el menú como item independiente.");
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            log.error("Validation error detaching size item: {}", e.getMessage());
+            response.put("success", false);
+            response.put("error", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        } catch (Exception e) {
+            log.error("Error detaching size item: {}", e.getMessage());
+            response.put("success", false);
+            response.put("error", "Error al desvincular tamaño: " + e.getMessage());
+            return ResponseEntity.internalServerError().body(response);
+        }
+    }
+
+    /**
+     * Update a size variant's sizeName and price (AJAX)
+     */
+    @PostMapping("/{id}/size-items/{childId}/update")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> updateSizeItem(
+            @PathVariable Long id,
+            @PathVariable Long childId,
+            @RequestParam("sizeName") String sizeName,
+            @RequestParam("price") java.math.BigDecimal price) {
+        log.info("Updating size variant ID: {} → sizeName='{}', price={}", childId, sizeName, price);
+        Map<String, Object> response = new HashMap<>();
+        try {
+            itemMenuService.updateSizeItem(childId, sizeName, price);
+            response.put("success", true);
+            response.put("message", "Tamaño actualizado exitosamente");
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            log.error("Validation error updating size item: {}", e.getMessage());
+            response.put("success", false);
+            response.put("error", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        } catch (Exception e) {
+            log.error("Error updating size item: {}", e.getMessage());
+            response.put("success", false);
+            response.put("error", "Error al actualizar tamaño: " + e.getMessage());
+            return ResponseEntity.internalServerError().body(response);
+        }
+    }
+
+    /**
+     * Search free (unattached) items by name for linking as size variant (AJAX).
+     * Only returns items with no parent, from the current company, excluding the parent itself.
+     * q: search term (empty = return first 20)
+     */
+    @GetMapping("/{id}/available-for-linking")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> searchAvailableForLinking(
+            @PathVariable Long id,
+            @RequestParam(value = "q", defaultValue = "") String query) {
+        Map<String, Object> response = new HashMap<>();
+        try {
+            List<ItemMenu> items = itemMenuService.searchFreeItems(id, query);
+            List<Map<String, Object>> dtos = items.stream().map(i -> {
+                Map<String, Object> dto = new HashMap<>();
+                dto.put("id", i.getIdItemMenu());
+                dto.put("name", i.getName());
+                dto.put("price", i.getPrice());
+                dto.put("categoryName", i.getCategory() != null ? i.getCategory().getName() : "");
+                return dto;
+            }).collect(Collectors.toList());
+            response.put("success", true);
+            response.put("items", dtos);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("Error searching free items: {}", e.getMessage());
+            response.put("success", false);
+            response.put("error", "Error al buscar items: " + e.getMessage());
+            return ResponseEntity.internalServerError().body(response);
+        }
+    }
+
+    /**
+     * Link an existing free item as a size variant of this parent (AJAX).
+     */
+    @PostMapping("/{id}/size-items/link")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> linkExistingItemAsSize(
+            @PathVariable Long id,
+            @RequestParam("childId") Long childId,
+            @RequestParam("sizeName") String sizeName) {
+        log.info("Linking item ID: {} as size variant of parent ID: {} with sizeName='{}'", childId, id, sizeName);
+        Map<String, Object> response = new HashMap<>();
+        try {
+            ItemMenu linked = itemMenuService.linkExistingItemAsSize(id, childId, sizeName);
+            response.put("success", true);
+            response.put("message", "Item vinculado como tamaño '" + sizeName + "' exitosamente.");
+            response.put("id", linked.getIdItemMenu());
+            response.put("sizeName", linked.getSizeName());
+            response.put("name", linked.getName());
+            response.put("price", linked.getPrice());
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            log.error("Validation error linking size item: {}", e.getMessage());
+            response.put("success", false);
+            response.put("error", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        } catch (Exception e) {
+            log.error("Error linking size item: {}", e.getMessage());
+            response.put("success", false);
+            response.put("error", "Error al vincular item: " + e.getMessage());
+            return ResponseEntity.internalServerError().body(response);
+        }
     }
 }

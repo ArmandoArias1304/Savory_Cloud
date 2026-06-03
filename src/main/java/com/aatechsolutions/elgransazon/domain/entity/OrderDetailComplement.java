@@ -114,6 +114,38 @@ public class OrderDetailComplement implements Serializable {
     @Builder.Default
     private Boolean stockDeducted = false;
 
+    // ========== Snapshots ==========
+
+    /**
+     * Snapshot of {@code Complement.isSauce} at the time the order was placed.
+     * NULL for legacy records created before this field was added.
+     * Used for kitchen comanda ticket routing.
+     */
+    @Column(name = "is_sauce_snapshot")
+    private Boolean isSauceSnapshot;
+
+    /**
+     * Snapshot of {@code Complement.isSpeciality} at the time the order was placed.
+     * NULL for legacy records created before this field was added.
+     * Used for kitchen comanda ticket routing.
+     */
+    @Column(name = "is_speciality_snapshot")
+    private Boolean isSpecialitySnapshot;
+
+    /**
+     * Snapshot of the parent {@code ItemMenu.minSauces} at the time the order was placed.
+     * NULL for legacy records or items with no minimum sauce constraint.
+     */
+    @Column(name = "min_sauces_snapshot")
+    private Integer minSaucesSnapshot;
+
+    /**
+     * Snapshot of the parent {@code ItemMenu.minSpecialities} at the time the order was placed.
+     * NULL for legacy records or items with no minimum speciality constraint.
+     */
+    @Column(name = "min_specialities_snapshot")
+    private Integer minSpecialitiesSnapshot;
+
     // ========== Timestamps ==========
 
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -126,6 +158,23 @@ public class OrderDetailComplement implements Serializable {
             this.createdAt = LocalDateTime.now();
         }
         calculateSubtotal();
+        // Freeze complement type snapshots so comanda tickets are unaffected by
+        // later changes to the Complement configuration.
+        if (this.isSauceSnapshot == null && this.complement != null) {
+            this.isSauceSnapshot = Boolean.TRUE.equals(this.complement.getIsSauce());
+        }
+        if (this.isSpecialitySnapshot == null && this.complement != null) {
+            this.isSpecialitySnapshot = Boolean.TRUE.equals(this.complement.getIsSpeciality());
+        }
+        // Freeze ItemMenu sauce/speciality minimum constraints from the parent item.
+        if (this.orderDetail != null && this.orderDetail.getItemMenu() != null) {
+            if (this.minSaucesSnapshot == null) {
+                this.minSaucesSnapshot = this.orderDetail.getItemMenu().getMinSauces();
+            }
+            if (this.minSpecialitiesSnapshot == null) {
+                this.minSpecialitiesSnapshot = this.orderDetail.getItemMenu().getMinSpecialities();
+            }
+        }
     }
 
     // ========== Business Methods ==========

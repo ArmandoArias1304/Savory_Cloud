@@ -174,6 +174,28 @@
                 ></textarea>
               </div>
 
+              <!-- Tamaño (Size Name) -->
+              <div class="md:col-span-2">
+                <label
+                  for="sizeName"
+                  class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+                >
+                  Tamaño
+                  <span class="ml-1 text-xs font-normal text-gray-400 dark:text-gray-500">(opcional)</span>
+                </label>
+                <input
+                  type="text"
+                  id="sizeName"
+                  th:field="*{sizeName}"
+                  maxlength="50"
+                  placeholder="Ej: Chica, Mediana, Grande, Jumbo…"
+                  class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                />
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  Etiqueta de tamaño para este item (ej. cuando es una variante de tamaño de otro item). Máx. 50 caracteres.
+                </p>
+              </div>
+
               <!-- Precio -->
               <div>
                 <label
@@ -299,6 +321,146 @@
                   th:field="*{imageUrl}"
                   id="currentImageUrl"
                 />
+              </div>
+
+              <!-- Info notice when this item is a child (has a parent) -->
+              <div class="md:col-span-2"
+                   th:if="${itemMenu.idItemMenu != null and itemMenu.parentItem != null}">
+                <div class="flex items-start gap-3 p-4 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
+                  <span class="material-symbols-outlined text-amber-500 text-xl mt-0.5">account_tree</span>
+                  <div>
+                    <p class="text-sm font-semibold text-amber-800 dark:text-amber-300">
+                      Este item es un tamaño del item padre:
+                      <span class="font-bold" th:text="${itemMenu.parentItem.name}"></span>
+                    </p>
+                    <p class="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                      Los items hijos no pueden tener sus propios tamaños. Para gestionar tamaños, edita el item padre directamente.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- ===== GESTIÓN DE TAMAÑOS ===== -->
+              <!-- Only shown when editing an existing item that is NOT a child (no parentItem) -->
+              <div class="md:col-span-2" th:if="${itemMenu.idItemMenu != null and itemMenu.parentItem == null}">
+                <div class="flex items-center gap-2 pb-2 border-b border-indigo-200 dark:border-indigo-800 mb-4">
+                  <span class="material-symbols-outlined text-indigo-500">straighten</span>
+                  <h3 class="text-sm font-bold uppercase tracking-wide text-indigo-700 dark:text-indigo-300">
+                    Tamaños / Variantes de precio
+                  </h3>
+                </div>
+
+                <!-- Existing size children -->
+                <div id="sizeItemsList" class="space-y-2 mb-4">
+                  <div th:if="${sizeItems != null and !#lists.isEmpty(sizeItems)}"
+                       th:each="si : ${sizeItems}"
+                       class="flex items-center gap-3 p-3 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800"
+                       th:data-size-id="${si.idItemMenu}">
+                    <span class="material-symbols-outlined text-indigo-400 text-base">label</span>
+                    <span class="flex-1 text-sm font-semibold text-gray-800 dark:text-gray-100"
+                          th:text="${si.sizeName != null ? si.sizeName : si.name}">Tamaño</span>
+                    <span class="text-sm font-bold text-primary" th:text="${si.formattedPrice}">$0.00</span>
+                    <button type="button"
+                            class="btn-edit-size px-2 py-1 rounded-lg bg-blue-100 hover:bg-blue-200 dark:bg-blue-900/30 dark:hover:bg-blue-800/50 text-blue-700 dark:text-blue-300 text-xs font-medium transition-colors"
+                            th:data-size-id="${si.idItemMenu}"
+                            th:data-size-name="${si.sizeName}"
+                            th:data-size-price="${si.price}">
+                      <span class="material-symbols-outlined text-xs align-middle">edit</span> Editar
+                    </button>
+                    <button type="button"
+                            class="btn-detach-size px-2 py-1 rounded-lg bg-orange-100 hover:bg-orange-200 dark:bg-orange-900/30 dark:hover:bg-orange-800/50 text-orange-700 dark:text-orange-300 text-xs font-medium transition-colors"
+                            th:data-size-id="${si.idItemMenu}"
+                            th:data-size-name="${si.sizeName != null ? si.sizeName : si.name}">
+                      <span class="material-symbols-outlined text-xs align-middle">link_off</span> Desvincular
+                    </button>
+                  </div>
+                  <p th:if="${sizeItems == null or #lists.isEmpty(sizeItems)}"
+                     class="text-sm text-gray-400 dark:text-gray-500 italic">
+                    Sin tamaños adicionales configurados.
+                  </p>
+                </div>
+
+                <!-- Add new size form -->
+                <div class="p-4 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                  <p class="text-xs font-semibold text-gray-600 dark:text-gray-300 mb-3 uppercase tracking-wide">Agregar nuevo tamaño</p>
+                  <div class="flex flex-wrap gap-3 items-end">
+                    <div class="flex-1 min-w-32">
+                      <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Nombre del tamaño</label>
+                      <input type="text" id="newSizeName" maxlength="50"
+                             placeholder="Ej: Grande"
+                             class="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500 focus:border-transparent" />
+                    </div>
+                    <div class="w-32">
+                      <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Precio</label>
+                      <div class="relative">
+                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
+                        <input type="number" id="newSizePrice" min="0.01" step="0.01"
+                               placeholder="0.00"
+                               class="w-full pl-6 pr-2 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500 focus:border-transparent" />
+                      </div>
+                    </div>
+                    <button type="button" id="btnAddSize"
+                            th:data-item-id="${itemMenu.idItemMenu}"
+                            class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition-colors flex items-center gap-1">
+                      <span class="material-symbols-outlined text-base">add</span> Agregar
+                    </button>
+                  </div>
+                  <p class="mt-2 text-xs text-gray-400 dark:text-gray-500">
+                    <span class="material-symbols-outlined text-xs align-middle">info</span>
+                    Máximo 9 tamaños adicionales por item (10 en total incluyendo el padre). Se heredarán la receta, complementos y configuración del padre.
+                  </p>
+                </div>
+
+                <!-- Link existing item as size variant -->
+                <div class="mt-3 p-4 rounded-xl bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-800">
+                  <p class="text-xs font-semibold text-violet-700 dark:text-violet-300 mb-3 uppercase tracking-wide flex items-center gap-1">
+                    <span class="material-symbols-outlined text-sm">link</span>
+                    Vincular item existente como tamaño
+                  </p>
+                  <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                    Busca un item que ya existe en el menú y está sin vincular para reutilizarlo como tamaño de este item.
+                  </p>
+                  <!-- Search input -->
+                  <div class="relative mb-3">
+                    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                      <span class="material-symbols-outlined text-base">search</span>
+                    </span>
+                    <input type="text" id="linkSizeSearch" autocomplete="off"
+                           placeholder="Escribe para buscar items disponibles..."
+                           class="w-full pl-9 pr-3 py-2 text-sm rounded-lg border border-violet-300 dark:border-violet-700 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-violet-500 focus:border-transparent" />
+                    <!-- Spinner -->
+                    <span id="linkSizeSpinner" class="absolute right-3 top-1/2 -translate-y-1/2 hidden">
+                      <svg class="animate-spin h-4 w-4 text-violet-500" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+                      </svg>
+                    </span>
+                  </div>
+                  <!-- Results dropdown -->
+                  <div id="linkSizeResults" class="hidden mb-3 max-h-48 overflow-y-auto rounded-xl border border-violet-200 dark:border-violet-700 bg-white dark:bg-gray-800 shadow-lg divide-y divide-violet-100 dark:divide-violet-800"></div>
+                  <!-- Selected item + sizeName + confirm -->
+                  <div id="linkSizeConfirmPanel" class="hidden p-3 rounded-xl bg-violet-100 dark:bg-violet-900/40 border border-violet-300 dark:border-violet-700">
+                    <p class="text-xs font-semibold text-violet-700 dark:text-violet-300 mb-2">Item seleccionado:</p>
+                    <p id="linkSizeSelectedName" class="text-sm font-bold text-gray-800 dark:text-gray-100 mb-3"></p>
+                    <div class="flex flex-wrap gap-3 items-end">
+                      <div class="flex-1 min-w-32">
+                        <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Nombre del tamaño (etiqueta)</label>
+                        <input type="text" id="linkSizeName" maxlength="50" placeholder="Ej: Grande"
+                               class="w-full px-3 py-2 text-sm rounded-lg border border-violet-300 dark:border-violet-700 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-violet-500" />
+                      </div>
+                      <div class="flex gap-2">
+                        <button type="button" id="btnLinkSizeConfirm"
+                                class="px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold rounded-lg transition-colors flex items-center gap-1">
+                          <span class="material-symbols-outlined text-base">link</span> Vincular
+                        </button>
+                        <button type="button" id="btnLinkSizeCancel"
+                                class="px-3 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 text-sm font-medium rounded-lg transition-colors">
+                          Cancelar
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <!-- Estado Activo -->
@@ -3765,5 +3927,311 @@
 
     <!-- Script del Sistema de Temas -->
     <div th:replace="~{fragments/theme :: themeScript}"></div>
+
+    <!-- ===== Size Management Script ===== -->
+    <script th:inline="javascript">
+    (function () {
+      const ITEM_ID = /*[[${itemMenu.idItemMenu}]]*/ null;
+      if (!ITEM_ID) return; // New item — no size management yet
+
+      const BASE_URL = `/admin/menu-items/${ITEM_ID}/size-items`;
+      const isDark = () => document.documentElement.classList.contains('dark');
+
+      // ── ADD SIZE ──────────────────────────────────────────────────────────
+      document.getElementById('btnAddSize')?.addEventListener('click', async function () {
+        const nameInput = document.getElementById('newSizeName');
+        const priceInput = document.getElementById('newSizePrice');
+        const sizeName = nameInput.value.trim();
+        const price = priceInput.value.trim();
+
+        if (!sizeName) {
+          Swal.fire({ icon: 'warning', title: 'Campo requerido', text: 'Ingresa el nombre del tamaño.', confirmButtonColor: '#6366f1', background: isDark() ? '#1e293b' : '#fff', color: isDark() ? '#f1f5f9' : '#111827' });
+          return;
+        }
+        if (sizeName.length > 50) {
+          Swal.fire({ icon: 'warning', title: 'Nombre demasiado largo', text: 'El nombre del tamaño no puede superar 50 caracteres.', confirmButtonColor: '#6366f1', background: isDark() ? '#1e293b' : '#fff', color: isDark() ? '#f1f5f9' : '#111827' });
+          return;
+        }
+        if (!price || parseFloat(price) <= 0) {
+          Swal.fire({ icon: 'warning', title: 'Precio inválido', text: 'Ingresa un precio mayor a 0.', confirmButtonColor: '#6366f1', background: isDark() ? '#1e293b' : '#fff', color: isDark() ? '#f1f5f9' : '#111827' });
+          return;
+        }
+
+        this.disabled = true;
+        try {
+          const params = new URLSearchParams({ sizeName, price });
+          const res = await fetch(BASE_URL, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: params.toString() });
+          const data = await res.json();
+          if (data.success) {
+            nameInput.value = '';
+            priceInput.value = '';
+            appendSizeRow(data.id, data.sizeName, data.price, data.name);
+            Swal.fire({ icon: 'success', title: '¡Tamaño agregado!', text: data.message, timer: 2000, showConfirmButton: false, background: isDark() ? '#1e293b' : '#fff', color: isDark() ? '#f1f5f9' : '#111827' });
+          } else {
+            Swal.fire({ icon: 'error', title: 'Error', text: data.error || 'No se pudo agregar el tamaño.', confirmButtonColor: '#6366f1', background: isDark() ? '#1e293b' : '#fff', color: isDark() ? '#f1f5f9' : '#111827' });
+          }
+        } catch (e) {
+          Swal.fire({ icon: 'error', title: 'Error', text: 'Error de red al agregar el tamaño.', confirmButtonColor: '#6366f1', background: isDark() ? '#1e293b' : '#fff', color: isDark() ? '#f1f5f9' : '#111827' });
+        } finally {
+          this.disabled = false;
+        }
+      });
+
+      // ── DELEGATE: DETACH / EDIT ───────────────────────────────────────────
+      document.getElementById('sizeItemsList')?.addEventListener('click', async function (e) {
+        const detachBtn = e.target.closest('.btn-detach-size');
+        const editBtn = e.target.closest('.btn-edit-size');
+
+        if (detachBtn) {
+          const childId = detachBtn.dataset.sizeId;
+          const childName = detachBtn.dataset.sizeName;
+          const confirm = await Swal.fire({
+            icon: 'warning',
+            title: '¿Desvincular tamaño?',
+            html: `El tamaño <b>${childName}</b> se desvinculará de este item padre. <br>El item <b>no se eliminará</b> — quedará como un item independiente.`,
+            showCancelButton: true,
+            confirmButtonText: 'Sí, desvincular',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#f59e0b',
+            cancelButtonColor: '#6b7280',
+            background: isDark() ? '#1e293b' : '#fff',
+            color: isDark() ? '#f1f5f9' : '#111827',
+          });
+          if (!confirm.isConfirmed) return;
+
+          detachBtn.disabled = true;
+          try {
+            const res = await fetch(`${BASE_URL}/${childId}/detach`, { method: 'POST' });
+            const data = await res.json();
+            if (data.success) {
+              detachBtn.closest('div[data-size-id]')?.remove();
+              Swal.fire({ icon: 'success', title: 'Desvinculado', text: data.message, timer: 3000, showConfirmButton: false, background: isDark() ? '#1e293b' : '#fff', color: isDark() ? '#f1f5f9' : '#111827' });
+            } else {
+              Swal.fire({ icon: 'error', title: 'Error', text: data.error || 'No se pudo desvincular.', confirmButtonColor: '#f59e0b', background: isDark() ? '#1e293b' : '#fff', color: isDark() ? '#f1f5f9' : '#111827' });
+              detachBtn.disabled = false;
+            }
+          } catch (err) {
+            Swal.fire({ icon: 'error', title: 'Error', text: 'Error de red al desvincular.', confirmButtonColor: '#f59e0b', background: isDark() ? '#1e293b' : '#fff', color: isDark() ? '#f1f5f9' : '#111827' });
+            detachBtn.disabled = false;
+          }
+        }
+
+        if (editBtn) {
+          const childId = editBtn.dataset.sizeId;
+          const currentSizeName = editBtn.dataset.sizeName || '';
+          const currentPrice = editBtn.dataset.sizePrice || '';
+
+          const dark = isDark();
+          const inputStyle = `width:100%;padding:.55rem .75rem;border-radius:.5rem;border:1px solid ${dark ? '#4b5563' : '#d1d5db'};background:${dark ? '#1f2937' : '#f9fafb'};color:${dark ? '#f1f5f9' : '#111827'};font-size:.875rem;outline:none;box-sizing:border-box;`;
+          const labelStyle = `display:block;font-size:.8rem;font-weight:600;margin-bottom:.35rem;color:${dark ? '#cbd5e1' : '#374151'};`;
+
+          const { value: formValues } = await Swal.fire({
+            title: 'Editar tamaño',
+            html: `
+              <div style="text-align:left;padding:.25rem .5rem;">
+                <div style="margin-bottom:.9rem">
+                  <label style="${labelStyle}">Nombre del tamaño</label>
+                  <input id="swal-edit-size-name" type="text" maxlength="50" placeholder="Ej: Grande" value="${currentSizeName}" style="${inputStyle}" />
+                </div>
+                <div>
+                  <label style="${labelStyle}">Precio</label>
+                  <input id="swal-edit-size-price" type="number" min="0.01" step="0.01" placeholder="0.00" value="${currentPrice}" style="${inputStyle}" />
+                </div>
+              </div>`,
+            showCancelButton: true,
+            confirmButtonText: 'Guardar',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#6366f1',
+            cancelButtonColor: '#6b7280',
+            background: dark ? '#1e293b' : '#fff',
+            color: dark ? '#f1f5f9' : '#111827',
+            preConfirm: () => {
+              const sn = document.getElementById('swal-edit-size-name').value.trim();
+              const sp = document.getElementById('swal-edit-size-price').value.trim();
+              if (!sn) { Swal.showValidationMessage('El nombre del tamaño es requerido'); return false; }
+              if (sn.length > 50) { Swal.showValidationMessage('Máximo 50 caracteres'); return false; }
+              if (!sp || parseFloat(sp) <= 0) { Swal.showValidationMessage('Precio inválido'); return false; }
+              return { sizeName: sn, price: sp };
+            }
+          });
+
+          if (!formValues) return;
+
+          editBtn.disabled = true;
+          try {
+            const params = new URLSearchParams({ sizeName: formValues.sizeName, price: formValues.price });
+            const res = await fetch(`${BASE_URL}/${childId}/update`, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: params.toString() });
+            const data = await res.json();
+            if (data.success) {
+              const row = editBtn.closest('div[data-size-id]');
+              if (row) {
+                row.querySelector('span.flex-1').textContent = formValues.sizeName;
+                row.querySelector('span.text-primary').textContent = '$' + parseFloat(formValues.price).toFixed(2);
+                editBtn.dataset.sizeName = formValues.sizeName;
+                editBtn.dataset.sizePrice = formValues.price;
+                const detach = row.querySelector('.btn-detach-size');
+                if (detach) detach.dataset.sizeName = formValues.sizeName;
+              }
+              Swal.fire({ icon: 'success', title: 'Actualizado', text: data.message, timer: 2000, showConfirmButton: false, background: isDark() ? '#1e293b' : '#fff', color: isDark() ? '#f1f5f9' : '#111827' });
+            } else {
+              Swal.fire({ icon: 'error', title: 'Error', text: data.error || 'No se pudo actualizar.', confirmButtonColor: '#6366f1', background: isDark() ? '#1e293b' : '#fff', color: isDark() ? '#f1f5f9' : '#111827' });
+            }
+          } catch (err) {
+            Swal.fire({ icon: 'error', title: 'Error', text: 'Error de red al actualizar.', confirmButtonColor: '#6366f1', background: isDark() ? '#1e293b' : '#fff', color: isDark() ? '#f1f5f9' : '#111827' });
+          } finally {
+            editBtn.disabled = false;
+          }
+        }
+      });
+
+      // ── HELPER: append a new size row dynamically ────────────────────────
+      function appendSizeRow(id, sizeName, price, fullName) {
+        const list = document.getElementById('sizeItemsList');
+        if (!list) return;
+        // Remove "no sizes" placeholder
+        list.querySelectorAll('p.text-gray-400').forEach(el => el.remove());
+
+        const formattedPrice = '$' + parseFloat(price).toFixed(2);
+        const div = document.createElement('div');
+        div.className = 'flex items-center gap-3 p-3 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800';
+        div.dataset.sizeId = id;
+        div.innerHTML = `
+          <span class="material-symbols-outlined text-indigo-400 text-base">label</span>
+          <span class="flex-1 text-sm font-semibold text-gray-800 dark:text-gray-100">${sizeName || fullName}</span>
+          <span class="text-sm font-bold text-primary">${formattedPrice}</span>
+          <button type="button"
+                  class="btn-edit-size px-2 py-1 rounded-lg bg-blue-100 hover:bg-blue-200 dark:bg-blue-900/30 dark:hover:bg-blue-800/50 text-blue-700 dark:text-blue-300 text-xs font-medium transition-colors"
+                  data-size-id="${id}" data-size-name="${sizeName}" data-size-price="${price}">
+            <span class="material-symbols-outlined text-xs align-middle">edit</span> Editar
+          </button>
+          <button type="button"
+                  class="btn-detach-size px-2 py-1 rounded-lg bg-orange-100 hover:bg-orange-200 dark:bg-orange-900/30 dark:hover:bg-orange-800/50 text-orange-700 dark:text-orange-300 text-xs font-medium transition-colors"
+                  data-size-id="${id}" data-size-name="${sizeName || fullName}">
+            <span class="material-symbols-outlined text-xs align-middle">link_off</span> Desvincular
+          </button>`;
+        list.appendChild(div);
+      }
+
+      // ── LINK EXISTING ITEM ────────────────────────────────────────────────
+      let linkDebounceTimer = null;
+      let selectedLinkItem = null; // { id, name, price }
+
+      const searchInput    = document.getElementById('linkSizeSearch');
+      const resultsBox     = document.getElementById('linkSizeResults');
+      const spinner        = document.getElementById('linkSizeSpinner');
+      const confirmPanel   = document.getElementById('linkSizeConfirmPanel');
+      const selectedName   = document.getElementById('linkSizeSelectedName');
+      const sizeNameInput  = document.getElementById('linkSizeName');
+      const btnConfirm     = document.getElementById('btnLinkSizeConfirm');
+      const btnCancel      = document.getElementById('btnLinkSizeCancel');
+
+      function hideLinkResults() {
+        resultsBox.classList.add('hidden');
+        resultsBox.innerHTML = '';
+      }
+
+      function showLinkConfirm(item) {
+        selectedLinkItem = item;
+        selectedName.textContent = item.name + ' — $' + parseFloat(item.price).toFixed(2) + (item.categoryName ? ' (' + item.categoryName + ')' : '');
+        sizeNameInput.value = '';
+        confirmPanel.classList.remove('hidden');
+        hideLinkResults();
+        searchInput.value = '';
+        sizeNameInput.focus();
+      }
+
+      function hideLinkConfirm() {
+        selectedLinkItem = null;
+        confirmPanel.classList.add('hidden');
+        sizeNameInput.value = '';
+      }
+
+      async function doSearch(q) {
+        spinner.classList.remove('hidden');
+        try {
+          const res = await fetch(`${BASE_URL.replace('/size-items', '')}/available-for-linking?q=${encodeURIComponent(q)}`);
+          const data = await res.json();
+          if (!data.success || !data.items.length) {
+            resultsBox.innerHTML = '<p class="px-4 py-3 text-sm text-gray-400 dark:text-gray-500 italic">Sin resultados</p>';
+          } else {
+            resultsBox.innerHTML = data.items.map(item => `
+              <button type="button" class="link-item-result w-full text-left px-4 py-2.5 hover:bg-violet-50 dark:hover:bg-violet-900/30 transition-colors"
+                      data-item-id="${item.id}" data-item-name="${item.name.replace(/"/g,'&quot;')}" data-item-price="${item.price}" data-item-category="${(item.categoryName||'').replace(/"/g,'&quot;')}">
+                <span class="block text-sm font-semibold text-gray-800 dark:text-gray-100">${item.name}</span>
+                <span class="text-xs text-gray-400">${item.categoryName || ''} — $${parseFloat(item.price).toFixed(2)}</span>
+              </button>`).join('');
+          }
+          resultsBox.classList.remove('hidden');
+        } catch (err) {
+          resultsBox.innerHTML = '<p class="px-4 py-3 text-sm text-red-400">Error de red</p>';
+          resultsBox.classList.remove('hidden');
+        } finally {
+          spinner.classList.add('hidden');
+        }
+      }
+
+      searchInput?.addEventListener('input', function () {
+        clearTimeout(linkDebounceTimer);
+        const q = this.value.trim();
+        hideLinkConfirm();
+        if (q.length === 0) { hideLinkResults(); return; }
+        linkDebounceTimer = setTimeout(() => doSearch(q), 280);
+      });
+
+      // Click on a result
+      resultsBox?.addEventListener('click', function (e) {
+        const btn = e.target.closest('.link-item-result');
+        if (!btn) return;
+        showLinkConfirm({
+          id: btn.dataset.itemId,
+          name: btn.dataset.itemName,
+          price: btn.dataset.itemPrice,
+          categoryName: btn.dataset.itemCategory,
+        });
+      });
+
+      // Cancel
+      btnCancel?.addEventListener('click', hideLinkConfirm);
+
+      // Confirm link
+      btnConfirm?.addEventListener('click', async function () {
+        if (!selectedLinkItem) return;
+        const sizeName = sizeNameInput.value.trim();
+        if (!sizeName) {
+          Swal.fire({ icon: 'warning', title: 'Campo requerido', text: 'Ingresa el nombre del tamaño (etiqueta).', confirmButtonColor: '#7c3aed', background: isDark() ? '#1e293b' : '#fff', color: isDark() ? '#f1f5f9' : '#111827' });
+          return;
+        }
+        if (sizeName.length > 50) {
+          Swal.fire({ icon: 'warning', title: 'Nombre demasiado largo', text: 'Máximo 50 caracteres.', confirmButtonColor: '#7c3aed', background: isDark() ? '#1e293b' : '#fff', color: isDark() ? '#f1f5f9' : '#111827' });
+          return;
+        }
+
+        btnConfirm.disabled = true;
+        try {
+          const params = new URLSearchParams({ childId: selectedLinkItem.id, sizeName });
+          const res = await fetch(`${BASE_URL}/link`, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: params.toString() });
+          const data = await res.json();
+          if (data.success) {
+            appendSizeRow(data.id, data.sizeName, data.price, data.name);
+            hideLinkConfirm();
+            Swal.fire({ icon: 'success', title: '¡Vinculado!', text: data.message, timer: 2500, showConfirmButton: false, background: isDark() ? '#1e293b' : '#fff', color: isDark() ? '#f1f5f9' : '#111827' });
+          } else {
+            Swal.fire({ icon: 'error', title: 'Error', text: data.error || 'No se pudo vincular.', confirmButtonColor: '#7c3aed', background: isDark() ? '#1e293b' : '#fff', color: isDark() ? '#f1f5f9' : '#111827' });
+          }
+        } catch (err) {
+          Swal.fire({ icon: 'error', title: 'Error', text: 'Error de red al vincular.', confirmButtonColor: '#7c3aed', background: isDark() ? '#1e293b' : '#fff', color: isDark() ? '#f1f5f9' : '#111827' });
+        } finally {
+          btnConfirm.disabled = false;
+        }
+      });
+
+      // Close results when clicking outside
+      document.addEventListener('click', function (e) {
+        if (!searchInput?.contains(e.target) && !resultsBox?.contains(e.target)) {
+          hideLinkResults();
+        }
+      });
+    })();
+    </script>
   </body>
 </html>

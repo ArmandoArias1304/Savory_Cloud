@@ -500,9 +500,34 @@ public class CashierController {
             
             // Get available menu items
             List<ItemMenu> availableItems = itemMenuService.findAvailableItems();
-            
-            // Group items by category ID for easier display
-            Map<Long, List<ItemMenu>> itemsByCategory = availableItems.stream()
+
+            // Separate root items (no parent) from size children
+            List<ItemMenu> rootItems = availableItems.stream()
+                .filter(i -> i.getParentItem() == null)
+                .collect(Collectors.toList());
+
+            // Build sizeItemsDto: parentId → sorted list of child DTOs for JS
+            Map<Long, List<Map<String, Object>>> sizeItemsDto = new HashMap<>();
+            availableItems.stream()
+                .filter(i -> i.getParentItem() != null)
+                .sorted(Comparator.comparing(ItemMenu::getPrice))
+                .forEach(c -> {
+                    Long pid = c.getParentItem().getIdItemMenu();
+                    Map<String, Object> dto = new LinkedHashMap<>();
+                    dto.put("id", c.getIdItemMenu());
+                    dto.put("name", c.getName());
+                    dto.put("sizeName", c.getSizeName() != null ? c.getSizeName() : c.getName());
+                    dto.put("price", c.getPrice());
+                    dto.put("available", c.getAvailable());
+                    dto.put("imageUrl", c.getImageUrl());
+                    dto.put("description", c.getDescription());
+                    dto.put("isCombo", Boolean.TRUE.equals(c.getIsCombo()));
+                    dto.put("scheduleStatus", c.getScheduleStatus() != null ? c.getScheduleStatus().toString() : "available");
+                    sizeItemsDto.computeIfAbsent(pid, k -> new ArrayList<>()).add(dto);
+                });
+
+            // Group ROOT items by category for display (hide size children from the grid)
+            Map<Long, List<ItemMenu>> itemsByCategory = rootItems.stream()
                 .collect(Collectors.groupingBy(item -> item.getCategory().getIdCategory()));
             
             // Get all active categories - ONLY those with active items
@@ -552,7 +577,8 @@ public class CashierController {
             model.addAttribute("deliveryCost", effectiveDeliveryCost);
             model.addAttribute("categories", categories);
             model.addAttribute("itemsByCategory", itemsByCategory);
-            model.addAttribute("allItems", availableItems);
+            model.addAttribute("allItems", rootItems);
+            model.addAttribute("sizeItemsDto", sizeItemsDto);
             model.addAttribute("employee", employee);
             model.addAttribute("config", config);
             model.addAttribute("taxRate", config.getTaxRate());

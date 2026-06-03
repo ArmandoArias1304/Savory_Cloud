@@ -154,6 +154,13 @@ public interface ItemMenuRepository extends JpaRepository<ItemMenu, Long> {
     List<ItemMenu> findAllByCompanyOrderByCategoryAndName(@Param("company") Company company);
 
     /**
+     * Find all items by company ordered by category and name, with parentItem eagerly loaded.
+     * Used in the admin list to avoid N+1 queries when displaying the parent badge.
+     */
+    @Query("SELECT i FROM ItemMenu i LEFT JOIN FETCH i.parentItem WHERE i.company = :company ORDER BY i.category.name ASC, i.name ASC")
+    List<ItemMenu> findAllByCompanyOrderByCategoryAndNameWithParent(@Param("company") Company company);
+
+    /**
      * Find all available items by company
      */
     @Query("SELECT i FROM ItemMenu i WHERE i.company = :company AND i.active = true AND i.available = true ORDER BY i.name ASC")
@@ -216,4 +223,25 @@ public interface ItemMenuRepository extends JpaRepository<ItemMenu, Long> {
      * Count all menu items by company
      */
     long countByCompany(Company company);
+
+    // ========== Size / Self-Reference Queries ==========
+
+    /**
+     * Find all size variants (children) of a given parent item, ordered by price ascending.
+     */
+    @Query("SELECT i FROM ItemMenu i WHERE i.parentItem.idItemMenu = :parentId ORDER BY i.price ASC")
+    List<ItemMenu> findSizeItemsByParentId(@Param("parentId") Long parentId);
+
+    /**
+     * Count how many size variants a parent item has.
+     */
+    @Query("SELECT COUNT(i) FROM ItemMenu i WHERE i.parentItem.idItemMenu = :parentId")
+    long countSizeItemsByParentId(@Param("parentId") Long parentId);
+
+    /**
+     * Find all "free" items for a company (no parent assigned), ordered by name.
+     * Used when selecting which items can have sizes added to them.
+     */
+    @Query("SELECT i FROM ItemMenu i WHERE i.company = :company AND i.parentItem IS NULL ORDER BY i.name ASC")
+    List<ItemMenu> findFreeItemsByCompany(@Param("company") Company company);
 }
