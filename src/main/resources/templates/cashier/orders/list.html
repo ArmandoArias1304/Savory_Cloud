@@ -1649,6 +1649,185 @@
       }
     </script>
 
+    <!-- WebSocket para Actualizaciones en Tiempo Real -->
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+    <script th:inline="javascript">
+      /*<![CDATA[*/
+      const companyId = /*[[${systemConfig.company != null ? systemConfig.company.idCompany : 0}]]*/ 0;
+      /*]]>*/
+    </script>
+    <script>
+      let stompClient = null;
+      let reconnectAttempts = 0;
+      const maxReconnectAttempts = 10;
+      let reconnectDelay = 1000;
+      const maxReconnectDelay = 30000;
+      let isIntentionalDisconnect = false;
+      let pendingReload = null;
+
+      function connectOrderListWebSocket() {
+        if (reconnectAttempts >= maxReconnectAttempts) return;
+
+        const socket = new SockJS("/ws");
+        stompClient = Stomp.over(socket);
+        stompClient.debug = null;
+
+        stompClient.connect(
+          {},
+          function (frame) {
+            reconnectAttempts = 0;
+            reconnectDelay = 1000;
+
+            stompClient.subscribe(
+              `/topic/admin/kitchen/${companyId}`,
+              function (message) {
+                const notification = JSON.parse(message.body);
+                handleOrderListUpdate(notification);
+              },
+            );
+          },
+          function (error) {
+            if (isIntentionalDisconnect) return;
+            reconnectAttempts++;
+            if (reconnectAttempts < maxReconnectAttempts) {
+              const delay = Math.min(
+                reconnectDelay * Math.pow(2, reconnectAttempts - 1),
+                maxReconnectDelay,
+              );
+              setTimeout(connectOrderListWebSocket, delay);
+            }
+          },
+        );
+      }
+
+      function scheduleListReload(delayMs) {
+        if (pendingReload) return;
+        pendingReload = setTimeout(function () {
+          pendingReload = null;
+          window.location.reload();
+        }, delayMs || 2000);
+      }
+
+      // Clases de color usadas por los badges de estado (se quitan antes de aplicar las nuevas)
+      const STATUS_CLASS_TOKENS = [
+        "bg-amber-100", "text-amber-800", "dark:bg-amber-900/30", "dark:text-amber-400",
+        "ring-2", "ring-amber-400/40",
+        "bg-yellow-100", "text-yellow-800", "dark:bg-yellow-900/30", "dark:text-yellow-400",
+        "bg-orange-100", "text-orange-800", "dark:bg-orange-900/30", "dark:text-orange-400",
+        "bg-blue-100", "text-blue-800", "dark:bg-blue-900/30", "dark:text-blue-400",
+        "bg-purple-100", "text-purple-800", "dark:bg-purple-900/30", "dark:text-purple-400",
+        "bg-green-100", "text-green-800", "dark:bg-green-900/30", "dark:text-green-400",
+        "bg-primary/20", "text-primary",
+        "bg-emerald-100", "text-emerald-800", "dark:bg-emerald-900/30", "dark:text-emerald-400",
+        "bg-red-100", "text-red-800", "dark:bg-red-900/30", "dark:text-red-400",
+        "bg-gray-100", "text-gray-800", "dark:bg-gray-900/30", "dark:text-gray-400",
+      ];
+
+      function getStatusBadgeInfo(status) {
+        switch (status) {
+          case "TO_ACCEPT":
+            return { classes: ["bg-amber-100", "text-amber-800", "dark:bg-amber-900/30", "dark:text-amber-400", "ring-2", "ring-amber-400/40"], label: "Por aceptar" };
+          case "PENDING":
+            return { classes: ["bg-yellow-100", "text-yellow-800", "dark:bg-yellow-900/30", "dark:text-yellow-400"], label: "Pendiente" };
+          case "IN_PREPARATION":
+            return { classes: ["bg-orange-100", "text-orange-800", "dark:bg-orange-900/30", "dark:text-orange-400"], label: "En preparación" };
+          case "READY":
+            return { classes: ["bg-blue-100", "text-blue-800", "dark:bg-blue-900/30", "dark:text-blue-400"], label: "Listo" };
+          case "ON_THE_WAY":
+            return { classes: ["bg-purple-100", "text-purple-800", "dark:bg-purple-900/30", "dark:text-purple-400"], label: "En camino" };
+          case "DELIVERED":
+            return { classes: ["bg-green-100", "text-green-800", "dark:bg-green-900/30", "dark:text-green-400"], label: "Entregado" };
+          case "PAID":
+            return { classes: ["bg-primary/20", "text-primary"], label: "Pagado" };
+          case "CANCELLED":
+            return { classes: ["bg-red-100", "text-red-800", "dark:bg-red-900/30", "dark:text-red-400"], label: "Cancelado" };
+          default:
+            return { classes: ["bg-gray-100", "text-gray-800", "dark:bg-gray-900/30", "dark:text-gray-400"], label: status };
+        }
+      }
+
+      function updateStatusBadge(badge, status) {
+        const info = getStatusBadgeInfo(status);
+        const preserved = (badge.className || "")
+          .split(/\s+/)
+          .filter(function (cls) {
+            return cls && STATUS_CLASS_TOKENS.indexOf(cls) === -1;
+          });
+        badge.className = preserved.concat(info.classes).join(" ");
+        badge.textContent = info.label;
+      }
+
+      function showStatusToast(title, message, icon) {
+        if (typeof Swal === "undefined") return;
+        Swal.fire({
+          toast: true,
+          position: "top-end",
+          icon: icon,
+          title: title,
+          text: message,
+          showConfirmButton: false,
+          timer: 4000,
+          timerProgressBar: true,
+          customClass: getSwalDarkModeClasses(),
+        });
+      }
+
+      function handleOrderListUpdate(notification) {
+        const orderId = notification.orderId;
+        const status = notification.status;
+        const type = notification.notificationType;
+        const row = document.querySelector(`tr[data-order-id="${orderId}"]`);
+
+        if (row) {
+          const badge = row.querySelector(".status-badge");
+          if (badge && status) updateStatusBadge(badge, status);
+
+          // Resaltar la fila actualizada
+          row.classList.add("bg-primary/5");
+          setTimeout(function () {
+            row.classList.remove("bg-primary/5");
+          }, 1500);
+
+          if (type === "STATUS_CHANGE") {
+            showStatusToast(
+              "📊 Estado Actualizado",
+              `Pedido #${notification.orderNumber} - ${notification.message || ""}`,
+              "info",
+            );
+          } else if (type === "ORDER_CANCELLED") {
+            showStatusToast(
+              "⚠️ Pedido Cancelado",
+              `Pedido #${notification.orderNumber} ha sido cancelado`,
+              "warning",
+            );
+            scheduleListReload(2000);
+          } else if (type === "ITEMS_ADDED" || type === "ITEM_DELETED") {
+            scheduleListReload(2000);
+          }
+        } else if (
+          (type === "NEW_ORDER" || type === "ITEMS_ADDED") &&
+          status &&
+          status !== "PAID"
+        ) {
+          // Nuevo pedido aún no visible (ej. pedido por cobrar) → recargar para mostrarlo
+          scheduleListReload(2000);
+        }
+      }
+
+      document.addEventListener("DOMContentLoaded", function () {
+        connectOrderListWebSocket();
+      });
+
+      window.addEventListener("beforeunload", function () {
+        isIntentionalDisconnect = true;
+        if (pendingReload) clearTimeout(pendingReload);
+        if (stompClient !== null && stompClient.connected) {
+          stompClient.disconnect();
+        }
+      });
+    </script>
+
     <!-- Script del Sistema de Temas -->
     <div th:replace="~{fragments/theme :: themeScript}"></div>
   </body>
