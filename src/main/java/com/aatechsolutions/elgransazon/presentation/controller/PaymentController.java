@@ -75,7 +75,14 @@ public class PaymentController {
 
                     // Get system configuration
                     SystemConfiguration config = systemConfigurationService.getConfiguration();
-                    
+
+                    // If waiter collection is disabled, waiters cannot collect payments
+                    if (isWaiter && !Boolean.TRUE.equals(config.getWaiterDeliveryCanCollect())) {
+                        redirectAttributes.addFlashAttribute("errorMessage", 
+                            "El cobro por meseros está deshabilitado. Por favor, dirija al cliente a caja.");
+                        return "redirect:/admin/orders";
+                    }
+
                     // Get enabled payment methods based on order type
                     // For DELIVERY orders, use delivery payment methods
                     // For other orders (DINE_IN, TAKEOUT), use restaurant payment methods
@@ -157,7 +164,12 @@ public class PaymentController {
 
             // Get system configuration to validate payment method
             SystemConfiguration config = systemConfigurationService.getConfiguration();
-            
+
+            // If waiter collection is disabled, waiters cannot collect payments
+            if (isWaiter && !Boolean.TRUE.equals(config.getWaiterDeliveryCanCollect())) {
+                throw new IllegalStateException("El cobro por meseros está deshabilitado. Por favor, dirija al cliente a caja.");
+            }
+
             // Validate payment method based on order type
             boolean isPaymentMethodEnabled = order.getOrderType() == OrderType.DELIVERY 
                 ? config.isDeliveryPaymentMethodEnabled(paymentMethod)
@@ -217,6 +229,12 @@ public class PaymentController {
             }
             if (tip.scale() > 2) {
                 throw new IllegalArgumentException("La propina solo permite hasta 2 decimales");
+            }
+
+            // Cash payments: the tip is given directly to the waiter in cash,
+            // so no tip can be registered in the system for CASH payments.
+            if (paymentMethod == PaymentMethodType.CASH) {
+                tip = BigDecimal.ZERO;
             }
 
             // Validate order discount (descuento sobre el total de la orden, incluye IVA).

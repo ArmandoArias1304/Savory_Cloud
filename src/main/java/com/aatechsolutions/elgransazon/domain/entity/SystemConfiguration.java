@@ -158,6 +158,17 @@ public class SystemConfiguration implements Serializable {
     @Builder.Default
     private Boolean staffCanManageParrilleroItems = false;
 
+    // ========== Waiter/Delivery Collection Permission ==========
+    // When TRUE (default), waiters and delivery staff CAN collect payments
+    // (waiters: credit/debit cards only; delivery: per the delivery payment methods).
+    // When FALSE, waiters and delivery staff can only advance orders up to DELIVERED
+    // status — the charge button is hidden and payment endpoints are blocked;
+    // only cashier/admin/manager can collect. Backward compatible (default TRUE).
+    @Column(name = "waiter_delivery_can_collect", nullable = false,
+            columnDefinition = "boolean not null default true")
+    @Builder.Default
+    private Boolean waiterDeliveryCanCollect = true;
+
     // Ticket logo intensity (10-100%). Controls how dark/visible the logo prints on thermal tickets.
     // Higher value = darker print (more pixels become black dots). 50% ≈ original threshold.
     // Useful for logos with light colors that don't print well on thermal printers.

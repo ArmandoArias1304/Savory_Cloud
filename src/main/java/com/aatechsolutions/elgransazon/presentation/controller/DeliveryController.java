@@ -247,7 +247,14 @@ public class DeliveryController {
                     
                     // Get system configuration
                     SystemConfiguration config = configurationService.getConfiguration();
-                    
+
+                    // Validate that delivery collection is enabled in system configuration
+                    if (!Boolean.TRUE.equals(config.getWaiterDeliveryCanCollect())) {
+                        redirectAttributes.addFlashAttribute("errorMessage", 
+                            "El cobro por repartidores está deshabilitado. Por favor, dirija el pedido a caja.");
+                        return "redirect:/delivery/orders/pending";
+                    }
+
                     // Get enabled delivery payment methods for the view
                     List<PaymentMethodType> enabledDeliveryPaymentMethods = java.util.Arrays.stream(PaymentMethodType.values())
                             .filter(config::isDeliveryPaymentMethodEnabled)
@@ -307,6 +314,12 @@ public class DeliveryController {
 
             // Get system configuration to validate payment method is enabled FOR DELIVERY
             SystemConfiguration config = configurationService.getConfiguration();
+
+            // Validate that delivery collection is enabled in system configuration
+            if (!Boolean.TRUE.equals(config.getWaiterDeliveryCanCollect())) {
+                throw new IllegalStateException("El cobro por repartidores está deshabilitado. Por favor, dirija el pedido a caja.");
+            }
+
             PaymentMethodType paymentMethod = order.getPaymentMethod();
             if (!config.isDeliveryPaymentMethodEnabled(paymentMethod)) {
                 // Stay on the same page showing the error message

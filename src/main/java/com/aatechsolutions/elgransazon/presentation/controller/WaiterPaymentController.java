@@ -88,7 +88,14 @@ public class WaiterPaymentController {
 
                     // Get system configuration
                     SystemConfiguration config = systemConfigurationService.getConfiguration();
-                    
+
+                    // Validate that waiter collection is enabled in system configuration
+                    if (!Boolean.TRUE.equals(config.getWaiterDeliveryCanCollect())) {
+                        redirectAttributes.addFlashAttribute("errorMessage", 
+                            "El cobro por meseros está deshabilitado. Por favor, dirija al cliente a caja.");
+                        return "redirect:/waiter/orders";
+                    }
+
                     // Get enabled payment methods (only CREDIT_CARD and DEBIT_CARD for waiters)
                     Map<PaymentMethodType, Boolean> paymentMethods = config.getPaymentMethods();
                     List<PaymentMethodType> enabledPaymentMethods = paymentMethods.entrySet().stream()
@@ -141,6 +148,11 @@ public class WaiterPaymentController {
             if (paymentMethod != PaymentMethodType.CREDIT_CARD && 
                 paymentMethod != PaymentMethodType.DEBIT_CARD) {
                 throw new IllegalStateException("Los meseros solo pueden cobrar pagos con tarjeta de crédito o débito. Por favor, dirija al cliente a caja.");
+            }
+
+            // Validate that waiter collection is enabled in system configuration
+            if (!Boolean.TRUE.equals(systemConfigurationService.getConfiguration().getWaiterDeliveryCanCollect())) {
+                throw new IllegalStateException("El cobro por meseros está deshabilitado. Por favor, dirija al cliente a caja.");
             }
 
             // Find the order

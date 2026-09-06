@@ -596,9 +596,9 @@
                           <i th:unless="${anyInPrep}" class="fas fa-play"></i>
                         </button>
 
-                        <!-- Pay (only DELIVERED and NON-CASH and NON-TRANSFER) -->
+                        <!-- Pay (only DELIVERED and NON-CASH and NON-TRANSFER, and waiter collection enabled) -->
                         <a
-                          th:if="${order.status.name() == 'DELIVERED' && order.paymentMethod.name() != 'CASH' && order.paymentMethod.name() != 'TRANSFER'}"
+                          th:if="${waiterDeliveryCanCollect and order.status.name() == 'DELIVERED' && order.paymentMethod.name() != 'CASH' && order.paymentMethod.name() != 'TRANSFER'}"
                           th:href="@{/waiter/payments/form/{id}(id=${order.idOrder})}"
                           class="p-2 rounded-lg bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/40 transition-all"
                           title="Procesar Pago"
@@ -606,9 +606,9 @@
                           <i class="fas fa-dollar-sign"></i>
                         </a>
 
-                        <!-- Cash/Transfer Payment - Disabled (show message) -->
+                        <!-- Cash/Transfer Payment - Disabled (show message, only when waiter collection enabled) -->
                         <button
-                          th:if="${order.status.name() == 'DELIVERED' && (order.paymentMethod.name() == 'CASH' || order.paymentMethod.name() == 'TRANSFER')}"
+                          th:if="${waiterDeliveryCanCollect and order.status.name() == 'DELIVERED' && (order.paymentMethod.name() == 'CASH' || order.paymentMethod.name() == 'TRANSFER')}"
                           class="p-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-600 cursor-not-allowed"
                           disabled
                           title="Los pagos en efectivo y transferencia solo pueden ser procesados por el cajero"

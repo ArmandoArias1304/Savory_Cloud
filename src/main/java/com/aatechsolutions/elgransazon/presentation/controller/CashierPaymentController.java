@@ -189,6 +189,12 @@ public class CashierPaymentController {
                 throw new IllegalArgumentException("La propina solo permite hasta 2 decimales");
             }
 
+            // Cash payments: the tip is given directly to the waiter in cash,
+            // so no tip can be registered in the system for CASH payments.
+            if (paymentMethod == PaymentMethodType.CASH) {
+                tip = BigDecimal.ZERO;
+            }
+
             // Validate order discount (descuento sobre el total de la orden, incluye IVA).
             if (orderDiscount == null) {
                 orderDiscount = BigDecimal.ZERO;

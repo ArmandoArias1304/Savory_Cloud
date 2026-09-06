@@ -158,6 +158,10 @@ public class SystemConfigurationServiceImpl implements SystemConfigurationServic
         existingConfig.setStaffCanManageParrilleroItems(
                 Boolean.TRUE.equals(configuration.getStaffCanManageParrilleroItems()));
 
+        // Waiter/delivery collection toggle (true when the checkbox is checked)
+        existingConfig.setWaiterDeliveryCanCollect(
+                Boolean.TRUE.equals(configuration.getWaiterDeliveryCanCollect()));
+
         SystemConfiguration saved = configurationRepository.save(existingConfig);
         invalidateConfigCache();
         log.info("System configuration updated successfully");

@@ -1744,7 +1744,7 @@ public class CashierController {
     }
 
     /**
-     * Display cashiers ranking by sales collected today
+     * Display cashiers ranking by orders created today
      *
      * @param authentication Spring Security authentication object
      * @param model Spring MVC model
@@ -1770,30 +1770,33 @@ public class CashierController {
                             .anyMatch(role -> role.getNombreRol().equals("ROLE_CASHIER")))
                     .toList();
             
-            // Calculate sales for each cashier (TODAY ONLY) - using paidBy + paidAt
+            // Calculate sales for each cashier (TODAY ONLY) - by createdAt (creator).
+            // SCOPE PERSONAL: count orders CREATED by this cashier (employee),
+            // not orders collected (paidBy) by someone else. Only orders that
+            // reached PAID status count toward the ranking.
             List<Map<String, Object>> cashierSales = allCashiers.stream()
                     .map(cashier -> {
                         // MULTI-TENANT: adminOrderService.findByStatus filters by company.
-                        // SCOPE: orders paid (paidBy) by this cashier in today's [startOfDay, endOfDay] (by paidAt).
-                        List<Order> todayPaidOrders = adminOrderService.findByStatus(OrderStatus.PAID)
+                        // SCOPE: orders CREATED (employee) by this cashier in today's [startOfDay, endOfDay] (by createdAt).
+                        List<Order> todayCreatedPaidOrders = adminOrderService.findByStatus(OrderStatus.PAID)
                                 .stream()
                                 .filter(order -> {
-                                    LocalDateTime paidAt = order.getPaidAt() != null ? order.getPaidAt() : (order.getUpdatedAt() != null ? order.getUpdatedAt() : order.getCreatedAt());
-                                    return order.getPaidBy() != null &&
-                                           order.getPaidBy().getIdEmpleado().equals(cashier.getIdEmpleado()) &&
-                                           paidAt != null &&
-                                           !paidAt.isBefore(startOfDay) &&
-                                           !paidAt.isAfter(endOfDay);
+                                    LocalDateTime createdAt = order.getCreatedAt();
+                                    return order.getEmployee() != null &&
+                                           order.getEmployee().getIdEmpleado().equals(cashier.getIdEmpleado()) &&
+                                           createdAt != null &&
+                                           !createdAt.isBefore(startOfDay) &&
+                                           !createdAt.isAfter(endOfDay);
                                 })
                                 .toList();
                         
-                        // Calculate total sales TODAY
-                        BigDecimal totalSales = todayPaidOrders.stream()
+                        // Calculate total sales TODAY (orders created today that reached PAID)
+                        BigDecimal totalSales = todayCreatedPaidOrders.stream()
                                 .map(order -> order.getTotal() != null ? order.getTotal() : BigDecimal.ZERO)
                                 .reduce(BigDecimal.ZERO, BigDecimal::add);
                         
                         // Calculate total orders TODAY
-                        int totalOrders = todayPaidOrders.size();
+                        int totalOrders = todayCreatedPaidOrders.size();
                         
                         // Get initials
                         String firstName = cashier.getNombre() != null ? cashier.getNombre() : "";

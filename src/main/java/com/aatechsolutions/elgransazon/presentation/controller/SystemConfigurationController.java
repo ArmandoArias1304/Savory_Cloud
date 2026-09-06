@@ -110,6 +110,7 @@ public class SystemConfigurationController {
             @RequestParam(value = "staffCanManageChefItems", required = false) Boolean staffCanManageChefItems,
             @RequestParam(value = "staffCanManageBaristaItems", required = false) Boolean staffCanManageBaristaItems,
             @RequestParam(value = "staffCanManageParrilleroItems", required = false) Boolean staffCanManageParrilleroItems,
+            @RequestParam(value = "waiterDeliveryCanCollect", required = false) Boolean waiterDeliveryCanCollect,
             RedirectAttributes redirectAttributes,
             Model model) {
 
@@ -174,6 +175,9 @@ public class SystemConfigurationController {
             configuration.setStaffCanManageChefItems(chefChild);
             configuration.setStaffCanManageBaristaItems(baristaChild);
             configuration.setStaffCanManageParrilleroItems(parrilleroChild);
+
+            // Waiter/delivery collection toggle (true when the checkbox is checked)
+            configuration.setWaiterDeliveryCanCollect(Boolean.TRUE.equals(waiterDeliveryCanCollect));
 
             configurationService.updateConfiguration(configuration);
             

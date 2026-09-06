@@ -346,6 +346,12 @@ public class OrderController {
         model.addAttribute("staffBaristaEnabled", staffBaristaEnabled);
         model.addAttribute("staffParrilleroEnabled", staffParrilleroEnabled);
 
+        // Expose whether waiters are allowed to collect payments, so the list view
+        // can hide the charge button when disabled in system configuration.
+        boolean waiterDeliveryCanCollect = listCfg != null
+            && Boolean.TRUE.equals(listCfg.getWaiterDeliveryCanCollect());
+        model.addAttribute("waiterDeliveryCanCollect", waiterDeliveryCanCollect);
+
         return role + "/orders/list";
     }
 

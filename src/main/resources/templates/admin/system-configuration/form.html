@@ -1562,6 +1562,36 @@
                   </p>
                 </div>
 
+                <!-- Waiter/Delivery Collection Permission -->
+                <div
+                  class="mt-4 p-4 rounded-xl border-2 border-dashed border-indigo-200 dark:border-indigo-800 bg-indigo-50/50 dark:bg-indigo-900/10"
+                >
+                  <label class="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      id="waiterDeliveryCanCollect"
+                      name="waiterDeliveryCanCollect"
+                      th:checked="${configuration.waiterDeliveryCanCollect}"
+                      class="w-5 h-5 text-indigo-500 border-gray-300 rounded focus:ring-indigo-500"
+                    />
+                    <div class="flex items-center gap-2">
+                      <span class="material-symbols-outlined text-indigo-500"
+                        >point_of_sale</span
+                      >
+                      <span
+                        class="text-sm font-semibold text-gray-700 dark:text-gray-300"
+                        >¿Meseros y repartidores pueden cobrar?</span
+                      >
+                    </div>
+                  </label>
+                  <p class="mt-2 text-xs text-gray-500 dark:text-gray-400 ml-1">
+                    Si lo desactivas, los meseros y repartidores solo podrán
+                    llevar las órdenes hasta el estado ENTREGADO y no verán el
+                    botón de cobrar; el cobro lo realizará el cajero o
+                    administrador. Activado por defecto.
+                  </p>
+                </div>
+
                 <div class="flex justify-end">
                   <button
                     type="submit"

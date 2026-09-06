@@ -534,7 +534,7 @@
                   </div>
 
                   <!-- Tip Section -->
-                  <div class="space-y-4">
+                  <div class="space-y-4" id="tipSection">
                     <h3
                       class="text-lg font-bold text-gray-900 dark:text-white dark:text-white"
                     >
@@ -544,6 +544,7 @@
                       <button
                         type="button"
                         onclick="setTipPercentage(event, 0)"
+                        data-percent="0"
                         class="tip-btn active rounded-xl bg-gray-100 dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600 py-3 font-bold text-gray-700 dark:text-gray-300 text-sm"
                       >
                         0%
@@ -551,6 +552,7 @@
                       <button
                         type="button"
                         onclick="setTipPercentage(event, 10)"
+                        data-percent="10"
                         class="tip-btn rounded-xl bg-gray-100 dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600 py-3 font-bold text-gray-700 dark:text-gray-300 text-sm"
                       >
                         10%
@@ -558,6 +560,7 @@
                       <button
                         type="button"
                         onclick="setTipPercentage(event, 15)"
+                        data-percent="15"
                         class="tip-btn rounded-xl bg-gray-100 dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600 py-3 font-bold text-gray-700 dark:text-gray-300 text-sm"
                       >
                         15%
@@ -565,6 +568,7 @@
                       <button
                         type="button"
                         onclick="setTipPercentage(event, 20)"
+                        data-percent="20"
                         class="tip-btn rounded-xl bg-gray-100 dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600 py-3 font-bold text-gray-700 dark:text-gray-300 text-sm"
                       >
                         20%
@@ -610,6 +614,21 @@
                           >$0.00</span
                         >
                       </div>
+                    </div>
+                  </div>
+
+                  <!-- Note shown when the selected payment method is CASH -->
+                  <div
+                    id="tipCashNote"
+                    style="display: none"
+                    class="rounded-xl bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 px-4 py-3"
+                  >
+                    <div class="flex items-center gap-2">
+                      <span class="material-symbols-outlined">payments</span>
+                      <p class="font-medium text-sm">
+                        La propina en efectivo se entrega directamente al
+                        mesero, por lo que no se registra en el sistema.
+                      </p>
                     </div>
                   </div>
 
@@ -986,7 +1005,41 @@
         // Update hidden input
         const method = button.getAttribute("data-method");
         document.getElementById("paymentMethodInput").value = method;
+
+        // Show/hide the tip section based on the selected payment method
+        syncTipSection();
       }
+
+      // Sync the tip section with the selected payment method.
+      // For CASH payments the tip is given directly to the waiter in cash,
+      // so the section is hidden, the tip is forced to $0, and no tip is
+      // registered in the system.
+      function syncTipSection() {
+        const method = document.getElementById("paymentMethodInput").value;
+        const isCash = method === "CASH";
+
+        const tipSection = document.getElementById("tipSection");
+        const tipCashNote = document.getElementById("tipCashNote");
+        const tipLine = document.getElementById("tip-line");
+
+        if (tipSection) tipSection.style.display = isCash ? "none" : "";
+        if (tipCashNote) tipCashNote.style.display = isCash ? "" : "none";
+        if (tipLine) tipLine.style.display = isCash ? "none" : "";
+
+        if (isCash) {
+          const tipInput = document.getElementById("tip");
+          if (tipInput) tipInput.value = "0.00";
+          document.querySelectorAll(".tip-btn").forEach((btn) => {
+            btn.classList.remove("active");
+          });
+          const zeroBtn = document.querySelector('.tip-btn[data-percent="0"]');
+          if (zeroBtn) zeroBtn.classList.add("active");
+          calculateTotalWithTip();
+        }
+      }
+
+      // Initialize tip section state based on the pre-selected payment method
+      syncTipSection();
 
       // Set tip percentage (calculated on the EFFECTIVE total, post-discount)
       function setTipPercentage(event, percentage) {
@@ -1108,7 +1161,11 @@
 
           // Confirm payment
           e.preventDefault();
-          const tip = parseFloat(document.getElementById("tip").value) || 0;
+          // CASH payments: the tip is given directly to the waiter, force $0
+          const tip =
+            paymentMethod === "CASH"
+              ? 0
+              : parseFloat(document.getElementById("tip").value) || 0;
           const orderDiscountVal =
             parseFloat(document.getElementById("orderDiscount").value) || 0;
           const safeOrderDiscount = Math.min(
