@@ -514,7 +514,7 @@
                         </span>
                       </div>
 
-                      <!-- CHEF: No item-level buttons - uses order-level bulk button only -->
+                      <!-- Per-item slide controls: chef, barista, parrillero (each item has its own status) -->
 
                       <!-- Complements and Sauces -->
                       <div
@@ -613,8 +613,8 @@
                         </span>
                       </div>
 
-                      <!-- Barista Item Slide Controls (per-item) -->
-                      <div th:if="${currentRole == 'barista'}" class="mt-3">
+                      <!-- Per-item Item Slide Controls (barista, chef, parrillero) -->
+                      <div th:if="${currentRole == 'barista' or currentRole == 'chef' or currentRole == 'parrillero'}" class="mt-3">
                         <!-- Slide to Accept Item (PENDING -> IN_PREPARATION) -->
                         <div
                           th:if="${detail.itemStatus != null && detail.itemStatus.name() == 'PENDING'}"
@@ -713,75 +713,7 @@
                 ></span>
               </div>
 
-              <!-- Action Slider -->
-              <!-- CHEF / PARRILLERO: Show order-level slide-to-confirm -->
-              <div th:if="${currentRole == 'chef' or currentRole == 'parrillero'}"
-                   th:with="itemFlagCheck=${currentRole == 'parrillero' ? 'requiresParrilleroPreparation' : 'requiresPreparation'}">
-                <!-- PRIORITY 1: If ANY item is IN_PREPARATION, show "Marcar Listo" slider -->
-                <div
-                  th:if="${currentRole == 'parrillero' ? #lists.size(order.orderDetails.?[itemMenu.requiresParrilleroPreparation == true && itemStatus.name() == 'IN_PREPARATION']) > 0 : #lists.size(order.orderDetails.?[itemMenu.requiresPreparation == true && itemStatus.name() == 'IN_PREPARATION']) > 0}"
-                  class="slide-confirm"
-                  th:with="chefHasPending=${currentRole == 'parrillero' ? #lists.size(order.orderDetails.?[itemMenu.requiresParrilleroPreparation == true && itemStatus.name() == 'PENDING']) > 0 : #lists.size(order.orderDetails.?[itemMenu.requiresPreparation == true && itemStatus.name() == 'PENDING']) > 0}"
-                  th:attr="data-action='ready-all', data-order-id=${order.idOrder}, data-order-number=${order.orderNumber}, data-has-pending=${chefHasPending}"
-                >
-                  <div
-                    class="slide-confirm-track bg-gradient-to-r from-primary-dark to-primary"
-                  >
-                    <span
-                      class="slide-confirm-text"
-                      data-original="Desliza para Marcar Listo"
-                    >
-                      Desliza para Marcar Listo
-                      <span class="slide-arrows"
-                        ><span>›</span><span>›</span><span>›</span></span
-                      >
-                    </span>
-                  </div>
-                  <div class="slide-confirm-progress bg-primary/30"></div>
-                  <div class="slide-confirm-thumb">
-                    <span
-                      class="material-symbols-outlined text-primary !text-xl"
-                      >check_circle</span
-                    >
-                  </div>
-                </div>
-
-                <!-- PRIORITY 2: If NO items IN_PREPARATION but PENDING, show "Comenzar" slider -->
-                <div
-                  th:if="${currentRole == 'parrillero' ? (#lists.size(order.orderDetails.?[itemMenu.requiresParrilleroPreparation == true && itemStatus.name() == 'IN_PREPARATION']) == 0 && #lists.size(order.orderDetails.?[itemMenu.requiresParrilleroPreparation == true && itemStatus.name() == 'PENDING']) > 0) : (#lists.size(order.orderDetails.?[itemMenu.requiresPreparation == true && itemStatus.name() == 'IN_PREPARATION']) == 0 && #lists.size(order.orderDetails.?[itemMenu.requiresPreparation == true && itemStatus.name() == 'PENDING']) > 0)}"
-                  class="slide-confirm"
-                  th:attr="data-action='accept-all', data-order-id=${order.idOrder}, data-order-number=${order.orderNumber}"
-                >
-                  <div
-                    class="slide-confirm-track bg-gradient-to-r from-blue-600 to-blue-500"
-                  >
-                    <span
-                      class="slide-confirm-text"
-                      data-original="Desliza para Comenzar"
-                    >
-                      Desliza para Comenzar
-                      <span class="slide-arrows"
-                        ><span>›</span><span>›</span><span>›</span></span
-                      >
-                    </span>
-                  </div>
-                  <div class="slide-confirm-progress bg-blue-400/30"></div>
-                  <div class="slide-confirm-thumb">
-                    <span
-                      class="material-symbols-outlined text-blue-600 !text-xl"
-                      >restaurant</span
-                    >
-                  </div>
-                </div>
-
-                <p
-                  class="text-xs text-gray-500 dark:text-gray-400 text-center mt-2"
-                >
-                  Desliza el botón para confirmar la acción
-                </p>
-              </div>
-
-              <!-- BARISTA: No footer instructions - more space for items -->
+              <!-- BARISTA / CHEF / PARRILLERO: No footer instructions - more space for items -->
             </div>
           </div>
         </div>
@@ -827,26 +759,6 @@
       const currentRole = /*[[${currentRole}]]*/ "chef";
       const companyId = /*[[${systemConfig.company != null ? systemConfig.company.idCompany : 0}]]*/ 0;
       /*]]>*/
-
-      // Helper function to get SweetAlert dark mode classes
-      function getSwalDarkModeClasses() {
-        const isDark = document.documentElement.classList.contains("dark");
-        return isDark
-          ? {
-              popup: "rounded-2xl !bg-gray-800 !text-gray-100",
-              title: "!text-gray-100",
-              htmlContainer: "!text-gray-300",
-              confirmButton: "rounded-xl px-6 py-2.5 font-semibold",
-              cancelButton: "rounded-xl px-6 py-2.5 font-semibold",
-              input: "!bg-gray-700 !text-gray-100 !border-gray-600",
-              validationMessage: "!bg-red-900 !text-red-200",
-            }
-          : {
-              popup: "rounded-2xl",
-              confirmButton: "rounded-xl px-6 py-2.5 font-semibold",
-              cancelButton: "rounded-xl px-6 py-2.5 font-semibold",
-            };
-      }
 
       // ===== Slide to Confirm Logic =====
       function initSlideConfirm() {
@@ -945,56 +857,7 @@
         const itemId = slider.dataset.itemId;
         const itemName = slider.dataset.itemName;
 
-        if (action === "accept-all") {
-          changeAllChefItems(
-            slider,
-            orderId,
-            orderNumber,
-            "Preparación Iniciada",
-            "Preparación iniciada",
-          );
-        } else if (action === "ready-all") {
-          const hasPending = slider.dataset.hasPending === "true";
-          if (hasPending) {
-            const isDarkMode = document.documentElement.classList.contains("dark");
-            const darkBg = "#1f2937";
-            Swal.fire({
-              icon: "warning",
-              title: "Items PENDIENTES serán marcados como LISTOS",
-              html:
-                "Este pedido tiene items en estado <strong>PENDIENTE</strong> que pasarán " +
-                "<strong>directamente a LISTO</strong> sin haber estado en PREPARACIÓN.<br><br>¿Deseas continuar?",
-              showCancelButton: true,
-              confirmButtonText: "Continuar",
-              cancelButtonText: "Revisar",
-              confirmButtonColor: "#f59e0b",
-              cancelButtonColor: "#6b7280",
-              reverseButtons: true,
-              background: isDarkMode ? darkBg : undefined,
-              customClass: getSwalDarkModeClasses(),
-            }).then((res) => {
-              if (res.isConfirmed) {
-                changeAllChefItems(
-                  slider,
-                  orderId,
-                  orderNumber,
-                  "Items Listos",
-                  "Items listos para servir",
-                );
-              } else {
-                resetSlider(slider);
-              }
-            });
-            return;
-          }
-          changeAllChefItems(
-            slider,
-            orderId,
-            orderNumber,
-            "Items Listos",
-            "Items listos para servir",
-          );
-        } else if (action === "accept-item") {
+        if (action === "accept-item") {
           changeItemStatusDirect(
             slider,
             orderId,
@@ -1015,48 +878,6 @@
             "Listo para servir",
           );
         }
-      }
-
-      // Direct API call for ALL chef items (no double confirmation)
-      function changeAllChefItems(
-        slider,
-        orderId,
-        orderNumber,
-        successTitle,
-        successText,
-      ) {
-        // Route to the correct backend endpoint based on the current role.
-        // Chef and parrillero share this template; each role has its own dedicated endpoint
-        // (the backend rejects cross-role calls with a "solo está disponible para el rol de X" error).
-        const endpoint = currentRole === "parrillero"
-          ? "change-all-parrillero-items"
-          : "change-all-chef-items";
-        fetch(`/${currentRole}/orders/${orderId}/${endpoint}`, {
-          method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        })
-          .then((response) => response.json())
-          .then((data) => {
-            if (data.success) {
-              showNotification(
-                successTitle,
-                `${successText}: #${orderNumber}`,
-                "success",
-              );
-              setTimeout(() => window.location.reload(), 1000);
-            } else {
-              showNotification(
-                "Error",
-                data.message || "No se pudo cambiar el estado",
-                "error",
-              );
-              resetSlider(slider);
-            }
-          })
-          .catch((error) => {
-            showNotification("Error", "Error al cambiar el estado", "error");
-            resetSlider(slider);
-          });
       }
 
       // Direct API call for individual item status (no double confirmation)
