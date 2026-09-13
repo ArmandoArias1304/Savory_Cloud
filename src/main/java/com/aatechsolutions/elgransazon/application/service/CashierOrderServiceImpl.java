@@ -1,6 +1,7 @@
 package com.aatechsolutions.elgransazon.application.service;
 
 import com.aatechsolutions.elgransazon.domain.entity.*;
+import com.aatechsolutions.elgransazon.util.DeliveryStatusSupport;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
@@ -46,6 +47,9 @@ public class CashierOrderServiceImpl implements OrderService {
      * Cashier can:
      * - Change READY -> DELIVERED (mark order as delivered)
      * - Change DELIVERED -> PAID (collect payment)
+     * - Advance a DELIVERY order through the repartidor flow:
+     *   READY -> ON_THE_WAY -> DELIVERED (only when the staff permission is enabled;
+     *   the controller enforces the permission/role check before calling here)
      */
     private void validateStatusChangeForCashier(Order order, OrderStatus newStatus) {
         // Cashier can change READY -> DELIVERED
@@ -57,9 +61,15 @@ public class CashierOrderServiceImpl implements OrderService {
         if (order.getStatus() == OrderStatus.DELIVERED && newStatus == OrderStatus.PAID) {
             return; // Valid
         }
+
+        // Cashier can advance a delivery order one step (READY -> ON_THE_WAY, ON_THE_WAY -> DELIVERED)
+        if (DeliveryStatusSupport.nextDeliveryStatus(order) == newStatus) {
+            return; // Valid
+        }
         
         throw new IllegalStateException(
-            "El cajero solo puede marcar pedidos LISTOS como ENTREGADOS o pedidos ENTREGADOS como PAGADOS"
+            "El cajero solo puede marcar pedidos LISTOS como ENTREGADOS, ENTREGADOS como PAGADOS " +
+            "o avanzar un pedido de reparto LISTO -> EN CAMINO -> ENTREGADO (con el permiso habilitado)"
         );
     }
 

@@ -236,7 +236,8 @@ public class TicketPdfService {
                     .setBorder(Border.NO_BORDER)
                     .setPadding(1);
             
-            // Price cell shows original price (unitPrice × quantity)
+            // Price cell shows original price (unitPrice × quantity). Courtesy lines keep
+            // the $0.00 and add a "Cortesía" note below it.
             Cell priceCell = new Cell()
                     .add(new Paragraph("$" + precioOriginalConIVA.toString())
                             .setFont(normalFont)
@@ -244,6 +245,13 @@ public class TicketPdfService {
                             .setTextAlignment(TextAlignment.RIGHT))
                     .setBorder(Border.NO_BORDER)
                     .setPadding(1);
+            if (detail.isCourtesy()) {
+                priceCell.add(new Paragraph("Cortesía")
+                        .setFont(normalFont)
+                        .setFontSize(6)
+                        .setFontColor(new DeviceRgb(190, 24, 93))
+                        .setTextAlignment(TextAlignment.RIGHT));
+            }
             
             itemsTable.addCell(nameCell);
             itemsTable.addCell(qtyCell);
@@ -426,7 +434,10 @@ public class TicketPdfService {
 
         // Nota informativa: descuento aplicado al total de la orden (incluye IVA)
         if (order.hasOrderDiscount()) {
-            Paragraph orderDiscountNote = new Paragraph("Descuento aplicado de " + order.getFormattedOrderDiscount())
+            Paragraph orderDiscountNote = new Paragraph("Descuento aplicado de " + order.getFormattedOrderDiscount()
+                    + (order.hasOrderDiscountPercent()
+                            ? " (" + order.getFormattedOrderDiscountPercent() + "%)"
+                            : ""))
                     .setFont(normalFont)
                     .setFontSize(7)
                     .setTextAlignment(TextAlignment.CENTER)
@@ -582,6 +593,451 @@ public class TicketPdfService {
 
         log.info("PDF ticket generated successfully for order: {}", order.getOrderNumber());
         return baos.toByteArray();
+    }
+
+    /**
+     * Generate PDF ticket for ONE account (Payment) of a split bill.
+     * Each account prints its own ticket with its own folio, lines, totals and
+     * autofactura QR (own key).
+     *
+     * @param payment Payment (per-person account) to generate ticket for
+     * @return byte array containing the PDF
+     */
+    public byte[] generateTicket(Payment payment) throws IOException {
+        Order order = payment.getOrder();
+        log.info("Generating PDF ticket for payment: {}", payment.getPaymentFolio());
+
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+
+        PdfWriter writer = new PdfWriter(baos);
+        PdfDocument pdfDoc = new PdfDocument(writer);
+
+        float estimatedHeight = calculateEstimatedHeight(payment);
+        PageSize pageSize = new PageSize(TICKET_WIDTH, estimatedHeight);
+        pdfDoc.setDefaultPageSize(pageSize);
+
+        Document document = new Document(pdfDoc);
+        document.setMargins(MARGIN, MARGIN, MARGIN, MARGIN);
+
+        SystemConfiguration config = systemConfigurationService.getConfiguration();
+
+        PdfFont boldFont = PdfFontFactory.createFont(StandardFonts.HELVETICA_BOLD);
+        PdfFont normalFont = PdfFontFactory.createFont(StandardFonts.HELVETICA);
+
+        // Add logo from company's restaurantLogoUrl (centered)
+        try {
+            String logoUrl = config.getRestaurantLogoUrl();
+            if (logoUrl != null && !logoUrl.isBlank()) {
+                String pdfLogoUrl = cloudflareImagesUrlHelper.transform(logoUrl, "w=200,h=200,fit=contain,format=png,quality=85");
+                Image logo = new Image(ImageDataFactory.create(new java.net.URL(pdfLogoUrl)));
+                logo.setWidth(60);
+                logo.setHorizontalAlignment(com.itextpdf.layout.properties.HorizontalAlignment.CENTER);
+                document.add(logo);
+            }
+        } catch (Exception e) {
+            log.warn("Could not load logo image: {}", e.getMessage());
+        }
+
+        // Restaurant name (centered, bold)
+        Paragraph restaurantName = new Paragraph(config.getRestaurantName())
+                .setFont(boldFont)
+                .setFontSize(14)
+                .setTextAlignment(TextAlignment.CENTER)
+                .setMarginTop(5);
+        document.add(restaurantName);
+
+        // Address (centered)
+        Paragraph address = new Paragraph(config.getAddress())
+                .setFont(normalFont)
+                .setFontSize(8)
+                .setTextAlignment(TextAlignment.CENTER)
+                .setMarginTop(2);
+        document.add(address);
+
+        // RFC (centered, below address)
+        if (config.getRfc() != null && !config.getRfc().isBlank()) {
+            Paragraph rfc = new Paragraph("RFC: " + config.getRfc())
+                    .setFont(normalFont)
+                    .setFontSize(8)
+                    .setTextAlignment(TextAlignment.CENTER)
+                    .setMarginTop(2);
+            document.add(rfc);
+        }
+
+        // Phone (centered)
+        Paragraph phone = new Paragraph("Tel: " + config.getPhone())
+                .setFont(normalFont)
+                .setFontSize(8)
+                .setTextAlignment(TextAlignment.CENTER)
+                .setMarginTop(2);
+        document.add(phone);
+
+        // Separator
+        document.add(new Paragraph("━━━━━━━━━━━━━━━━━━━━━━━━━━")
+                .setTextAlignment(TextAlignment.CENTER)
+                .setMarginTop(5)
+                .setMarginBottom(3));
+
+        // Parent order number (centered, bold)
+        Paragraph orderNum = new Paragraph("ORDEN: " + order.getOrderNumber())
+                .setFont(boldFont)
+                .setFontSize(10)
+                .setTextAlignment(TextAlignment.CENTER)
+                .setMarginTop(3);
+        document.add(orderNum);
+
+        // Account folio (centered, bold, double emphasis) — e.g. ORD-20260906-001-02
+        Paragraph accountNum = new Paragraph("CUENTA: " + payment.getPaymentFolio())
+                .setFont(boldFont)
+                .setFontSize(11)
+                .setTextAlignment(TextAlignment.CENTER)
+                .setMarginTop(2);
+        document.add(accountNum);
+
+        // Person label (centered)
+        if (payment.getPersonLabel() != null && !payment.getPersonLabel().isBlank()) {
+            Paragraph person = new Paragraph(payment.getPersonLabel())
+                    .setFont(normalFont)
+                    .setFontSize(8)
+                    .setTextAlignment(TextAlignment.CENTER)
+                    .setMarginTop(2);
+            document.add(person);
+        }
+
+        // Separator + Items header
+        document.add(new Paragraph("━━━━━━━━━━━━━━━━━━━━━━━━━━")
+                .setTextAlignment(TextAlignment.CENTER)
+                .setMarginTop(5)
+                .setMarginBottom(3));
+        Paragraph itemsHeader = new Paragraph("DETALLE DE LA CUENTA")
+                .setFont(boldFont)
+                .setFontSize(9)
+                .setTextAlignment(TextAlignment.CENTER)
+                .setMarginBottom(5);
+        document.add(itemsHeader);
+
+        // Items table: Producto | Cant | Total (3 columns)
+        Table itemsTable = new Table(new float[]{3, 1, 2});
+        itemsTable.setWidth(UnitValue.createPercentValue(100));
+        itemsTable.setBorder(Border.NO_BORDER);
+
+        itemsTable.addCell(new Cell()
+                .add(new Paragraph("Producto").setFont(boldFont).setFontSize(7))
+                .setBorder(Border.NO_BORDER).setPadding(1));
+        itemsTable.addCell(new Cell()
+                .add(new Paragraph("Cant").setFont(boldFont).setFontSize(7).setTextAlignment(TextAlignment.CENTER))
+                .setBorder(Border.NO_BORDER).setPadding(1));
+        itemsTable.addCell(new Cell()
+                .add(new Paragraph("Total").setFont(boldFont).setFontSize(7).setTextAlignment(TextAlignment.RIGHT))
+                .setBorder(Border.NO_BORDER).setPadding(1));
+
+        for (PaymentDetail pd : payment.getPaymentDetails()) {
+            String itemName = pd.getItemName() != null ? pd.getItemName() : "Producto";
+            if (pd.isComboParent()) {
+                itemName = "[COMBO] " + itemName;
+            }
+            String qtyText = formatQuantity(pd.getQuantity());
+            BigDecimal lineTotal = pd.getTotal() != null ? pd.getTotal() : BigDecimal.ZERO;
+
+            Cell nameCell = new Cell()
+                    .add(new Paragraph(itemName)
+                            .setFont(normalFont)
+                            .setFontSize(7))
+                    .setBorder(Border.NO_BORDER)
+                    .setPadding(1);
+            Cell qtyCell = new Cell()
+                    .add(new Paragraph(qtyText)
+                            .setFont(normalFont)
+                            .setFontSize(7)
+                            .setTextAlignment(TextAlignment.CENTER))
+                    .setBorder(Border.NO_BORDER)
+                    .setPadding(1);
+            Cell totalCell = new Cell()
+                    .add(new Paragraph("$" + lineTotal.setScale(2, RoundingMode.HALF_UP).toPlainString())
+                            .setFont(normalFont)
+                            .setFontSize(7)
+                            .setTextAlignment(TextAlignment.RIGHT))
+                    .setBorder(Border.NO_BORDER)
+                    .setPadding(1);
+            // Courtesy line: keep the $0.00 and label it as "Cortesía"
+            if (pd.isCourtesy()) {
+                totalCell.add(new Paragraph("Cortesía")
+                        .setFont(normalFont)
+                        .setFontSize(6)
+                        .setFontColor(new DeviceRgb(190, 24, 93))
+                        .setTextAlignment(TextAlignment.RIGHT));
+            }
+            itemsTable.addCell(nameCell);
+            itemsTable.addCell(qtyCell);
+            itemsTable.addCell(totalCell);
+
+            // Comments snapshot
+            if (pd.getComments() != null && !pd.getComments().isBlank()) {
+                Cell commentCell = new Cell(1, 3)
+                        .add(new Paragraph("  → " + pd.getComments())
+                                .setFont(normalFont)
+                                .setFontSize(6)
+                                .setFontColor(ColorConstants.DARK_GRAY))
+                        .setBorder(Border.NO_BORDER)
+                        .setPadding(0)
+                        .setPaddingLeft(5);
+                itemsTable.addCell(commentCell);
+            }
+
+            // Complements summary
+            if (pd.getComplementDetails() != null && !pd.getComplementDetails().isBlank()) {
+                Cell compCell = new Cell(1, 3)
+                        .add(new Paragraph("  + " + pd.getComplementDetails())
+                                .setFont(normalFont)
+                                .setFontSize(6)
+                                .setFontColor(ColorConstants.DARK_GRAY))
+                        .setBorder(Border.NO_BORDER)
+                        .setPadding(1)
+                        .setPaddingLeft(5);
+                itemsTable.addCell(compCell);
+            }
+        }
+
+        document.add(itemsTable);
+
+        // Totals separator
+        document.add(new Paragraph("━━━━━━━━━━━━━━━━━━━━━━━━━━")
+                .setTextAlignment(TextAlignment.CENTER)
+                .setMarginTop(3)
+                .setMarginBottom(3));
+
+        BigDecimal taxAmount = payment.getTaxAmount();
+        BigDecimal total = payment.getTotal();
+
+        Table totalsTable = new Table(new float[]{3, 2});
+        totalsTable.setWidth(UnitValue.createPercentValue(100));
+        totalsTable.setBorder(Border.NO_BORDER);
+
+        // Subtotal sin IVA, ANTES del descuento de orden
+        addTotalRow(totalsTable, "Subtotal:", "$" + payment.getDisplaySubtotal().setScale(2, RoundingMode.HALF_UP).toPlainString(), normalFont, boldFont, false);
+
+        if (payment.hasOrderDiscount()) {
+            addTotalRow(totalsTable, "Descuento de orden:", "-$" + payment.getOrderDiscountWithoutTax().setScale(2, RoundingMode.HALF_UP).toPlainString(), normalFont, boldFont, false);
+        }
+
+        addTotalRow(totalsTable, "IVA (" + payment.getTaxRate() + "%):", "$" + (taxAmount != null ? taxAmount.toPlainString() : "0.00"), normalFont, boldFont, false);
+
+        // TOTAL (bold) - sin propina
+        addTotalRow(totalsTable, "TOTAL:", "$" + (total != null ? total.setScale(2, RoundingMode.HALF_UP).toPlainString() : "0.00"), boldFont, boldFont, true);
+
+        document.add(totalsTable);
+
+        // Total in words (Mexican format)
+        Paragraph totalEnLetraParagraph = new Paragraph(totalEnLetra(total != null ? total : BigDecimal.ZERO))
+                .setFont(normalFont)
+                .setFontSize(7)
+                .setTextAlignment(TextAlignment.CENTER)
+                .setMarginTop(2)
+                .setMarginBottom(3);
+        document.add(totalEnLetraParagraph);
+
+        // Nota informativa: envío (DELIVERY only)
+        if (order.getOrderType() == OrderType.DELIVERY
+                && payment.getDeliveryCost() != null
+                && payment.getDeliveryCost().compareTo(BigDecimal.ZERO) > 0) {
+            Paragraph envioNote = new Paragraph("Incluye costo de envío de $" + payment.getDeliveryCost().setScale(2, RoundingMode.HALF_UP).toPlainString())
+                    .setFont(normalFont)
+                    .setFontSize(7)
+                    .setTextAlignment(TextAlignment.CENTER)
+                    .setMarginTop(2);
+            document.add(envioNote);
+        }
+
+        // Nota informativa: descuento aplicado al total (incluye IVA)
+        if (payment.hasOrderDiscount()) {
+            Paragraph orderDiscountNote = new Paragraph("Descuento aplicado de $" + payment.getOrderDiscount().setScale(2, RoundingMode.HALF_UP).toPlainString()
+                    + (payment.hasOrderDiscountPercent()
+                            ? " (" + payment.getFormattedOrderDiscountPercent() + "%)"
+                            : ""))
+                    .setFont(normalFont)
+                    .setFontSize(7)
+                    .setTextAlignment(TextAlignment.CENTER)
+                    .setMarginTop(2);
+            document.add(orderDiscountNote);
+        }
+
+        // Order type and payment method in one line
+        Paragraph orderInfoParagraph = new Paragraph()
+                .add(new Text("Tipo: ").setFont(boldFont))
+                .add(new Text(order.getOrderType().getDisplayName()).setFont(normalFont))
+                .add(new Text(" | ").setFont(normalFont))
+                .add(new Text("Pago: ").setFont(boldFont))
+                .add(new Text(payment.getPaymentMethod() != null ? payment.getPaymentMethod().getDisplayName() : "N/A").setFont(normalFont))
+                .setFontSize(8)
+                .setTextAlignment(TextAlignment.CENTER)
+                .setMarginTop(5);
+        document.add(orderInfoParagraph);
+
+        // Customer name (if available)
+        if (order.getCustomerName() != null && !order.getCustomerName().trim().isEmpty()) {
+            Paragraph customer = new Paragraph()
+                    .add(new Text("Cliente: ").setFont(boldFont))
+                    .add(new Text(order.getCustomerName()).setFont(normalFont))
+                    .setFontSize(8)
+                    .setTextAlignment(TextAlignment.CENTER);
+            document.add(customer);
+        }
+
+        // Served by
+        String servedBy = order.getEmployee() != null ? order.getEmployee().getFullName() : config.getRestaurantName();
+        Paragraph employee = new Paragraph()
+                .add(new Text("Atendido por: ").setFont(boldFont))
+                .add(new Text(servedBy).setFont(normalFont))
+                .setFontSize(8)
+                .setTextAlignment(TextAlignment.CENTER)
+                .setMarginBottom(5);
+        document.add(employee);
+
+        // Date and time separator
+        document.add(new Paragraph("━━━━━━━━━━━━━━━━━━━━━━━━━━")
+                .setTextAlignment(TextAlignment.CENTER)
+                .setMarginTop(5)
+                .setMarginBottom(3));
+
+        // Date and time
+        Paragraph dateTime;
+        if (payment.getPaidAt() != null) {
+            dateTime = new Paragraph("Pagado: " + dateTimeService.formatToCompanyTime(payment.getPaidAt(), "dd/MM/yyyy HH:mm"));
+        } else {
+            dateTime = new Paragraph("Creada: " + dateTimeService.formatToCompanyTime(payment.getCreatedAt(), "dd/MM/yyyy HH:mm"));
+        }
+        dateTime.setFont(normalFont)
+                .setFontSize(8)
+                .setTextAlignment(TextAlignment.CENTER)
+                .setMarginBottom(5);
+        document.add(dateTime);
+
+        // Final separator
+        document.add(new Paragraph("━━━━━━━━━━━━━━━━━━━━━━━━━━")
+                .setTextAlignment(TextAlignment.CENTER)
+                .setMarginTop(5)
+                .setMarginBottom(5));
+
+        // Thank you message
+        Paragraph thankYou = new Paragraph("¡Gracias por su preferencia!")
+                .setFont(boldFont)
+                .setFontSize(10)
+                .setTextAlignment(TextAlignment.CENTER)
+                .setMarginTop(5);
+        document.add(thankYou);
+
+        Paragraph visitAgain = new Paragraph("Esperamos volver a atenderle pronto")
+                .setFont(normalFont)
+                .setFontSize(8)
+                .setTextAlignment(TextAlignment.CENTER)
+                .setMarginTop(2)
+                .setMarginBottom(5);
+        document.add(visitAgain);
+
+        // Fiscal disclaimer / Autofactura billing info
+        boolean canInvoice = payment.getTotal() != null && payment.getTotal().compareTo(BigDecimal.ZERO) > 0;
+        if (canInvoice && payment.getAutofacturaKey() != null && !payment.getAutofacturaKey().isBlank()) {
+            document.add(new Paragraph("━━━━━━━━━━━━━━━━━━━━━━━━━━")
+                    .setTextAlignment(TextAlignment.CENTER)
+                    .setMarginTop(3)
+                    .setMarginBottom(3));
+
+            Paragraph billingHint = new Paragraph("Facture esta cuenta escaneando el código QR:")
+                    .setFont(normalFont)
+                    .setFontSize(7)
+                    .setTextAlignment(TextAlignment.CENTER)
+                    .setMarginTop(2);
+            document.add(billingHint);
+
+            if (payment.getSelfInvoiceUrl() != null) {
+                try {
+                    byte[] qrBytes = generateQrCodePng(payment.getSelfInvoiceUrl(), 150);
+                    Image qrImage = new Image(ImageDataFactory.create(qrBytes));
+                    qrImage.setWidth(80);
+                    qrImage.setHeight(80);
+                    qrImage.setHorizontalAlignment(com.itextpdf.layout.properties.HorizontalAlignment.CENTER);
+                    qrImage.setMarginTop(3);
+                    qrImage.setMarginBottom(3);
+                    document.add(qrImage);
+                } catch (Exception e) {
+                    log.warn("Could not generate QR code for autofactura: {}", e.getMessage());
+                }
+            }
+
+            // Invoicing deadline legend (last day of payment month, in company timezone)
+            java.time.LocalDate deadline = payment.getInvoiceDeadline(
+                    com.aatechsolutions.elgransazon.infrastructure.util.CompanyLocalTime.getZone());
+            if (deadline != null) {
+                String deadlineText = deadline.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+                Paragraph deadlineLegend = new Paragraph("Facture antes del " + deadlineText)
+                        .setFont(boldFont)
+                        .setFontSize(7)
+                        .setTextAlignment(TextAlignment.CENTER)
+                        .setMarginTop(2)
+                        .setMarginBottom(2);
+                document.add(deadlineLegend);
+            }
+
+            document.add(new Paragraph("━━━━━━━━━━━━━━━━━━━━━━━━━━")
+                    .setTextAlignment(TextAlignment.CENTER)
+                    .setMarginTop(3)
+                    .setMarginBottom(3));
+        } else {
+            Paragraph fiscalDisclaimer = new Paragraph("Este no es un comprobante fiscal")
+                    .setFont(normalFont)
+                    .setFontSize(7)
+                    .setTextAlignment(TextAlignment.CENTER)
+                    .setMarginBottom(3);
+            document.add(fiscalDisclaimer);
+        }
+
+        // System branding footer (GLOBAL - not per-company)
+        String systemName = globalSystemConfigService.getConfiguration().getSystemName();
+        Paragraph systemBranding = new Paragraph("by " + systemName)
+                .setFont(normalFont)
+                .setFontSize(6)
+                .setTextAlignment(TextAlignment.CENTER)
+                .setFontColor(ColorConstants.GRAY)
+                .setMarginBottom(10);
+        document.add(systemBranding);
+
+        document.close();
+
+        log.info("PDF ticket generated successfully for payment: {}", payment.getPaymentFolio());
+        return baos.toByteArray();
+    }
+
+    /**
+     * Format a (possibly fractional) quantity for display: 1 → "1", 0.5 → "0.5".
+     */
+    private String formatQuantity(BigDecimal qty) {
+        if (qty == null) {
+            return "1";
+        }
+        return qty.stripTrailingZeros().toPlainString();
+    }
+
+    /**
+     * Estimate page height for an account (Payment) ticket.
+     */
+    private float calculateEstimatedHeight(Payment payment) {
+        float baseHeight = 470f; // header + account folio + totals + footer
+        float itemHeight = 15f;
+        float commentHeight = 10f;
+        float complementHeight = 10f;
+
+        if (payment.getPaymentDetails() != null) {
+            for (PaymentDetail pd : payment.getPaymentDetails()) {
+                baseHeight += itemHeight;
+                if (pd.getComments() != null && !pd.getComments().isBlank()) {
+                    baseHeight += commentHeight;
+                }
+                if (pd.getComplementDetails() != null && !pd.getComplementDetails().isBlank()) {
+                    baseHeight += complementHeight;
+                }
+            }
+        }
+        return baseHeight;
     }
 
     /**

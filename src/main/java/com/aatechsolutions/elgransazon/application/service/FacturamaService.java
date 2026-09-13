@@ -231,7 +231,7 @@ public class FacturamaService {
                         && lineSubtotal != null
                         && lineSubtotal.compareTo(BigDecimal.ZERO) > 0) {
                     candidateLines.add(new CfdiLine(detail.getDisplayName(),
-                            detail.getQuantity(), lineSubtotal, PROD_CODE_RESTAURANT));
+                            BigDecimal.valueOf(detail.getQuantity()), lineSubtotal, PROD_CODE_RESTAURANT));
                 }
 
                 // Always check complements — even zero-price items can have paid complements
@@ -246,7 +246,7 @@ public class FacturamaService {
                         int effectiveQty = comp.getQuantity();
                         BigDecimal compLineTotal = comp.getSubtotal();
                         candidateLines.add(new CfdiLine("Complemento - " + comp.getComplementName(),
-                                effectiveQty, compLineTotal, PROD_CODE_RESTAURANT));
+                                BigDecimal.valueOf(effectiveQty), compLineTotal, PROD_CODE_RESTAURANT));
                     }
                 }
             }
@@ -256,54 +256,22 @@ public class FacturamaService {
             if (order.getOrderType() == OrderType.DELIVERY
                     && order.getDeliveryCost() != null
                     && order.getDeliveryCost().compareTo(BigDecimal.ZERO) > 0) {
-                candidateLines.add(new CfdiLine("Costo de envío a domicilio", 1,
+                candidateLines.add(new CfdiLine("Costo de envío a domicilio", BigDecimal.ONE,
                         order.getDeliveryCost(), PROD_CODE_DELIVERY));
             }
 
-            // Pro-rata distribution of orderDiscount across line totals (con IVA).
+            // A ticket made only of cortesías ($0.00 lines, which are skipped above) has no
+            // fiscal value to bill: fail with a clear message instead of an empty concept list.
+            if (candidateLines.isEmpty()) {
+                throw new IllegalStateException(
+                        "No hay conceptos con valor para facturar: el pedido quedó en $0.00 (solo cortesías).");
+            }
+
+            // Pro-rata distribution of orderDiscount across line totals (con IVA) + emission.
             // After distribution, Σ adjustedLineTotal == order.getTotal() exactly
-            // (the last line absorbs any rounding residual). When no discount,
-            // adjustedLineTotal[i] == lineTotalConIva[i].
-            BigDecimal[] adjustedLineTotal = new BigDecimal[candidateLines.size()];
-            BigDecimal sumLineTotalConIva = candidateLines.stream()
-                    .map(l -> l.lineTotalConIva)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add)
-                    .setScale(2, RoundingMode.HALF_UP);
-
-            if (order.hasOrderDiscount() && sumLineTotalConIva.compareTo(BigDecimal.ZERO) > 0) {
-                BigDecimal orderDiscountConIva = order.getOrderDiscount().setScale(2, RoundingMode.HALF_UP);
-                BigDecimal expectedTotalConIva = sumLineTotalConIva.subtract(orderDiscountConIva);
-                BigDecimal accumulated = BigDecimal.ZERO;
-                for (int i = 0; i < candidateLines.size(); i++) {
-                    if (i == candidateLines.size() - 1) {
-                        // Last line absorbs the residual so Σ matches expectedTotalConIva exactly
-                        adjustedLineTotal[i] = expectedTotalConIva.subtract(accumulated)
-                                .setScale(2, RoundingMode.HALF_UP);
-                    } else {
-                        BigDecimal share = candidateLines.get(i).lineTotalConIva
-                                .multiply(expectedTotalConIva)
-                                .divide(sumLineTotalConIva, 10, RoundingMode.HALF_UP)
-                                .setScale(2, RoundingMode.HALF_UP);
-                        adjustedLineTotal[i] = share;
-                        accumulated = accumulated.add(share);
-                    }
-                }
-            } else {
-                for (int i = 0; i < candidateLines.size(); i++) {
-                    adjustedLineTotal[i] = candidateLines.get(i).lineTotalConIva
-                            .setScale(2, RoundingMode.HALF_UP);
-                }
-            }
-
-            // Emit CFDI items and accumulate Comprobante-level discount (sin IVA).
+            // (the last line absorbs any rounding residual).
             ArrayNode items = objectMapper.createArrayNode();
-            BigDecimal sumConceptDiscount = BigDecimal.ZERO;
-            for (int i = 0; i < candidateLines.size(); i++) {
-                CfdiLine cl = candidateLines.get(i);
-                BigDecimal conceptDiscount = addCfdiItem(items, cl.description, cl.quantity,
-                        cl.lineTotalConIva, adjustedLineTotal[i], cl.productCode);
-                sumConceptDiscount = sumConceptDiscount.add(conceptDiscount);
-            }
+            BigDecimal sumConceptDiscount = emitCfdiLines(items, candidateLines, order.getOrderDiscount());
 
             body.set("Items", items);
 
@@ -475,6 +443,324 @@ public class FacturamaService {
     }
 
     /**
+     * Create a CFDI 4.0 (Ingreso) via Facturama API Multiemisor for ONE account of a
+     * split bill (Payment). Each account invoices independently with its own folio
+     * (parent order number + "-XX"), its own lines, totals and payment form.
+     *
+     * @param payment          The per-person account (Payment)
+     * @param config           The Facturama configuration for the issuing company
+     * @param receiverRfc      Client's RFC
+     * @param receiverName     Client's legal name (razón social)
+     * @param receiverRegime   Client's fiscal regime code
+     * @param receiverCfdiUse  Client's CFDI use code (e.g. "G03")
+     * @param receiverZipCode  Client's fiscal zip code
+     * @return Map with cfdi_id and cfdi_uuid
+     */
+    public Map<String, String> createCfdi(Payment payment, FacturamaConfig config,
+                                          String receiverRfc, String receiverName,
+                                          String receiverRegime, String receiverCfdiUse,
+                                          String receiverZipCode) {
+        validateCredentials();
+
+        if (!config.isReady()) {
+            throw new IllegalStateException("Facturama no está configurado para esta empresa");
+        }
+
+        log.info("Creating CFDI 4.0 for payment: {} (receiver RFC: {})", payment.getPaymentFolio(), receiverRfc);
+
+        try {
+            ObjectNode body = objectMapper.createObjectNode();
+            body.put("CfdiType", "I"); // Ingreso
+            body.put("PaymentForm", mapPaymentForm(payment.getPaymentMethod()));
+            body.put("PaymentMethod", "PUE"); // Pago en Una sola Exhibición
+            body.put("Currency", "MXN");
+            body.put("ExpeditionPlace", config.getExpeditionPlace());
+
+            // Folio: account folio (parent order number + suffix, e.g. "ORD-20260906-001-02")
+            body.put("Folio", payment.getPaymentFolio());
+
+            // Issuer (company data from config)
+            ObjectNode issuer = objectMapper.createObjectNode();
+            issuer.put("Rfc", config.getRfc());
+            issuer.put("Name", config.getLegalName());
+            issuer.put("FiscalRegime", config.getFiscalRegime());
+            body.set("Issuer", issuer);
+
+            // Receiver (client data from autofactura form)
+            ObjectNode receiver = objectMapper.createObjectNode();
+            receiver.put("Rfc", receiverRfc);
+            receiver.put("Name", receiverName);
+            receiver.put("CfdiUse", receiverCfdiUse);
+            receiver.put("FiscalRegime", receiverRegime);
+            receiver.put("TaxZipCode", receiverZipCode);
+            body.set("Receiver", receiver);
+
+            // Items — each PaymentDetail (item + its complement share folded in) becomes
+            // one CFDI line, plus a delivery line when this account absorbed delivery cost.
+            List<CfdiLine> candidateLines = new ArrayList<>();
+            for (PaymentDetail pd : payment.getPaymentDetails()) {
+                BigDecimal lineTotalConIva = pd.getTotal() != null ? pd.getTotal() : BigDecimal.ZERO;
+                if (lineTotalConIva.compareTo(BigDecimal.ZERO) <= 0) {
+                    continue;
+                }
+                String description = pd.getItemName() != null && !pd.getItemName().isBlank()
+                        ? pd.getItemName() : "Producto";
+                if (pd.getComplementDetails() != null && !pd.getComplementDetails().isBlank()) {
+                    description = description + " (" + pd.getComplementDetails() + ")";
+                }
+                candidateLines.add(new CfdiLine(description, pd.getQuantity(), lineTotalConIva, PROD_CODE_RESTAURANT));
+            }
+
+            if (payment.getDeliveryCost() != null && payment.getDeliveryCost().compareTo(BigDecimal.ZERO) > 0) {
+                candidateLines.add(new CfdiLine("Costo de envío a domicilio", BigDecimal.ONE,
+                        payment.getDeliveryCost(), PROD_CODE_DELIVERY));
+            }
+
+            // A ticket made only of cortesías ($0.00 lines, which are skipped above) has no
+            // fiscal value to bill: fail with a clear message instead of an empty concept list.
+            if (candidateLines.isEmpty()) {
+                throw new IllegalStateException(
+                        "No hay conceptos con valor para facturar: la cuenta quedó en $0.00 (solo cortesías).");
+            }
+
+            ArrayNode items = objectMapper.createArrayNode();
+            BigDecimal sumConceptDiscount = emitCfdiLines(items, candidateLines, payment.getOrderDiscount());
+
+            body.set("Items", items);
+
+            // Comprobante.Discount must equal Σ Concepto.Descuento (sin IVA), per CFDI 4.0 spec.
+            if (sumConceptDiscount.compareTo(BigDecimal.ZERO) > 0) {
+                body.put("Discount", sumConceptDiscount.toPlainString());
+            }
+
+            HttpHeaders headers = authHeaders(defaultLiveMode);
+            headers.setContentType(MediaType.APPLICATION_JSON);
+
+            // CFDI 4.0 Multiemisor endpoint
+            ResponseEntity<JsonNode> response = restTemplate.exchange(
+                    getBaseUrl(defaultLiveMode) + "api-lite/3/cfdis",
+                    HttpMethod.POST,
+                    new HttpEntity<>(body.toString(), headers),
+                    JsonNode.class
+            );
+
+            JsonNode respBody = response.getBody();
+            if (respBody == null) {
+                throw new RuntimeException("Facturama devolvió una respuesta vacía al crear el CFDI");
+            }
+
+            String cfdiId = respBody.path("Id").asText();
+            String cfdiUuid = respBody.path("Complement").path("TaxStamp").path("Uuid").asText(null);
+
+            log.info("CFDI created for payment {}: id={}, uuid={}", payment.getPaymentFolio(), cfdiId, cfdiUuid);
+
+            Map<String, String> result = new HashMap<>();
+            result.put("cfdi_id", cfdiId);
+            result.put("cfdi_uuid", cfdiUuid != null ? cfdiUuid : "");
+            return result;
+
+        } catch (Exception e) {
+            log.error("Error creating CFDI for payment {}: {}", payment.getPaymentFolio(), e.getMessage());
+            throw new RuntimeException("Error al crear el CFDI: " + parseFacturamaError(e), e);
+        }
+    }
+
+    // ========== CFDI Global (Público en General) ==========
+
+    /**
+     * One operation to be included in the global invoice: a paid ticket (normal order)
+     * or a paid split account (Payment). Each becomes ONE CFDI concept with its own
+     * folio, per regla 2.7.1.21 de la RMF (the folio of each operation must be stated).
+     *
+     * @param description CFDI concept description (includes the ticket folio)
+     * @param totalConIva Total of the operation incl. IVA (exactly the ticket amount)
+     * @param paymentMethod Payment method used to settle the operation
+     */
+    public record GlobalCfdiTicket(String description, BigDecimal totalConIva, PaymentMethodType paymentMethod) {
+    }
+
+    /**
+     * Create a CFDI 4.0 GLOBAL invoice (operaciones con el público en general) via the
+     * Facturama API Multiemisor. Emitted by the ADMIN for a period (one day or one full
+     * month) covering every paid ticket that was NOT individually invoiced.
+     *
+     * SAT/Facturama requirements (regla 2.7.1.21 RMF + Facturama guía CFDI global 4.0):
+     * - Receiver: RFC XAXX010101000, "PUBLICO EN GENERAL", régimen 616, uso CFDI S01,
+     *   C.P. fiscal = mismo de expedición.
+     * - PaymentForm: forma de pago de MAYOR monto entre las operaciones incluidas.
+     * - PaymentMethod: "PUE".
+     * - InformacionGlobal: Periodicidad (01 diario / 04 mensual), Mes(es) y Año.
+     * - One concept per operation, IVA 16% desglosado, sin descuentos a nivel comprobante.
+     *
+     * @param config      The Facturama configuration for the issuing company
+     * @param tickets     The paid operations to amparar (never empty)
+     * @param periodicity "01" (daily) or "04" (monthly)
+     * @param month       1-12, month the operations belong to
+     * @param year        Year the operations belong to
+     * @param folio       Internal control folio (e.g. GLOBAL-20260906)
+     * @return Map with cfdi_id and cfdi_uuid
+     */
+    public Map<String, String> createGlobalCfdi(FacturamaConfig config, List<GlobalCfdiTicket> tickets,
+                                                String periodicity, int month, int year, String folio) {
+        validateCredentials();
+
+        if (!config.isReady()) {
+            throw new IllegalStateException("Facturama no está configurado para esta empresa");
+        }
+        if (tickets == null || tickets.isEmpty()) {
+            throw new IllegalArgumentException("No hay operaciones pendientes para la factura global");
+        }
+
+        log.info("Creating global CFDI (público en general): {} tickets, folio: {}", tickets.size(), folio);
+
+        try {
+            ObjectNode body = objectMapper.createObjectNode();
+            body.put("CfdiType", "I"); // Ingreso
+            body.put("PaymentForm", dominantPaymentForm(tickets));
+            body.put("PaymentMethod", "PUE"); // Pago en Una sola Exhibición
+            body.put("Currency", "MXN");
+            body.put("ExpeditionPlace", config.getExpeditionPlace());
+            body.put("Folio", folio);
+
+            // Información Global (periodo cubierto)
+            ObjectNode globalInformation = objectMapper.createObjectNode();
+            globalInformation.put("Periodicity", periodicity);
+            globalInformation.put("Months", String.format("%02d", month));
+            globalInformation.put("Year", year);
+            body.set("GlobalInformation", globalInformation);
+
+            // Issuer (company data from config)
+            ObjectNode issuer = objectMapper.createObjectNode();
+            issuer.put("Rfc", config.getRfc());
+            issuer.put("Name", config.getLegalName());
+            issuer.put("FiscalRegime", config.getFiscalRegime());
+            body.set("Issuer", issuer);
+
+            // Receiver: público en general (RFC genérico SAT)
+            ObjectNode receiver = objectMapper.createObjectNode();
+            receiver.put("Rfc", "XAXX010101000");
+            receiver.put("Name", "PUBLICO EN GENERAL");
+            receiver.put("CfdiUse", "S01"); // Sin efectos fiscales
+            receiver.put("FiscalRegime", "616"); // Sin obligaciones fiscales
+            receiver.put("TaxZipCode", config.getExpeditionPlace());
+            body.set("Receiver", receiver);
+
+            // Items — one concept per operation, no discount at global level.
+            // addCfdiItem desglosa el IVA 16% (Subtotal = Total / 1.16).
+            ArrayNode items = objectMapper.createArrayNode();
+            for (GlobalCfdiTicket ticket : tickets) {
+                addCfdiItem(items, ticket.description(), BigDecimal.ONE,
+                        ticket.totalConIva(), ticket.totalConIva(), PROD_CODE_RESTAURANT);
+            }
+            body.set("Items", items);
+
+            HttpHeaders headers = authHeaders(defaultLiveMode);
+            headers.setContentType(MediaType.APPLICATION_JSON);
+
+            // CFDI 4.0 Multiemisor endpoint (same as autofactura)
+            ResponseEntity<JsonNode> response = restTemplate.exchange(
+                    getBaseUrl(defaultLiveMode) + "api-lite/3/cfdis",
+                    HttpMethod.POST,
+                    new HttpEntity<>(body.toString(), headers),
+                    JsonNode.class
+            );
+
+            JsonNode respBody = response.getBody();
+            if (respBody == null) {
+                throw new RuntimeException("Facturama devolvió una respuesta vacía al crear el CFDI global");
+            }
+
+            String cfdiId = respBody.path("Id").asText();
+            String cfdiUuid = respBody.path("Complement").path("TaxStamp").path("Uuid").asText(null);
+
+            log.info("Global CFDI created: id={}, uuid={}", cfdiId, cfdiUuid);
+
+            Map<String, String> result = new HashMap<>();
+            result.put("cfdi_id", cfdiId);
+            result.put("cfdi_uuid", cfdiUuid != null ? cfdiUuid : "");
+            return result;
+
+        } catch (Exception e) {
+            log.error("Error creating global CFDI: {}", e.getMessage());
+            throw new RuntimeException("Error al crear el CFDI global: " + parseFacturamaError(e), e);
+        }
+    }
+
+    /**
+     * SAT c_FormaPago for the global invoice: the payment form with the HIGHEST total
+     * amount among the included operations (Facturama requirement). Fallback "99" (por
+     * definir) when no payment method is known.
+     */
+    public String dominantPaymentForm(List<GlobalCfdiTicket> tickets) {
+        Map<PaymentMethodType, BigDecimal> totalsByMethod = new LinkedHashMap<>();
+        for (GlobalCfdiTicket ticket : tickets) {
+            if (ticket.paymentMethod() == null) {
+                continue;
+            }
+            BigDecimal total = ticket.totalConIva() != null ? ticket.totalConIva() : BigDecimal.ZERO;
+            totalsByMethod.merge(ticket.paymentMethod(), total, BigDecimal::add);
+        }
+        PaymentMethodType dominant = null;
+        BigDecimal maxTotal = BigDecimal.ZERO;
+        for (Map.Entry<PaymentMethodType, BigDecimal> entry : totalsByMethod.entrySet()) {
+            if (entry.getValue().compareTo(maxTotal) > 0) {
+                maxTotal = entry.getValue();
+                dominant = entry.getKey();
+            }
+        }
+        return dominant != null ? mapPaymentForm(dominant) : "99";
+    }
+
+    /**
+     * Distribute an order/account-level discount (con IVA) pro-rata across candidate
+     * lines (last line absorbs the residual) and emit the CFDI items.
+     *
+     * @return the sum of per-concept Discounts (sin IVA), for Comprobante.Discount.
+     */
+    private BigDecimal emitCfdiLines(ArrayNode items, List<CfdiLine> candidateLines, BigDecimal discountConIva) {
+        BigDecimal[] adjustedLineTotal = new BigDecimal[candidateLines.size()];
+        BigDecimal sumLineTotalConIva = candidateLines.stream()
+                .map(l -> l.lineTotalConIva)
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                .setScale(2, RoundingMode.HALF_UP);
+
+        BigDecimal effectiveDiscount = discountConIva != null ? discountConIva.setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO;
+        if (effectiveDiscount.compareTo(BigDecimal.ZERO) > 0 && sumLineTotalConIva.compareTo(BigDecimal.ZERO) > 0) {
+            BigDecimal expectedTotalConIva = sumLineTotalConIva.subtract(effectiveDiscount);
+            BigDecimal accumulated = BigDecimal.ZERO;
+            for (int i = 0; i < candidateLines.size(); i++) {
+                if (i == candidateLines.size() - 1) {
+                    // Last line absorbs the residual so Σ matches expectedTotalConIva exactly
+                    adjustedLineTotal[i] = expectedTotalConIva.subtract(accumulated)
+                            .setScale(2, RoundingMode.HALF_UP);
+                } else {
+                    BigDecimal share = candidateLines.get(i).lineTotalConIva
+                            .multiply(expectedTotalConIva)
+                            .divide(sumLineTotalConIva, 10, RoundingMode.HALF_UP)
+                            .setScale(2, RoundingMode.HALF_UP);
+                    adjustedLineTotal[i] = share;
+                    accumulated = accumulated.add(share);
+                }
+            }
+        } else {
+            for (int i = 0; i < candidateLines.size(); i++) {
+                adjustedLineTotal[i] = candidateLines.get(i).lineTotalConIva
+                        .setScale(2, RoundingMode.HALF_UP);
+            }
+        }
+
+        // Emit CFDI items and accumulate Comprobante-level discount (sin IVA).
+        BigDecimal sumConceptDiscount = BigDecimal.ZERO;
+        for (int i = 0; i < candidateLines.size(); i++) {
+            CfdiLine cl = candidateLines.get(i);
+            BigDecimal conceptDiscount = addCfdiItem(items, cl.description, cl.quantity,
+                    cl.lineTotalConIva, adjustedLineTotal[i], cl.productCode);
+            sumConceptDiscount = sumConceptDiscount.add(conceptDiscount);
+        }
+        return sumConceptDiscount;
+    }
+
+    /**
      * Add a CFDI line item with IVA 16% (desglosado) supporting per-line discount.
      *
      * The caller passes:
@@ -495,7 +781,7 @@ public class FacturamaService {
      * @return the per-line Discount (sin IVA) emitted, so the caller can sum it for
      *         Comprobante.Discount (which SAT requires == Σ Concepto.Descuento).
      */
-    private BigDecimal addCfdiItem(ArrayNode items, String description, int quantity,
+    private BigDecimal addCfdiItem(ArrayNode items, String description, BigDecimal quantity,
                                    BigDecimal lineTotalConIva,
                                    BigDecimal lineTotalConIvaAfterDiscount,
                                    String productCode) {
@@ -507,7 +793,7 @@ public class FacturamaService {
 
         // UnitPrice sin IVA: derived from the ORIGINAL (pre-discount) per-unit price,
         // 6 decimals so |UnitPrice × Quantity − Subtotal| ≤ 1¢ for any quantity.
-        BigDecimal unitPriceConIva = totalOriginal.divide(BigDecimal.valueOf(quantity), 6, RoundingMode.HALF_UP);
+        BigDecimal unitPriceConIva = totalOriginal.divide(quantity, 6, RoundingMode.HALF_UP);
         BigDecimal unitPriceSinIva = unitPriceConIva.divide(BigDecimal.valueOf(1.16), 6, RoundingMode.HALF_UP);
 
         // Concepto.Subtotal (Importe) — sin IVA, BEFORE discount
@@ -554,11 +840,11 @@ public class FacturamaService {
      */
     private static final class CfdiLine {
         final String description;
-        final int quantity;
+        final BigDecimal quantity;
         final BigDecimal lineTotalConIva;
         final String productCode;
 
-        CfdiLine(String description, int quantity, BigDecimal lineTotalConIva, String productCode) {
+        CfdiLine(String description, BigDecimal quantity, BigDecimal lineTotalConIva, String productCode) {
             this.description = description;
             this.quantity = quantity;
             this.lineTotalConIva = lineTotalConIva;

@@ -203,6 +203,13 @@ public class PromotionController {
             bindingResult.rejectValue("validDays", "error.promotion", "Debe seleccionar al menos un día de la semana");
         }
 
+        // Optional daily time window: either both hours are provided or neither.
+        // Leaving both empty means the promotion applies all day on the selected days.
+        if ((promotion.getStartTime() == null) != (promotion.getEndTime() == null)) {
+            bindingResult.rejectValue("endTime", "error.promotion",
+                "Indica la hora de inicio y la hora de fin, o deja ambas vacías para que aplique todo el día");
+        }
+
         // Validate items
         if (itemIds == null || itemIds.isEmpty()) {
             bindingResult.rejectValue("items", "error.promotion", "Debe seleccionar al menos un item del menú");
@@ -293,6 +300,13 @@ public class PromotionController {
             promotion.setValidDays(String.join(",", daysOfWeek));
         } else {
             bindingResult.rejectValue("validDays", "error.promotion", "Debe seleccionar al menos un día de la semana");
+        }
+
+        // Optional daily time window: either both hours are provided or neither.
+        // Leaving both empty means the promotion applies all day on the selected days.
+        if ((promotion.getStartTime() == null) != (promotion.getEndTime() == null)) {
+            bindingResult.rejectValue("endTime", "error.promotion",
+                "Indica la hora de inicio y la hora de fin, o deja ambas vacías para que aplique todo el día");
         }
 
         // Validate items

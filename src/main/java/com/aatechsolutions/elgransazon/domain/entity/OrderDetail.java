@@ -146,6 +146,61 @@ public class OrderDetail implements Serializable {
     @Column(name = "added_at")
     private LocalDateTime addedAt;
 
+    // ========== Partial collection (departing guest / pay-as-they-leave) ==========
+
+    /**
+     * Quantity of this line already charged through a departing-guest payment
+     * (a {@link Payment} row created while the order is still open). The line
+     * stays on the order; only the remaining units are charged when the rest of
+     * the party settles. Null for rows that were never partially collected
+     * (treated as zero). Kept whole because per-person charges are whole units.
+     */
+    @Digits(integer = 8, fraction = 4)
+    @Column(name = "paid_quantity", precision = 10, scale = 4)
+    @Builder.Default
+    private BigDecimal paidQuantity = BigDecimal.ZERO;
+
+    /** Paid quantity, never null. */
+    public BigDecimal getPaidQuantityOrZero() {
+        return paidQuantity != null ? paidQuantity : BigDecimal.ZERO;
+    }
+
+    /** Units of this line that have NOT been charged yet. */
+    public BigDecimal getRemainingQuantity() {
+        return BigDecimal.valueOf(quantity != null ? quantity : 0)
+                .subtract(getPaidQuantityOrZero())
+                .max(BigDecimal.ZERO);
+    }
+
+    public boolean hasRemainingQuantity() {
+        return getRemainingQuantity().signum() > 0;
+    }
+
+    /** True when at least one unit of this line was already charged. */
+    public boolean hasPaidUnits() {
+        return getPaidQuantityOrZero().signum() > 0;
+    }
+
+    /**
+     * Whether every unit of this line has already been charged in a partial
+     * (departing-guest) collection.
+     */
+    public boolean isFullyPaid() {
+        return quantity != null && quantity > 0 && getRemainingQuantity().signum() <= 0;
+    }
+
+    /**
+     * Paid quantity formatted without trailing zeros (1, 2, 1.5...).
+     */
+    public String getFormattedPaidQuantity() {
+        return getPaidQuantityOrZero().stripTrailingZeros().toPlainString();
+    }
+
+    /** Mark units as charged (partial collection / final settlement). */
+    public void addPaidQuantity(BigDecimal qty) {
+        this.paidQuantity = getPaidQuantityOrZero().add(qty != null ? qty : BigDecimal.ZERO);
+    }
+
     @Column(name = "prepared_by")
     private String preparedBy;
 
@@ -309,9 +364,21 @@ public class OrderDetail implements Serializable {
     }
 
     /**
-     * Get formatted unit price
+     * Whether this line is a courtesy (cortesía): a $0.00 item given away for free
+     * (e.g. the courtesy coffee). Stock is still deducted for it.
+     */
+    public boolean isCourtesy() {
+        return unitPrice != null && unitPrice.compareTo(BigDecimal.ZERO) == 0;
+    }
+
+    /**
+     * Get formatted unit price. Courtesy lines are labelled instead of showing
+     * "$0.00" in the comanda/order views (the printed ticket still shows both).
      */
     public String getFormattedUnitPrice() {
+        if (isCourtesy()) {
+            return "Cortesía";
+        }
         if (unitPrice == null) {
             return "$0.00";
         }

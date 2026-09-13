@@ -81,8 +81,8 @@
         <div class="text-center mb-6">
           <span class="material-symbols-outlined text-green-500 text-5xl mb-2">task_alt</span>
           <h2 class="text-xl font-bold text-gray-900 dark:text-white">Factura Generada</h2>
-          <p class="text-sm text-gray-500 dark:text-gray-400 mt-1" th:if="${order.facturamaCfdiUuid}">
-            Folio Fiscal: <span class="font-mono text-xs" th:text="${order.facturamaCfdiUuid}"></span>
+          <p class="text-sm text-gray-500 dark:text-gray-400 mt-1" th:if="${payment != null ? payment.facturamaCfdiUuid : order.facturamaCfdiUuid}">
+            Folio Fiscal: <span class="font-mono text-xs" th:text="${payment != null ? payment.facturamaCfdiUuid : order.facturamaCfdiUuid}"></span>
           </p>
         </div>
 
@@ -92,20 +92,24 @@
             <span class="text-sm text-gray-500 dark:text-gray-400">Orden</span>
             <span class="font-semibold text-gray-900 dark:text-white" th:text="${order.orderNumber}"></span>
           </div>
+          <div class="flex justify-between items-center mb-2" th:if="${payment != null}">
+            <span class="text-sm text-gray-500 dark:text-gray-400">Cuenta</span>
+            <span class="font-semibold text-gray-900 dark:text-white" th:text="${payment.paymentFolio}"></span>
+          </div>
           <div class="flex justify-between items-center">
             <span class="text-sm text-gray-500 dark:text-gray-400">Total</span>
-            <span class="font-bold text-lg text-primary" th:text="'$' + ${#numbers.formatDecimal(order.total, 1, 2)}"></span>
+            <span class="font-bold text-lg text-primary" th:text="'$' + ${#numbers.formatDecimal(payment != null ? payment.total : order.total, 1, 2)}"></span>
           </div>
         </div>
 
         <!-- Download buttons -->
         <div class="grid grid-cols-2 gap-4">
-          <a th:href="@{/autofactura/{key}/pdf(key=${order.autofacturaKey})}"
+          <a th:href="@{/autofactura/{key}/pdf(key=${payment != null ? payment.autofacturaKey : order.autofacturaKey})}"
              class="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-red-600 text-white font-semibold hover:bg-red-700 transition-colors">
             <span class="material-symbols-outlined">picture_as_pdf</span>
             Descargar PDF
           </a>
-          <a th:href="@{/autofactura/{key}/xml(key=${order.autofacturaKey})}"
+          <a th:href="@{/autofactura/{key}/xml(key=${payment != null ? payment.autofacturaKey : order.autofacturaKey})}"
              class="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition-colors">
             <span class="material-symbols-outlined">code</span>
             Descargar XML
@@ -113,8 +117,58 @@
         </div>
       </div>
 
+      <!-- INCLUDED IN GLOBAL INVOICE — the operation can no longer be individually invoiced -->
+      <div
+        th:if="${inGlobalInvoice}"
+        class="bg-white dark:bg-gray-900 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 p-6"
+      >
+        <div class="text-center mb-6">
+          <span class="material-symbols-outlined text-amber-500 text-5xl mb-2"
+            >receipt_long</span
+          >
+          <h2 class="text-xl font-bold text-gray-900 dark:text-white">
+            Operación incluida en factura global
+          </h2>
+          <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">
+            Esta operación ya fue facturada globalmente por el restaurante
+            en su factura para el público en general, por lo que no es
+            posible generar una factura individual.
+          </p>
+          <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            Para cualquier aclaración, contacte directamente al restaurante.
+          </p>
+        </div>
+
+        <!-- Order summary -->
+        <div
+          class="p-4 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 mb-6"
+        >
+          <div class="flex justify-between items-center mb-2">
+            <span class="text-sm text-gray-500 dark:text-gray-400">Orden</span>
+            <span
+              class="font-semibold text-gray-900 dark:text-white"
+              th:text="${order.orderNumber}"
+            ></span>
+          </div>
+          <div class="flex justify-between items-center mb-2" th:if="${payment != null}">
+            <span class="text-sm text-gray-500 dark:text-gray-400">Cuenta</span>
+            <span
+              class="font-semibold text-gray-900 dark:text-white"
+              th:text="${payment.paymentFolio}"
+            ></span>
+          </div>
+          <div class="flex justify-between items-center">
+            <span class="text-sm text-gray-500 dark:text-gray-400">Total</span>
+            <span
+              class="font-bold text-lg text-primary"
+              th:text="'$' + ${#numbers.formatDecimal(payment != null ? payment.total : order.total, 1, 2)}"
+            ></span>
+          </div>
+        </div>
+      </div>
+
       <!-- AUTOFACTURA FORM (only if order exists, not yet invoiced, and config is ready) -->
-      <div th:if="${order != null and !alreadyInvoiced}" class="space-y-6">
+      <div th:if="${order != null and !(alreadyInvoiced ?: false) and !(inGlobalInvoice ?: false)}" class="space-y-6">
 
         <!-- Order Summary Card -->
         <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 p-6">
@@ -128,15 +182,38 @@
               <span class="text-sm text-gray-500 dark:text-gray-400">Orden</span>
               <span class="font-semibold text-gray-900 dark:text-white" th:text="${order.orderNumber}"></span>
             </div>
+            <div class="flex justify-between" th:if="${payment != null}">
+              <span class="text-sm text-gray-500 dark:text-gray-400">Cuenta</span>
+              <span class="font-semibold text-gray-900 dark:text-white" th:text="${payment.paymentFolio}"></span>
+            </div>
             <div class="flex justify-between">
               <span class="text-sm text-gray-500 dark:text-gray-400">Fecha</span>
-              <span class="text-gray-900 dark:text-white" th:text="${#tz.format(order.createdAt, 'dd/MM/yyyy HH:mm')}"></span>
+              <span class="text-gray-900 dark:text-white" th:text="${#tz.format(payment != null ? payment.paidAt : order.createdAt, 'dd/MM/yyyy HH:mm')}"></span>
             </div>
           </div>
 
           <!-- Items -->
           <div class="border-t border-gray-200 dark:border-gray-700 pt-3 space-y-1">
-            <th:block th:each="detail : ${order.orderDetails}">
+            <!-- Split-bill account: lines from PaymentDetail (guarded: payment is null for legacy whole-order tickets) -->
+            <th:block th:if="${payment != null}">
+              <th:block th:each="pd : ${payment.paymentDetails}">
+                <div class="flex justify-between text-sm">
+                  <span class="text-gray-700 dark:text-gray-300">
+                    <span th:if="${pd.comboParent}" class="text-primary font-semibold">[COMBO] </span>
+                    <span th:text="${pd.quantity != null ? pd.quantity.stripTrailingZeros().toPlainString() : '1'}"></span>x
+                    <span th:text="${pd.itemName}"></span>
+                  </span>
+                  <span class="font-semibold text-gray-900 dark:text-white"
+                        th:text="'$' + ${#numbers.formatDecimal(pd.total, 1, 2)}"></span>
+                </div>
+                <div th:if="${pd.complementDetails != null and !pd.complementDetails.isBlank()}"
+                     class="flex justify-between text-xs pl-4">
+                  <span class="text-gray-400 dark:text-gray-500">+ <span th:text="${pd.complementDetails}"></span></span>
+                </div>
+              </th:block>
+            </th:block>
+            <!-- Legacy whole-order lines -->
+            <th:block th:unless="${payment != null}" th:each="detail : ${order.orderDetails}">
               <!-- Main item row -->
               <div class="flex justify-between text-sm"
                    th:classappend="${detail.comboChild ? 'pl-4 text-xs' : ''}">
@@ -166,30 +243,33 @@
             </th:block>
           </div>
 
-          <div class="border-t border-gray-200 dark:border-gray-700 mt-3 pt-3">
+          <div class="border-t border-gray-200 dark:border-gray-700 mt-3 pt-3"
+               th:with="invDelivery=${payment != null ? payment.deliveryCost : (order.orderType != null and order.orderType.name() == 'DELIVERY' ? order.deliveryCost : null)},
+                         invDiscount=${payment != null ? payment.orderDiscount : order.orderDiscount},
+                         invTotal=${payment != null ? payment.total : order.total}">
             <!-- Costo de envío con IVA (antes del TOTAL) -->
             <div
-              th:if="${order.orderType != null and order.orderType.name() == 'DELIVERY' and order.deliveryCost != null and order.deliveryCost.compareTo(T(java.math.BigDecimal).ZERO) > 0}"
+              th:if="${invDelivery != null and invDelivery.compareTo(T(java.math.BigDecimal).ZERO) > 0}"
               class="flex justify-between items-center text-sm text-gray-600 dark:text-gray-400 mb-1"
             >
               <span>Costo de envío</span>
-              <span th:text="'$' + ${#numbers.formatDecimal(order.deliveryCost, 1, 2)}">$0.00</span>
+              <span th:text="'$' + ${#numbers.formatDecimal(invDelivery, 1, 2)}">$0.00</span>
             </div>
             <!-- Descuento de orden con IVA (antes del TOTAL, después del envío) -->
             <div
-              th:if="${order.hasOrderDiscount()}"
+              th:if="${invDiscount != null and invDiscount.compareTo(T(java.math.BigDecimal).ZERO) > 0}"
               class="flex justify-between items-center text-sm text-red-600 dark:text-red-400 mb-1"
             >
               <span>Descuento de orden</span>
-              <span th:text="'-' + ${order.formattedOrderDiscount}">-$0.00</span>
+              <span th:text="'-' + ${#numbers.formatDecimal(invDiscount, 1, 2)}">-$0.00</span>
             </div>
             <div class="flex justify-between items-center">
               <span class="font-bold text-gray-900 dark:text-white">Total</span>
-              <span class="font-bold text-xl text-primary" th:text="'$' + ${#numbers.formatDecimal(order.total, 1, 2)}"></span>
+              <span class="font-bold text-xl text-primary" th:text="'$' + ${#numbers.formatDecimal(invTotal, 1, 2)}"></span>
             </div>
-            <!-- Nota informativa de descuento por promoción (después del TOTAL) -->
+            <!-- Nota informativa de descuento por promoción (después del TOTAL, solo órdenes completas) -->
             <div
-              th:if="${order.hasDiscount()}"
+              th:if="${payment == null and order.hasDiscount()}"
               class="flex justify-end items-center gap-1 text-xs text-gray-500 dark:text-gray-400 italic mt-2"
             >
               <span class="material-symbols-outlined text-sm">local_offer</span>
@@ -209,7 +289,7 @@
             Ingrese sus datos fiscales para generar su factura (CFDI 4.0)
           </p>
 
-          <form th:action="@{/autofactura/{key}(key=${order.autofacturaKey})}" method="post" class="space-y-4">
+          <form th:action="@{/autofactura/{key}(key=${payment != null ? payment.autofacturaKey : order.autofacturaKey})}" method="post" class="space-y-4">
             <div>
               <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">RFC *</label>
               <input

@@ -215,13 +215,24 @@
                     th:field="*{price}"
                     required
                     step="0.01"
-                    min="0.01"
+                    min="0"
                     placeholder="0.00"
-                    oninput="if(this.value.includes('.') && this.value.split('.')[1]?.length > 2) this.value = parseFloat(this.value).toFixed(2);"
+                    oninput="onPriceInput(this)"
                     class="w-full pl-8 pr-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
                   />
                 </div>
                 <span class="block mt-1 text-xs text-gray-500 dark:text-gray-400">Debe introducir el precio del producto con IVA incluido.</span>
+                <!-- Aviso de cortesía: precio 0 = gratis pero descuenta inventario -->
+                <p
+                  id="courtesyNote"
+                  class="hidden mt-2 text-xs font-medium text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800 rounded-xl px-3 py-2"
+                >
+                  🎁 Precio $0.00 = <strong>cortesía</strong>: se cobra en $0.00 pero
+                  sí descuenta el inventario de su receta. Se marcará
+                  automáticamente "Solo para consumo en establecimiento" para que
+                  solo se pueda registrar dentro del restaurante (no aparece en
+                  para llevar ni delivery).
+                </p>
               </div>
 
               <!-- Imagen del Platillo -->
@@ -3604,6 +3615,37 @@
         }
       });
 
+      // ========== Cortesía (precio $0.00) ==========
+      // A $0.00 price is a courtesy: it is charged at $0.00 but still deducts the
+      // recipe stock, and it must only be sold inside the restaurant, so
+      // "solo para consumo en establecimiento" becomes mandatory.
+      function isCourtesyPrice() {
+        const priceInput = document.getElementById("price");
+        if (!priceInput || priceInput.value === "") return false;
+        const value = parseFloat(priceInput.value);
+        return !isNaN(value) && value === 0;
+      }
+
+      function syncCourtesyState() {
+        const courtesy = isCourtesyPrice();
+        const note = document.getElementById("courtesyNote");
+        if (note) note.classList.toggle("hidden", !courtesy);
+        const dineInCb = document.getElementById("dineInOnly");
+        if (courtesy && dineInCb && !dineInCb.disabled) {
+          dineInCb.checked = true;
+        }
+      }
+
+      // Called from the price input's oninput
+      window.onPriceInput = function (el) {
+        if (el.value.includes(".") && el.value.split(".")[1]?.length > 2) {
+          el.value = parseFloat(el.value).toFixed(2);
+        }
+        syncCourtesyState();
+      };
+
+      document.addEventListener("DOMContentLoaded", syncCourtesyState);
+
       // ========== Validación antes de enviar ==========
       document.querySelector("form").addEventListener("submit", function (e) {
         // Trim leading/trailing whitespace from text fields before submit
@@ -3612,6 +3654,23 @@
         ).forEach(function (el) {
           el.value = el.value.trim();
         });
+
+        // Cortesía: precio $0.00 exige "solo para consumo en establecimiento"
+        if (isCourtesyPrice()) {
+          const dineInCbCheck = document.getElementById("dineInOnly");
+          if (dineInCbCheck && !dineInCbCheck.checked) {
+            e.preventDefault();
+            Swal.fire({
+              icon: "warning",
+              title: "Artículo de cortesía",
+              html:
+                "Un artículo con precio <strong>$0.00</strong> es una cortesía y solo se puede vender dentro del restaurante." +
+                "<br><br>Marca <strong>¿Solo para consumo en establecimiento?</strong> para continuar.",
+              confirmButtonColor: "#38e07b",
+            });
+            return false;
+          }
+        }
 
         // Re-enable disabled checkboxes before submit so their values are sent
         const dineInOnlyCb = document.getElementById("dineInOnly");

@@ -3,6 +3,7 @@ package com.aatechsolutions.elgransazon.application.service;
 import com.aatechsolutions.elgransazon.domain.entity.*;
 import com.aatechsolutions.elgransazon.domain.repository.EmployeeRepository;
 import com.aatechsolutions.elgransazon.infrastructure.context.CompanyContext;
+import com.aatechsolutions.elgransazon.presentation.dto.CashRegisterSummary;
 import com.itextpdf.io.font.constants.StandardFonts;
 import com.itextpdf.kernel.colors.DeviceRgb;
 import com.itextpdf.kernel.font.PdfFont;
@@ -1063,6 +1064,132 @@ public class ReportPdfService {
 
         document.close();
         return baos.toByteArray();
+    }
+
+    /**
+     * Generate the cash-register (caja) daily report: session info, the day
+     * summary, sales per payment method and every manual movement.
+     */
+    public byte[] generateCashRegisterReport(CashRegisterSession session,
+                                             CashRegisterSummary summary,
+                                             java.util.List<CashRegisterMovement> movements,
+                                             String cashierName,
+                                             String openedAtLabel,
+                                             String closedAtLabel) throws Exception {
+
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        PdfWriter writer = new PdfWriter(baos);
+        PdfDocument pdf = new PdfDocument(writer);
+        Document document = new Document(pdf, PageSize.LETTER);
+        document.setMargins(40, 40, 40, 40);
+
+        PdfFont boldFont = PdfFontFactory.createFont(StandardFonts.HELVETICA_BOLD);
+        PdfFont regularFont = PdfFontFactory.createFont(StandardFonts.HELVETICA);
+
+        addHeader(document, boldFont, regularFont, "CORTE DE CAJA");
+
+        // ----- Session info -----
+        addSectionTitle(document, boldFont, "Información de la caja");
+        Table infoTable = new Table(new float[]{1, 1});
+        infoTable.setWidth(UnitValue.createPercentValue(100));
+        addTableHeader(infoTable, boldFont, "Concepto", "Detalle");
+        addTableRow(infoTable, regularFont, "Cajero", cashierName != null ? cashierName : "-");
+        addTableRow(infoTable, regularFont, "Apertura", openedAtLabel != null ? openedAtLabel : "-");
+        addTableRow(infoTable, regularFont, "Cierre", closedAtLabel != null ? closedAtLabel : "-");
+        addTableRow(infoTable, regularFont, "Estado",
+                session != null && session.isOpen() ? "Abierta" : "Cerrada");
+        document.add(infoTable);
+        document.add(new Paragraph("\n"));
+
+        // ----- Summary -----
+        addSectionTitle(document, boldFont, "Resumen del día");
+        Table summaryTable = new Table(new float[]{1, 1, 1});
+        summaryTable.setWidth(UnitValue.createPercentValue(100));
+        addSummaryCell(summaryTable, boldFont, regularFont, "Fondo inicial", cashRegisterMoney(summary.getInitialAmount()));
+        addSummaryCell(summaryTable, boldFont, regularFont, "Vendido (sin propina)", cashRegisterMoney(summary.getTotalSales()));
+        addSummaryCell(summaryTable, boldFont, regularFont, "Propinas", cashRegisterMoney(summary.getTotalTips()));
+        document.add(summaryTable);
+        document.add(new Paragraph("\n"));
+
+        Table moneyTable = new Table(new float[]{1, 1, 1});
+        moneyTable.setWidth(UnitValue.createPercentValue(100));
+        addSummaryCell(moneyTable, boldFont, regularFont, "Pagos", cashRegisterMoney(summary.getTotalExpenses()));
+        addSummaryCell(moneyTable, boldFont, regularFont, "Entradas", cashRegisterMoney(summary.getTotalIncomes()));
+        addSummaryCell(moneyTable, boldFont, regularFont, "Retiros", cashRegisterMoney(summary.getTotalWithdrawals()));
+        document.add(moneyTable);
+        document.add(new Paragraph("\n"));
+
+        Table cashTable = new Table(new float[]{1, 1, 1});
+        cashTable.setWidth(UnitValue.createPercentValue(100));
+        addSummaryCell(cashTable, boldFont, regularFont, "Ventas en efectivo", cashRegisterMoney(summary.getCashSales()));
+        addSummaryCell(cashTable, boldFont, regularFont, "Esperado en caja", cashRegisterMoney(summary.getExpectedCash()));
+        addSummaryCell(cashTable, boldFont, regularFont, "Contado",
+                summary.getCountedAmount() != null ? cashRegisterMoney(summary.getCountedAmount()) : "—");
+        document.add(cashTable);
+        document.add(new Paragraph("\n"));
+
+        if (summary.getDifference() != null) {
+            DeviceRgb diffColor = summary.getDifference().signum() == 0
+                    ? PRIMARY_DARK
+                    : new DeviceRgb(220, 38, 38);
+            document.add(new Paragraph("Diferencia (contado − esperado): " + cashRegisterMoney(summary.getDifference()))
+                    .setFont(boldFont)
+                    .setFontSize(11)
+                    .setFontColor(diffColor)
+                    .setTextAlignment(TextAlignment.RIGHT));
+            document.add(new Paragraph("\n"));
+        }
+
+        // ----- Sales by payment method -----
+        addSectionTitle(document, boldFont, "Ventas por método de pago");
+        Table salesTable = new Table(new float[]{2, 1});
+        salesTable.setWidth(UnitValue.createPercentValue(100));
+        addTableHeader(salesTable, boldFont, "Método", "Total");
+        boolean anySale = false;
+        if (summary.getSalesByMethod() != null) {
+            for (Map.Entry<PaymentMethodType, BigDecimal> entry : summary.getSalesByMethod().entrySet()) {
+                BigDecimal value = entry.getValue() != null ? entry.getValue() : BigDecimal.ZERO;
+                if (value.signum() == 0) {
+                    continue;
+                }
+                anySale = true;
+                addTableRow(salesTable, regularFont, entry.getKey().getDisplayName(), cashRegisterMoney(value));
+            }
+        }
+        if (!anySale) {
+            addTableRow(salesTable, regularFont, "Sin ventas", cashRegisterMoney(BigDecimal.ZERO));
+        }
+        document.add(salesTable);
+        document.add(new Paragraph("\n"));
+
+        // ----- Manual movements -----
+        addSectionTitle(document, boldFont, "Pagos, entradas y retiros");
+        Table movementsTable = new Table(new float[]{1.4f, 1, 1, 1.4f});
+        movementsTable.setWidth(UnitValue.createPercentValue(100));
+        addTableHeader(movementsTable, boldFont, "Concepto", "Tipo", "Monto", "Notas");
+        if (movements != null && !movements.isEmpty()) {
+            for (CashRegisterMovement movement : movements) {
+                String amountLabel = (movement.getType() != null && movement.getType().isCashOut() ? "-" : "+")
+                        + cashRegisterMoney(movement.getAmount());
+                addTableRow(movementsTable, regularFont,
+                        movement.getConcept() != null ? movement.getConcept() : "-",
+                        movement.getType() != null ? movement.getType().getDisplayName() : "-",
+                        amountLabel,
+                        movement.getNotes() != null ? movement.getNotes() : "");
+            }
+        } else {
+            addTableRow(movementsTable, regularFont, "Sin movimientos", "-", cashRegisterMoney(BigDecimal.ZERO), "");
+        }
+        document.add(movementsTable);
+        document.add(new Paragraph("\n"));
+
+        addFooter(document, regularFont);
+        document.close();
+        return baos.toByteArray();
+    }
+
+    private String cashRegisterMoney(BigDecimal value) {
+        return String.format("$%,.2f", value != null ? value : BigDecimal.ZERO);
     }
 
     // ========== Helper Methods ==========

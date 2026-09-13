@@ -3,6 +3,11 @@ package com.aatechsolutions.elgransazon.presentation.controller;
 import com.aatechsolutions.elgransazon.application.service.*;
 import com.aatechsolutions.elgransazon.domain.entity.*;
 import com.aatechsolutions.elgransazon.domain.repository.OrderRepository;
+import com.aatechsolutions.elgransazon.presentation.dto.SplitAccountDTO;
+import com.aatechsolutions.elgransazon.presentation.dto.SplitItemDTO;
+import com.aatechsolutions.elgransazon.util.OrderDiscountSupport;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -31,18 +36,24 @@ public class CashierPaymentController {
     private final OrderRepository orderRepository;
     private final EmployeeService employeeService;
     private final FacturamaService facturamaService;
+    private final SplitPaymentService splitPaymentService;
+    private final ObjectMapper objectMapper;
 
     public CashierPaymentController(
             @Qualifier("cashierOrderService") CashierOrderServiceImpl cashierOrderService,
             SystemConfigurationService systemConfigurationService,
             OrderRepository orderRepository,
             EmployeeService employeeService,
-            FacturamaService facturamaService) {
+            FacturamaService facturamaService,
+            SplitPaymentService splitPaymentService,
+            ObjectMapper objectMapper) {
         this.cashierOrderService = cashierOrderService;
         this.systemConfigurationService = systemConfigurationService;
         this.orderRepository = orderRepository;
         this.employeeService = employeeService;
         this.facturamaService = facturamaService;
+        this.splitPaymentService = splitPaymentService;
+        this.objectMapper = objectMapper;
     }
 
     /**
@@ -52,6 +63,7 @@ public class CashierPaymentController {
     @GetMapping("/form/{orderId}")
     public String showPaymentForm(
             @PathVariable Long orderId,
+            @RequestParam(value = "split", required = false) String split,
             Authentication authentication,
             Model model,
             RedirectAttributes redirectAttributes) {
@@ -61,10 +73,13 @@ public class CashierPaymentController {
 
         return cashierOrderService.findByIdWithDetails(orderId)
                 .map(order -> {
-                    // Validate that order is in DELIVERED status
-                    if (order.getStatus() != OrderStatus.DELIVERED) {
+                    // A departing-guest collection may charge the ENTREGADO items of an open
+                    // order (some items still PENDING/READY). Full-order payment requires
+                    // the whole order ENTREGADO.
+                    boolean departureEligible = order.canCollectDeparture();
+                    if (order.getStatus() != OrderStatus.DELIVERED && !departureEligible) {
                         redirectAttributes.addFlashAttribute("errorMessage", 
-                            "Solo se pueden pagar órdenes con estado ENTREGADO. Estado actual: " + order.getStatus().getDisplayName());
+                            "Solo se pueden pagar órdenes con estado ENTREGADO o cobrar por persona los ítems ya entregados. Estado actual: " + order.getStatus().getDisplayName());
                         return "redirect:/cashier/orders";
                     }
 
@@ -92,6 +107,28 @@ public class CashierPaymentController {
                         .map(PaymentMethodType::name)
                         .collect(Collectors.toList());
 
+                    // Split editor semantics: "departure" (cobro de la persona que
+                    // se va) while items are still pending — only ENTREGADO items
+                    // offered and the order stays open. A fully delivered order can
+                    // always be settled per person (assign whole items); when it
+                    // already has partial charges the editor auto-opens in
+                    // "Por persona" over the remaining units (regular payment is
+                    // no longer possible on such an order).
+                    boolean departureHint = "items".equalsIgnoreCase(split);
+                    boolean departure = order.canCollectDeparture()
+                            && (departureHint || order.hasUndeliveredItems());
+                    model.addAttribute("splitDeparture", departure);
+                    // Mirrors the zeroCashTips flag passed to SplitPaymentService
+                    // (cashier always drops cash tips) so the split cards hide the
+                    // tip picker for a cash-paying account and never capture a
+                    // value the backend would discard.
+                    model.addAttribute("splitZeroCashTips", true);
+                    // Parts-equal was removed (SAT): a product cannot be divided,
+                    // so the split editor is per-person (whole items) only.
+                    model.addAttribute("splitAllowEqual", false);
+                    model.addAttribute("splitAutoEnable",
+                            order.hasPartialCollections());
+                    model.addAttribute("nextPersonNumber", order.nextPersonNumber());
                     model.addAttribute("order", order);
                     model.addAttribute("enabledPaymentMethods", enabledPaymentMethods);
                     model.addAttribute("enabledPaymentMethodNames", enabledPaymentMethodNames);
@@ -116,6 +153,12 @@ public class CashierPaymentController {
             @RequestParam PaymentMethodType paymentMethod,
             @RequestParam(required = false, defaultValue = "0") BigDecimal tip,
             @RequestParam(required = false, defaultValue = "0") BigDecimal orderDiscount,
+            @RequestParam(required = false) String discountType,
+            @RequestParam(required = false, defaultValue = "0") BigDecimal orderDiscountPercent,
+            @RequestParam(required = false) String splitEnabled,
+            @RequestParam(required = false) String splitMode,
+            @RequestParam(required = false) String splitAccounts,
+            @RequestParam(required = false) String splitDeparture,
             Authentication authentication,
             Model model,
             RedirectAttributes redirectAttributes,
@@ -130,14 +173,57 @@ public class CashierPaymentController {
             Order order = cashierOrderService.findByIdWithDetails(orderId)
                     .orElseThrow(() -> new IllegalArgumentException("Orden no encontrada"));
 
-            // Validate that order is in DELIVERED status
-            if (order.getStatus() != OrderStatus.DELIVERED) {
-                throw new IllegalStateException("Solo se pueden pagar órdenes con estado ENTREGADO. Estado actual: " + order.getStatus().getDisplayName());
+            // Departure = the user pressed the 👥 button (form submits
+            // splitDeparture=true) OR the order still has items pending: charge
+            // only the ENTREGADO items of the person(s) leaving and keep the
+            // order open. A fully delivered order opened via the $ button — even
+            // one with prior partial charges — settles through the full split
+            // flow over the remaining units.
+            boolean departureEligible = order.canCollectDeparture()
+                    && ("true".equalsIgnoreCase(splitDeparture) || order.hasUndeliveredItems());
+            if (order.getStatus() != OrderStatus.DELIVERED && !departureEligible) {
+                throw new IllegalStateException("Solo se pueden pagar órdenes con estado ENTREGADO o cobrar por persona los ítems ya entregados. Estado actual: " + order.getStatus().getDisplayName());
             }
 
             // Get system configuration to validate payment method
             SystemConfiguration config = systemConfigurationService.getConfiguration();
-            
+
+            // ========== DEPARTING-GUEST / SPLIT BILL FLOW ==========
+            if ("true".equalsIgnoreCase(splitEnabled)) {
+                if (departureEligible) {
+                    // Departing-guest flow: percentage only, and the captured percentage
+                    // is locked on the order from this very first collection.
+                    applyOrderDiscount(order, username, discountType, orderDiscount,
+                            orderDiscountPercent, true);
+                    orderRepository.save(order);
+                    return processDepartingGuestPayment(order, username, splitAccounts, config, redirectAttributes);
+                }
+                // Full-order split requires every item already delivered.
+                if (!order.isReadyToCharge()) {
+                    throw new IllegalStateException("Solo se cobran los ítems con estado ENTREGADO. Aún hay ítems sin entregar en este pedido.");
+                }
+                // A split bill only accepts a percentage discount, and the captured
+                // percentage is locked so every later collection reuses it exactly.
+                applyOrderDiscount(order, username, discountType, orderDiscount,
+                        orderDiscountPercent, true);
+                orderRepository.save(order);
+                return processSplitPayment(order, username, splitMode, splitAccounts,
+                        config, redirectAttributes);
+            }
+
+            // Regular (non-split) payment always charges the whole ENTREGADO order; never
+            // re-charge units already collected from departing guests.
+            if (!order.isReadyToCharge()) {
+                throw new IllegalStateException("Solo se cobran los ítems con estado ENTREGADO. Aún hay ítems sin entregar en este pedido.");
+            }
+            if (order.hasPartialCollections()) {
+                // The remaining bill can still be charged globally: one account
+                // takes every unit still owed and the order closes as PAID.
+                // Per-person splitting stays available via "Dividir cuenta".
+                return processGlobalRemainingPayment(order, username, paymentMethod, tip,
+                        discountType, orderDiscount, orderDiscountPercent, config, redirectAttributes);
+            }
+
             // Validate payment method based on order type
             boolean isPaymentMethodEnabled = order.getOrderType() == OrderType.DELIVERY 
                 ? config.isDeliveryPaymentMethodEnabled(paymentMethod)
@@ -168,6 +254,7 @@ public class CashierPaymentController {
                 model.addAttribute("enabledPaymentMethodNames", enabledPaymentMethodNames);
                 model.addAttribute("currentPaymentMethod", order.getPaymentMethod() != null ? order.getPaymentMethod().name() : null);
                 model.addAttribute("currentRole", "cashier");
+                model.addAttribute("splitZeroCashTips", true);
                 model.addAttribute("errorMessage", 
                     "El método de pago '" + paymentMethod.getDisplayName() + 
                     "' está deshabilitado para " + orderTypeLabel + ". Por favor seleccione otro método de pago.");
@@ -195,34 +282,14 @@ public class CashierPaymentController {
                 tip = BigDecimal.ZERO;
             }
 
-            // Validate order discount (descuento sobre el total de la orden, incluye IVA).
-            if (orderDiscount == null) {
-                orderDiscount = BigDecimal.ZERO;
-            }
-            if (orderDiscount.compareTo(BigDecimal.ZERO) < 0) {
-                throw new IllegalArgumentException("El descuento sobre el total no puede ser negativo");
-            }
-            if (orderDiscount.compareTo(new BigDecimal("999999.99")) > 0) {
-                throw new IllegalArgumentException("El descuento sobre el total no puede ser mayor a $999,999.99");
-            }
-            if (orderDiscount.scale() > 2) {
-                throw new IllegalArgumentException("El descuento sobre el total solo permite hasta 2 decimales");
-            }
-            BigDecimal currentTotal = order.getTotal() != null ? order.getTotal() : BigDecimal.ZERO;
-            if (orderDiscount.compareTo(currentTotal) > 0) {
-                throw new IllegalArgumentException(
-                        "El descuento (" + String.format("$%.2f", orderDiscount)
-                                + ") no puede ser mayor al total de la orden ("
-                                + String.format("$%.2f", currentTotal) + ")");
-            }
+            // Validate + resolve the order discount (monto fijo o porcentaje) and
+            // recompute totals BEFORE setting tip/payment metadata.
+            applyOrderDiscount(order, username, discountType, orderDiscount,
+                    orderDiscountPercent, false);
 
             // Get current cashier employee
             Employee cashier = employeeService.findByUsername(username)
                     .orElseThrow(() -> new IllegalStateException("Cajero no encontrado"));
-
-            // Apply order discount and recompute totals BEFORE setting tip/payment metadata.
-            order.setOrderDiscount(orderDiscount);
-            order.recalculateAmounts();
 
             // Set tip, payment method, and paidBy
             order.setTip(tip);
@@ -285,6 +352,257 @@ public class CashierPaymentController {
             redirectAttributes.addFlashAttribute("errorMessage", "Error al procesar el pago: " + e.getMessage());
             return "redirect:/cashier/payments/form/" + orderId;
         }
+    }
+
+    /**
+     * Validates (monto fijo $ / porcentaje %) and applies the order discount,
+     * then recomputes the order totals. Locked orders keep their fixed
+     * percentage; split bills and departing-guest collections only accept a
+     * percentage and lock it from the very first collection, and so does any
+     * charge on an order that already has partial collections.
+     */
+    private void applyOrderDiscount(Order order, String username, String discountType,
+                                    BigDecimal orderDiscount, BigDecimal orderDiscountPercent,
+                                    boolean percentageOnlyFlow) {
+        OrderDiscountSupport.Resolved resolved = OrderDiscountSupport.resolve(
+                order, discountType, orderDiscount, orderDiscountPercent, true, percentageOnlyFlow);
+        order.setOrderDiscountPercent(resolved.isPercentMode() ? resolved.getPercent() : null);
+        if (resolved.isLock()) {
+            order.setOrderDiscountLocked(true);
+        }
+        order.setOrderDiscount(resolved.getAmount());
+        order.recalculateAmounts();
+        order.setUpdatedBy(username);
+        order.setUpdatedAt(java.time.LocalDateTime.now());
+    }
+
+    /**
+     * Global settlement of the remaining bill after departing-guest charges:
+     * one single account takes every unit still owed (the "charge the whole
+     * table" flow) and the order closes as PAID. Per-person splitting stays
+     * available by enabling "Dividir cuenta" in the form.
+     */
+    private String processGlobalRemainingPayment(Order order, String username,
+                                                 PaymentMethodType paymentMethod, BigDecimal tip,
+                                                 String discountType, BigDecimal orderDiscount,
+                                                 BigDecimal orderDiscountPercent,
+                                                 SystemConfiguration config,
+                                                 RedirectAttributes redirectAttributes) {
+        // Settlement after partial charges: the discount applies only to what is
+        // still owed (never retroactively to already-collected units).
+        applyOrderDiscount(order, username, discountType, orderDiscount, orderDiscountPercent, false);
+        orderRepository.save(order);
+
+        List<SplitItemDTO> items = new ArrayList<>();
+        for (OrderDetail d : order.getOrderDetails()) {
+            if (d.isComboChild() || d.getItemStatus() == OrderStatus.CANCELLED) {
+                continue;
+            }
+            BigDecimal remaining = d.getRemainingQuantity();
+            if (remaining != null && remaining.compareTo(BigDecimal.ZERO) > 0) {
+                SplitItemDTO item = new SplitItemDTO();
+                item.setOrderDetailId(d.getIdOrderDetail());
+                item.setQuantity(remaining);
+                items.add(item);
+            }
+        }
+        if (items.isEmpty()) {
+            throw new IllegalStateException("No queda saldo pendiente por cobrar en este pedido");
+        }
+        SplitAccountDTO account = new SplitAccountDTO();
+        account.setIndex(1);
+        account.setPersonLabel("Cuenta");
+        account.setPaymentMethod(paymentMethod.name());
+        account.setTip(tip != null ? tip : BigDecimal.ZERO);
+        account.setItems(items);
+        try {
+            String json = objectMapper.writeValueAsString(java.util.List.of(account));
+            return processSplitPayment(order, username, "ITEMS", json,
+                    config, redirectAttributes);
+        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+            throw new IllegalStateException("No se pudo preparar el cobro global del pedido", e);
+        }
+    }
+
+    /**
+     * Split-bill flow: divide the DELIVERED order into N per-person accounts,
+     * each with its own method/tip/items, pay them all and mark the order PAID.
+     * The order discount was already validated and applied by the caller.
+     */
+    private String processSplitPayment(Order order, String username,
+                                       String splitMode, String splitAccounts,
+                                       SystemConfiguration config, RedirectAttributes redirectAttributes) {
+        // Parse the per-account plan
+        List<SplitAccountDTO> accounts;
+        try {
+            accounts = objectMapper.readValue(splitAccounts, new TypeReference<List<SplitAccountDTO>>() {});
+        } catch (Exception e) {
+            log.warn("Invalid splitAccounts JSON: {}", e.getMessage());
+            throw new IllegalArgumentException("Los datos de la división de cuenta son inválidos");
+        }
+        if (!"ITEMS".equalsIgnoreCase(splitMode)) {
+            throw new IllegalArgumentException(
+                    "El modo 'Partes iguales' ya no está disponible: un producto no puede dividirse. "
+                            + "Use la división por persona (asignar ítems completos) o realice un solo pago.");
+        }
+        SplitMode mode = SplitMode.ITEMS;
+
+        // Validate per-account payment methods (must be enabled for the order type)
+        for (SplitAccountDTO acc : accounts) {
+            if (acc.getPaymentMethod() == null || acc.getPaymentMethod().isBlank()) {
+                throw new IllegalArgumentException(acc.getDisplayLabel() + ": debe seleccionar un método de pago");
+            }
+            PaymentMethodType method;
+            try {
+                method = PaymentMethodType.valueOf(acc.getPaymentMethod());
+            } catch (Exception e) {
+                throw new IllegalArgumentException(acc.getDisplayLabel() + ": método de pago no válido");
+            }
+            boolean enabled = order.getOrderType() == OrderType.DELIVERY
+                    ? config.isDeliveryPaymentMethodEnabled(method)
+                    : config.isPaymentMethodEnabled(method);
+            if (!enabled) {
+                throw new IllegalArgumentException("El método de pago '" + method.getDisplayName()
+                        + "' de " + acc.getDisplayLabel() + " está deshabilitado. Por favor seleccione otro método de pago.");
+            }
+        }
+
+        // Get current cashier employee
+        Employee cashier = employeeService.findByUsername(username)
+                .orElseThrow(() -> new IllegalStateException("Cajero no encontrado"));
+
+        // The order discount was already validated and applied by the caller.
+        order.setUpdatedBy(username);
+        order.setUpdatedAt(java.time.LocalDateTime.now());
+        orderRepository.save(order);
+
+        // Build request base URL for autofactura self-invoice links
+        jakarta.servlet.http.HttpServletRequest req =
+                ((org.springframework.web.context.request.ServletRequestAttributes)
+                org.springframework.web.context.request.RequestContextHolder.currentRequestAttributes())
+                .getRequest();
+        String baseUrl = req.getScheme() + "://" + req.getServerName()
+                + (req.getServerPort() == 80 || req.getServerPort() == 443 ? "" : ":" + req.getServerPort());
+
+        // Create the per-person payments (each with its own folio, method, tip, autofactura key)
+        List<Payment> payments = splitPaymentService.createSplitPayments(
+                order, mode, accounts, cashier, username, true, baseUrl);
+
+        // Order-level metadata for backward compatibility: method of the first account,
+        // tip = sum of ALL account tips of this order (previous departing-guest/split
+        // charges included), collector.
+        BigDecimal totalTips = order.getPayments().stream()
+                .map(p -> p.getTip() != null ? p.getTip() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        order.setPaymentMethod(payments.get(0).getPaymentMethod());
+        order.setTip(totalTips);
+        order.setPaidBy(cashier);
+        order.setUpdatedBy(username);
+        order.setUpdatedAt(java.time.LocalDateTime.now());
+        orderRepository.save(order);
+
+        // Change status to PAID: frees the table and updates stats exactly once
+        cashierOrderService.changeStatus(order.getIdOrder(), OrderStatus.PAID, username);
+
+        log.info("Split payment processed for order {}: {} accounts, collected by {}",
+                order.getOrderNumber(), payments.size(), username);
+
+        redirectAttributes.addFlashAttribute("successMessage",
+                "Pago procesado exitosamente para el pedido " + order.getOrderNumber()
+                        + ". Se cobr" + (payments.size() == 1 ? "ó " + payments.size() + " cuenta" : "aron " + payments.size() + " cuentas") + ".");
+        redirectAttributes.addFlashAttribute("printTicketOrderId", order.getIdOrder());
+        redirectAttributes.addFlashAttribute("printTicketOrderIds",
+                payments.stream().map(Payment::getIdPayment).toList());
+
+        return "redirect:/cashier/orders";
+    }
+
+    /**
+     * Departing-guest collection (cashier): charge ONLY the already ENTREGADO items
+     * of the person(s) leaving while the order stays open. Pending items are
+     * charged when the rest of the party settles.
+     */
+    private String processDepartingGuestPayment(Order order, String username,
+                                                String splitAccounts,
+                                                SystemConfiguration config,
+                                                RedirectAttributes redirectAttributes) {
+        List<SplitAccountDTO> accounts;
+        try {
+            accounts = objectMapper.readValue(splitAccounts, new TypeReference<List<SplitAccountDTO>>() {});
+        } catch (Exception e) {
+            log.warn("Invalid splitAccounts JSON: {}", e.getMessage());
+            throw new IllegalArgumentException("Los datos de la persona que se va son inválidos");
+        }
+
+        for (SplitAccountDTO acc : accounts) {
+            if (acc.getPaymentMethod() == null || acc.getPaymentMethod().isBlank()) {
+                throw new IllegalArgumentException(acc.getDisplayLabel() + ": debe seleccionar un método de pago");
+            }
+            PaymentMethodType method;
+            try {
+                method = PaymentMethodType.valueOf(acc.getPaymentMethod());
+            } catch (Exception e) {
+                throw new IllegalArgumentException(acc.getDisplayLabel() + ": método de pago no válido");
+            }
+            if (!config.isPaymentMethodEnabled(method)) {
+                throw new IllegalArgumentException("El método de pago '" + method.getDisplayName()
+                        + "' de " + acc.getDisplayLabel() + " está deshabilitado. Por favor seleccione otro método de pago.");
+            }
+        }
+
+        Employee cashier = employeeService.findByUsername(username)
+                .orElseThrow(() -> new IllegalStateException("Cajero no encontrado"));
+
+        jakarta.servlet.http.HttpServletRequest req =
+                ((org.springframework.web.context.request.ServletRequestAttributes)
+                org.springframework.web.context.request.RequestContextHolder.currentRequestAttributes())
+                .getRequest();
+        String baseUrl = req.getScheme() + "://" + req.getServerName()
+                + (req.getServerPort() == 80 || req.getServerPort() == 443 ? "" : ":" + req.getServerPort());
+
+        List<Payment> payments = splitPaymentService.collectDepartingGuests(
+                order, accounts, cashier, username, true, baseUrl);
+
+        log.info("Departing-guest collection processed for order {}: {} cuenta(s), by {}",
+                order.getOrderNumber(), payments.size(), username);
+
+        // If nothing remains owed and nothing is still pending, the collection
+        // settled the whole order: close it (frees the table / updates stats).
+        boolean liquidated = !order.hasUndeliveredItems() && !order.hasChargeableDeliveredItems();
+        String message;
+        if (liquidated) {
+            BigDecimal allTips = order.getPayments().stream()
+                    .map(p -> p.getTip() != null ? p.getTip() : BigDecimal.ZERO)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            order.setPaymentMethod(payments.get(0).getPaymentMethod());
+            order.setTip(allTips);
+            order.setPaidBy(cashier);
+            order.setUpdatedBy(username);
+            order.setUpdatedAt(java.time.LocalDateTime.now());
+            orderRepository.save(order);
+            cashierOrderService.changeStatus(order.getIdOrder(), OrderStatus.PAID, username);
+            message = "El pedido " + order.getOrderNumber()
+                    + " quedó liquidado: la mesa fue liberada.";
+        } else {
+            // Accumulate the tip on the order as guests pay: the order stays
+            // open, but the aggregate must reflect every departing-guest charge
+            // so the final settlement (and tip views/reports) keep them all.
+            BigDecimal allTips = order.getPayments().stream()
+                    .map(p -> p.getTip() != null ? p.getTip() : BigDecimal.ZERO)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            order.setTip(allTips);
+            order.setUpdatedBy(username);
+            order.setUpdatedAt(java.time.LocalDateTime.now());
+            orderRepository.save(order);
+            message = "Cobro procesado a la persona que se va del pedido " + order.getOrderNumber()
+                    + ". El pedido continúa abierto con el resto de la cuenta.";
+        }
+        redirectAttributes.addFlashAttribute("successMessage", message);
+        redirectAttributes.addFlashAttribute("printTicketOrderId", order.getIdOrder());
+        redirectAttributes.addFlashAttribute("printTicketOrderIds",
+                payments.stream().map(Payment::getIdPayment).toList());
+
+        return "redirect:/cashier/orders";
     }
 
     /**

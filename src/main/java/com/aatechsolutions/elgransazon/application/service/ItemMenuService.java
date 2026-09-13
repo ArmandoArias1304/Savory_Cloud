@@ -3,7 +3,10 @@ package com.aatechsolutions.elgransazon.application.service;
 import com.aatechsolutions.elgransazon.domain.entity.ItemMenu;
 import com.aatechsolutions.elgransazon.domain.entity.ItemIngredient;
 import com.aatechsolutions.elgransazon.domain.entity.ItemMenuComboItem;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
@@ -26,6 +29,15 @@ public interface ItemMenuService {
      * Find all menu items ordered by category and name
      */
     List<ItemMenu> findAllOrderByCategoryAndName();
+
+    /**
+     * Search menu items of the current company with optional filters, paginated.
+     * All filter parameters are optional (pass null to ignore them).
+     * Availability flags of the returned page are refreshed against current stock.
+     */
+    Page<ItemMenu> searchMenuItemsPage(String name, Long categoryId, BigDecimal minPrice,
+                                       BigDecimal maxPrice, Boolean active, Boolean available,
+                                       Pageable pageable);
 
     /**
      * Find menu item by ID
@@ -191,6 +203,26 @@ public interface ItemMenuService {
      * Count unavailable menu items (active but no stock)
      */
     long countUnavailable();
+
+    /**
+     * Count all menu items of the current company
+     */
+    long countAllByCompany();
+
+    /**
+     * Count active menu items of the current company
+     */
+    long countActiveByCompany();
+
+    /**
+     * Count available menu items of the current company
+     */
+    long countAvailableByCompany();
+
+    /**
+     * Count unavailable menu items of the current company (active but no stock)
+     */
+    long countUnavailableByCompany();
 
     /**
      * Count menu items by category

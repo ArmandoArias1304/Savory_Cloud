@@ -167,6 +167,12 @@ public class TicketEscPosService {
                 printLine(out, padColumns3(truncate(itemName, 16), String.valueOf(quantity), totalStr));
             }
 
+            // Courtesy line: the $0.00 stays and a "Cortesia" note is added so the
+            // customer can tell a free item from a mistake.
+            if (detail.isCourtesy()) {
+                printLine(out, truncate("     Cortesia", 42));
+            }
+
             // Comments
             String displayComments = detail.getDisplayComments();
             if (displayComments != null && !displayComments.isEmpty()) {
@@ -240,7 +246,10 @@ public class TicketEscPosService {
 
         // Nota informativa: descuento aplicado al total de la orden (incluye IVA)
         if (order.hasOrderDiscount()) {
-            printLine(out, "Descuento aplicado de " + order.getFormattedOrderDiscount());
+            printLine(out, "Descuento aplicado de " + order.getFormattedOrderDiscount()
+                    + (order.hasOrderDiscountPercent()
+                            ? " (" + order.getFormattedOrderDiscountPercent() + "%)"
+                            : ""));
         }
         out.write(FONT_A);
 
@@ -321,6 +330,250 @@ public class TicketEscPosService {
 
         log.info("ESC/POS ticket generated successfully for order: {}", order.getOrderNumber());
         return out.toByteArray();
+    }
+
+    /**
+     * Generate ESC/POS raw bytes for ONE account (Payment) of a split bill.
+     * Each account prints its own ticket with its own folio, lines, totals and
+     * autofactura QR (own key).
+     *
+     * @param payment Payment (per-person account) to generate ticket for
+     * @return byte array containing ESC/POS commands
+     */
+    public byte[] generateTicket(Payment payment) throws IOException {
+        Order order = payment.getOrder();
+        log.info("Generating ESC/POS ticket for payment: {}", payment.getPaymentFolio());
+
+        ByteArrayOutputStream out = new ByteArrayOutputStream(2048);
+
+        // Initialize printer and set code page for Spanish accents
+        out.write(INIT);
+        out.write(SET_CP1252);
+        // Set line spacing to minimum (0 dots) to reduce top margin
+        out.write(new byte[]{0x1B, 0x33, 0x00});
+
+        // Get system configuration
+        SystemConfiguration config = systemConfigurationService.getConfiguration();
+
+        // ── Logo (raster image) ──
+        int logoIntensity = config.getTicketLogoOpacity() != null ? config.getTicketLogoOpacity() : 50;
+        writeLogo(out, config.getRestaurantLogoUrl(), logoIntensity);
+        // Restore default line spacing after logo
+        out.write(new byte[]{0x1B, 0x32});
+
+        // ── Restaurant name (centered, bold, double height) ──
+        out.write(ALIGN_CENTER);
+        out.write(BOLD_ON);
+        out.write(DOUBLE_HEIGHT);
+        printLine(out, config.getRestaurantName());
+        out.write(NORMAL_SIZE);
+        out.write(BOLD_OFF);
+
+        // ── Address (centered, Font B) ──
+        out.write(FONT_B);
+        printLine(out, config.getAddress());
+
+        // ── RFC (centered, Font B) ──
+        if (config.getRfc() != null && !config.getRfc().isBlank()) {
+            printLine(out, "RFC: " + config.getRfc());
+        }
+
+        // ── Phone (centered, Font B) ──
+        printLine(out, "Tel: " + config.getPhone());
+        out.write(FONT_A);
+
+        // ── Separator ──
+        printSeparator(out);
+
+        // ── Parent order number (centered, bold) ──
+        out.write(BOLD_ON);
+        printLine(out, "ORDEN: " + order.getOrderNumber());
+        out.write(BOLD_OFF);
+
+        // ── Account folio (centered, bold, double height) e.g. ORD-20260906-001-02 ──
+        out.write(BOLD_ON);
+        out.write(DOUBLE_HEIGHT);
+        printLine(out, "CUENTA: " + payment.getPaymentFolio());
+        out.write(NORMAL_SIZE);
+        out.write(BOLD_OFF);
+
+        // ── Person label (centered, Font B) ──
+        if (payment.getPersonLabel() != null && !payment.getPersonLabel().isBlank()) {
+            out.write(FONT_B);
+            printLine(out, payment.getPersonLabel());
+            out.write(FONT_A);
+        }
+
+        // ── Separator + Items header ──
+        printSeparator(out);
+        out.write(BOLD_ON);
+        printLine(out, "DETALLE DE LA CUENTA");
+        out.write(BOLD_OFF);
+
+        // ── Column headers (Font B) 3-col: Producto | Cant | Total ──
+        out.write(ALIGN_CENTER);
+        out.write(FONT_B);
+        out.write(BOLD_ON);
+        printLine(out, padColumns3("Producto", "Cant", "Total"));
+        out.write(BOLD_OFF);
+
+        // ── Print each assigned line ──
+        for (PaymentDetail pd : payment.getPaymentDetails()) {
+            String itemName = pd.getItemName() != null ? pd.getItemName() : "Producto";
+            if (pd.isComboParent()) {
+                itemName = "[COMBO] " + itemName;
+            }
+            String qtyText = formatQuantity(pd.getQuantity());
+            BigDecimal lineTotal = pd.getTotal() != null ? pd.getTotal() : BigDecimal.ZERO;
+            String totalStr = "$" + lineTotal.setScale(2, RoundingMode.HALF_UP).toPlainString();
+
+            printLine(out, padColumns3(truncate(itemName, 16), qtyText, totalStr));
+
+            // Courtesy line: keep the $0.00 and label it as "Cortesia"
+            if (pd.isCourtesy()) {
+                printLine(out, truncate("     Cortesia", 42));
+            }
+
+            // Comments snapshot
+            if (pd.getComments() != null && !pd.getComments().isBlank()) {
+                printLine(out, truncate("  -> " + pd.getComments(), 42));
+            }
+
+            // Complements summary
+            if (pd.getComplementDetails() != null && !pd.getComplementDetails().isBlank()) {
+                printLine(out, truncate("  + " + pd.getComplementDetails(), 42));
+            }
+        }
+        out.write(FONT_A);
+
+        // ── Totals separator ──
+        printSeparator(out);
+
+        // ── Totals section ──
+        BigDecimal taxAmount = payment.getTaxAmount();
+        BigDecimal total = payment.getTotal();
+
+        out.write(ALIGN_RIGHT);
+        printTotalLine(out, "Subtotal:", "$" + payment.getDisplaySubtotal().setScale(2, RoundingMode.HALF_UP).toPlainString(), false);
+
+        if (payment.hasOrderDiscount()) {
+            printTotalLine(out, "Descuento de orden:", "-$" + payment.getOrderDiscountWithoutTax().setScale(2, RoundingMode.HALF_UP).toPlainString(), false);
+        }
+
+        printTotalLine(out, "IVA (" + payment.getTaxRate() + "%):", "$" + (taxAmount != null ? taxAmount.toPlainString() : "0.00"), false);
+
+        // TOTAL (bold) - sin propina
+        out.write(BOLD_ON);
+        printTotalLine(out, "TOTAL:", "$" + (total != null ? total.setScale(2, RoundingMode.HALF_UP).toPlainString() : "0.00"), true);
+        out.write(BOLD_OFF);
+
+        // Total in words (Mexican format)
+        out.write(ALIGN_CENTER);
+        out.write(FONT_B);
+        printLine(out, totalEnLetra(total != null ? total : BigDecimal.ZERO));
+
+        // Nota informativa: envío (DELIVERY only)
+        if (order.getOrderType() == OrderType.DELIVERY
+                && payment.getDeliveryCost() != null
+                && payment.getDeliveryCost().compareTo(BigDecimal.ZERO) > 0) {
+            printLine(out, "Incluye costo de envio de $" + payment.getDeliveryCost().setScale(2, RoundingMode.HALF_UP).toPlainString());
+        }
+
+        // Nota informativa: descuento aplicado al total (incluye IVA)
+        if (payment.hasOrderDiscount()) {
+            printLine(out, "Descuento aplicado de $" + payment.getOrderDiscount().setScale(2, RoundingMode.HALF_UP).toPlainString()
+                    + (payment.hasOrderDiscountPercent()
+                            ? " (" + payment.getFormattedOrderDiscountPercent() + "%)"
+                            : ""));
+        }
+        out.write(FONT_A);
+
+        // ── Order info (centered) ──
+        out.write(ALIGN_CENTER);
+        out.write(FONT_B);
+        String paymentMethodStr = payment.getPaymentMethod() != null ? payment.getPaymentMethod().getDisplayName() : "N/A";
+        printLine(out, "Tipo: " + order.getOrderType().getDisplayName() + " | Pago: " + paymentMethodStr);
+
+        // Customer
+        if (order.getCustomerName() != null && !order.getCustomerName().trim().isEmpty()) {
+            printLine(out, "Cliente: " + order.getCustomerName());
+        }
+
+        // Served by
+        String servedBy = order.getEmployee() != null ? order.getEmployee().getFullName() : config.getRestaurantName();
+        printLine(out, "Atendido por: " + servedBy);
+        out.write(FONT_A);
+
+        // ── Date separator + date ──
+        printSeparator(out);
+        out.write(FONT_B);
+        if (payment.getPaidAt() != null) {
+            printLine(out, "Pagado: " + dateTimeService.formatToCompanyTime(payment.getPaidAt(), "dd/MM/yyyy HH:mm"));
+        } else {
+            printLine(out, "Creada: " + dateTimeService.formatToCompanyTime(payment.getCreatedAt(), "dd/MM/yyyy HH:mm"));
+        }
+        out.write(FONT_A);
+
+        // ── Final separator ──
+        printSeparator(out);
+
+        // ── Thank you ──
+        out.write(BOLD_ON);
+        printLine(out, "\u00A1Gracias por su preferencia!");
+        out.write(BOLD_OFF);
+        out.write(FONT_B);
+        printLine(out, "Esperamos volver a atenderle pronto");
+        out.write(FONT_A);
+
+        // ── Fiscal disclaimer / Autofactura billing info ──
+        // A zero-total account cannot be invoiced (SAT does not allow CFDI for $0).
+        boolean canInvoice = payment.getTotal() != null && payment.getTotal().compareTo(BigDecimal.ZERO) > 0;
+        out.write(FONT_B);
+        if (canInvoice && payment.getAutofacturaKey() != null && !payment.getAutofacturaKey().isBlank()) {
+            // Account has an autofactura key — show QR code
+            printSeparator(out);
+            printLine(out, "Facture esta cuenta");
+            printLine(out, "escaneando el codigo QR:");
+            if (payment.getSelfInvoiceUrl() != null) {
+                writeQrCode(out, payment.getSelfInvoiceUrl());
+            }
+            // Invoicing deadline legend (last day of payment month, in company timezone)
+            java.time.LocalDate deadline = payment.getInvoiceDeadline(
+                    com.aatechsolutions.elgransazon.infrastructure.util.CompanyLocalTime.getZone());
+            if (deadline != null) {
+                String deadlineText = deadline.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+                out.write(BOLD_ON);
+                printLine(out, "Facture antes del " + deadlineText);
+                out.write(BOLD_OFF);
+            }
+            printSeparator(out);
+        } else {
+            printLine(out, "Este no es un comprobante fiscal");
+        }
+        out.write(FONT_A);
+
+        // ── System branding (small) ──
+        out.write(FONT_B);
+        String systemName = globalSystemConfigService.getConfiguration().getSystemName();
+        printLine(out, "by " + systemName);
+        out.write(FONT_A);
+
+        // ── Feed and cut ──
+        out.write(new byte[]{LF, LF, LF, LF});
+        out.write(FEED_CUT);
+
+        log.info("ESC/POS ticket generated successfully for payment: {}", payment.getPaymentFolio());
+        return out.toByteArray();
+    }
+
+    /**
+     * Format a (possibly fractional) quantity for display: 1 → "1", 0.5 → "0.5".
+     */
+    private String formatQuantity(BigDecimal qty) {
+        if (qty == null) {
+            return "1";
+        }
+        return qty.stripTrailingZeros().toPlainString();
     }
 
     // ── Helper methods ──

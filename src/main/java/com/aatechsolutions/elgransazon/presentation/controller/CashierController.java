@@ -3,6 +3,7 @@ package com.aatechsolutions.elgransazon.presentation.controller;
 import com.aatechsolutions.elgransazon.application.service.*;
 import com.aatechsolutions.elgransazon.domain.entity.*;
 import com.aatechsolutions.elgransazon.infrastructure.context.CompanyContext;
+import com.aatechsolutions.elgransazon.util.DeliveryStatusSupport;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -307,10 +308,14 @@ public class CashierController {
                 && Boolean.TRUE.equals(listCfg.getStaffCanManageBaristaItems());
         boolean staffParrilleroEnabled = staffOrderStatusEnabled
                 && Boolean.TRUE.equals(listCfg.getStaffCanManageParrilleroItems());
+        // Delivery orders can be advanced by the cashier when the permission is enabled.
+        boolean staffDeliveryEnabled = staffOrderStatusEnabled
+                && Boolean.TRUE.equals(listCfg.getStaffCanManageDeliveryOrders());
         model.addAttribute("staffOrderStatusEnabled", staffOrderStatusEnabled);
         model.addAttribute("staffChefEnabled", staffChefEnabled);
         model.addAttribute("staffBaristaEnabled", staffBaristaEnabled);
         model.addAttribute("staffParrilleroEnabled", staffParrilleroEnabled);
+        model.addAttribute("staffDeliveryEnabled", staffDeliveryEnabled);
 
         return "cashier/orders/list";
     }
@@ -973,6 +978,17 @@ public class CashierController {
                 log.info("Setting paidBy to cashier: {}", username);
             }
             
+            // Delivery advance guard: on a DELIVERY order, ON_THE_WAY / DELIVERED may only be
+            // set by the repartidor or by admin/gerente/cajero when the staff permission is ON.
+            SystemConfiguration deliveryCfg = systemConfigurationService.getConfiguration();
+            if (!DeliveryStatusSupport.isStatusChangeAllowed("cashier", order, status, deliveryCfg)) {
+                response.put("success", false);
+                response.put("message", "Solo el repartidor, administrador, gerente o cajero pueden avanzar el estado " +
+                        "de una orden de reparto: el permiso debe estar habilitado en configuración y el cambio debe ser " +
+                        "el siguiente paso (LISTO -> EN CAMINO -> ENTREGADO).");
+                return response;
+            }
+
             // Now change the status
             Order updated = cashierOrderService.changeStatus(id, status, username);
             
@@ -1038,6 +1054,20 @@ public class CashierController {
                 paidStatus.put("label", OrderStatus.PAID.getDisplayName());
                 validStatuses.add(paidStatus);
             }
+
+            // Cashier can advance a DELIVERY order one step (repartidor flow) when the staff
+            // permission is enabled: READY -> ON_THE_WAY and ON_THE_WAY -> DELIVERED.
+            SystemConfiguration deliveryCfg = systemConfigurationService.getConfiguration();
+            OrderStatus nextDelivery = DeliveryStatusSupport.canStaffAdvanceDelivery("cashier", order, deliveryCfg)
+                ? DeliveryStatusSupport.nextDeliveryStatus(order)
+                : null;
+            if (nextDelivery != null) {
+                Map<String, String> deliveryStatus = new HashMap<>();
+                deliveryStatus.put("value", nextDelivery.name());
+                deliveryStatus.put("label", nextDelivery.getDisplayName());
+                validStatuses.add(deliveryStatus);
+            }
+            response.put("canAdvanceDelivery", nextDelivery != null);
             
             response.put("success", true);
             response.put("validStatuses", validStatuses);

@@ -9,6 +9,8 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -95,6 +97,28 @@ public class ItemMenuServiceImpl implements ItemMenuService {
         itemMenuRepository.saveAll(items);
         
         return items;
+    }
+
+    @Override
+    @Transactional
+    public Page<ItemMenu> searchMenuItemsPage(String name, Long categoryId, BigDecimal minPrice,
+                                              BigDecimal maxPrice, Boolean active, Boolean available,
+                                              Pageable pageable) {
+        log.debug("Searching menu items page: page={}, size={}, name={}, categoryId={}, minPrice={}, maxPrice={}, active={}, available={}",
+                pageable.getPageNumber(), pageable.getPageSize(), name, categoryId, minPrice, maxPrice, active, available);
+
+        Company company = CompanyContext.requireCurrentCompany();
+        Page<ItemMenu> page = itemMenuRepository.searchPageByCompany(
+                company, name, categoryId, minPrice, maxPrice, active, available, pageable);
+
+        // Refresh availability for the items on this page based on current ingredient stock
+        // (same behavior as the old full-list load, but only touching the fetched page)
+        for (ItemMenu item : page.getContent()) {
+            item.updateAvailability();
+        }
+        itemMenuRepository.saveAll(page.getContent());
+
+        return page;
     }
 
     @Override
@@ -637,6 +661,26 @@ public class ItemMenuServiceImpl implements ItemMenuService {
     @Override
     public long countUnavailable() {
         return itemMenuRepository.countUnavailable();
+    }
+
+    @Override
+    public long countAllByCompany() {
+        return itemMenuRepository.countByCompany(CompanyContext.requireCurrentCompany());
+    }
+
+    @Override
+    public long countActiveByCompany() {
+        return itemMenuRepository.countActiveByCompany(CompanyContext.requireCurrentCompany());
+    }
+
+    @Override
+    public long countAvailableByCompany() {
+        return itemMenuRepository.countAvailableByCompany(CompanyContext.requireCurrentCompany());
+    }
+
+    @Override
+    public long countUnavailableByCompany() {
+        return itemMenuRepository.countUnavailableByCompany(CompanyContext.requireCurrentCompany());
     }
 
     @Override

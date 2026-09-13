@@ -10,7 +10,9 @@ import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Order entity representing customer orders in the restaurant
@@ -134,6 +136,47 @@ public class Order implements Serializable {
     @Builder.Default
     private List<OrderDetail> orderDetails = new ArrayList<>();
 
+    /**
+     * Per-person accounts when the bill was split (empty/null for regular orders).
+     * Populated by the split-payment flow; each Payment carries its own amounts,
+     * tip, method, autofactura key and CFDI data.
+     */
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @Builder.Default
+    private List<Payment> payments = new ArrayList<>();
+
+    /**
+     * True when this order was paid through split accounts (1..N Payment rows).
+     */
+    public boolean isSplitOrder() {
+        return payments != null && !payments.isEmpty();
+    }
+
+    /**
+     * Next sequential "Persona N" number for the split editor: one past the
+     * highest person number already charged on this order. Person labels are a
+     * snapshot per payment, so numbering must continue where it left off
+     * instead of restarting at 1 on every collection.
+     */
+    public int nextPersonNumber() {
+        int max = 0;
+        if (payments != null) {
+            for (Payment p : payments) {
+                if (p.getPersonLabel() != null) {
+                    String label = p.getPersonLabel().trim();
+                    if (label.startsWith("Persona ")) {
+                        try {
+                            max = Math.max(max, Integer.parseInt(label.substring(8).trim()));
+                        } catch (NumberFormatException ignored) {
+                            // Non-numeric label does not advance the counter.
+                        }
+                    }
+                }
+            }
+        }
+        return max + 1;
+    }
+
     // ========== Payment Method ==========
 
     @NotNull(message = "El método de pago es requerido")
@@ -198,6 +241,29 @@ public class Order implements Serializable {
     @Column(name = "order_discount", precision = 8, scale = 2, nullable = false)
     @Builder.Default
     private BigDecimal orderDiscount = BigDecimal.ZERO;
+
+    /**
+     * Porcentaje de descuento capturado por admin/cajero (0–100, 2 decimales).
+     * Cuando está presente, {@link #orderDiscount} sigue siendo el monto
+     * resuelto (total × %) para no alterar totales, IVA, reportes, tickets ni
+     * Facturama.
+     */
+    @DecimalMin(value = "0.0", message = "El porcentaje de descuento no puede ser negativo")
+    @DecimalMax(value = "100.0", message = "El porcentaje de descuento no puede exceder 100%")
+    @Digits(integer = 3, fraction = 2, message = "El porcentaje de descuento solo permite hasta 2 decimales")
+    @Column(name = "order_discount_percent", precision = 5, scale = 2)
+    private BigDecimal orderDiscountPercent;
+
+    /**
+     * true cuando el descuento quedó fijado (flujo "persona que se va"):
+     * todo cobro posterior de la orden debe usar exactamente el mismo
+     * porcentaje. El mesero nunca lo fija (solo admin/cajero).
+     */
+    @NotNull(message = "El bloqueo del descuento es requerido")
+    @Column(name = "order_discount_locked", nullable = false,
+            columnDefinition = "boolean not null default false")
+    @Builder.Default
+    private boolean orderDiscountLocked = false;
 
     // ========== Audit Fields ==========
 
@@ -270,6 +336,29 @@ public class Order implements Serializable {
     @Column(name = "facturama_cfdi_created_at")
     private LocalDateTime facturamaCfdiCreatedAt;
 
+    // ========== Factura Global (Público en General) ==========
+    // When the ADMIN emits the daily/monthly global invoice, every paid ticket without
+    // an individual CFDI gets these fields filled. Once set, the autofactura page blocks
+    // individual invoicing (SAT forbids invoicing the same operation twice).
+
+    /**
+     * Facturama CFDI ID of the global invoice (público en general) that included this order.
+     */
+    @Column(name = "factura_global_cfdi_id", length = 100)
+    private String facturaGlobalCfdiId;
+
+    /**
+     * SAT fiscal folio UUID of the global invoice that included this order.
+     */
+    @Column(name = "factura_global_cfdi_uuid", length = 100)
+    private String facturaGlobalCfdiUuid;
+
+    /**
+     * Timestamp (UTC) when the global invoice CFDI was created via Facturama.
+     */
+    @Column(name = "factura_global_cfdi_created_at")
+    private LocalDateTime facturaGlobalCfdiCreatedAt;
+
     /**
      * Full self-invoice URL for this order (e.g. https://slug.domain.com/autofactura/{key}).
      */
@@ -340,15 +429,29 @@ public class Order implements Serializable {
         // Subtract order-level discount (gross, includes IVA). Clamp to [0, itemsTotal+envío]
         // so a malformed value can never push total below 0.
         BigDecimal grossBeforeDiscount = itemsTotal.add(effectiveDeliveryCost);
-        BigDecimal effectiveOrderDiscount = (this.orderDiscount != null)
-                ? this.orderDiscount
-                : BigDecimal.ZERO;
+        BigDecimal effectiveOrderDiscount;
+        if (this.orderDiscountLocked
+                && this.orderDiscountPercent != null
+                && this.orderDiscountPercent.compareTo(BigDecimal.ZERO) > 0) {
+            // Descuento fijado (persona que se va): el monto SIEMPRE se re-deriva
+            // del % sobre el total bruto vigente, por lo que los ítems agregados
+            // después del bloqueo también quedan descontados.
+            effectiveOrderDiscount = grossBeforeDiscount
+                    .multiply(this.orderDiscountPercent)
+                    .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+        } else {
+            effectiveOrderDiscount = (this.orderDiscount != null)
+                    ? this.orderDiscount
+                    : BigDecimal.ZERO;
+        }
         if (effectiveOrderDiscount.compareTo(BigDecimal.ZERO) < 0) {
             effectiveOrderDiscount = BigDecimal.ZERO;
         }
         if (effectiveOrderDiscount.compareTo(grossBeforeDiscount) > 0) {
             effectiveOrderDiscount = grossBeforeDiscount;
         }
+        // Keep the resolved amount in sync with the applied discount.
+        this.orderDiscount = effectiveOrderDiscount;
 
         this.total = grossBeforeDiscount.subtract(effectiveOrderDiscount).setScale(2, RoundingMode.HALF_UP);
         
@@ -720,6 +823,81 @@ public class Order implements Serializable {
         return String.format("$%.2f", getOrderDiscountWithoutTax());
     }
 
+    // ========== Order Discount Percent (porcentaje capturado) ==========
+
+    /**
+     * @return true when this order was discounted with a captured percentage (> 0).
+     */
+    public boolean hasOrderDiscountPercent() {
+        return orderDiscountPercent != null && orderDiscountPercent.compareTo(BigDecimal.ZERO) > 0;
+    }
+
+    /**
+     * @return true when the percentage discount is locked (departing-guest flow),
+     *         so every later collection must reuse the same percentage.
+     */
+    public boolean hasLockedOrderDiscount() {
+        return orderDiscountLocked && hasOrderDiscountPercent();
+    }
+
+    /**
+     * Formatted percentage without trailing zeros, e.g. "10" or "12.5".
+     */
+    public String getFormattedOrderDiscountPercent() {
+        if (orderDiscountPercent == null) {
+            return "0";
+        }
+        return orderDiscountPercent.stripTrailingZeros().toPlainString();
+    }
+
+    /**
+     * Gross order base used to resolve a percentage discount: items with item-level
+     * promotions already applied plus the delivery cost (IVA included).
+     */
+    public BigDecimal getGrossBeforeOrderDiscount() {
+        BigDecimal items = getCurrentItemsTotalWithTaxRaw();
+        BigDecimal delivery = (this.deliveryCost != null && this.orderType == OrderType.DELIVERY)
+                ? this.deliveryCost
+                : BigDecimal.ZERO;
+        return items.add(delivery).setScale(2, RoundingMode.HALF_UP);
+    }
+
+    /**
+     * Multiplier of the global percentage discount: (1 − %/100).
+     * Returns {@code 1} when the order has no captured percentage.
+     */
+    public BigDecimal getOrderDiscountFactor() {
+        if (!hasOrderDiscountPercent()) {
+            return BigDecimal.ONE;
+        }
+        return BigDecimal.ONE.subtract(
+                orderDiscountPercent.divide(BigDecimal.valueOf(100), 10, RoundingMode.HALF_UP));
+    }
+
+    /**
+     * Resolves a captured percentage (0–100) to a discount amount.
+     *
+     * The base is what is still owed when the order already has partial
+     * (departing-guest) charges, otherwise the full gross order; the result is
+     * capped at that base so the discount can never exceed what remains to be
+     * charged. Shared by the controllers to keep the amount stored on the order
+     * consistent with the captured percentage.
+     */
+    public BigDecimal resolveDiscountAmountForPercent(BigDecimal percent) {
+        if (percent == null || percent.compareTo(BigDecimal.ZERO) <= 0) {
+            return BigDecimal.ZERO;
+        }
+        BigDecimal base = hasPartialCollections()
+                ? getRemainingTotal()
+                : getGrossBeforeOrderDiscount();
+        if (base == null || base.compareTo(BigDecimal.ZERO) <= 0) {
+            return BigDecimal.ZERO;
+        }
+        BigDecimal resolved = base.multiply(percent)
+                .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+        return resolved.min(base).max(BigDecimal.ZERO);
+    }
+
     /**
      * Subtotal sin IVA "antes" del descuento de orden, para mostrar en tickets/vistas.
      * = order.subtotal + orderDiscountSinIVA.
@@ -910,6 +1088,211 @@ public class Order implements Serializable {
      */
     public void updateStatusFromItems() {
         this.status = calculateStatusFromItems();
+    }
+
+    /**
+     * Whether the order can be charged: status DELIVERED and every chargeable
+     * line already ENTREGADO (per-item status DELIVERED).
+     *
+     * An order that received new items later (items still PENDING /
+     * IN_PREPARATION / READY / TO_ACCEPT) is not charged until those items are
+     * delivered, because only items with itemStatus ENTREGADO are collected.
+     * Cancelled lines are not charged and never block the payment. Lines whose
+     * per-item status is null are treated as delivered for legacy orders
+     * created before the per-item status flow existed.
+     */
+    public boolean isReadyToCharge() {
+        if (status != OrderStatus.DELIVERED) {
+            return false;
+        }
+        if (orderDetails == null || orderDetails.isEmpty()) {
+            return false;
+        }
+        return orderDetails.stream()
+                .filter(d -> d.getItemStatus() != null
+                        && d.getItemStatus() != OrderStatus.CANCELLED)
+                .allMatch(d -> d.getItemStatus() == OrderStatus.DELIVERED);
+    }
+
+    /**
+     * Whether some non-cancelled line has not been delivered yet
+     * (order still open: extra items cooking or ready).
+     */
+    public boolean hasUndeliveredItems() {
+        if (orderDetails == null) {
+            return false;
+        }
+        return orderDetails.stream()
+                .filter(d -> d.getItemStatus() != null
+                        && d.getItemStatus() != OrderStatus.CANCELLED)
+                .anyMatch(d -> d.getItemStatus() != OrderStatus.DELIVERED);
+    }
+
+    /**
+     * True when at least one line has already been charged in a partial
+     * (departing-guest) collection while the order stayed open.
+     */
+    public boolean hasPartialCollections() {
+        if (orderDetails == null) {
+            return false;
+        }
+        return orderDetails.stream().anyMatch(OrderDetail::hasPaidUnits);
+    }
+
+    /**
+     * Amount already collected in partial (departing-guest) charges: every paid
+     * unit at its effective price plus its prorated complement share (same
+     * rounding as the departure collections).
+     */
+    public BigDecimal getCollectedAmount() {
+        // Real collections win: every Payment row already carries the discount
+        // that applied at the time it was charged, so summing their totals is
+        // exact even when the discount was set midway through the bill.
+        if (payments != null && !payments.isEmpty()) {
+            return payments.stream()
+                    .map(p -> p.getTotal() != null ? p.getTotal() : BigDecimal.ZERO)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add)
+                    .setScale(2, RoundingMode.HALF_UP);
+        }
+        // Fallback (no Payment rows yet): reconstruct from the charged units.
+        if (orderDetails == null) {
+            return BigDecimal.ZERO;
+        }
+        BigDecimal collected = BigDecimal.ZERO;
+        for (OrderDetail d : orderDetails) {
+            if (d.isComboChild() || d.getItemStatus() == OrderStatus.CANCELLED) {
+                continue;
+            }
+            BigDecimal paidQty = d.getPaidQuantityOrZero();
+            if (paidQty.compareTo(BigDecimal.ZERO) == 0) {
+                continue;
+            }
+            BigDecimal eff = (d.getPromotionAppliedPrice() != null)
+                    ? d.getPromotionAppliedPrice()
+                    : d.getUnitPrice();
+            collected = collected.add(eff.multiply(paidQty).setScale(2, RoundingMode.HALF_UP));
+            BigDecimal effComp = getEffectiveComplementsTotal(d);
+            if (effComp.compareTo(BigDecimal.ZERO) > 0
+                    && d.getQuantity() != null && d.getQuantity() > 0) {
+                collected = collected.add(effComp.multiply(paidQty)
+                        .divide(BigDecimal.valueOf(d.getQuantity()), 2, RoundingMode.HALF_UP));
+            }
+        }
+        return collected;
+    }
+
+    /**
+     * Complement total that must be charged for a line in a per-person payment.
+     *
+     * Combos are stored as a priced parent line plus $0-priced child lines, and
+     * the PAID complements live on the children (e.g. "Arrachera" inside the
+     * combo's Pizza Atrevida). Per-person charges only assign the parent line,
+     * so for a combo parent the effective complement total is its own
+     * complements PLUS the complements of its children in the same combo group
+     * (non-cancelled and already delivered, so only served items are charged).
+     * For every other line it is just the line's own complements.
+     */
+    public BigDecimal getEffectiveComplementsTotal(OrderDetail d) {
+        if (d == null) {
+            return BigDecimal.ZERO;
+        }
+        BigDecimal own = d.getComplementsTotal() != null ? d.getComplementsTotal() : BigDecimal.ZERO;
+        if (!d.isComboParent() || d.getComboGroupId() == null || orderDetails == null) {
+            return own;
+        }
+        String group = d.getComboGroupId();
+        BigDecimal children = orderDetails.stream()
+                .filter(c -> c.isComboChild())
+                .filter(c -> group.equals(c.getComboGroupId()))
+                .filter(c -> c.getItemStatus() != OrderStatus.CANCELLED)
+                .filter(c -> c.getItemStatus() == null || c.getItemStatus() == OrderStatus.DELIVERED)
+                .map(c -> c.getComplementsTotal() != null ? c.getComplementsTotal() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        return own.add(children);
+    }
+
+    /**
+     * Split-bill item descriptors for the payment screens (split-bill.js): every
+     * non-combo-child, non-cancelled line with the units still owed, the
+     * effective unit price and the EFFECTIVE complement total (combo parents
+     * include the complements of their $0-priced children, so per-person
+     * charges and their previews collect them too).
+     */
+    public List<Map<String, Object>> getSplitBillItems() {
+        List<Map<String, Object>> out = new ArrayList<>();
+        if (orderDetails == null) {
+            return out;
+        }
+        for (OrderDetail d : orderDetails) {
+            if (d.isComboChild()) {
+                continue;
+            }
+            if (d.getItemStatus() != null && d.getItemStatus() == OrderStatus.CANCELLED) {
+                continue;
+            }
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("id", d.getIdOrderDetail());
+            m.put("name", d.getDisplayName());
+            m.put("qty", d.getRemainingQuantity());
+            m.put("lineQty", BigDecimal.valueOf(d.getQuantity()));
+            m.put("price", d.getPromotionAppliedPrice() != null
+                    ? d.getPromotionAppliedPrice()
+                    : d.getUnitPrice());
+            m.put("comps", getEffectiveComplementsTotal(d));
+            m.put("delivered", d.getItemStatus() == null
+                    || d.getItemStatus() == OrderStatus.DELIVERED);
+            out.add(m);
+        }
+        return out;
+    }
+
+    /**
+     * Total still owed after partial (departing-guest) charges.
+     */
+    public BigDecimal getRemainingTotal() {
+        BigDecimal base = total != null ? total : BigDecimal.ZERO;
+        return base.subtract(getCollectedAmount()).max(BigDecimal.ZERO);
+    }
+
+    /**
+     * Get formatted collected amount (partial charges).
+     */
+    public String getFormattedCollectedAmount() {
+        return String.format("$%.2f", getCollectedAmount());
+    }
+
+    /**
+     * Get formatted remaining total.
+     */
+    public String getFormattedRemainingTotal() {
+        return String.format("$%.2f", getRemainingTotal());
+    }
+
+    /**
+     * There is at least one ENTREGADO line with units not charged yet — the
+     * waiter/cashier can charge a departing guest those units right now even
+     * though the rest of the order may still be pending.
+     */
+    public boolean hasChargeableDeliveredItems() {
+        if (orderDetails == null) {
+            return false;
+        }
+        return orderDetails.stream()
+                // Per-item status null (legacy orders) counts as delivered, same as isReadyToCharge()
+                .filter(d -> d.getItemStatus() == null || d.getItemStatus() == OrderStatus.DELIVERED)
+                .anyMatch(OrderDetail::hasRemainingQuantity);
+    }
+
+    /**
+     * Whether the "cobrar a la persona que se va" action is available:
+     * the order is open (not PAID/CANCELLED, not a delivery) and there is at
+     * least one delivered line that has not been fully charged.
+     */
+    public boolean canCollectDeparture() {
+        return status != OrderStatus.PAID
+                && status != OrderStatus.CANCELLED
+                && orderType != OrderType.DELIVERY
+                && hasChargeableDeliveredItems();
     }
 
     /**

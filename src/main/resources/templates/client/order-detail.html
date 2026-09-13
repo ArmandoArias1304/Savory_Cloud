@@ -514,7 +514,7 @@
                         Precio unitario:
                         <span
                           class="font-bold text-gray-900 dark:text-white"
-                          th:text="'$' + ${#numbers.formatDecimal(detail.unitPrice, 1, 2)}"
+                          th:text="${detail.courtesy ? 'Cortesía' : '$' + #numbers.formatDecimal(detail.unitPrice, 1, 2)}"
                         >
                           $0.00
                         </span>

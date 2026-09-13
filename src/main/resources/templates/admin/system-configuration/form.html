@@ -1198,7 +1198,9 @@
                         gerente) podrá avanzar el estado de los items de la orden que
                         requieren preparación (PENDIENTE → EN PREPARACIÓN → LISTO) con un
                         solo click, igual que lo hace el chef. Si está desactivado, solo
-                        chef y barista pueden cambiar esos estados.
+                        chef y barista pueden cambiar esos estados. El avance de las
+                        órdenes de reparto (EN CAMINO → ENTREGADO) queda reservado
+                        únicamente a administrador, gerente y cajero.
                       </span>
                     </div>
                   </label>
@@ -1282,13 +1284,40 @@
                         </span>
                       </div>
                     </label>
+
+                    <label
+                      class="flex items-start gap-3 p-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 hover:border-primary cursor-pointer transition-colors"
+                    >
+                      <input
+                        type="checkbox"
+                        id="staffCanManageDeliveryOrders"
+                        name="staffCanManageDeliveryOrders"
+                        th:checked="${configuration.staffCanManageDeliveryOrders}"
+                        class="mt-1 w-5 h-5 text-primary border-gray-300 rounded focus:ring-primary staff-order-status-child"
+                      />
+                      <div>
+                        <span
+                          class="block text-sm font-medium text-gray-900 dark:text-white"
+                        >
+                          Pedidos de reparto (repartidor)
+                        </span>
+                        <span
+                          class="block mt-1 text-xs text-gray-500 dark:text-gray-400"
+                        >
+                          Solo <strong>administrador, gerente y cajero</strong> podrán
+                          avanzar las órdenes de reparto (LISTO → EN CAMINO → ENTREGADO).
+                          El mesero no puede. El repartidor conserva su propia
+                          capacidad.
+                        </span>
+                      </div>
+                    </label>
                   </div>
                   <p
                     id="staffOrderStatusChildrenError"
                     class="mt-2 text-xs text-red-600 dark:text-red-400 hidden"
                   >
-                    Debes seleccionar al menos uno de los dos sub-permisos cuando el
-                    permiso principal está activado.
+                    Debes seleccionar al menos uno de los sub-permisos (chef, barista,
+                    parrillero o repartidor) cuando el permiso principal está activado.
                   </p>
                 </div>
 
@@ -1342,10 +1371,18 @@
                         var par = document.getElementById(
                           "staffCanManageParrilleroItems"
                         );
+                        var del = document.getElementById(
+                          "staffCanManageDeliveryOrders"
+                        );
                         var errorMsg = document.getElementById(
                           "staffOrderStatusChildrenError"
                         );
-                        if (!chef.checked && !bar.checked && !(par && par.checked)) {
+                        if (
+                          !chef.checked &&
+                          !bar.checked &&
+                          !(par && par.checked) &&
+                          !(del && del.checked)
+                        ) {
                           e.preventDefault();
                           if (errorMsg) errorMsg.classList.remove("hidden");
                           chef.focus();

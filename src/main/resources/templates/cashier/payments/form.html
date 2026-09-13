@@ -269,8 +269,17 @@
                     <h2
                       class="text-6xl sm:text-7xl font-black text-primary tracking-tighter mt-2"
                       id="displayTotal"
-                      th:text="${order.formattedTotal}"
+                      th:text="${order.hasPartialCollections() ? order.formattedRemainingTotal : order.formattedTotal}"
                     ></h2>
+                    <p
+                      th:if="${order.hasPartialCollections()}"
+                      class="mt-2 text-sm text-gray-500 dark:text-gray-400"
+                    >
+                      Total del pedido:
+                      <span class="font-semibold" th:text="${order.formattedTotal}"></span>
+                      · Ya cobrado:
+                      <span class="font-semibold" th:text="${order.formattedCollectedAmount}"></span>
+                    </p>
                   </div>
 
                   <!-- Payment Methods -->
@@ -446,52 +455,54 @@
                     <div
                       class="space-y-4 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 p-5"
                     >
-                      <div class="flex items-center justify-between">
-                        <p class="text-gray-600 dark:text-gray-400 font-medium">
-                          Dividir en partes iguales
+                      <label class="flex items-center gap-3 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          id="splitToggle"
+                          class="w-5 h-5 rounded border-gray-300 text-primary focus:ring-primary"
+                        />
+                        <span
+                          class="text-sm font-semibold text-gray-700 dark:text-gray-300"
+                          >Dividir cuenta entre varias personas</span
+                        >
+                      </label>
+
+                      <div id="splitPanel" style="display: none">
+                        <p
+                          class="text-xs text-gray-500 dark:text-gray-400 font-medium"
+                        >
+                          Asigna a cada persona los productos completos que
+                          consumió. Un producto no se divide para facturación
+                          (SAT).
                         </p>
-                        <div class="flex items-center gap-3">
+
+                        <!-- Add person -->
+                        <div id="splitAddPersonRow" style="display: none">
                           <button
                             type="button"
-                            class="counter-btn w-10 h-10 rounded-lg flex items-center justify-center font-bold"
-                            onclick="updateSplit(-1)"
+                            id="splitAddPerson"
+                            class="w-full rounded-xl border-2 border-dashed border-primary/50 text-primary py-2.5 font-bold text-sm hover:bg-primary/5"
                           >
-                            <span class="material-symbols-outlined"
-                              >remove</span
-                            >
-                          </button>
-                          <span
-                            class="text-2xl font-black text-gray-900 dark:text-white min-w-[2rem] text-center"
-                            id="split-count"
-                            >1</span
-                          >
-                          <button
-                            type="button"
-                            class="counter-btn w-10 h-10 rounded-lg flex items-center justify-center font-bold"
-                            onclick="updateSplit(1)"
-                          >
-                            <span class="material-symbols-outlined">add</span>
+                            + Agregar persona
                           </button>
                         </div>
-                      </div>
-                      <div class="border-t border-gray-300 pt-4">
+
+                        <!-- Per-person accounts -->
+                        <div id="splitAccountList" class="space-y-3"></div>
+
                         <p
-                          class="text-gray-600 dark:text-gray-400 font-medium mb-2"
-                        >
-                          Monto por persona
-                        </p>
-                        <p
-                          class="text-4xl font-black bg-gradient-to-r from-primary to-primary-dark bg-clip-text text-transparent"
-                          id="per-person-amount"
-                        >
-                          $0.00
-                        </p>
+                          id="splitSummary"
+                          class="text-xs text-gray-500 dark:text-gray-400 font-medium"
+                        ></p>
                       </div>
                     </div>
                   </div>
 
                   <!-- Order Discount Section (descuento sobre el total, incluye IVA) -->
-                  <div class="space-y-4">
+                  <div
+                    class="space-y-4"
+                    th:if="${currentRole != 'waiter' or order.hasLockedOrderDiscount()}"
+                  >
                     <h3
                       class="text-lg font-bold text-gray-900 dark:text-white"
                     >
@@ -500,13 +511,71 @@
                         (opcional, incluye IVA)
                       </span>
                     </h3>
-                    <div>
+
+                    <!-- Descuento fijado (flujo "persona que se va"): solo lectura -->
+                    <div
+                      th:if="${order.hasLockedOrderDiscount()}"
+                      class="rounded-xl border-2 border-orange-200 dark:border-orange-700 bg-orange-50 dark:bg-orange-900/20 p-3"
+                    >
+                      <p class="text-sm font-semibold text-orange-700 dark:text-orange-300">
+                        El descuento de este pedido quedó fijado en
+                        <span th:text="${order.formattedOrderDiscountPercent}">0</span>%
+                        y se aplica a cada ítem.
+                      </p>
+                      <input type="hidden" name="discountType" value="PORCENTAJE" />
+                      <input
+                        type="hidden"
+                        name="orderDiscountPercent"
+                        th:value="${order.orderDiscountPercent}"
+                      />
+                    </div>
+
+                    <!-- Captura del descuento (monto fijo $ o porcentaje %) -->
+                    <div th:unless="${order.hasLockedOrderDiscount()}">
                       <label
                         class="block text-sm font-semibold text-gray-600 dark:text-gray-400 mb-2"
                       >
-                        Monto a descontar
+                        Descuento
                       </label>
-                      <div class="relative">
+
+                      <!-- Selector $ / %: en el cobro de la persona que se va solo se permite % -->
+                      <div
+                        id="discountTypeToggle"
+                        class="inline-flex gap-1 rounded-xl border-2 border-gray-300 dark:border-gray-600 p-1 mb-2"
+                        th:if="${!splitDeparture and !order.hasPartialCollections()}"
+                      >
+                        <button
+                          type="button"
+                          id="discountTypeAmountBtn"
+                          onclick="setDiscountType('MONTO')"
+                          class="rounded-lg px-3 py-1.5 text-sm font-bold transition"
+                        >
+                          $ Monto
+                        </button>
+                        <button
+                          type="button"
+                          id="discountTypePercentBtn"
+                          onclick="setDiscountType('PORCENTAJE')"
+                          class="rounded-lg px-3 py-1.5 text-sm font-bold transition"
+                        >
+                          % Porcentaje
+                        </button>
+                      </div>
+
+                      <input
+                        type="hidden"
+                        name="discountType"
+                        id="discountType"
+                        th:value="${(splitDeparture or order.hasPartialCollections()) ? 'PORCENTAJE' : 'MONTO'}"
+                        value="MONTO"
+                      />
+
+                      <!-- Monto fijo -->
+                      <div
+                        class="relative"
+                        id="discountAmountWrap"
+                        th:style="${(splitDeparture or order.hasPartialCollections()) ? 'display:none' : ''}"
+                      >
                         <span
                           class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-gray-400 text-xl font-bold"
                           >$</span
@@ -517,7 +586,7 @@
                           id="orderDiscount"
                           step="0.01"
                           min="0"
-                          th:max="${order.total}"
+                          th:max="${order.hasPartialCollections() ? order.remainingTotal : order.total}"
                           value="0.00"
                           data-prev="0.00"
                           class="input-field w-full rounded-xl border-2 border-gray-300 bg-white dark:bg-gray-700 p-4 pl-11 text-xl font-bold text-gray-900 dark:text-white focus:outline-none"
@@ -525,10 +594,112 @@
                           oninput="onOrderDiscountInput(this)"
                         />
                       </div>
+
+                      <!-- Porcentaje -->
+                      <div
+                        class="relative"
+                        id="discountPercentWrap"
+                        th:style="${(splitDeparture or order.hasPartialCollections()) ? '' : 'display:none'}"
+                      >
+                        <span
+                          class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-gray-400 text-xl font-bold"
+                          >%</span
+                        >
+                        <input
+                          type="number"
+                          name="orderDiscountPercent"
+                          id="orderDiscountPercent"
+                          step="0.01"
+                          min="0"
+                          max="100"
+                          value="0.00"
+                          class="input-field w-full rounded-xl border-2 border-gray-300 bg-white dark:bg-gray-700 p-4 pl-11 text-xl font-bold text-gray-900 dark:text-white focus:outline-none"
+                          placeholder="0.00"
+                          oninput="onOrderDiscountPercentInput(this)"
+                        />
+                      </div>
+
                       <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
                         Máximo:
-                        <span th:text="${order.formattedTotal}">$0.00</span>
-                        (total de la orden).
+                        <span th:text="${order.hasPartialCollections() ? order.formattedRemainingTotal : order.formattedTotal}">$0.00</span>
+                        <span th:text="${order.hasPartialCollections() ? '(total restante del pedido).' : '(total de la orden).'}"></span>
+                      </p>
+                    </div>
+                  </div>
+
+                  <!-- Quick split: visual reference only (never splits the payment) -->
+                  <div class="space-y-4">
+                    <div
+                      id="quickSplitToggle"
+                      role="button"
+                      tabindex="0"
+                      aria-expanded="false"
+                      class="flex items-center justify-between cursor-pointer select-none"
+                    >
+                      <h3
+                        class="text-lg font-bold text-gray-900 dark:text-white"
+                      >
+                        ¿Entre cuántas personas?
+                        <span class="text-sm font-semibold text-gray-400"
+                          >(solo referencia)</span
+                        >
+                      </h3>
+                      <span
+                        id="quickSplitChevron"
+                        class="material-symbols-outlined text-gray-400 transition-transform"
+                        >expand_more</span
+                      >
+                    </div>
+                    <div
+                      id="quickSplitBody"
+                      style="display: none"
+                      class="space-y-4 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-5"
+                    >
+                      <div class="flex items-center justify-between">
+                        <p class="text-gray-600 dark:text-gray-400 font-medium">
+                          Personas
+                        </p>
+                        <div class="flex items-center gap-3">
+                          <button
+                            type="button"
+                            id="quickSplitDec"
+                            class="counter-btn w-10 h-10 rounded-lg flex items-center justify-center font-bold"
+                          >
+                            <span class="material-symbols-outlined">remove</span>
+                          </button>
+                          <span
+                            class="text-2xl font-black text-gray-900 dark:text-white min-w-[2rem] text-center"
+                            id="quickSplitCount"
+                            >2</span
+                          >
+                          <button
+                            type="button"
+                            id="quickSplitInc"
+                            class="counter-btn w-10 h-10 rounded-lg flex items-center justify-center font-bold"
+                          >
+                            <span class="material-symbols-outlined">add</span>
+                          </button>
+                        </div>
+                      </div>
+                      <div
+                        class="rounded-xl bg-primary/10 border-2 border-primary p-4"
+                      >
+                        <div class="flex justify-between items-center">
+                          <span
+                            class="text-gray-700 dark:text-gray-300 font-semibold"
+                            >Cada persona pagaría</span
+                          >
+                          <span
+                            class="text-2xl font-black text-primary"
+                            id="quickSplitPerPerson"
+                            >$0.00</span
+                          >
+                        </div>
+                      </div>
+                      <p class="text-xs text-gray-500 dark:text-gray-400 italic">
+                        Conversión rápida únicamente visual: el cobro se hace en
+                        un solo ticket con el total del pedido. Un producto no se
+                        divide para facturación (SAT).
                       </p>
                     </div>
                   </div>
@@ -750,7 +921,7 @@
               <div
                 th:each="detail : ${order.orderDetails}"
                 class="order-item flex flex-col"
-                th:classappend="${detail.comboChild} ? 'pl-5' : ''"
+                th:classappend="${(detail.comboChild ? 'pl-5' : '') + (detail.isFullyPaid() ? ' opacity-50' : '')}"
               >
                 <div class="flex justify-between items-start">
                   <div class="flex-1">
@@ -761,6 +932,11 @@
                     <span class="text-gray-600 dark:text-gray-400 text-sm ml-2">
                       x<span th:text="${detail.quantity}"></span>
                     </span>
+                    <span
+                      th:if="${detail.hasPaidUnits()}"
+                      class="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300"
+                      th:text="${detail.isFullyPaid() ? 'Pagado' : 'Pagado ' + detail.formattedPaidQuantity + ' de ' + detail.quantity}"
+                    ></span>
                   </div>
                   <span
                     class="font-bold text-gray-900 dark:text-white dark:text-white"
@@ -860,9 +1036,18 @@
                 <span
                   class="text-primary text-2xl"
                   id="grand-total"
-                  th:text="${order.formattedTotal}"
+                  th:text="${order.hasPartialCollections() ? order.formattedRemainingTotal : order.formattedTotal}"
                 ></span>
               </div>
+              <p
+                th:if="${order.hasPartialCollections()}"
+                class="text-right text-xs text-gray-500 dark:text-gray-400 italic"
+              >
+                Total del pedido:
+                <span class="font-semibold" th:text="${order.formattedTotal}"></span>
+                · Ya cobrado:
+                <span class="font-semibold" th:text="${order.formattedCollectedAmount}"></span>
+              </p>
               <!-- Nota informativa de envío (después del TOTAL) -->
               <div
                 th:if="${order.orderType != null and order.orderType.name() == 'DELIVERY' and order.deliveryCost != null and order.deliveryCost.compareTo(T(java.math.BigDecimal).ZERO) > 0}"
@@ -889,6 +1074,10 @@
                 <span class="material-symbols-outlined text-sm">sell</span>
                 <span>Descuento aplicado de </span>
                 <span th:text="${order.formattedOrderDiscount}">$0.00</span>
+                <span
+                  th:if="${order.hasOrderDiscountPercent()}"
+                  th:text="'(' + ${order.formattedOrderDiscountPercent} + '%)'"
+                ></span>
               </div>
             </div>
 
@@ -941,17 +1130,46 @@
     <script th:inline="javascript">
       /*<![CDATA[*/
       window.ORDER_DATA = {
-        total: /*[[${order.total}]]*/ 0,
+        // Con cobros parciales, el total operable es lo que resta por cobrar
+        total: /*[[${order.hasPartialCollections() ? order.remainingTotal : order.total}]]*/ 0,
         subtotal: /*[[${order.subtotal}]]*/ 0,
+        // Descuento fijado (persona que se va): ya viene incluido en los totales
+        discountLocked: /*[[${order.hasLockedOrderDiscount()}]]*/ false,
+        discountPercent: /*[[${order.orderDiscountPercent != null ? order.orderDiscountPercent : 0}]]*/ 0,
+        // % obligatorio: cuenta dividida o cobro de la persona que se va ya realizado
+        discountPercentageForced: /*[[${splitDeparture or order.hasPartialCollections()}]]*/ false,
+      };
+
+      // Split-bill configuration (real "Dividir Cuenta")
+      window.SPLIT_CONFIG = {
+        total: /*[[${order.total}]]*/ 0,
+        role: /*[[${currentRole}]]*/ "cashier",
+        methods: /*[[${enabledPaymentMethodNames}]]*/ [],
+        fixedMethod: null,
+        // qty = unidades aún no cobradas; delivered = ítem ya ENTREGADO
+        // comps = complementos efectivos: para un combo padre incluye los complementos de sus hijos
+        items: /*[[${order.splitBillItems}]]*/ [],
+        // departure: orden abierta con ítems pendientes → cobro parcial (solo ENTREGADOS)
+        departure: /*[[${splitDeparture}]]*/ false,
+        // Cash accounts never register a tip in the restaurant (delivery allows it)
+        zeroCashTips: /*[[${splitZeroCashTips}]]*/ true,
+        // Parts-equal removed (SAT): the split editor is per-person only; this
+        // flag keeps any cached JS in per-person mode.
+        allowEqual: false,
+        // autoEnable: (sin uso activo) el cobro global del saldo restante sí
+        // está permitido tras cobros parciales; la división queda a elección
+        autoEnable: /*[[${splitAutoEnable}]]*/ false,
+        // Numeración continua: siguiente número de persona para este pedido
+        nextPersonNumber: /*[[${nextPersonNumber}]]*/ 1
       };
       /*]]>*/
     </script>
+    <script th:src="@{/js/split-bill.js}"></script>
 
     <!-- Application JavaScript -->
     <script>
       let orderTotal = 0;
       let orderSubtotal = 0;
-      let splitCount = 1;
 
       // Initialize data from backend
       if (window.ORDER_DATA) {
@@ -959,25 +1177,90 @@
         orderSubtotal = parseFloat(window.ORDER_DATA.subtotal) || 0;
       }
 
-      // Helper: returns total after subtracting (and clamping) the entered order discount.
-      function getEffectiveOrderTotal() {
-        const discount =
-          parseFloat(document.getElementById("orderDiscount").value) || 0;
-        const safeDiscount = Math.min(Math.max(0, discount), orderTotal);
-        return Math.max(0, orderTotal - safeDiscount);
+      // ---------- Descuento: monto fijo ($) o porcentaje (%) ----------
+      // El descuento fijado (persona que se va) ya viene incluido en los totales
+      // que renderiza el servidor, así que no se recalcula en vivo.
+      function isDiscountLocked() {
+        return !!(window.ORDER_DATA && window.ORDER_DATA.discountLocked);
       }
 
-      // Update split count
-      function updateSplit(delta) {
-        const tip = parseFloat(document.getElementById("tip").value) || 0;
-        const totalWithTip = getEffectiveOrderTotal() + tip;
+      function getDiscountType() {
+        const typeEl = document.getElementById("discountType");
+        return typeEl && String(typeEl.value).toUpperCase() === "PORCENTAJE"
+          ? "PORCENTAJE"
+          : "MONTO";
+      }
 
-        splitCount = Math.max(1, Math.min(10, splitCount + delta));
-        document.getElementById("split-count").textContent = splitCount;
+      function getDiscountAmount() {
+        if (isDiscountLocked()) return 0;
+        if (getDiscountType() === "PORCENTAJE") {
+          const pctInput = document.getElementById("orderDiscountPercent");
+          let pct = parseFloat(pctInput ? pctInput.value : 0) || 0;
+          pct = Math.min(Math.max(0, pct), 100);
+          return Math.min(orderTotal, (orderTotal * pct) / 100);
+        }
+        const amountInput = document.getElementById("orderDiscount");
+        const amount = parseFloat(amountInput ? amountInput.value : 0) || 0;
+        return Math.min(Math.max(0, amount), orderTotal);
+      }
 
-        const perPerson = (totalWithTip / splitCount).toFixed(2);
-        document.getElementById("per-person-amount").textContent =
-          "$" + perPerson;
+      function setDiscountType(type) {
+        const hidden = document.getElementById("discountType");
+        if (hidden) hidden.value = type;
+        const isPercent = type === "PORCENTAJE";
+        const amountWrap = document.getElementById("discountAmountWrap");
+        const percentWrap = document.getElementById("discountPercentWrap");
+        const amountInput = document.getElementById("orderDiscount");
+        const percentInput = document.getElementById("orderDiscountPercent");
+        if (amountWrap) amountWrap.style.display = isPercent ? "none" : "";
+        if (percentWrap) percentWrap.style.display = isPercent ? "" : "none";
+        // El campo oculto se deshabilita para que el servidor nunca reciba ambos.
+        if (amountInput) amountInput.disabled = isPercent;
+        if (percentInput) percentInput.disabled = !isPercent;
+        const activeClass =
+          "rounded-lg px-3 py-1.5 text-sm font-bold transition bg-primary text-white";
+        const idleClass =
+          "rounded-lg px-3 py-1.5 text-sm font-bold transition text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700";
+        const amountBtn = document.getElementById("discountTypeAmountBtn");
+        const percentBtn = document.getElementById("discountTypePercentBtn");
+        if (amountBtn) amountBtn.className = isPercent ? idleClass : activeClass;
+        if (percentBtn) percentBtn.className = isPercent ? activeClass : idleClass;
+        calculateTotalWithTip();
+      }
+
+      // The discount must be a percentage (and gets locked) as soon as the bill
+      // is split among people or someone at the table was already charged: a
+      // fixed amount would retroactively change what earlier guests already paid.
+      function isPercentageForced() {
+        if (window.ORDER_DATA && window.ORDER_DATA.discountPercentageForced) return true;
+        if (window.ORDER_DATA && window.ORDER_DATA.discountLocked) return true;
+        const splitToggle = document.getElementById("splitToggle");
+        if (splitToggle && splitToggle.checked) return true;
+        return !!(window.SPLIT_BILL && window.SPLIT_BILL.enabled());
+      }
+
+      // Forces % mode and blocks the "$ Monto" button when the discount can no
+      // longer be captured as a fixed amount.
+      function applyDiscountModeLock() {
+        const forced = isPercentageForced();
+        if (forced) {
+          setDiscountType("PORCENTAJE");
+        }
+        const amountBtn = document.getElementById("discountTypeAmountBtn");
+        if (amountBtn) {
+          amountBtn.disabled = forced;
+          amountBtn.classList.toggle("opacity-50", forced);
+          amountBtn.classList.toggle("cursor-not-allowed", forced);
+          amountBtn.title = forced
+            ? "Bloqueado: con la cuenta dividida o ya cobrada la persona que se va, el descuento debe ser por porcentaje"
+            : "";
+        }
+      }
+
+      // Helper: returns total after subtracting (and clamping) the entered order discount.
+      function getEffectiveOrderTotal() {
+        const safeDiscount = getDiscountAmount();
+        return Math.max(0, orderTotal - safeDiscount);
       }
 
       // Calculate change
@@ -1015,6 +1298,17 @@
       // so the section is hidden, the tip is forced to $0, and no tip is
       // registered in the system.
       function syncTipSection() {
+        // While the split-bill editor is open every person sets their own tip:
+        // keep the global Propina section hidden.
+        if (window.SPLIT_BILL && window.SPLIT_BILL.enabled()) {
+          const tipSection = document.getElementById("tipSection");
+          const tipCashNote = document.getElementById("tipCashNote");
+          const tipLine = document.getElementById("tip-line");
+          if (tipSection) tipSection.style.display = "none";
+          if (tipCashNote) tipCashNote.style.display = "none";
+          if (tipLine) tipLine.style.display = "none";
+          return;
+        }
         const method = document.getElementById("paymentMethodInput").value;
         const isCash = method === "CASH";
 
@@ -1085,6 +1379,26 @@
         calculateTotalWithTip();
       }
 
+      // Sanitize and clamp the percentage input (0–100, 2 decimals), then refresh totals.
+      function onOrderDiscountPercentInput(input) {
+        if (input.value.includes(".")) {
+          const parts = input.value.split(".");
+          if (parts[1].length > 2) {
+            input.value = parts[0] + "." + parts[1].slice(0, 2);
+          }
+        }
+        let value = parseFloat(input.value);
+        if (isNaN(value) || value < 0) {
+          value = 0;
+          input.value = "0";
+        }
+        if (value > 100) {
+          value = 100;
+          input.value = "100";
+        }
+        calculateTotalWithTip();
+      }
+
       function calculateTotalWithTip() {
         const tipInput = document.getElementById("tip");
         const tip = parseFloat(tipInput.value) || 0;
@@ -1094,9 +1408,7 @@
           return;
         }
 
-        const discountInput = document.getElementById("orderDiscount");
-        const discountRaw = parseFloat(discountInput.value) || 0;
-        const discount = Math.min(Math.max(0, discountRaw), orderTotal);
+        const discount = getDiscountAmount();
         const effectiveTotal = Math.max(0, orderTotal - discount);
         const totalWithTip = effectiveTotal + tip;
 
@@ -1126,19 +1438,56 @@
           }
         }
 
-        // Update split amount
-        const perPerson = (totalWithTip / splitCount).toFixed(2);
-        document.getElementById("per-person-amount").textContent =
-          "$" + perPerson;
-
         // Recalculate change
         calculateChange();
+
+        // Refresh split-bill preview (if enabled)
+        if (window.SPLIT_BILL) window.SPLIT_BILL.refresh();
       }
 
       // Form validation
       document
         .getElementById("paymentForm")
         .addEventListener("submit", function (e) {
+          // ========== SPLIT BILL: build the per-account plan and confirm ==========
+          if (window.SPLIT_BILL && window.SPLIT_BILL.enabled()) {
+            e.preventDefault();
+            var plan = window.SPLIT_BILL.buildPlan();
+            if (!plan) return false;
+            Swal.fire({
+              title: window.SPLIT_BILL.confirmTitle
+                ? window.SPLIT_BILL.confirmTitle()
+                : "¿Confirmar división de cuenta?",
+              html: window.SPLIT_BILL.summaryHtml(plan),
+              icon: "question",
+              showCancelButton: true,
+              confirmButtonColor: "#38e07b",
+              cancelButtonColor: "#6b7280",
+              confirmButtonText: "Sí, procesar pagos",
+              cancelButtonText: "Cancelar",
+              background: document.documentElement.classList.contains("dark")
+                ? "#1f2937"
+                : "#ffffff",
+              color: document.documentElement.classList.contains("dark")
+                ? "#f3f4f6"
+                : "#1f2937",
+              customClass: {
+                popup: "rounded-2xl",
+                confirmButton: "rounded-xl px-6 py-3 font-bold",
+                cancelButton: "rounded-xl px-6 py-3 font-bold",
+              },
+            }).then(function (result) {
+              if (result.isConfirmed) {
+                var form = document.getElementById("paymentForm");
+                window.SPLIT_BILL.appendToForm(form);
+                playPaymentSound(function () {
+                  form.submit();
+                });
+              }
+            });
+            return false;
+          }
+
           const paymentMethod =
             document.getElementById("paymentMethodInput").value;
 
@@ -1166,12 +1515,7 @@
             paymentMethod === "CASH"
               ? 0
               : parseFloat(document.getElementById("tip").value) || 0;
-          const orderDiscountVal =
-            parseFloat(document.getElementById("orderDiscount").value) || 0;
-          const safeOrderDiscount = Math.min(
-            Math.max(0, orderDiscountVal),
-            orderTotal,
-          );
+          const safeOrderDiscount = getDiscountAmount();
           const effectiveTotal = Math.max(0, orderTotal - safeOrderDiscount);
           const totalWithTip = effectiveTotal + tip;
 
@@ -1280,7 +1624,24 @@
 
       // Initialize on page load
       document.addEventListener("DOMContentLoaded", function () {
+        // Initial discount mode: $ monto by default, % for the departing-guest
+        // collection (a locked order renders its own hidden fields).
+        const discountHidden = document.getElementById("discountType");
+        if (discountHidden) {
+          setDiscountType(
+            String(discountHidden.value).toUpperCase() === "PORCENTAJE"
+              ? "PORCENTAJE"
+              : "MONTO",
+          );
+        }
         calculateTotalWithTip();
+
+        // Lock the discount to % when the bill is split or already partly charged.
+        applyDiscountModeLock();
+        const splitToggleEl = document.getElementById("splitToggle");
+        if (splitToggleEl) {
+          splitToggleEl.addEventListener("change", applyDiscountModeLock);
+        }
 
         // Initialize payment method button states based on hidden input value
         const selectedMethod =

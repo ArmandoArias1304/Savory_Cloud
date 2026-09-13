@@ -531,6 +531,7 @@
                   th:data-schedule-info="${item.scheduleInfo}"
                   th:data-is-combo="${item.isCombo != null && item.isCombo}"
                   th:data-dine-in-only="${item.dineInOnly != null && item.dineInOnly}"
+                  th:data-courtesy="${item.courtesy}"
                   th:data-has-sizes="${sizeItemsDto != null and sizeItemsDto.containsKey(item.idItemMenu)}"
                   th:data-size-name="${item.sizeName}"
                   onclick="openItemModal(this)"
@@ -1310,6 +1311,10 @@
         document.querySelectorAll(".menu-item-card").forEach((card) => {
           if (card.dataset.dineInOnly === "true") {
             card.style.display = isDineIn ? "" : "none";
+          }
+          // Cortesías ($0.00) son solo para el personal: nunca se ofrecen al cliente
+          if (card.dataset.courtesy === "true") {
+            card.style.display = "none";
           }
         });
       }
@@ -4177,7 +4182,9 @@
                            <span class="text-green-600 dark:text-green-400 font-bold">GRATIS</span>`
                         : `<span class="line-through text-gray-400 dark:text-gray-600 font-normal mr-1">$${item.price.toFixed(2)}</span>
                            <span class="text-green-600 dark:text-green-400">$${item.promotionAppliedPrice.toFixed(2)}</span>`
-                      : `$${item.price.toFixed(2)}`
+                      : item.price === 0
+                        ? `<span class="text-rose-600 dark:text-rose-400 font-bold">Cortesía</span>`
+                        : `$${item.price.toFixed(2)}`
                   }
                 </p>
               </div>

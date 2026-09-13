@@ -157,6 +157,8 @@ public class SystemConfigurationServiceImpl implements SystemConfigurationServic
                 Boolean.TRUE.equals(configuration.getStaffCanManageBaristaItems()));
         existingConfig.setStaffCanManageParrilleroItems(
                 Boolean.TRUE.equals(configuration.getStaffCanManageParrilleroItems()));
+        existingConfig.setStaffCanManageDeliveryOrders(
+                Boolean.TRUE.equals(configuration.getStaffCanManageDeliveryOrders()));
 
         // Waiter/delivery collection toggle (true when the checkbox is checked)
         existingConfig.setWaiterDeliveryCanCollect(

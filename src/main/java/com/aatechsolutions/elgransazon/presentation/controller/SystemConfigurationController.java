@@ -110,6 +110,7 @@ public class SystemConfigurationController {
             @RequestParam(value = "staffCanManageChefItems", required = false) Boolean staffCanManageChefItems,
             @RequestParam(value = "staffCanManageBaristaItems", required = false) Boolean staffCanManageBaristaItems,
             @RequestParam(value = "staffCanManageParrilleroItems", required = false) Boolean staffCanManageParrilleroItems,
+            @RequestParam(value = "staffCanManageDeliveryOrders", required = false) Boolean staffCanManageDeliveryOrders,
             @RequestParam(value = "waiterDeliveryCanCollect", required = false) Boolean waiterDeliveryCanCollect,
             RedirectAttributes redirectAttributes,
             Model model) {
@@ -166,15 +167,17 @@ public class SystemConfigurationController {
             boolean chefChild = Boolean.TRUE.equals(staffCanManageChefItems);
             boolean baristaChild = Boolean.TRUE.equals(staffCanManageBaristaItems);
             boolean parrilleroChild = Boolean.TRUE.equals(staffCanManageParrilleroItems);
-            if (parentEnabled && !chefChild && !baristaChild && !parrilleroChild) {
+            boolean deliveryChild = Boolean.TRUE.equals(staffCanManageDeliveryOrders);
+            if (parentEnabled && !chefChild && !baristaChild && !parrilleroChild && !deliveryChild) {
                 throw new IllegalArgumentException(
-                    "Si activas 'Habilitar permiso de estado de orden', debes habilitar al menos uno de los sub-permisos (chef, barista o parrillero).");
+                    "Si activas 'Habilitar permiso de estado de orden', debes habilitar al menos uno de los sub-permisos (chef, barista, parrillero o repartidor).");
             }
             configuration.setEnableOrderStatusPermission(parentEnabled);
             // Persist child values as received; they are only evaluated by business logic when parent is TRUE.
             configuration.setStaffCanManageChefItems(chefChild);
             configuration.setStaffCanManageBaristaItems(baristaChild);
             configuration.setStaffCanManageParrilleroItems(parrilleroChild);
+            configuration.setStaffCanManageDeliveryOrders(deliveryChild);
 
             // Waiter/delivery collection toggle (true when the checkbox is checked)
             configuration.setWaiterDeliveryCanCollect(Boolean.TRUE.equals(waiterDeliveryCanCollect));

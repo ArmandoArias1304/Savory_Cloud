@@ -709,7 +709,7 @@
             optionsHtml += `<option value="${item.idItemMenu}" data-price="${
               item.price
             }" ${selected}>
-                      ${item.name} - $${item.price.toFixed(2)}
+                      ${item.name} - ${item.price === 0 ? "Cortesía" : "$" + item.price.toFixed(2)}
                   </option>`;
           });
 

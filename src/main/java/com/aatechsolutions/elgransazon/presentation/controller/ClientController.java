@@ -807,6 +807,17 @@ public class ClientController {
                     }
                 }
             }
+
+            // Courtesy items ($0.00) are staff-only: a customer can never add them
+            // from the self-order menu (stock is still deducted when staff adds them).
+            for (OrderDetail detail : orderDetails) {
+                if (detail.getItemMenu() != null && detail.getItemMenu().isCourtesy()) {
+                    return ResponseEntity.badRequest().body(Map.of(
+                        "success", false,
+                        "message", "El item '" + detail.getItemMenu().getName() + "' es una cortesía y solo el personal puede agregarlo."
+                    ));
+                }
+            }
             
             // Validate stock
             Map<Long, String> stockErrors = orderService.validateStock(orderDetails);
@@ -1342,6 +1353,17 @@ public class ClientController {
                             "message", "El item '" + detail.getItemMenu().getName() + "' solo está disponible para consumo en el establecimiento."
                         ));
                     }
+                }
+            }
+
+            // Courtesy items ($0.00) are staff-only: a customer can never add them
+            // from the self-order menu (stock is still deducted when staff adds them).
+            for (OrderDetail detail : newItems) {
+                if (detail.getItemMenu() != null && detail.getItemMenu().isCourtesy()) {
+                    return ResponseEntity.badRequest().body(Map.of(
+                        "success", false,
+                        "message", "El item '" + detail.getItemMenu().getName() + "' es una cortesía y solo el personal puede agregarlo."
+                    ));
                 }
             }
 
