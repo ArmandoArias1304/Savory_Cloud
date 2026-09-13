@@ -27,6 +27,7 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.jsdelivr.net/npm/qz-tray@2/qz-tray.js"></script>
     <script th:src="@{/js/qz-signing.js}"></script>
+    <script th:src="@{/js/print-accounts.js}"></script>
     <script>
       tailwind.config = {
         darkMode: "class",
@@ -1811,84 +1812,32 @@
         });
       }
 
-      // Auto-print of split-bill accounts via QZ Tray after payment.
-      // The whole-order ticket is printed by the printer agent, so here we only
-      // print the accounts of a split bill: one ESC/POS ticket per account.
+      // Auto-print of the payment ticket: "normal" first, printer agent as fallback.
+      //
+      // Ticket del pedido completo, cobro de la persona que se va y división de cuentas:
+      // esta PC intenta imprimirlos con QZ Tray en cuanto carga la pantalla de pago. Si no
+      // puede (sin impresora de tickets configurada aquí, sin QZ Tray, impresora no
+      // instalada en esta PC o error al imprimir) el servidor deja el ticket a los agentes
+      // unos segundos después, y lo imprime la PC que tenga la impresora conectada.
+      //
+      // Exactamente una vez: cada ticket se reclama antes de imprimir (y se libera si
+      // falla), y en una cuenta dividida nunca se imprime el ticket del pedido completo
+      // (es solo el total de la mesa y no se entrega a nadie).
+      //
+      // Las comandas de cocina, barra y parrillero no pasan por aquí: esas siempre se
+      // imprimen por el agente.
       document.addEventListener("DOMContentLoaded", function () {
         const printOrderId = /*[[${printTicketOrderId}]]*/ null;
         const printPaymentIds = /*[[${printTicketOrderIds}]]*/ null;
+        const printWholeOrder = /*[[${printTicketWholeOrder}]]*/ false;
         if (printOrderId && printPaymentIds && printPaymentIds.length) {
-          const urls = printPaymentIds.map(function (paymentId) {
-            return (
-              "/cashier/orders/" +
-              printOrderId +
-              "/download-ticket-raw/" +
-              paymentId
-            );
-          });
-          printTicketViaQZ(urls);
+          // División de cuentas / persona que se va: un ticket por cuenta.
+          printTicketLocally(printOrderId, printPaymentIds, companyId);
+        } else if (printOrderId && printWholeOrder) {
+          // Cobro normal: un solo ticket del pedido completo (nunca en delivery).
+          printTicketLocally(printOrderId, [], companyId);
         }
       });
-
-      // Prints the given URLs sequentially (waits for each job to finish).
-      function printTicketViaQZ(urls) {
-        if (typeof qz === "undefined" || !qz.websocket || !urls.length) return;
-        if (qz.websocket.isActive()) {
-          _printSequential(urls, 0);
-          return;
-        }
-        var probe = new WebSocket("ws://localhost:8182");
-        var probeTimer = setTimeout(function () {
-          probe.close();
-        }, 500);
-        probe.onopen = function () {
-          clearTimeout(probeTimer);
-          probe.close();
-          qz.websocket
-            .connect()
-            .then(function () {
-              _printSequential(urls, 0);
-            })
-            .catch(function () {});
-        };
-        probe.onerror = function () {
-          clearTimeout(probeTimer);
-        };
-      }
-
-      function _printSequential(urls, idx) {
-        if (idx >= urls.length) return;
-        _doQzPrint(urls[idx]).then(function () {
-          _printSequential(urls, idx + 1);
-        });
-      }
-
-      function _doQzPrint(rawUrl) {
-        return fetch(rawUrl)
-          .then(function (r) {
-            if (!r.ok) throw new Error("fetch failed");
-            return r.arrayBuffer();
-          })
-          .then(function (buf) {
-            var b = new Uint8Array(buf),
-              s = "";
-            for (var i = 0; i < b.length; i++) s += String.fromCharCode(b[i]);
-            return btoa(s);
-          })
-          .then(function (b64) {
-            return qz.printers.getDefault().then(function (p) {
-              return qz.print(qz.configs.create(p), [
-                { type: "raw", format: "base64", data: b64 },
-              ]);
-            });
-          })
-          .then(function () {
-            console.log("Ticket enviado a imprimir (ESC/POS).");
-          })
-          .catch(function (e) {
-            console.warn("No se pudo imprimir ticket:", e);
-          });
-      }
     </script>
 
     <!-- WebSocket para Actualizaciones en Tiempo Real -->

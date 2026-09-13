@@ -7,22 +7,87 @@ import com.aatechsolutions.elgransazon.presentation.dto.OrderNotificationDTO;
 import com.aatechsolutions.elgransazon.presentation.dto.PrintComandaNotificationDTO;
 import com.aatechsolutions.elgransazon.presentation.dto.PrintTicketNotificationDTO;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.scheduling.TaskScheduler;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.stream.Collectors;
 
 /**
  * Service for sending real-time WebSocket notifications
  */
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class WebSocketNotificationService {
 
     private final SimpMessagingTemplate messagingTemplate;
+
+    /**
+     * Schedules the ticket broadcast to the agents after the local-first window.
+     * Null in tests, where the ticket event must go out immediately.
+     */
+    private final TaskScheduler printScheduler;
+
+    /**
+     * How long the printer agents wait before taking a paid ticket.
+     *
+     * <p>The PC that charged the order prints the ticket itself as soon as the payment
+     * screen loads ("normal" printing, waiter/cashier/manager/admin); the agents take the
+     * job only when that PC cannot — no ticket printer installed there, no QZ Tray, printer
+     * offline or a failed job. Without this wait the agents would always win the claim,
+     * because they receive the WebSocket event long before the redirected page loads.
+     */
+    private final Duration ticketAgentGrace;
+
+    /** Test/legacy constructor: no scheduler, so the ticket event is sent immediately. */
+    public WebSocketNotificationService(SimpMessagingTemplate messagingTemplate) {
+        this(messagingTemplate, null, 0L);
+    }
+
+    @Autowired
+    public WebSocketNotificationService(
+            SimpMessagingTemplate messagingTemplate,
+            TaskScheduler printScheduler,
+            @Value("${app.print.ticket.agent-grace-ms:5000}") long ticketAgentGraceMs) {
+        this.messagingTemplate = messagingTemplate;
+        this.printScheduler = printScheduler;
+        this.ticketAgentGrace = Duration.ofMillis(Math.max(0L, ticketAgentGraceMs));
+    }
+
+    /**
+     * Runs an action only once the surrounding transaction has committed.
+     *
+     * <p>Print events make the agent fetch the order right away, so sending them
+     * before the commit makes the download fail (the new order is not visible yet
+     * from the request thread). Outside a transaction the action runs immediately.
+     */
+    private void afterCommit(Runnable action) {
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    safeRun(action);
+                }
+            });
+            return;
+        }
+        safeRun(action);
+    }
+
+    private void safeRun(Runnable action) {
+        try {
+            action.run();
+        } catch (Exception e) {
+            log.error("WebSocket notification failed after commit", e);
+        }
+    }
 
     /**
      * MULTI-TENANT: Build a company-specific topic path
@@ -474,52 +539,127 @@ public class WebSocketNotificationService {
 
         // Send the ids of the items of each station so the agent prints ONLY those items
         // (never the whole order) and can mark them as printed when the ticket comes out.
+        // Resolved here, inside the transaction: after the commit the entities may be detached.
+        Long orderId = order.getIdOrder();
+        String orderNumber = order.getOrderNumber();
         java.util.List<Long> kitchenIds = detailIdsForPreparationType(items, "CHEF");
-        if (!kitchenIds.isEmpty()) {
-            messagingTemplate.convertAndSend(
-                "/topic/print/comanda/kitchen/" + companyId,
-                new PrintComandaNotificationDTO(order.getIdOrder(), order.getOrderNumber(), companyId, "KITCHEN", kitchenIds));
-        }
         java.util.List<Long> barIds = detailIdsForPreparationType(items, "BARISTA");
-        if (!barIds.isEmpty()) {
-            messagingTemplate.convertAndSend(
-                "/topic/print/comanda/bar/" + companyId,
-                new PrintComandaNotificationDTO(order.getIdOrder(), order.getOrderNumber(), companyId, "BAR", barIds));
-        }
         java.util.List<Long> parrilleroIds = detailIdsForPreparationType(items, "PARRILLERO");
-        if (!parrilleroIds.isEmpty()) {
-            messagingTemplate.convertAndSend(
-                "/topic/print/comanda/parrillero/" + companyId,
-                new PrintComandaNotificationDTO(order.getIdOrder(), order.getOrderNumber(), companyId, "PARRILLERO", parrilleroIds));
-        }
+
+        // The agent downloads the comanda as soon as it gets the event, so the event
+        // must go out AFTER the commit or the order is still invisible to it.
+        afterCommit(() -> {
+            if (!kitchenIds.isEmpty()) {
+                messagingTemplate.convertAndSend(
+                    "/topic/print/comanda/kitchen/" + companyId,
+                    new PrintComandaNotificationDTO(orderId, orderNumber, companyId, "KITCHEN", kitchenIds));
+            }
+            if (!barIds.isEmpty()) {
+                messagingTemplate.convertAndSend(
+                    "/topic/print/comanda/bar/" + companyId,
+                    new PrintComandaNotificationDTO(orderId, orderNumber, companyId, "BAR", barIds));
+            }
+            if (!parrilleroIds.isEmpty()) {
+                messagingTemplate.convertAndSend(
+                    "/topic/print/comanda/parrillero/" + companyId,
+                    new PrintComandaNotificationDTO(orderId, orderNumber, companyId, "PARRILLERO", parrilleroIds));
+            }
+        });
     }
 
     /**
-     * Sends a print-ticket WebSocket notification to the specific user who processed
-     * the payment. Using convertAndSendToUser ensures only THAT user's printer-agent
-     * receives the event — so two cashiers each with their own PC and printer will
-     * only print on the PC that actually processed the payment, matching the old
-     * list.html flash-attribute behavior.
-     * <p>
-     * DELIVERY orders are excluded: the delivery person is remote and ticket printing
-     * at the restaurant is not needed.
+     * Broadcasts a print-ticket request to every printer agent of the company.
+     *
+     * <p>The ticket must come out of the printer that is physically connected to a
+     * restaurant PC, no matter who processed the payment: a waiter charging from a
+     * tablet cannot print a ticket that hangs off the cashier/kitchen PC. Each agent
+     * decides locally (its own QZ Tray printer list) and the extra ones skip the job.
+     * To avoid two PCs sharing the same printer printing twice, the winner of
+     * {@code PrintClaimService.claim(orderId)} is the only one that prints.
+     *
+     * <p>DELIVERY orders are excluded: the delivery person is remote and ticket
+     * printing at the restaurant is not needed.
      *
      * @param order          The order that was paid
-     * @param paidByUsername The Spring Security username of who processed the payment
+     * @param paidByUsername The Spring Security username of who processed the payment (logging only)
      */
     public void notifyPrintTicket(Order order, String paidByUsername) {
-        if (order == null || order.getCompany() == null || paidByUsername == null) return;
+        notifyPrintTicket(order, java.util.List.of(), paidByUsername, true);
+    }
+
+    /**
+     * Prints the accounts created by a split bill or a departing-guest collection:
+     * one ticket per person, never the whole-order ticket.
+     *
+     * <p>Split bills and departing guests settle through {@code Payment} rows, so the order
+     * ticket is deliberately skipped (see OrderServiceImpl.changeStatus) — it only reflects the
+     * table total and is not handed to any customer. Each account of this collection must print
+     * exactly once on the PC that has the ticket printer.
+     *
+     * @param paymentIds accounts created by this collection (Payment ids)
+     */
+    public void notifyPrintTicketAccounts(Order order, java.util.List<Long> paymentIds, String requestedBy) {
+        if (paymentIds == null || paymentIds.isEmpty()) return;
+        notifyPrintTicket(order, paymentIds, requestedBy, true);
+    }
+
+    /**
+     * Hands a ticket to the printer agents right away, without the local-first window.
+     *
+     * <p>Used when the PC that claimed the ticket could not print it after all (printer
+     * offline, job rejected...): the claim is released and the agents retry immediately
+     * instead of the ticket being lost until the next manual reprint.
+     *
+     * @param paymentIds accounts to print; empty means the whole-order ticket
+     */
+    public void notifyPrintTicketToAgents(Order order, java.util.List<Long> paymentIds, String reason) {
+        notifyPrintTicket(order, paymentIds == null ? java.util.List.of() : paymentIds, reason, false);
+    }
+
+    private void notifyPrintTicket(Order order, java.util.List<Long> paymentIds, String requestedBy,
+                                   boolean waitForLocalPrint) {
+        if (order == null || order.getCompany() == null) return;
         Long companyId = order.getCompany().getIdCompany();
         if (companyId == null) return;
-        // Use a company+user scoped topic so server-side isolation is guaranteed.
-        // Two companies sharing the same username receive messages on different topics:
-        //   /topic/print/ticket/1/juan  ≠  /topic/print/ticket/2/juan
-        // This makes manipulation of the client-side companyId check irrelevant.
-        messagingTemplate.convertAndSend(
-            "/topic/print/ticket/" + companyId + "/" + paidByUsername,
-            new PrintTicketNotificationDTO(order.getIdOrder(), order.getOrderNumber(), companyId));
-        log.info("Ticket print WS notification sent to user '{}' (company {}) for order {}",
-            paidByUsername, companyId, order.getOrderNumber());
+        Long orderId = order.getIdOrder();
+        String orderNumber = order.getOrderNumber();
+        java.util.List<Long> accountIds = java.util.List.copyOf(paymentIds);
+        Runnable broadcast = () -> {
+            messagingTemplate.convertAndSend(
+                "/topic/print/ticket/" + companyId,
+                new PrintTicketNotificationDTO(orderId, orderNumber, companyId, accountIds));
+            log.info("Ticket print WS notification broadcast (company {}) for order {} paid by '{}' — {}",
+                companyId, orderNumber, requestedBy,
+                accountIds.isEmpty() ? "whole order" : accountIds.size() + " account(s)");
+        };
+        afterCommit(() -> {
+            if (waitForLocalPrint) {
+                afterLocalPrintWindow(broadcast);
+            } else {
+                safeRun(broadcast);
+            }
+        });
+    }
+
+    /**
+     * Runs the ticket broadcast once the local-first window has passed
+     * (see {@link #ticketAgentGrace}).
+     *
+     * <p>The event is still broadcast to every agent of the company; the exactly-once
+     * claim decides who prints, so the waiting PC never duplicates the ticket the charging
+     * PC already printed. Without a scheduler (tests) the action runs immediately.
+     */
+    private void afterLocalPrintWindow(Runnable action) {
+        if (printScheduler == null || ticketAgentGrace.isZero() || ticketAgentGrace.isNegative()) {
+            safeRun(action);
+            return;
+        }
+        try {
+            printScheduler.schedule(() -> safeRun(action), Instant.now().plus(ticketAgentGrace));
+        } catch (Exception e) {
+            log.warn("Could not schedule the ticket broadcast, sending it now: {}", e.getMessage());
+            safeRun(action);
+        }
     }
 
     /**

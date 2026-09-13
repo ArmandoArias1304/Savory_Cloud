@@ -924,6 +924,8 @@
         total: /*[[${order.total}]]*/ 0,
         role: "delivery",
         methods: /*[[${ {order.paymentMethod.name()} }]]*/ ["CASH"],
+        // Etiqueta en español del enum PaymentMethodType, alineada con "methods"
+        methodLabels: /*[[${ {order.paymentMethod.displayName} }]]*/ ["Efectivo"],
         fixedMethod: /*[[${order.paymentMethod.name()}]]*/ "CASH",
         // qty = unidades aún no cobradas; delivered = ítem ya ENTREGADO
         // comps = complementos efectivos: para un combo padre incluye los complementos de sus hijos

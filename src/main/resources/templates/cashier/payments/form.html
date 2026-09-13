@@ -1145,6 +1145,8 @@
         total: /*[[${order.total}]]*/ 0,
         role: /*[[${currentRole}]]*/ "cashier",
         methods: /*[[${enabledPaymentMethodNames}]]*/ [],
+        // Etiquetas en español del enum PaymentMethodType, alineadas con "methods"
+        methodLabels: /*[[${enabledPaymentMethods.![displayName]}]]*/ [],
         fixedMethod: null,
         // qty = unidades aún no cobradas; delivered = ítem ya ENTREGADO
         // comps = complementos efectivos: para un combo padre incluye los complementos de sus hijos

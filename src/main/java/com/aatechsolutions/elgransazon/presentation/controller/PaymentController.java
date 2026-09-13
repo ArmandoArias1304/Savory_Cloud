@@ -39,6 +39,7 @@ public class PaymentController {
     private final FacturamaService facturamaService;
     private final SplitPaymentService splitPaymentService;
     private final ObjectMapper objectMapper;
+    private final WebSocketNotificationService wsNotificationService;
 
     // Constructor manual para inyectar adminOrderService específicamente
     public PaymentController(
@@ -48,7 +49,8 @@ public class PaymentController {
             EmployeeService employeeService,
             FacturamaService facturamaService,
             SplitPaymentService splitPaymentService,
-            ObjectMapper objectMapper) {
+            ObjectMapper objectMapper,
+            WebSocketNotificationService wsNotificationService) {
         this.orderService = orderService;
         this.systemConfigurationService = systemConfigurationService;
         this.orderRepository = orderRepository;
@@ -56,6 +58,21 @@ public class PaymentController {
         this.facturamaService = facturamaService;
         this.splitPaymentService = splitPaymentService;
         this.objectMapper = objectMapper;
+        this.wsNotificationService = wsNotificationService;
+    }
+
+    /**
+     * Sends the per-person tickets of a split bill / departing-guest collection to the
+     * printer agents: one ticket per account and NEVER the whole-order ticket (that one is
+     * only the table total and is not handed to a customer).
+     */
+    private void notifyAccountTickets(Order order, List<Payment> payments, String username) {
+        try {
+            wsNotificationService.notifyPrintTicketAccounts(order,
+                    payments.stream().map(Payment::getIdPayment).toList(), username);
+        } catch (Exception e) {
+            log.warn("Could not notify account tickets for order {}: {}", order.getOrderNumber(), e.getMessage());
+        }
     }
 
     /**
@@ -387,6 +404,10 @@ public class PaymentController {
                     "Pago procesado exitosamente para el pedido " + order.getOrderNumber() + 
                     ". Total pagado: " + order.getFormattedTotalWithTip());
             redirectAttributes.addFlashAttribute("printTicketOrderId", orderId);
+            // The whole-order ticket is printed locally by this PC when it can; the agents
+            // never print it for a DELIVERY order (the delivery person is remote).
+            redirectAttributes.addFlashAttribute("printTicketWholeOrder",
+                    order.getOrderType() != OrderType.DELIVERY);
             
             return "redirect:/admin/orders";
 
@@ -565,6 +586,7 @@ public class PaymentController {
         redirectAttributes.addFlashAttribute("printTicketOrderId", order.getIdOrder());
         redirectAttributes.addFlashAttribute("printTicketOrderIds",
                 payments.stream().map(Payment::getIdPayment).toList());
+        notifyAccountTickets(order, payments, username);
 
         return "redirect:/admin/orders";
     }
@@ -659,6 +681,7 @@ public class PaymentController {
         redirectAttributes.addFlashAttribute("printTicketOrderId", order.getIdOrder());
         redirectAttributes.addFlashAttribute("printTicketOrderIds",
                 payments.stream().map(Payment::getIdPayment).toList());
+        notifyAccountTickets(order, payments, username);
 
         return "redirect:/admin/orders";
     }

@@ -38,6 +38,7 @@ public class WaiterPaymentController {
     private final FacturamaService facturamaService;
     private final SplitPaymentService splitPaymentService;
     private final ObjectMapper objectMapper;
+    private final WebSocketNotificationService wsNotificationService;
 
     public WaiterPaymentController(
             @Qualifier("waiterOrderService") WaiterOrderServiceImpl waiterOrderService,
@@ -46,7 +47,8 @@ public class WaiterPaymentController {
             EmployeeService employeeService,
             FacturamaService facturamaService,
             SplitPaymentService splitPaymentService,
-            ObjectMapper objectMapper) {
+            ObjectMapper objectMapper,
+            WebSocketNotificationService wsNotificationService) {
         this.waiterOrderService = waiterOrderService;
         this.systemConfigurationService = systemConfigurationService;
         this.orderRepository = orderRepository;
@@ -54,6 +56,7 @@ public class WaiterPaymentController {
         this.facturamaService = facturamaService;
         this.splitPaymentService = splitPaymentService;
         this.objectMapper = objectMapper;
+        this.wsNotificationService = wsNotificationService;
     }
 
     /**
@@ -322,6 +325,10 @@ public class WaiterPaymentController {
                     "Pago procesado exitosamente para el pedido " + order.getOrderNumber() + 
                     ". Total pagado: " + order.getFormattedTotalWithTip());
             redirectAttributes.addFlashAttribute("printTicketOrderId", orderId);
+            // The whole-order ticket is printed locally by this PC when it can; the agents
+            // never print it for a DELIVERY order (waiters cannot charge delivery anyway).
+            redirectAttributes.addFlashAttribute("printTicketWholeOrder",
+                    order.getOrderType() != OrderType.DELIVERY);
             
             return "redirect:/waiter/orders";
 
@@ -481,6 +488,7 @@ public class WaiterPaymentController {
         redirectAttributes.addFlashAttribute("printTicketOrderId", order.getIdOrder());
         redirectAttributes.addFlashAttribute("printTicketOrderIds",
                 payments.stream().map(Payment::getIdPayment).toList());
+        notifyAccountTickets(order, payments, username);
 
         return "redirect:/waiter/orders";
     }
@@ -572,8 +580,23 @@ public class WaiterPaymentController {
         redirectAttributes.addFlashAttribute("printTicketOrderId", order.getIdOrder());
         redirectAttributes.addFlashAttribute("printTicketOrderIds",
                 payments.stream().map(Payment::getIdPayment).toList());
+        notifyAccountTickets(order, payments, username);
 
         return "redirect:/waiter/orders";
+    }
+
+    /**
+     * Sends the per-person tickets of a split bill / departing-guest collection to the
+     * printer agents: one ticket per account and NEVER the whole-order ticket (that one is
+     * only the table total and is not handed to a customer).
+     */
+    private void notifyAccountTickets(Order order, List<Payment> payments, String username) {
+        try {
+            wsNotificationService.notifyPrintTicketAccounts(order,
+                    payments.stream().map(Payment::getIdPayment).toList(), username);
+        } catch (Exception e) {
+            log.warn("Could not notify account tickets for order {}: {}", order.getOrderNumber(), e.getMessage());
+        }
     }
 
     /**

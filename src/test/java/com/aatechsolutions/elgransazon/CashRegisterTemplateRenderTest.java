@@ -125,6 +125,16 @@ class CashRegisterTemplateRenderTest {
         assertTrue(html.contains("Hielo"), "the movement should be rendered");
         assertTrue(html.contains("/cashier/cash-register/session/1/pdf"),
                 "the PDF link must carry the real session id, not null");
+        // Saving a movement and deleting one must both ask for confirmation
+        assertTrue(html.contains("id=\"movementForm\""),
+                "the movement form must be wired to its confirmation dialog");
+        assertTrue(html.contains("js-delete-movement"),
+                "every movement delete button must be wired to its confirmation dialog");
+        // Closing the drawer captures the counted cash in a modal, not in the footer panel
+        assertTrue(html.contains("onclick=\"openCloseDrawer()\""),
+                "the close-drawer button must open the modal");
+        assertTrue(html.contains("closeCountedInput") && html.contains("CLOSE_EXPECTED_TEXT"),
+                "the modal must ask for the counted cash and show the expected one");
     }
 
     @Test

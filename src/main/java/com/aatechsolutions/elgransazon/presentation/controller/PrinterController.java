@@ -2,12 +2,16 @@ package com.aatechsolutions.elgransazon.presentation.controller;
 
 import com.aatechsolutions.elgransazon.application.service.ComandaEscPosService;
 import com.aatechsolutions.elgransazon.application.service.OrderService;
+import com.aatechsolutions.elgransazon.application.service.PrintClaimService;
 import com.aatechsolutions.elgransazon.application.service.PrinterService;
 import com.aatechsolutions.elgransazon.application.service.TicketEscPosService;
+import com.aatechsolutions.elgransazon.application.service.WebSocketNotificationService;
 import com.aatechsolutions.elgransazon.domain.entity.Order;
 import com.aatechsolutions.elgransazon.domain.entity.OrderDetail;
+import com.aatechsolutions.elgransazon.domain.entity.Payment;
 import com.aatechsolutions.elgransazon.domain.entity.Printer;
 import com.aatechsolutions.elgransazon.domain.entity.PrinterType;
+import com.aatechsolutions.elgransazon.domain.repository.PaymentRepository;
 import com.aatechsolutions.elgransazon.infrastructure.context.CompanyContext;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -19,6 +23,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -54,16 +59,25 @@ public class PrinterController {
     private final ComandaEscPosService comandaEscPosService;
     private final TicketEscPosService ticketEscPosService;
     private final OrderService adminOrderService;
+    private final PrintClaimService printClaimService;
+    private final PaymentRepository paymentRepository;
+    private final WebSocketNotificationService wsNotificationService;
 
     public PrinterController(
             PrinterService printerService,
             ComandaEscPosService comandaEscPosService,
             TicketEscPosService ticketEscPosService,
-            @Qualifier("adminOrderService") OrderService adminOrderService) {
+            @Qualifier("adminOrderService") OrderService adminOrderService,
+            PrintClaimService printClaimService,
+            PaymentRepository paymentRepository,
+            WebSocketNotificationService wsNotificationService) {
         this.printerService = printerService;
         this.comandaEscPosService = comandaEscPosService;
         this.ticketEscPosService = ticketEscPosService;
         this.adminOrderService = adminOrderService;
+        this.printClaimService = printClaimService;
+        this.paymentRepository = paymentRepository;
+        this.wsNotificationService = wsNotificationService;
     }
 
     // ═══════════════════════════════════════════
@@ -249,7 +263,7 @@ public class PrinterController {
             return ResponseEntity.ok().headers(headers).body(bytes);
         } catch (Exception e) {
             log.error("Error generating comanda for order {}", orderId, e);
-            return ResponseEntity.internalServerError().build();
+            return internalServerError(e);
         }
     }
 
@@ -304,8 +318,127 @@ public class PrinterController {
             return octetStream(bytes, "ticket_" + order.getOrderNumber() + ".bin");
         } catch (Exception e) {
             log.error("Error generating ticket for order {}", orderId, e);
-            return ResponseEntity.internalServerError().build();
+            return internalServerError(e);
         }
+    }
+
+    /**
+     * Download the ESC/POS ticket of ONE account (Payment) of a split bill or a
+     * departing-guest collection. Used by the printer agent and by the paying PC.
+     * GET /api/print/ticket/{orderId}/payment/{paymentId}
+     */
+    @GetMapping("/api/print/ticket/{orderId}/payment/{paymentId}")
+    @ResponseBody
+    @PreAuthorize(STAFF)
+    public ResponseEntity<byte[]> apiDownloadAccountTicket(
+            @PathVariable Long orderId,
+            @PathVariable Long paymentId) {
+        try {
+            Payment payment = paymentRepository.findByIdWithDetails(paymentId).orElse(null);
+            if (payment == null || payment.getOrder() == null
+                    || !orderId.equals(payment.getOrder().getIdOrder())) {
+                return ResponseEntity.notFound().build();
+            }
+            // Multi-tenant guard: never print another company's account.
+            Long accountCompanyId = payment.getCompany() != null
+                    ? payment.getCompany().getIdCompany()
+                    : (payment.getOrder().getCompany() != null
+                        ? payment.getOrder().getCompany().getIdCompany() : null);
+            Long currentCompanyId = CompanyContext.getCurrentCompanyId();
+            if (currentCompanyId != null && !currentCompanyId.equals(accountCompanyId)) {
+                log.warn("Account ticket {} of order {} belongs to company {} (current {}) — denied",
+                        paymentId, orderId, accountCompanyId, currentCompanyId);
+                return ResponseEntity.notFound().build();
+            }
+
+            byte[] bytes = ticketEscPosService.generateTicket(payment);
+            return octetStream(bytes, "ticket_" + payment.getPaymentFolio() + ".bin");
+        } catch (Exception e) {
+            log.error("Error generating account ticket {} of order {}", paymentId, orderId, e);
+            return internalServerError(e);
+        }
+    }
+
+    /**
+     * Exactly-once claim for ONE account (Payment): the split-bill ticket must not be
+     * printed twice when several PCs share the same printer.
+     * POST /api/print/ticket/payment/{paymentId}/claim
+     */
+    @PostMapping("/api/print/ticket/payment/{paymentId}/claim")
+    @ResponseBody
+    @PreAuthorize(STAFF)
+    public ResponseEntity<Map<String, Object>> apiClaimAccountTicket(@PathVariable Long paymentId) {
+        return ResponseEntity.ok(Map.of("claim", printClaimService.claim("account:" + paymentId)));
+    }
+
+    /**
+     * Exactly-once claim for a company-wide ticket print.
+     * POST /api/print/ticket/{orderId}/claim
+     *
+     * The ticket event is broadcast to every printer agent of the company; each agent
+     * that has the ticket printer connected asks for the claim first, so only one PC
+     * prints it even when the same printer is installed on several computers.
+     */
+    @PostMapping("/api/print/ticket/{orderId}/claim")
+    @ResponseBody
+    @PreAuthorize(STAFF)
+    public ResponseEntity<Map<String, Object>> apiClaimTicket(@PathVariable Long orderId) {
+        boolean claimed = printClaimService.claim("ticket:" + orderId);
+        return ResponseEntity.ok(Map.of("claim", claimed));
+    }
+
+    /**
+     * Hands the whole-order ticket back when the PC that claimed it could not print it
+     * (no printer installed, QZ Tray error, paper out...). Releasing the claim lets the
+     * printer agents take the ticket on the next event instead of losing it for the
+     * claim TTL.
+     * POST /api/print/ticket/{orderId}/release
+     */
+    @PostMapping("/api/print/ticket/{orderId}/release")
+    @ResponseBody
+    @PreAuthorize(STAFF)
+    public ResponseEntity<Map<String, Object>> apiReleaseTicket(@PathVariable Long orderId) {
+        printClaimService.release("ticket:" + orderId);
+        handTicketToAgents(orderId);
+        return ResponseEntity.ok(Map.of("released", true));
+    }
+
+    /**
+     * Re-broadcasts a whole-order ticket the charging PC could not print. Never fails the
+     * request: the release already happened and a manual reprint stays available.
+     */
+    private void handTicketToAgents(Long orderId) {
+        try {
+            adminOrderService.findByIdWithDetails(orderId).ifPresent(order ->
+                wsNotificationService.notifyPrintTicketToAgents(order, List.of(), "local print failed"));
+        } catch (Exception e) {
+            log.warn("Could not hand ticket {} to the agents: {}", orderId, e.getMessage());
+        }
+    }
+
+    /** Same as {@link #handTicketToAgents(Long)} for ONE account of a split bill. */
+    private void handAccountToAgents(Long paymentId) {
+        try {
+            Payment payment = paymentRepository.findByIdWithDetails(paymentId).orElse(null);
+            if (payment == null || payment.getOrder() == null) return;
+            wsNotificationService.notifyPrintTicketToAgents(
+                    payment.getOrder(), List.of(paymentId), "local print failed");
+        } catch (Exception e) {
+            log.warn("Could not hand account {} to the agents: {}", paymentId, e.getMessage());
+        }
+    }
+
+    /**
+     * Hands ONE account (Payment) back when the PC that claimed it could not print it.
+     * POST /api/print/ticket/payment/{paymentId}/release
+     */
+    @PostMapping("/api/print/ticket/payment/{paymentId}/release")
+    @ResponseBody
+    @PreAuthorize(STAFF)
+    public ResponseEntity<Map<String, Object>> apiReleaseAccountTicket(@PathVariable Long paymentId) {
+        printClaimService.release("account:" + paymentId);
+        handAccountToAgents(paymentId);
+        return ResponseEntity.ok(Map.of("released", true));
     }
 
     /**
@@ -334,6 +467,18 @@ public class PrinterController {
             log.error("Error generating test print for kind {}", kind, e);
             return ResponseEntity.internalServerError().build();
         }
+    }
+
+    /**
+     * 500 with a readable reason in the body: the printer agent shows it in its log, so a
+     * failure can be diagnosed from the PC that prints instead of from the server console.
+     */
+    private ResponseEntity<byte[]> internalServerError(Exception e) {
+        String detail = e.getClass().getSimpleName()
+                + (e.getMessage() != null ? ": " + e.getMessage() : "");
+        return ResponseEntity.status(org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR)
+                .contentType(MediaType.TEXT_PLAIN)
+                .body(detail.getBytes(StandardCharsets.UTF_8));
     }
 
     private ResponseEntity<byte[]> octetStream(byte[] bytes, String filename) {

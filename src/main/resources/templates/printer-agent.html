@@ -312,6 +312,58 @@
         }
       }
 
+      // ── Download helper with retry ──
+      // The server may still be committing the order when the WebSocket event arrives,
+      // and a transient error (503/500/404) must not lose the ticket: retry a few times
+      // with backoff and report the real reason returned by the server in the log.
+      async function downloadRaw(url, label, attempts) {
+        attempts = attempts || 3;
+        var lastError = "";
+        for (var i = 1; i <= attempts; i++) {
+          try {
+            var resp = await fetch(url);
+            if (resp.ok || resp.status === 204) return resp;
+            var detail = "";
+            try { detail = (await resp.text()).trim().slice(0, 300); } catch (ignored) {}
+            lastError = "HTTP " + resp.status + (detail ? " (" + detail + ")" : "");
+            // 4xx that is not "not found yet" will not fix itself: stop retrying
+            if (resp.status < 500 && resp.status !== 404) {
+              log("No se puede descargar " + label + ": " + lastError, "error");
+              return null;
+            }
+          } catch (e) {
+            lastError = String(e);
+          }
+          if (i < attempts) {
+            log("Intento " + i + " fallido al descargar " + label + ": " + lastError + " — reintentando...", "warn");
+            await new Promise(function(r) { setTimeout(r, 600 * i); });
+          }
+        }
+        log("No se pudo descargar " + label + " tras " + attempts + " intentos: " + lastError, "error");
+        return null;
+      }
+
+      /** Exactly-once claim for a broadcast ticket: only the first agent that asks prints it. */
+      async function claimTicket(orderId) {
+        return await askClaim("/api/print/ticket/" + orderId + "/claim");
+      }
+
+      /** Exactly-once claim for ONE account (Payment) of a split bill. */
+      async function claimAccountTicket(paymentId) {
+        return await askClaim("/api/print/ticket/payment/" + paymentId + "/claim");
+      }
+
+      async function askClaim(url) {
+        try {
+          var resp = await fetch(url, { method: "POST" });
+          if (!resp.ok) return true; // could not ask: better to try printing than to drop it
+          var data = await resp.json();
+          return data.claim === true;
+        } catch (e) {
+          return true;
+        }
+      }
+
       // ── Print a comanda ──
       // The server returns only the items of that station that are still pending to print,
       // so a comanda never repeats what already went out and a missed event is recovered
@@ -341,7 +393,10 @@
           log("Descargando comanda " + type + " para pedido #" + orderNumber
               + (announced ? " (" + announced + " ítem(s) nuevos anunciados)" : "") + "...");
 
-          var resp = await fetch("/api/print/comanda/" + orderId + "?type=" + type);
+          var resp = await downloadRaw("/api/print/comanda/" + orderId + "?type=" + type, "comanda " + type);
+          if (!resp) {
+            return; // the reason is already in the log
+          }
           if (resp.status === 204) {
             log("Pedido #" + orderNumber + ": sin ítems nuevos para " + type, "warn");
             return;
@@ -413,14 +468,16 @@
               printComanda(data.orderId, data.orderNumber, "PARRILLERO", data.detailIds);
             });
 
-            // Company+user scoped topic: server-side isolation ensures only THIS user
-            // in THIS company receives the event. Two companies with the same username
-            // get different topics: /topic/print/ticket/1/juan ≠ /topic/print/ticket/2/juan.
-            // No client-side companyId check needed — the topic itself is the guard.
-            stompClient.subscribe("/topic/print/ticket/" + COMPANY_ID + "/" + CURRENT_USERNAME, function(msg) {
+            // Company-wide topic: the ticket must come out of the PC whose ticket printer
+            // is connected, no matter who charged the order. Agents without that printer
+            // (or without a ticket printer configured) ignore the event, and the ones that
+            // share a printer resolve it with the exactly-once claim.
+            stompClient.subscribe("/topic/print/ticket/" + COMPANY_ID, function(msg) {
               var data = JSON.parse(msg.body);
-              log("🧾 Ticket solicitado para pedido #" + data.orderNumber);
-              printTicket(data.orderId, data.orderNumber);
+              var accounts = (data.paymentIds && data.paymentIds.length) ? data.paymentIds : [];
+              log("🧾 Ticket solicitado para pedido #" + data.orderNumber
+                  + (accounts.length ? " (" + accounts.length + " cuenta(s))" : ""));
+              printTicket(data.orderId, data.orderNumber, accounts);
             });
 
           }, function(err) {
@@ -443,16 +500,6 @@
       });
 
       // ── Ticket printer ──
-
-      /**
-       * Returns the ticket printer name for this PC.
-       * Stored in localStorage as 'ticketPrinter_{COMPANY_ID}'.
-       */
-      async function getTicketPrinterName() {
-        var stored = localStorage.getItem("ticketPrinter_" + COMPANY_ID);
-        if (stored) return stored;
-        return await selectTicketPrinter(true);
-      }
 
       async function promptTicketPrinterIfNeeded() {
         if (localStorage.getItem("ticketPrinter_" + COMPANY_ID)) return;
@@ -534,16 +581,25 @@
         if (qzConnected) selectTicketPrinter(true);
       }
 
-      /** Prints the ESC/POS ticket for a paid order */
-      async function printTicket(orderId, orderNumber) {
+      /**
+       * Prints the ticket of a paid order.
+       *
+       * @param paymentIds accounts of a split bill / departing guest: one ticket per person.
+       *                   Empty means the normal whole-order charge.
+       *                   The whole-order ticket is NEVER printed when there are accounts:
+       *                   it is just the table total and is not handed to any customer.
+       */
+      async function printTicket(orderId, orderNumber, paymentIds) {
         if (!qzConnected) {
           log("❌ Ticket #" + orderNumber + ": QZ Tray no conectado", "error");
           return;
         }
         try {
-          var printerName = await getTicketPrinterName();
+          // Printer stored for THIS PC. Never prompt from here: the event reaches every
+          // agent of the company, so a dialog would open on unrelated PCs.
+          var printerName = localStorage.getItem("ticketPrinter_" + COMPANY_ID);
           if (!printerName) {
-            log("⚠️ Ticket #" + orderNumber + ": no se seleccionó impresora de tickets", "warn");
+            log("Ticket #" + orderNumber + ": esta PC no tiene impresora de tickets configurada — omitido", "warn");
             return;
           }
           // Verify the printer is physically connected on THIS PC before printing.
@@ -555,9 +611,26 @@
             log("Impresora de tickets '" + printerName + "' no conectada en esta PC — omitido", "warn");
             return;
           }
+          // Split bill / departing guest: one ticket per account, no order ticket.
+          if (paymentIds && paymentIds.length) {
+            for (var i = 0; i < paymentIds.length; i++) {
+              await printOneAccountTicket(orderId, paymentIds[i], printerName, orderNumber);
+            }
+            updateTicketCard(printerName, true);
+            return;
+          }
+
+          // Exactly-once: only the agent that wins the claim prints this ticket.
+          var claimed = await claimTicket(orderId);
+          if (!claimed) {
+            log("Ticket #" + orderNumber + " ya fue tomado por otra PC — omitido", "warn");
+            return;
+          }
           log("Descargando ticket para pedido #" + orderNumber + "...");
-          var resp = await fetch("/api/print/ticket/" + orderId);
-          if (!resp.ok) throw new Error("HTTP " + resp.status);
+          var resp = await downloadRaw("/api/print/ticket/" + orderId, "ticket #" + orderNumber);
+          if (!resp) {
+            return; // the reason is already in the log
+          }
           var buf = await resp.arrayBuffer();
           var bytes = new Uint8Array(buf), binary = "";
           for (var i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
@@ -567,6 +640,33 @@
           updateTicketCard(printerName, true);
         } catch(e) {
           log("❌ Error al imprimir ticket #" + orderNumber + ": " + e.message, "error");
+        }
+      }
+
+      /**
+       * One account of a split bill: claim it (exactly once, even if several PCs share the
+       * printer) and print its own ESC/POS ticket on this PC's ticket printer.
+       */
+      async function printOneAccountTicket(orderId, paymentId, printerName, orderNumber) {
+        var label = "cuenta " + paymentId + " del pedido #" + orderNumber;
+        try {
+          var claimed = await claimAccountTicket(paymentId);
+          if (!claimed) {
+            log(label + " ya fue tomada por otra PC — omitida", "warn");
+            return;
+          }
+          log("Descargando " + label + "...");
+          var resp = await downloadRaw("/api/print/ticket/" + orderId + "/payment/" + paymentId, label);
+          if (!resp) {
+            return; // the reason is already in the log
+          }
+          var buf = await resp.arrayBuffer();
+          var bytes = new Uint8Array(buf), binary = "";
+          for (var i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+          await qz.print(qz.configs.create(printerName), [{ type: "raw", format: "base64", data: btoa(binary) }]);
+          log("✓ " + label + " impresa en " + printerName, "success");
+        } catch (e) {
+          log("❌ Error al imprimir la " + label + ": " + e.message, "error");
         }
       }
 

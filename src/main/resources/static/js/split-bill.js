@@ -25,6 +25,7 @@
  *   total: <order total>,
  *   items: [{ id, name, qty, price (effective per-unit), comps (complement total) }],
  *   methods: ["CASH", "CREDIT_CARD", ...],   // enabled for this role
+ *   methodLabels: ["Efectivo", ...],         // Spanish label per method (same order)
  *   fixedMethod: "CASH" | null,              // delivery: method fixed per order
  *   role: "admin" | "cashier" | "waiter" | "delivery"
  * }
@@ -35,6 +36,9 @@
   var cfg = window.SPLIT_CONFIG || {};
   var items = cfg.items || [];
   var methods = cfg.methods || [];
+  // Spanish labels injected by the server (PaymentMethodType.getDisplayName),
+  // aligned by index with `methods`.
+  var methodLabels = cfg.methodLabels || [];
   var fixedMethod = cfg.fixedMethod || null;
   var orderTotal = parseFloat(cfg.total) || 0;
   var MAX_ACCOUNTS = 10;
@@ -122,7 +126,14 @@
     TRANSFER: "Transferencia",
   };
 
+  /**
+   * Spanish name of a payment method. The server-injected label wins (single
+   * source of truth: the PaymentMethodType enum); the local map is only a
+   * fallback for a method that is not part of the enabled list.
+   */
   function methodDisplay(m) {
+    var i = methods.indexOf(m);
+    if (i >= 0 && methodLabels[i]) return methodLabels[i];
     return METHOD_NAMES[m] || m;
   }
 
@@ -312,7 +323,7 @@
     for (var i = 0; i < methods.length; i++) {
       var m = methods[i];
       opts +=
-        '<option value="' + esc(m) + '"' + (acc.method === m ? " selected" : "") + ">" + esc(m) + "</option>";
+        '<option value="' + esc(m) + '"' + (acc.method === m ? " selected" : "") + ">" + esc(methodDisplay(m)) + "</option>";
     }
     return (
       '<select class="split-method w-full rounded-lg border-2 border-gray-300 bg-white dark:bg-gray-700 dark:text-white px-3 py-1.5 text-sm font-semibold focus:outline-none focus:border-primary">' +

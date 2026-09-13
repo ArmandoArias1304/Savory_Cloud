@@ -2,10 +2,13 @@ package com.aatechsolutions.elgransazon.presentation.controller;
 
 import com.aatechsolutions.elgransazon.application.service.ComandaEscPosService;
 import com.aatechsolutions.elgransazon.application.service.OrderService;
+import com.aatechsolutions.elgransazon.application.service.PrintClaimService;
 import com.aatechsolutions.elgransazon.application.service.PrinterService;
 import com.aatechsolutions.elgransazon.application.service.TicketEscPosService;
+import com.aatechsolutions.elgransazon.application.service.WebSocketNotificationService;
 import com.aatechsolutions.elgransazon.domain.entity.Printer;
 import com.aatechsolutions.elgransazon.domain.entity.PrinterType;
+import com.aatechsolutions.elgransazon.domain.repository.PaymentRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -35,7 +38,10 @@ class PrinterControllerSaveTest {
                 printerService,
                 mock(ComandaEscPosService.class),
                 mock(TicketEscPosService.class),
-                mock(OrderService.class));
+                mock(OrderService.class),
+                new PrintClaimService(),
+                mock(PaymentRepository.class),
+                mock(WebSocketNotificationService.class));
         mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
     }
 
