@@ -898,7 +898,11 @@ public class OrderServiceImpl implements OrderService {
         // Use paidBy.getUsername() — it is set in the controller BEFORE calling changeStatus
         // and is immutable after that (updatedBy can be overwritten later by autofactura, etc.).
         // Falls back to updatedBy if paidBy is somehow null.
-        if (newStatus == OrderStatus.PAID && order.getOrderType() != OrderType.DELIVERY) {
+        // Split bills (one Payment per person) are excluded: each account prints its own
+        // ticket from the payment screen, so the agent must not print the whole order too.
+        if (newStatus == OrderStatus.PAID
+                && order.getOrderType() != OrderType.DELIVERY
+                && !savedOrder.isSplitOrder()) {
             try {
                 String payerUsername = (savedOrder.getPaidBy() != null
                         && savedOrder.getPaidBy().getUsername() != null)

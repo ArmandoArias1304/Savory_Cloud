@@ -2,6 +2,7 @@ package com.aatechsolutions.elgransazon.presentation.controller;
 
 import com.aatechsolutions.elgransazon.application.service.*;
 import com.aatechsolutions.elgransazon.domain.entity.*;
+import com.aatechsolutions.elgransazon.util.DeliveryStatusSupport;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.ResponseEntity;
@@ -56,6 +57,7 @@ public class OrderController {
     private final TicketPdfService ticketPdfService;
     private final TicketEscPosService ticketEscPosService;
     private final ComandaEscPosService comandaEscPosService;
+    private final com.aatechsolutions.elgransazon.domain.repository.PaymentRepository paymentRepository;
     private final com.aatechsolutions.elgransazon.domain.repository.ComplementRepository complementRepository;
     private final com.aatechsolutions.elgransazon.domain.repository.ItemMenuComplementRepository itemMenuComplementRepository;
     private final com.aatechsolutions.elgransazon.domain.repository.ItemMenuComboItemRepository itemMenuComboItemRepository;
@@ -88,6 +90,7 @@ public class OrderController {
             TicketPdfService ticketPdfService,
             TicketEscPosService ticketEscPosService,
             ComandaEscPosService comandaEscPosService,
+            com.aatechsolutions.elgransazon.domain.repository.PaymentRepository paymentRepository,
             com.aatechsolutions.elgransazon.domain.repository.ComplementRepository complementRepository,
             com.aatechsolutions.elgransazon.domain.repository.ItemMenuComplementRepository itemMenuComplementRepository,
             com.aatechsolutions.elgransazon.domain.repository.ItemMenuComboItemRepository itemMenuComboItemRepository,
@@ -118,6 +121,7 @@ public class OrderController {
         this.ticketPdfService = ticketPdfService;
         this.ticketEscPosService = ticketEscPosService;
         this.comandaEscPosService = comandaEscPosService;
+        this.paymentRepository = paymentRepository;
         this.complementRepository = complementRepository;
         this.itemMenuComplementRepository = itemMenuComplementRepository;
         this.itemMenuComboItemRepository = itemMenuComboItemRepository;
@@ -344,10 +348,15 @@ public class OrderController {
             && listCfg != null && Boolean.TRUE.equals(listCfg.getStaffCanManageBaristaItems());
         boolean staffParrilleroEnabled = staffOrderStatusEnabled
             && listCfg != null && Boolean.TRUE.equals(listCfg.getStaffCanManageParrilleroItems());
+        // Delivery orders can only be advanced by admin/manager/cashier (never the waiter).
+        boolean staffDeliveryEnabled = staffOrderStatusEnabled
+            && listCfg != null && Boolean.TRUE.equals(listCfg.getStaffCanManageDeliveryOrders())
+            && DeliveryStatusSupport.isStaffRoleAllowed(role);
         model.addAttribute("staffOrderStatusEnabled", staffOrderStatusEnabled);
         model.addAttribute("staffChefEnabled", staffChefEnabled);
         model.addAttribute("staffBaristaEnabled", staffBaristaEnabled);
         model.addAttribute("staffParrilleroEnabled", staffParrilleroEnabled);
+        model.addAttribute("staffDeliveryEnabled", staffDeliveryEnabled);
 
         // Expose whether waiters are allowed to collect payments, so the list view
         // can hide the charge button when disabled in system configuration.
@@ -1851,6 +1860,15 @@ public class OrderController {
             if (status == OrderStatus.PAID) {
                 response.put("success", false);
                 response.put("message", "Para cobrar una orden debes usar el formulario de pago. No se puede marcar como PAGADO desde aquí.");
+                return response;
+            }
+
+            // Delivery advance guard: on a DELIVERY order, ON_THE_WAY / DELIVERED may only be
+            // set by the repartidor or by admin/gerente/cajero when the staff permission is ON.
+            SystemConfiguration deliveryCfg = systemConfigurationService.getConfiguration();
+            if (!DeliveryStatusSupport.isStatusChangeAllowed(role, order, status, deliveryCfg)) {
+                response.put("success", false);
+                response.put("message", "Solo el repartidor, administrador, gerente o cajero pueden avanzar el estado de una orden de reparto (el permiso debe estar habilitado en configuración).");
                 return response;
             }
             
@@ -3926,6 +3944,91 @@ public class OrderController {
         }
     }
     
+    /**
+     * Download PDF ticket for ONE account (Payment) of a split bill.
+     * GET /{role}/orders/{orderId}/download-ticket/{paymentId}
+     */
+    @GetMapping("/{orderId}/download-ticket/{paymentId}")
+    public ResponseEntity<byte[]> downloadPaymentTicket(
+            @PathVariable String role,
+            @PathVariable Long orderId,
+            @PathVariable Long paymentId,
+            Authentication authentication) {
+
+        log.info("User {} downloading PDF ticket for payment {} of order {}", authentication.getName(), paymentId, orderId);
+
+        validateRole(role, authentication);
+
+        try {
+            com.aatechsolutions.elgransazon.domain.entity.Payment payment = paymentRepository.findByIdWithDetails(paymentId)
+                    .orElseThrow(() -> new IllegalArgumentException("Cuenta no encontrada"));
+            if (!payment.getOrder().getIdOrder().equals(orderId)) {
+                return ResponseEntity.notFound().build();
+            }
+
+            byte[] pdfBytes = ticketPdfService.generateTicket(payment);
+
+            org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+            headers.setContentType(org.springframework.http.MediaType.APPLICATION_PDF);
+            headers.setContentDispositionFormData("attachment", "ticket_" + payment.getPaymentFolio() + ".pdf");
+            headers.setCacheControl("must-revalidate, post-check=0, pre-check=0");
+
+            return ResponseEntity.ok()
+                    .headers(headers)
+                    .body(pdfBytes);
+
+        } catch (IllegalArgumentException e) {
+            log.warn("Payment ticket not found: payment {} order {}", paymentId, orderId);
+            return ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            log.error("Error generating payment ticket {} of order {}", paymentId, orderId, e);
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    /**
+     * Download ESC/POS raw ticket for ONE account (Payment) of a split bill
+     * (for thermal printers via QZ Tray).
+     * GET /{role}/orders/{orderId}/download-ticket-raw/{paymentId}
+     */
+    @GetMapping("/{orderId}/download-ticket-raw/{paymentId}")
+    public ResponseEntity<byte[]> downloadPaymentTicketRaw(
+            @PathVariable String role,
+            @PathVariable Long orderId,
+            @PathVariable Long paymentId,
+            Authentication authentication) {
+
+        log.info("User {} downloading ESC/POS ticket for payment {} of order {}", authentication.getName(), paymentId, orderId);
+
+        validateRole(role, authentication);
+
+        try {
+            com.aatechsolutions.elgransazon.domain.entity.Payment payment = paymentRepository.findByIdWithDetails(paymentId)
+                    .orElseThrow(() -> new IllegalArgumentException("Cuenta no encontrada"));
+            if (!payment.getOrder().getIdOrder().equals(orderId)) {
+                return ResponseEntity.notFound().build();
+            }
+
+            byte[] escposBytes = ticketEscPosService.generateTicket(payment);
+
+            org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+            headers.setContentType(org.springframework.http.MediaType.APPLICATION_OCTET_STREAM);
+            headers.setContentDispositionFormData("attachment", "ticket_" + payment.getPaymentFolio() + ".bin");
+            headers.setCacheControl("must-revalidate, post-check=0, pre-check=0");
+
+            return ResponseEntity.ok()
+                    .headers(headers)
+                    .body(escposBytes);
+
+        } catch (IllegalArgumentException e) {
+            log.warn("Payment ticket not found: payment {} order {}", paymentId, orderId);
+            return ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            log.error("Error generating payment ticket {} of order {}", paymentId, orderId, e);
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
     /**
      * Validate if promotions sent from frontend are still active
      * Returns a map with validation results and list of expired promotions

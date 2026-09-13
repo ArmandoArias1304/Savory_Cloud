@@ -2,11 +2,14 @@ package com.aatechsolutions.elgransazon.domain.repository;
 
 import com.aatechsolutions.elgransazon.domain.entity.Company;
 import com.aatechsolutions.elgransazon.domain.entity.ItemMenu;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
@@ -161,6 +164,40 @@ public interface ItemMenuRepository extends JpaRepository<ItemMenu, Long> {
     List<ItemMenu> findAllByCompanyOrderByCategoryAndNameWithParent(@Param("company") Company company);
 
     /**
+     * Search menu items of a company with optional filters, paginated (20 per page in the admin list).
+     * All filter parameters are optional: pass null to ignore them.
+     */
+    @Query(value = """
+            SELECT i FROM ItemMenu i LEFT JOIN FETCH i.parentItem
+            WHERE i.company = :company
+              AND (:name IS NULL OR LOWER(i.name) LIKE LOWER(CONCAT('%', :name, '%')))
+              AND (:categoryId IS NULL OR i.category.idCategory = :categoryId)
+              AND (:minPrice IS NULL OR i.price >= :minPrice)
+              AND (:maxPrice IS NULL OR i.price <= :maxPrice)
+              AND (:active IS NULL OR i.active = :active)
+              AND (:available IS NULL OR i.available = :available)
+            ORDER BY i.category.name ASC, i.name ASC
+            """,
+            countQuery = """
+            SELECT COUNT(i) FROM ItemMenu i
+            WHERE i.company = :company
+              AND (:name IS NULL OR LOWER(i.name) LIKE LOWER(CONCAT('%', :name, '%')))
+              AND (:categoryId IS NULL OR i.category.idCategory = :categoryId)
+              AND (:minPrice IS NULL OR i.price >= :minPrice)
+              AND (:maxPrice IS NULL OR i.price <= :maxPrice)
+              AND (:active IS NULL OR i.active = :active)
+              AND (:available IS NULL OR i.available = :available)
+            """)
+    Page<ItemMenu> searchPageByCompany(@Param("company") Company company,
+                                       @Param("name") String name,
+                                       @Param("categoryId") Long categoryId,
+                                       @Param("minPrice") BigDecimal minPrice,
+                                       @Param("maxPrice") BigDecimal maxPrice,
+                                       @Param("active") Boolean active,
+                                       @Param("available") Boolean available,
+                                       Pageable pageable);
+
+    /**
      * Find all available items by company
      */
     @Query("SELECT i FROM ItemMenu i WHERE i.company = :company AND i.active = true AND i.available = true ORDER BY i.name ASC")
@@ -223,6 +260,18 @@ public interface ItemMenuRepository extends JpaRepository<ItemMenu, Long> {
      * Count all menu items by company
      */
     long countByCompany(Company company);
+
+    /**
+     * Count active menu items by company
+     */
+    @Query("SELECT COUNT(i) FROM ItemMenu i WHERE i.company = :company AND i.active = true")
+    long countActiveByCompany(@Param("company") Company company);
+
+    /**
+     * Count unavailable menu items by company (active but no stock)
+     */
+    @Query("SELECT COUNT(i) FROM ItemMenu i WHERE i.company = :company AND i.active = true AND i.available = false")
+    long countUnavailableByCompany(@Param("company") Company company);
 
     // ========== Size / Self-Reference Queries ==========
 

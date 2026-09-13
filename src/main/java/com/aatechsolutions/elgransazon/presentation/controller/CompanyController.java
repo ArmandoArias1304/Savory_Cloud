@@ -5,7 +5,9 @@ import com.aatechsolutions.elgransazon.application.service.FacturamaService;
 import com.aatechsolutions.elgransazon.domain.entity.Company;
 import com.aatechsolutions.elgransazon.domain.entity.FacturamaConfig;
 import com.aatechsolutions.elgransazon.domain.repository.CompanyRepository;
+import com.aatechsolutions.elgransazon.domain.repository.GlobalInvoiceRepository;
 import com.aatechsolutions.elgransazon.domain.repository.OrderRepository;
+import com.aatechsolutions.elgransazon.domain.repository.PaymentRepository;
 import com.aatechsolutions.elgransazon.presentation.dto.CompanyCreateDTO;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -39,6 +41,8 @@ public class CompanyController {
     private final CompanyRepository companyRepository;
     private final FacturamaService facturamaService;
     private final OrderRepository orderRepository;
+    private final PaymentRepository paymentRepository;
+    private final GlobalInvoiceRepository globalInvoiceRepository;
 
     /**
      * List all companies with pagination
@@ -191,7 +195,13 @@ public class CompanyController {
         FacturamaConfig facturamaConfig = facturamaService.getConfigForCompany(company).orElse(null);
         model.addAttribute("facturamaConfig", facturamaConfig);
         model.addAttribute("facturamaLiveMode", facturamaService.isLiveMode());
-        model.addAttribute("totalCfdis", orderRepository.countByCompanyAndFacturamaCfdiCreatedAtIsNotNull(company));
+        // Order-level invoices (normal single-ticket orders) + per-account invoices
+        // (split bills, saved on the Payment) + global invoices (público en general):
+        // every generated CFDI/timbre used counts.
+        long totalCfdis = orderRepository.countByCompanyAndFacturamaCfdiCreatedAtIsNotNull(company)
+                + paymentRepository.countByCompanyAndFacturamaCfdiCreatedAtIsNotNull(company)
+                + globalInvoiceRepository.countByCompany(company);
+        model.addAttribute("totalCfdis", totalCfdis);
         
         return "programmer/companies/view";
     }

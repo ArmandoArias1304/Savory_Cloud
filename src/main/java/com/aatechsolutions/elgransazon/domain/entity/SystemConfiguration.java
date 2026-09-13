@@ -158,6 +158,16 @@ public class SystemConfiguration implements Serializable {
     @Builder.Default
     private Boolean staffCanManageParrilleroItems = false;
 
+    // Child flag (only evaluated when enableOrderStatusPermission = TRUE).
+    // When TRUE, ONLY admin/manager/cashier can advance the status of DELIVERY orders
+    // (READY -> ON_THE_WAY "En camino" -> DELIVERED "Entregado") with a single click,
+    // exactly like the repartidor does. The waiter is intentionally excluded from this
+    // permission, and the repartidor keeps their own ability regardless of this flag.
+    @Column(name = "staff_can_manage_delivery_orders", nullable = false,
+            columnDefinition = "boolean not null default false")
+    @Builder.Default
+    private Boolean staffCanManageDeliveryOrders = false;
+
     // ========== Waiter/Delivery Collection Permission ==========
     // When TRUE (default), waiters and delivery staff CAN collect payments
     // (waiters: credit/debit cards only; delivery: per the delivery payment methods).

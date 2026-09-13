@@ -7,8 +7,12 @@ import com.aatechsolutions.elgransazon.application.service.EmployeeService;
 import com.aatechsolutions.elgransazon.application.service.ItemMenuService;
 import com.aatechsolutions.elgransazon.application.service.FacturamaService;
 import com.aatechsolutions.elgransazon.application.service.OrderService;
+import com.aatechsolutions.elgransazon.application.service.SplitPaymentService;
 import com.aatechsolutions.elgransazon.application.service.SystemConfigurationService;
 import com.aatechsolutions.elgransazon.domain.repository.OrderRepository;
+import com.aatechsolutions.elgransazon.presentation.dto.SplitAccountDTO;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.aatechsolutions.elgransazon.domain.entity.Category;
 import com.aatechsolutions.elgransazon.domain.entity.Employee;
 import com.aatechsolutions.elgransazon.domain.entity.ItemMenu;
@@ -16,6 +20,7 @@ import com.aatechsolutions.elgransazon.domain.entity.Order;
 import com.aatechsolutions.elgransazon.domain.entity.OrderStatus;
 import com.aatechsolutions.elgransazon.domain.entity.PaymentMethodType;
 import com.aatechsolutions.elgransazon.domain.entity.SystemConfiguration;
+import com.aatechsolutions.elgransazon.domain.entity.SplitMode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -54,6 +59,8 @@ public class DeliveryController {
     private final ItemMenuService itemMenuService;
     private final FacturamaService facturamaService;
     private final OrderRepository orderRepository;
+    private final SplitPaymentService splitPaymentService;
+    private final ObjectMapper objectMapper;
 
     /**
      * Display delivery dashboard
@@ -237,6 +244,13 @@ public class DeliveryController {
                         redirectAttributes.addFlashAttribute("errorMessage", "Solo se pueden cobrar pedidos entregados");
                         return "redirect:/delivery/orders/pending";
                     }
+
+                    // Only charge items already delivered
+                    if (!order.isReadyToCharge()) {
+                        redirectAttributes.addFlashAttribute("errorMessage",
+                            "Solo se cobran los ítems con estado ENTREGADO. Aún hay ítems sin entregar en este pedido.");
+                        return "redirect:/delivery/orders/pending";
+                    }
                     
                     // Validate that current delivery person delivered this order
                     if (order.getDeliveredBy() == null || 
@@ -270,6 +284,15 @@ public class DeliveryController {
                     model.addAttribute("currentEmployee", currentEmployee);
                     model.addAttribute("enabledPaymentMethods", enabledDeliveryPaymentMethods);
                     model.addAttribute("enabledPaymentMethodNames", enabledPaymentMethodNames);
+                    // Delivery orders are always charged complete at the door (no partial departures)
+                    model.addAttribute("splitDeparture", false);
+                    // Delivery allows a cash tip per account (zeroCashTips=false).
+                    model.addAttribute("splitZeroCashTips", false);
+                    // Parts-equal was removed (SAT): a product cannot be divided,
+                    // so the split editor is per-person (whole items) only.
+                    model.addAttribute("splitAllowEqual", false);
+                    model.addAttribute("splitAutoEnable", order.hasPartialCollections());
+                    model.addAttribute("nextPersonNumber", order.nextPersonNumber());
                     
                     return "delivery/payments/form";
                 })
@@ -287,6 +310,9 @@ public class DeliveryController {
     public String processPayment(
             @PathVariable Long orderId,
             @RequestParam(required = false, defaultValue = "0") BigDecimal tip,
+            @RequestParam(required = false) String splitEnabled,
+            @RequestParam(required = false) String splitMode,
+            @RequestParam(required = false) String splitAccounts,
             Authentication authentication,
             Model model,
             RedirectAttributes redirectAttributes) {
@@ -305,6 +331,11 @@ public class DeliveryController {
             if (order.getStatus() != OrderStatus.DELIVERED) {
                 throw new IllegalStateException("Solo se pueden cobrar pedidos entregados");
             }
+
+            // Only charge items already delivered
+            if (!order.isReadyToCharge()) {
+                throw new IllegalStateException("Solo se cobran los ítems con estado ENTREGADO. Aún hay ítems sin entregar en este pedido.");
+            }
             
             // Validate that current delivery person delivered this order
             if (order.getDeliveredBy() == null || 
@@ -318,6 +349,13 @@ public class DeliveryController {
             // Validate that delivery collection is enabled in system configuration
             if (!Boolean.TRUE.equals(config.getWaiterDeliveryCanCollect())) {
                 throw new IllegalStateException("El cobro por repartidores está deshabilitado. Por favor, dirija el pedido a caja.");
+            }
+
+            // ========== SPLIT BILL FLOW (dividir cuenta) ==========
+            // For delivery the payment method is fixed per order, so every account
+            // uses the order's method; per-account tips are allowed as entered.
+            if ("true".equalsIgnoreCase(splitEnabled)) {
+                return processSplitPayment(order, currentEmployee, username, splitMode, splitAccounts, redirectAttributes);
             }
 
             PaymentMethodType paymentMethod = order.getPaymentMethod();
@@ -340,6 +378,7 @@ public class DeliveryController {
                 model.addAttribute("currentEmployee", currentEmployee);
                 model.addAttribute("enabledPaymentMethods", enabledDeliveryPaymentMethods);
                 model.addAttribute("enabledPaymentMethodNames", enabledPaymentMethodNames);
+                model.addAttribute("splitZeroCashTips", false);
                 model.addAttribute("errorMessage", 
                     "El método de pago '" + paymentMethod.getDisplayName() + 
                     "' está deshabilitado para entregas a domicilio. Por favor contacte al administrador.");
@@ -412,6 +451,72 @@ public class DeliveryController {
             redirectAttributes.addFlashAttribute("errorMessage", "Error al procesar el pago");
             return "redirect:/delivery/orders/pending";
         }
+    }
+
+    /**
+     * Split-bill flow for delivery: divide the DELIVERED order into N per-person
+     * accounts. All accounts use the order's payment method; each account keeps
+     * its own tip, items and autofactura key.
+     */
+    private String processSplitPayment(Order order, Employee currentEmployee, String username,
+                                       String splitMode, String splitAccounts,
+                                       RedirectAttributes redirectAttributes) {
+        // Parse the per-account plan
+        List<SplitAccountDTO> accounts;
+        try {
+            accounts = objectMapper.readValue(splitAccounts, new TypeReference<List<SplitAccountDTO>>() {});
+        } catch (Exception e) {
+            log.warn("Invalid splitAccounts JSON: {}", e.getMessage());
+            throw new IllegalArgumentException("Los datos de la división de cuenta son inválidos");
+        }
+        if (!"ITEMS".equalsIgnoreCase(splitMode)) {
+            throw new IllegalArgumentException(
+                    "El modo 'Partes iguales' ya no está disponible: un producto no puede dividirse. "
+                            + "Use la división por persona (asignar ítems completos) o realice un solo pago.");
+        }
+        SplitMode mode = SplitMode.ITEMS;
+
+        // Delivery: the payment method is fixed per order — clear any per-account
+        // method so the service falls back to the order's method.
+        for (SplitAccountDTO acc : accounts) {
+            acc.setPaymentMethod(null);
+        }
+
+        // Build request base URL for autofactura self-invoice links
+        jakarta.servlet.http.HttpServletRequest req =
+                ((org.springframework.web.context.request.ServletRequestAttributes)
+                org.springframework.web.context.request.RequestContextHolder.currentRequestAttributes())
+                .getRequest();
+        String baseUrl = req.getScheme() + "://" + req.getServerName()
+                + (req.getServerPort() == 80 || req.getServerPort() == 443 ? "" : ":" + req.getServerPort());
+
+        // Create the per-person payments. Delivery keeps tips as entered (no CASH zeroing).
+        List<com.aatechsolutions.elgransazon.domain.entity.Payment> payments =
+                splitPaymentService.createSplitPayments(order, mode, accounts, currentEmployee, username, false, baseUrl);
+
+        // Order-level metadata for backward compatibility: tip = sum of ALL
+        // account tips of this order (earlier charges included), so tip
+        // views/reports keep every tip collected.
+        BigDecimal totalTips = order.getPayments().stream()
+                .map(p -> p.getTip() != null ? p.getTip() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        order.setTip(totalTips);
+        order.setPaidBy(currentEmployee);
+        order.setUpdatedBy(username);
+        order.setUpdatedAt(java.time.LocalDateTime.now());
+        orderRepository.save(order);
+
+        // Change status to PAID
+        deliveryOrderService.changeStatus(order.getIdOrder(), OrderStatus.PAID, username);
+
+        log.info("Split payment processed for order {}: {} accounts, collected by {}",
+                order.getOrderNumber(), payments.size(), username);
+
+        redirectAttributes.addFlashAttribute("successMessage",
+                "Pago cobrado exitosamente. Pedido #" + order.getOrderNumber()
+                        + " (" + payments.size() + " cuentas).");
+
+        return "redirect:/delivery/orders/pending";
     }
 
     /**

@@ -717,6 +717,391 @@
             </div>
           </div>
 
+          <!-- Timbres Emitidos (CFDI) -->
+          <div
+            class="mt-8 bg-white dark:bg-gray-900 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 overflow-hidden"
+          >
+            <div class="bg-gradient-to-r from-blue-500 to-indigo-600 px-6 py-4">
+              <div class="flex items-center gap-3 text-white">
+                <span class="material-symbols-outlined text-2xl"
+                  >local_printshop</span
+                >
+                <h5 class="text-xl font-bold">Timbres Emitidos (CFDI)</h5>
+              </div>
+              <p class="text-blue-50 text-xs mt-1">
+                Cada factura individual y cada factura global (público en
+                general) cuentan como un timbre. Filtra por fecha de emisión.
+              </p>
+            </div>
+            <div class="p-6">
+              <div class="flex flex-wrap items-end gap-3">
+                <div>
+                  <label
+                    class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1"
+                    >Desde</label
+                  >
+                  <input
+                    type="date"
+                    id="tmbFrom"
+                    class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label
+                    class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1"
+                    >Hasta</label
+                  >
+                  <input
+                    type="date"
+                    id="tmbTo"
+                    class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+                <button
+                  id="tmbSearchBtn"
+                  type="button"
+                  class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-colors flex items-center gap-1"
+                >
+                  <span class="material-symbols-outlined text-lg">search</span>
+                  Consultar
+                </button>
+              </div>
+              <p id="tmbError" class="text-sm text-red-500 mt-2 hidden"></p>
+
+              <!-- Results -->
+              <div
+                id="tmbResult"
+                class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4 hidden"
+              >
+                <!-- Timbres en el periodo -->
+                <div
+                  class="p-5 rounded-2xl bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/20 border border-blue-200 dark:border-blue-800"
+                >
+                  <div class="flex items-center gap-2 mb-2">
+                    <span
+                      class="material-symbols-outlined text-blue-600 dark:text-blue-300"
+                      >local_printshop</span
+                    >
+                    <h6
+                      class="text-sm font-semibold text-blue-900 dark:text-blue-200"
+                    >
+                      Timbres en el periodo
+                    </h6>
+                  </div>
+                  <p
+                    class="text-3xl font-bold text-blue-700 dark:text-blue-200"
+                  >
+                    <span id="tmbCount">0</span>
+                  </p>
+                  <p class="text-sm text-blue-700 dark:text-blue-300 mt-1">
+                    CFDI emitidos en las fechas seleccionadas
+                  </p>
+                </div>
+                <!-- Total histórico -->
+                <div
+                  class="p-5 rounded-2xl bg-gradient-to-br from-indigo-50 to-indigo-100 dark:from-indigo-900/30 dark:to-indigo-800/20 border border-indigo-200 dark:border-indigo-800"
+                >
+                  <div class="flex items-center gap-2 mb-2">
+                    <span
+                      class="material-symbols-outlined text-indigo-600 dark:text-indigo-300"
+                      >stacked_bar_chart</span
+                    >
+                    <h6
+                      class="text-sm font-semibold text-indigo-900 dark:text-indigo-200"
+                    >
+                      Total histórico (desde el inicio)
+                    </h6>
+                  </div>
+                  <p
+                    class="text-3xl font-bold text-indigo-700 dark:text-indigo-200"
+                  >
+                    <span id="tmbTotal">0</span>
+                  </p>
+                  <p class="text-sm text-indigo-700 dark:text-indigo-300 mt-1">
+                    Todo lo timbrado desde que el restaurante usa el sistema
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Factura Global (Público en General) -->
+          <div
+            class="mt-8 bg-white dark:bg-gray-900 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 overflow-hidden"
+          >
+            <div class="bg-gradient-to-r from-amber-500 to-amber-600 px-6 py-4">
+              <div class="flex items-center gap-3 text-white">
+                <span class="material-symbols-outlined text-2xl"
+                  >receipt_long</span
+                >
+                <h5 class="text-xl font-bold">
+                  Factura Global (Público en General)
+                </h5>
+              </div>
+              <p class="text-amber-50 text-xs mt-1">
+                Emite un solo CFDI 4.0 con todas las operaciones pagadas que NO
+                se facturaron individualmente, con receptor público en general.
+                Debe emitirse a más tardar 24 h después del cierre del periodo
+                (regla 2.7.1.21 RMF). El periodo debe ser un día completo o un
+                mes completo.
+              </p>
+            </div>
+            <div class="p-6">
+              <div class="flex flex-wrap items-end gap-3">
+                <div>
+                  <label
+                    class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1"
+                    >Desde</label
+                  >
+                  <input
+                    type="date"
+                    id="gblFrom"
+                    class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label
+                    class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1"
+                    >Hasta</label
+                  >
+                  <input
+                    type="date"
+                    id="gblTo"
+                    class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                  />
+                </div>
+                <button
+                  id="gblSearchBtn"
+                  type="button"
+                  class="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-sm font-semibold rounded-lg transition-colors flex items-center gap-1"
+                >
+                  <span class="material-symbols-outlined text-lg">search</span>
+                  Consultar pendientes
+                </button>
+              </div>
+              <p id="gblError" class="text-sm text-red-500 mt-2 hidden"></p>
+
+              <!-- Preview de operaciones pendientes -->
+              <div id="gblPreview" class="mt-6 hidden">
+                <div
+                  class="p-5 rounded-2xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800"
+                >
+                  <div
+                    class="flex flex-wrap items-center justify-between gap-3 mb-4"
+                  >
+                    <div>
+                      <h6
+                        class="text-sm font-semibold text-amber-900 dark:text-amber-200"
+                      >
+                        <span id="gblPreviewCount">0</span> operaciones
+                        pendientes de facturar
+                      </h6>
+                      <p
+                        class="text-xs text-amber-700 dark:text-amber-300 mt-1"
+                      >
+                        Total:
+                        <span id="gblPreviewTotal" class="font-bold"
+                          >$0.00</span
+                        >
+                        — se emitirá un concepto por ticket con su folio.
+                      </p>
+                    </div>
+                    <button
+                      id="gblEmitBtn"
+                      type="button"
+                      class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg transition-colors flex items-center gap-1"
+                    >
+                      <span class="material-symbols-outlined text-lg"
+                        >bolt</span
+                      >
+                      Emitir factura global
+                    </button>
+                  </div>
+                  <div
+                    class="max-h-72 overflow-y-auto rounded-xl border border-amber-200 dark:border-amber-800"
+                  >
+                    <table class="w-full text-sm">
+                      <thead
+                        class="bg-amber-100 dark:bg-amber-900/40 text-amber-900 dark:text-amber-200 sticky top-0"
+                      >
+                        <tr>
+                          <th
+                            class="px-3 py-2 text-left font-semibold"
+                          >
+                            Folio
+                          </th>
+                          <th
+                            class="px-3 py-2 text-left font-semibold"
+                          >
+                            Fecha de pago
+                          </th>
+                          <th
+                            class="px-3 py-2 text-left font-semibold"
+                          >
+                            Forma de pago
+                          </th>
+                          <th
+                            class="px-3 py-2 text-right font-semibold"
+                          >
+                            Monto
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody
+                        id="gblPreviewBody"
+                        class="divide-y divide-amber-100 dark:divide-amber-900/40"
+                      ></tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Resultado -->
+              <div id="gblResult" class="mt-6 hidden">
+                <div
+                  class="p-5 rounded-2xl bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800"
+                >
+                  <div class="flex items-center gap-2 mb-2">
+                    <span
+                      class="material-symbols-outlined text-green-600 dark:text-green-300"
+                      >verified</span
+                    >
+                    <h6
+                      class="text-sm font-semibold text-green-900 dark:text-green-200"
+                    >
+                      Factura global emitida exitosamente
+                    </h6>
+                  </div>
+                  <p class="text-sm text-green-700 dark:text-green-300 mt-1">
+                    Folio:
+                    <span id="gblResultFolio" class="font-semibold"></span>
+                    · Folio Fiscal:
+                    <span id="gblResultUuid" class="font-mono text-xs"></span>
+                  </p>
+                  <p class="text-sm text-green-700 dark:text-green-300 mt-1">
+                    <span id="gblResultCount">0</span> operaciones · Total:
+                    <span id="gblResultTotal" class="font-bold">$0.00</span>
+                  </p>
+                  <div class="flex flex-wrap gap-3 mt-4">
+                    <a
+                      id="gblResultPdf"
+                      href="#"
+                      class="flex items-center gap-1 px-4 py-2 bg-red-600 text-white text-sm font-semibold rounded-lg hover:bg-red-700"
+                      ><span class="material-symbols-outlined text-lg"
+                        >picture_as_pdf</span
+                      >
+                      Descargar PDF</a
+                    >
+                    <a
+                      id="gblResultXml"
+                      href="#"
+                      class="flex items-center gap-1 px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700"
+                      ><span class="material-symbols-outlined text-lg">code</span>
+                      Descargar XML</a
+                    >
+                  </div>
+                </div>
+              </div>
+
+              <!-- Historial de facturas globales -->
+              <div
+                class="mt-8"
+                th:if="${globalInvoices != null and !globalInvoices.isEmpty()}"
+              >
+                <h6
+                  class="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-3"
+                >
+                  Historial de facturas globales
+                </h6>
+                <div
+                  class="max-h-64 overflow-y-auto rounded-xl border border-gray-200 dark:border-gray-700"
+                >
+                  <table class="w-full text-sm">
+                    <thead
+                      class="bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 sticky top-0"
+                    >
+                      <tr>
+                        <th
+                          class="px-3 py-2 text-left font-semibold"
+                        >
+                          Periodo
+                        </th>
+                        <th
+                          class="px-3 py-2 text-left font-semibold"
+                        >
+                          Folio
+                        </th>
+                        <th
+                          class="px-3 py-2 text-right font-semibold"
+                        >
+                          Operaciones
+                        </th>
+                        <th
+                          class="px-3 py-2 text-right font-semibold"
+                        >
+                          Total
+                        </th>
+                        <th
+                          class="px-3 py-2 text-left font-semibold"
+                        >
+                          Emitida
+                        </th>
+                        <th
+                          class="px-3 py-2 text-center font-semibold"
+                        >
+                          Descargas
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody
+                      class="divide-y divide-gray-100 dark:divide-gray-800"
+                    >
+                      <tr th:each="gi : ${globalInvoices}">
+                        <td class="px-3 py-2">
+                          <span th:text="${gi.periodFrom}"></span> →
+                          <span th:text="${gi.periodTo}"></span>
+                          <span
+                            class="ml-1 text-xs text-gray-400"
+                            th:text="${gi.periodType == 'DAILY' ? '(diaria)' : '(mensual)'}"
+                          ></span>
+                        </td>
+                        <td
+                          class="px-3 py-2 font-mono text-xs"
+                          th:text="${gi.folio}"
+                        ></td>
+                        <td
+                          class="px-3 py-2 text-right"
+                          th:text="${gi.ticketCount}"
+                        ></td>
+                        <td
+                          class="px-3 py-2 text-right font-semibold"
+                          th:text="'$' + ${#numbers.formatDecimal(gi.total, 1, 2)}"
+                        ></td>
+                        <td
+                          class="px-3 py-2"
+                          th:text="${#temporals.format(gi.createdAt, 'dd/MM/yyyy HH:mm')}"
+                        ></td>
+                        <td class="px-3 py-2 text-center whitespace-nowrap">
+                          <a
+                            th:href="@{/admin/facturacion/global-invoice/{id}/pdf(id=${gi.id})}"
+                            class="text-red-600 dark:text-red-400 hover:underline text-xs font-semibold"
+                            >PDF</a
+                          >
+                          <span class="mx-1 text-gray-300">|</span>
+                          <a
+                            th:href="@{/admin/facturacion/global-invoice/{id}/xml(id=${gi.id})}"
+                            class="text-blue-600 dark:text-blue-400 hover:underline text-xs font-semibold"
+                            >XML</a
+                          >
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <script>
             (function () {
               const fmtMoney = new Intl.NumberFormat("es-MX", {
@@ -813,6 +1198,255 @@
                       btn.innerHTML = originalHtml;
                     });
                 });
+            })();
+          </script>
+
+          <script>
+            (function () {
+              document
+                .getElementById("tmbSearchBtn")
+                .addEventListener("click", function () {
+                  const from = document.getElementById("tmbFrom").value;
+                  const to = document.getElementById("tmbTo").value;
+                  const errorEl = document.getElementById("tmbError");
+                  const resultEl = document.getElementById("tmbResult");
+                  const btn = this;
+
+                  errorEl.classList.add("hidden");
+                  resultEl.classList.add("hidden");
+
+                  if (!from || !to) {
+                    errorEl.textContent = "Ambas fechas son requeridas";
+                    errorEl.classList.remove("hidden");
+                    return;
+                  }
+                  if (from > to) {
+                    errorEl.textContent =
+                      'La fecha "Desde" debe ser menor o igual a "Hasta"';
+                    errorEl.classList.remove("hidden");
+                    return;
+                  }
+
+                  btn.disabled = true;
+                  const originalHtml = btn.innerHTML;
+                  btn.innerHTML =
+                    '<span class="material-symbols-outlined text-lg animate-spin">progress_activity</span> Consultando...';
+
+                  fetch(
+                    "/admin/facturacion/api/cfdi-count?from=" +
+                      from +
+                      "&to=" +
+                      to,
+                  )
+                    .then((r) => r.json())
+                    .then((data) => {
+                      if (data.error) {
+                        errorEl.textContent = data.error;
+                        errorEl.classList.remove("hidden");
+                        return;
+                      }
+
+                      document.getElementById("tmbCount").textContent =
+                        Number(data.count) || 0;
+                      document.getElementById("tmbTotal").textContent =
+                        Number(data.total) || 0;
+                      resultEl.classList.remove("hidden");
+                    })
+                    .catch(() => {
+                      errorEl.textContent = "Error al consultar";
+                      errorEl.classList.remove("hidden");
+                    })
+                    .finally(() => {
+                      btn.disabled = false;
+                      btn.innerHTML = originalHtml;
+                    });
+                });
+            })();
+          </script>
+
+          <script>
+            (function () {
+              const fmtMoney = new Intl.NumberFormat("es-MX", {
+                style: "currency",
+                currency: "MXN",
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              });
+
+              const fromEl = document.getElementById("gblFrom");
+              const toEl = document.getElementById("gblTo");
+              const searchBtn = document.getElementById("gblSearchBtn");
+              const emitBtn = document.getElementById("gblEmitBtn");
+              const errorEl = document.getElementById("gblError");
+              const previewEl = document.getElementById("gblPreview");
+              const resultEl = document.getElementById("gblResult");
+              let currentRange = null;
+
+              function showError(msg) {
+                errorEl.textContent = msg;
+                errorEl.classList.remove("hidden");
+              }
+
+              function readRange() {
+                const from = fromEl.value;
+                const to = toEl.value;
+                if (!from || !to) {
+                  showError("Ambas fechas son requeridas");
+                  return null;
+                }
+                if (from > to) {
+                  showError(
+                    'La fecha "Desde" debe ser menor o igual a "Hasta"',
+                  );
+                  return null;
+                }
+                errorEl.classList.add("hidden");
+                return { from, to };
+              }
+
+              searchBtn.addEventListener("click", function () {
+                const range = readRange();
+                if (!range) return;
+
+                previewEl.classList.add("hidden");
+                resultEl.classList.add("hidden");
+
+                searchBtn.disabled = true;
+                const originalHtml = searchBtn.innerHTML;
+                searchBtn.innerHTML =
+                  '<span class="material-symbols-outlined text-lg animate-spin">progress_activity</span> Consultando...';
+
+                fetch(
+                  "/admin/facturacion/api/global-invoice-preview?from=" +
+                    range.from +
+                    "&to=" +
+                    range.to,
+                )
+                  .then((r) => r.json())
+                  .then((data) => {
+                    if (data.error) {
+                      showError(data.error);
+                      return;
+                    }
+                    currentRange = range;
+
+                    const body = document.getElementById("gblPreviewBody");
+                    body.innerHTML = "";
+                    data.tickets.forEach(function (t) {
+                      const tr = document.createElement("tr");
+                      tr.className =
+                        "text-gray-700 dark:text-gray-300";
+                      tr.innerHTML =
+                        '<td class="px-3 py-2 font-mono text-xs">' +
+                        t.folio +
+                        "</td>" +
+                        '<td class="px-3 py-2">' +
+                        t.date +
+                        "</td>" +
+                        '<td class="px-3 py-2">' +
+                        t.paymentMethod +
+                        "</td>" +
+                        '<td class="px-3 py-2 text-right font-semibold">' +
+                        fmtMoney.format(Number(t.total) || 0) +
+                        "</td>";
+                      body.appendChild(tr);
+                    });
+
+                    document.getElementById("gblPreviewCount").textContent =
+                      data.count;
+                    document.getElementById("gblPreviewTotal").textContent =
+                      fmtMoney.format(Number(data.total) || 0);
+                    previewEl.classList.remove("hidden");
+                  })
+                  .catch(() => showError("Error al consultar las operaciones"))
+                  .finally(() => {
+                    searchBtn.disabled = false;
+                    searchBtn.innerHTML = originalHtml;
+                  });
+              });
+
+              emitBtn.addEventListener("click", function () {
+                if (!currentRange) return;
+
+                const ticketsCount =
+                  document.getElementById("gblPreviewCount").textContent;
+                Swal.fire({
+                  title: "¿Emitir factura global?",
+                  html:
+                    "Se timbrará un CFDI 4.0 al <b>público en general</b> con <b>" +
+                    ticketsCount +
+                    "</b> operaciones. Una vez emitida, esas operaciones ya <b>no</b> podrán facturarse individualmente.",
+                  icon: "warning",
+                  showCancelButton: true,
+                  confirmButtonColor: "#dc2626",
+                  cancelButtonColor: "#6b7280",
+                  confirmButtonText: "Sí, emitir",
+                  cancelButtonText: "Cancelar",
+                }).then(function (result) {
+                  if (!result.isConfirmed) return;
+
+                  emitBtn.disabled = true;
+                  const originalHtml = emitBtn.innerHTML;
+                  emitBtn.innerHTML =
+                    '<span class="material-symbols-outlined text-lg animate-spin">progress_activity</span> Emitiendo...';
+
+                  const body = new URLSearchParams();
+                  body.set("from", currentRange.from);
+                  body.set("to", currentRange.to);
+
+                  fetch("/admin/facturacion/api/global-invoice", {
+                    method: "POST",
+                    headers: {
+                      "Content-Type":
+                        "application/x-www-form-urlencoded",
+                    },
+                    body: body.toString(),
+                  })
+                    .then((r) => r.json())
+                    .then((data) => {
+                      if (data.error) {
+                        showError(data.error);
+                        return;
+                      }
+                      previewEl.classList.add("hidden");
+                      document.getElementById("gblResultFolio").textContent =
+                        data.folio;
+                      document.getElementById("gblResultUuid").textContent =
+                        data.cfdiUuid || "-";
+                      document.getElementById("gblResultCount").textContent =
+                        data.count;
+                      document.getElementById("gblResultTotal").textContent =
+                        fmtMoney.format(Number(data.total) || 0);
+                      document.getElementById("gblResultPdf").href =
+                        "/admin/facturacion/global-invoice/" +
+                        data.id +
+                        "/pdf";
+                      document.getElementById("gblResultXml").href =
+                        "/admin/facturacion/global-invoice/" +
+                        data.id +
+                        "/xml";
+                      resultEl.classList.remove("hidden");
+                      currentRange = null;
+                      Swal.fire({
+                        title: "Factura global emitida",
+                        text:
+                          "Folio " +
+                          data.folio +
+                          " — " +
+                          data.count +
+                          " operaciones por " +
+                          fmtMoney.format(Number(data.total) || 0),
+                        icon: "success",
+                        confirmButtonColor: "#16a34a",
+                      });
+                    })
+                    .catch(() => showError("Error al emitir la factura global"))
+                    .finally(() => {
+                      emitBtn.disabled = false;
+                      emitBtn.innerHTML = originalHtml;
+                    });
+                });
+              });
             })();
           </script>
         </div>

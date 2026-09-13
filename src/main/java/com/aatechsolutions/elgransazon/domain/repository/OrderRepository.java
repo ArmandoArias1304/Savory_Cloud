@@ -316,8 +316,13 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
             @Param("endDate") LocalDateTime endDate);
 
     /**
-     * Aggregate PAID orders for a company within a date range (UTC), broken down by whether
-     * the order was invoiced (has a Facturama CFDI) or not.
+     * Aggregate PAID orders WITHOUT split accounts for a company within a date range (UTC),
+     * broken down by whether the order was invoiced (has a Facturama CFDI) or not.
+     *
+     * Ticket-level semantics: orders that have Payment rows (split bills) are excluded here
+     * and counted account-by-account via {@code PaymentRepository.sumPaidByCompanyAndDateRange},
+     * so every paid ticket (a normal order OR one person's account) is counted exactly once.
+     * A normal order (no payments) counts as 1 ticket; a split order counts as N tickets.
      *
      * Filters by {@code paidAt} (authoritative payment timestamp; never overwritten after the
      * status transition to PAID, so safe even after autofactura CFDI saves).
@@ -327,14 +332,37 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     @Query("SELECT " +
            "  COUNT(o), " +
            "  COALESCE(SUM(o.total), 0), " +
-           "  SUM(CASE WHEN o.facturamaCfdiId IS NOT NULL THEN 1 ELSE 0 END), " +
-           "  COALESCE(SUM(CASE WHEN o.facturamaCfdiId IS NOT NULL THEN o.total ELSE 0 END), 0) " +
+           "  SUM(CASE WHEN o.facturamaCfdiId IS NOT NULL OR o.facturaGlobalCfdiId IS NOT NULL THEN 1 ELSE 0 END), " +
+           "  COALESCE(SUM(CASE WHEN o.facturamaCfdiId IS NOT NULL OR o.facturaGlobalCfdiId IS NOT NULL THEN o.total ELSE 0 END), 0) " +
            "FROM Order o " +
            "WHERE o.company = :company " +
            "  AND o.status = com.aatechsolutions.elgransazon.domain.entity.OrderStatus.PAID " +
            "  AND o.paidAt >= :startDate " +
-           "  AND o.paidAt < :endDate")
+           "  AND o.paidAt < :endDate " +
+           "  AND NOT EXISTS (SELECT p2 FROM Payment p2 WHERE p2.order = o)")
     List<Object[]> sumPaidOrdersByCompanyAndDateRange(
+            @Param("company") Company company,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate);
+
+    /**
+     * PAID tickets (orders WITHOUT split accounts) still pending the global invoice
+     * for a company within a paid date range (UTC): no individual CFDI and not yet
+     * included in a previous global invoice.
+     *
+     * These are the operations that become one concept each of the factura global
+     * (público en general), per regla 2.7.1.21 RMF.
+     */
+    @Query("SELECT o FROM Order o " +
+           "WHERE o.company = :company " +
+           "  AND o.status = com.aatechsolutions.elgransazon.domain.entity.OrderStatus.PAID " +
+           "  AND o.paidAt >= :startDate " +
+           "  AND o.paidAt < :endDate " +
+           "  AND o.facturamaCfdiId IS NULL " +
+           "  AND o.facturaGlobalCfdiId IS NULL " +
+           "  AND NOT EXISTS (SELECT p2 FROM Payment p2 WHERE p2.order = o) " +
+           "ORDER BY o.paidAt ASC")
+    List<Order> findPaidOrdersPendingGlobalInvoiceByDateRange(
             @Param("company") Company company,
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate);
@@ -516,6 +544,23 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
            "AND o.paidBy.username = :username " +
            "AND o.paidAt BETWEEN :startDate AND :endDate")
     BigDecimal getRevenueCreatedAndPaidBySameUserAndDateRangeAndCompany(
+            @Param("username") String username,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate,
+            @Param("company") Company company);
+
+    /**
+     * Find PAID orders collected by a specific employee username inside a UTC
+     * window. Used by the cash-register (caja) day summary to compute what the
+     * cashier sold during their open drawer.
+     * Filters by {@code paidAt} (authoritative payment timestamp).
+     */
+    @Query("SELECT o FROM Order o WHERE o.company = :company " +
+           "AND o.status = 'PAID' " +
+           "AND o.paidBy.username = :username " +
+           "AND o.paidAt BETWEEN :startDate AND :endDate " +
+           "ORDER BY o.paidAt ASC")
+    List<Order> findPaidByCollectorAndPaidAtRangeAndCompany(
             @Param("username") String username,
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate,

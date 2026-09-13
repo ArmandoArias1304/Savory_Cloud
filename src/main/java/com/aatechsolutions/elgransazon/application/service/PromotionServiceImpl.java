@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -96,16 +97,16 @@ public class PromotionServiceImpl implements PromotionService {
     @Override
     public List<Promotion> findActivePromotions() {
         log.debug("Finding active promotions for today");
-        LocalDate today = dateTimeService.todayLocal();
+        LocalDateTime now = dateTimeService.nowLocal();
         Company currentCompany = CompanyContext.requireCurrentCompany();
         
         // Get promotions that are within date range, active, and filtered by company at SQL level
         // Use company-filtered query for better performance and security
-        List<Promotion> promotions = promotionRepository.findActivePromotionsForDateByCompany(currentCompany, today);
+        List<Promotion> promotions = promotionRepository.findActivePromotionsForDateByCompany(currentCompany, now.toLocalDate());
         
-        // Filter by valid day of week (validDays field)
+        // Filter by valid day of week AND the promotion's daily time window
         return promotions.stream()
-            .filter(promotion -> promotion.isValidForDay(today.getDayOfWeek()))
+            .filter(promotion -> promotion.isValidAt(now))
             .toList();
     }
 
@@ -142,15 +143,15 @@ public class PromotionServiceImpl implements PromotionService {
     @Override
     public List<Promotion> findActivePromotionsByItemId(Long itemId) {
         log.debug("Finding active promotions for item ID: {}", itemId);
-        LocalDate today = dateTimeService.todayLocal();
+        LocalDateTime now = dateTimeService.nowLocal();
         Company currentCompany = CompanyContext.requireCurrentCompany();
         
         // Get promotions for item that are within date range and active
-        List<Promotion> promotions = promotionRepository.findActivePromotionsByItemId(itemId, today);
+        List<Promotion> promotions = promotionRepository.findActivePromotionsByItemId(itemId, now.toLocalDate());
         
-        // Filter by valid day of week (validDays field) and company
+        // Filter by valid day of week AND the promotion's daily time window, then company
         return promotions.stream()
-            .filter(promotion -> promotion.isValidForDay(today.getDayOfWeek()))
+            .filter(promotion -> promotion.isValidAt(now))
             .filter(promotion -> currentCompany.equals(promotion.getCompany()))
             .toList();
     }

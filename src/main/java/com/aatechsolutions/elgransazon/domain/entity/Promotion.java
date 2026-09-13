@@ -11,6 +11,8 @@ import com.aatechsolutions.elgransazon.infrastructure.util.CompanyLocalTime;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -123,6 +125,29 @@ public class Promotion implements Serializable {
     private LocalDate endDate;
 
     /**
+     * Time of day (company timezone) when the promotion starts applying on each of its
+     * valid days. Together with {@link #endTime} it defines the daily window, e.g.
+     * 07:00 → 12:00 means "active on the selected days from 7am until 12pm".
+     *
+     * <p>Both null means the promotion applies <b>all day</b> on the valid days
+     * (behaviour of promotions created before this field existed).</p>
+     */
+    @Column(name = "start_time")
+    private LocalTime startTime;
+
+    /**
+     * Time of day (company timezone) when the promotion stops applying on each of its
+     * valid days. The start is inclusive and the end is exclusive, so 07:00 → 12:00
+     * applies until 11:59 and stops at 12:00.
+     *
+     * <p>When it is earlier than {@link #startTime} the window crosses midnight
+     * (22:00 → 02:00) and its early-morning part belongs to the previous day: with only
+     * Friday selected, it applies Friday 22:00–23:59 and Saturday 00:00–02:00.</p>
+     */
+    @Column(name = "end_time")
+    private LocalTime endTime;
+
+    /**
      * Days of week when promotion is valid
      * Stored as comma-separated values: MONDAY,FRIDAY,SATURDAY
      * Note: @NotBlank removed because controller sets this from daysOfWeek param
@@ -214,14 +239,65 @@ public class Promotion implements Serializable {
     }
 
     /**
-     * Check if promotion is currently valid (date and active status)
+     * Check if promotion is currently valid (date range, day of week, time window
+     * and active status), using the company timezone.
      */
     public boolean isValidNow() {
-        LocalDate today = CompanyLocalTime.today();
-        return Boolean.TRUE.equals(active) 
-            && !today.isBefore(startDate) 
-            && !today.isAfter(endDate)
-            && isValidForDay(today.getDayOfWeek());
+        return isValidAt(CompanyLocalTime.now());
+    }
+
+    /**
+     * Full validity check for a given local moment (company timezone): active flag,
+     * date range, day of week and the optional daily time window.
+     */
+    public boolean isValidAt(LocalDateTime moment) {
+        if (!Boolean.TRUE.equals(active) || moment == null
+                || startDate == null || endDate == null) {
+            return false;
+        }
+
+        LocalDate day = moment.toLocalDate();
+        if (day.isBefore(startDate) || day.isAfter(endDate)) {
+            return false;
+        }
+
+        // Without a time window the promotion applies the whole valid day.
+        if (!hasTimeWindow()) {
+            return isValidForDay(day.getDayOfWeek());
+        }
+
+        LocalTime time = moment.toLocalTime();
+        if (!endTime.isAfter(startTime)) {
+            // Window crosses midnight: the early-morning part belongs to the previous day.
+            if (!time.isBefore(startTime)) {
+                return isValidForDay(day.getDayOfWeek());
+            }
+            return time.isBefore(endTime) && isValidForDay(day.minusDays(1).getDayOfWeek());
+        }
+
+        // Same-day window: inclusive start, exclusive end.
+        return isValidForDay(day.getDayOfWeek())
+                && !time.isBefore(startTime) && time.isBefore(endTime);
+    }
+
+    /**
+     * Whether this promotion has a daily time window configured.
+     */
+    public boolean hasTimeWindow() {
+        return startTime != null && endTime != null && !startTime.equals(endTime);
+    }
+
+    /**
+     * Human readable time window for the UI, e.g. "07:00 a 12:00", "Todo el día"
+     * or "22:00 a 02:00 (día siguiente)".
+     */
+    public String getTimeWindowLabel() {
+        if (!hasTimeWindow()) {
+            return "Todo el día";
+        }
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("HH:mm");
+        return startTime.format(fmt) + " a " + endTime.format(fmt)
+                + (endTime.isBefore(startTime) ? " (día siguiente)" : "");
     }
 
     /**

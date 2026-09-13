@@ -203,7 +203,7 @@
                   </p>
                   <p
                     class="text-2xl font-bold text-gray-900 dark:text-white"
-                    th:text="${#lists.size(menuItems)}"
+                    th:text="${totalCount}"
                   >
                     0
                   </p>
@@ -230,7 +230,7 @@
                   </p>
                   <p
                     class="text-2xl font-bold text-gray-900 dark:text-white"
-                    th:text="${#lists.size(menuItems.?[active == true])}"
+                    th:text="${activeCount}"
                   >
                     0
                   </p>
@@ -256,7 +256,7 @@
                   </p>
                   <p
                     class="text-2xl font-bold text-gray-900 dark:text-white"
-                    th:text="${#lists.size(menuItems.?[available == true])}"
+                    th:text="${availableCount}"
                   >
                     0
                   </p>
@@ -275,7 +275,12 @@
               <span class="material-symbols-outlined text-primary">filter_list</span>
               Filtros de Búsqueda
             </h2>
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            <form
+              method="get"
+              th:action="@{/admin/menu-items}"
+              id="filtersForm"
+              class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4"
+            >
               <!-- Nombre del Item -->
               <div>
                 <label
@@ -288,6 +293,8 @@
                 <input
                   type="text"
                   id="nameFilter"
+                  name="name"
+                  th:value="${nameFilter}"
                   placeholder="Buscar por nombre..."
                   class="w-full px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
                 />
@@ -304,11 +311,13 @@
                 </label>
                 <select
                   id="categoryFilter"
+                  name="categoryId"
                   class="w-full px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
                 >
                   <option value="">Todas las categorías</option>
                   <option th:each="category : ${categories}" 
                           th:value="${category.idCategory}" 
+                          th:selected="${categoryFilter == category.idCategory.toString()}"
                           th:text="${category.name}"></option>
                 </select>
               </div>
@@ -324,14 +333,15 @@
                 </label>
                 <select
                   id="priceFilter"
+                  name="price"
                   class="w-full px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
                 >
                   <option value="">Todos los precios</option>
-                  <option value="0-50">$0 - $50</option>
-                  <option value="50-100">$50 - $100</option>
-                  <option value="100-200">$100 - $200</option>
-                  <option value="200-500">$200 - $500</option>
-                  <option value="500+">$500+</option>
+                  <option value="0-50" th:selected="${priceFilter == '0-50'}">$0 - $50</option>
+                  <option value="50-100" th:selected="${priceFilter == '50-100'}">$50 - $100</option>
+                  <option value="100-200" th:selected="${priceFilter == '100-200'}">$100 - $200</option>
+                  <option value="200-500" th:selected="${priceFilter == '200-500'}">$200 - $500</option>
+                  <option value="500+" th:selected="${priceFilter == '500+'}">$500+</option>
                 </select>
               </div>
 
@@ -346,11 +356,12 @@
                 </label>
                 <select
                   id="availabilityFilter"
+                  name="availability"
                   class="w-full px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
                 >
                   <option value="">Todos</option>
-                  <option value="true">Disponibles</option>
-                  <option value="false">Sin Stock</option>
+                  <option value="true" th:selected="${availabilityFilter == 'true'}">Disponibles</option>
+                  <option value="false" th:selected="${availabilityFilter == 'false'}">Sin Stock</option>
                 </select>
               </div>
 
@@ -365,32 +376,33 @@
                 </label>
                 <select
                   id="statusFilter"
+                  name="status"
                   class="w-full px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
                 >
                   <option value="">Todos</option>
-                  <option value="true">Activos</option>
-                  <option value="false">Inactivos</option>
+                  <option value="true" th:selected="${statusFilter == 'true'}">Activos</option>
+                  <option value="false" th:selected="${statusFilter == 'false'}">Inactivos</option>
                 </select>
               </div>
-            </div>
+            </form>
             
             <div
               class="mt-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3"
             >
               <p class="text-sm text-gray-600 dark:text-gray-400">
                 Mostrando 
-                <span id="filteredCount" class="font-semibold text-primary" th:text="${#lists.size(menuItems)}">0</span> 
+                <span class="font-semibold text-primary" th:text="${pageStart}">0</span>-<span class="font-semibold text-primary" th:text="${pageEnd}">0</span>
                 de 
-                <span th:text="${#lists.size(menuItems)}">0</span> 
+                <span class="font-semibold text-primary" th:text="${totalElements}">0</span> 
                 items
               </p>
-              <button
-                id="clearFilters"
+              <a
+                th:href="@{/admin/menu-items}"
                 class="flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all font-medium"
               >
                 <span class="material-symbols-outlined text-lg">clear_all</span>
                 Limpiar Filtros
-              </button>
+              </a>
             </div>
           </div>
 
@@ -458,15 +470,25 @@
                         >
                         <p
                           class="text-lg font-semibold text-gray-600 dark:text-gray-400"
+                          th:text="${hasFilters} ? 'No se encontraron items con los filtros aplicados' : 'No hay items en el menú'"
                         >
                           No hay items en el menú
                         </p>
                         <a
+                          th:if="${!hasFilters}"
                           th:href="@{/admin/menu-items/new}"
                           class="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-primary to-primary-dark text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all"
                         >
                           <span class="material-symbols-outlined">add</span>
                           <span>Agregar Primer Item</span>
+                        </a>
+                        <a
+                          th:if="${hasFilters}"
+                          th:href="@{/admin/menu-items}"
+                          class="inline-flex items-center gap-2 px-6 py-3 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all"
+                        >
+                          <span class="material-symbols-outlined">clear_all</span>
+                          <span>Limpiar Filtros</span>
                         </a>
                       </div>
                     </td>
@@ -474,12 +496,7 @@
 
                   <tr
                     th:each="item : ${menuItems}"
-                    class="item-row hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
-                    th:data-name="${#strings.toLowerCase(item.name)}"
-                    th:data-category="${item.category.idCategory}"
-                    th:data-price="${item.price}"
-                    th:data-available="${item.available}"
-                    th:data-active="${item.active}"
+                    class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
                   >
                     <!-- Imagen -->
                     <td class="px-6 py-4">
@@ -573,6 +590,15 @@
                         th:text="${item.formattedPrice}"
                         >$0.00</span
                       >
+                      <!-- Cortesía: precio $0.00 (gratis, descuenta inventario) -->
+                      <span
+                        th:if="${item.courtesy}"
+                        class="ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-300"
+                        title="Cortesía: se cobra en $0.00 pero descuenta inventario. Solo consumo en establecimiento."
+                      >
+                        <span class="material-symbols-outlined text-xs">redeem</span>
+                        Cortesía
+                      </span>
                     </td>
 
                     <!-- Ingredientes -->
@@ -717,15 +743,53 @@
               </table>
             </div>
             
-            <!-- No Results Message -->
+            <!-- Pagination Controls -->
             <div
-              id="noResults"
-              class="hidden p-6 text-center text-gray-600 dark:text-gray-400"
+              th:if="${totalPages > 1}"
+              class="flex flex-col sm:flex-row items-center justify-between gap-4 px-6 py-4 border-t border-gray-200 dark:border-gray-700"
             >
-              <div class="flex flex-col items-center gap-3">
-                <span class="material-symbols-outlined text-6xl text-gray-400">search_off</span>
-                <p class="text-lg font-semibold">No se encontraron items con los filtros aplicados</p>
-                <p class="text-sm">Intenta ajustar los filtros o limpiarlos</p>
+              <p class="text-sm text-gray-600 dark:text-gray-400">
+                Página <span class="font-semibold text-primary" th:text="${currentPage + 1}">1</span> de <span th:text="${totalPages}">1</span>
+              </p>
+              <div class="flex items-center gap-1.5">
+                <!-- Anterior -->
+                <a
+                  th:if="${currentPage > 0}"
+                  th:href="@{/admin/menu-items(page=${currentPage - 1}, size=${pageSize}, name=${nameFilter}, categoryId=${categoryFilter}, price=${priceFilter}, availability=${availabilityFilter}, status=${statusFilter})}"
+                  class="flex items-center gap-1 px-3 py-2 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all font-medium text-sm"
+                >
+                  <span class="material-symbols-outlined text-base">chevron_left</span>
+                  Anterior
+                </a>
+
+                <!-- Page numbers -->
+                <th:block th:each="p : ${pageNumbers}">
+                  <span
+                    th:if="${p == -1}"
+                    class="px-2 py-2 text-gray-400 dark:text-gray-500"
+                  >…</span>
+                  <span
+                    th:if="${p >= 0 and p == currentPage}"
+                    class="px-3.5 py-2 rounded-xl bg-gradient-to-r from-primary to-primary-dark text-white font-semibold text-sm shadow-md"
+                    th:text="${p + 1}"
+                  >1</span>
+                  <a
+                    th:if="${p >= 0 and p != currentPage}"
+                    th:href="@{/admin/menu-items(page=${p}, size=${pageSize}, name=${nameFilter}, categoryId=${categoryFilter}, price=${priceFilter}, availability=${availabilityFilter}, status=${statusFilter})}"
+                    class="px-3.5 py-2 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all font-medium text-sm"
+                    th:text="${p + 1}"
+                  >1</a>
+                </th:block>
+
+                <!-- Siguiente -->
+                <a
+                  th:if="${currentPage < totalPages - 1}"
+                  th:href="@{/admin/menu-items(page=${currentPage + 1}, size=${pageSize}, name=${nameFilter}, categoryId=${categoryFilter}, price=${priceFilter}, availability=${availabilityFilter}, status=${statusFilter})}"
+                  class="flex items-center gap-1 px-3 py-2 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all font-medium text-sm"
+                >
+                  Siguiente
+                  <span class="material-symbols-outlined text-base">chevron_right</span>
+                </a>
               </div>
             </div>
           </div>
@@ -752,109 +816,31 @@
           }
         });
 
-        // Filter functionality
-        const nameFilter = document.getElementById("nameFilter");
-        const categoryFilter = document.getElementById("categoryFilter");
-        const priceFilter = document.getElementById("priceFilter");
-        const availabilityFilter = document.getElementById("availabilityFilter");
-        const statusFilter = document.getElementById("statusFilter");
-        const clearFiltersBtn = document.getElementById("clearFilters");
-        const filteredCount = document.getElementById("filteredCount");
-        const noResults = document.getElementById("noResults");
-        const table = document.getElementById("menuItemsTable");
-
-        // Check if filters exist
-        if (!nameFilter || !categoryFilter || !priceFilter || !availabilityFilter || !statusFilter) {
+        // Filters are applied server-side: submit the form whenever a filter changes.
+        // The server only loads the 20 items of the requested page from the database.
+        const filtersForm = document.getElementById("filtersForm");
+        if (!filtersForm) {
           return;
         }
 
-        function applyFilters() {
-          const nameValue = nameFilter.value.toLowerCase().trim();
-          const categoryValue = categoryFilter.value;
-          const priceValue = priceFilter.value;
-          const availabilityValue = availabilityFilter.value;
-          const statusValue = statusFilter.value;
-
-          const rows = document.querySelectorAll(".item-row");
-          let visibleCount = 0;
-
-          rows.forEach((row) => {
-            const name = row.getAttribute("data-name") || "";
-            const category = row.getAttribute("data-category") || "";
-            const price = parseFloat(row.getAttribute("data-price")) || 0;
-            const available = row.getAttribute("data-available") || "";
-            const active = row.getAttribute("data-active") || "";
-
-            let show = true;
-
-            // Filter by name
-            if (nameValue && !name.includes(nameValue)) {
-              show = false;
-            }
-
-            // Filter by category
-            if (categoryValue && category !== categoryValue) {
-              show = false;
-            }
-
-            // Filter by price range
-            if (priceValue) {
-              if (priceValue === "0-50" && (price < 0 || price > 50)) {
-                show = false;
-              } else if (priceValue === "50-100" && (price < 50 || price > 100)) {
-                show = false;
-              } else if (priceValue === "100-200" && (price < 100 || price > 200)) {
-                show = false;
-              } else if (priceValue === "200-500" && (price < 200 || price > 500)) {
-                show = false;
-              } else if (priceValue === "500+" && price < 500) {
-                show = false;
-              }
-            }
-
-            // Filter by availability
-            if (availabilityValue !== "" && available !== availabilityValue) {
-              show = false;
-            }
-
-            // Filter by status
-            if (statusValue !== "" && active !== statusValue) {
-              show = false;
-            }
-
-            if (show) {
-              row.style.display = "";
-              visibleCount++;
-            } else {
-              row.style.display = "none";
-            }
+        const nameFilter = document.getElementById("nameFilter");
+        if (nameFilter) {
+          let nameTimeout;
+          nameFilter.addEventListener("input", function () {
+            clearTimeout(nameTimeout);
+            nameTimeout = setTimeout(function () {
+              filtersForm.submit();
+            }, 600);
           });
-
-          filteredCount.textContent = visibleCount;
-
-          if (visibleCount === 0) {
-            noResults.classList.remove("hidden");
-            table.style.display = "none";
-          } else {
-            noResults.classList.add("hidden");
-            table.style.display = "";
-          }
         }
 
-        // Add event listeners
-        nameFilter.addEventListener("input", applyFilters);
-        categoryFilter.addEventListener("change", applyFilters);
-        priceFilter.addEventListener("change", applyFilters);
-        availabilityFilter.addEventListener("change", applyFilters);
-        statusFilter.addEventListener("change", applyFilters);
-
-        clearFiltersBtn.addEventListener("click", function () {
-          nameFilter.value = "";
-          categoryFilter.value = "";
-          priceFilter.value = "";
-          availabilityFilter.value = "";
-          statusFilter.value = "";
-          applyFilters();
+        ["categoryFilter", "priceFilter", "availabilityFilter", "statusFilter"].forEach(function (id) {
+          const el = document.getElementById(id);
+          if (el) {
+            el.addEventListener("change", function () {
+              filtersForm.submit();
+            });
+          }
         });
       });
     </script>

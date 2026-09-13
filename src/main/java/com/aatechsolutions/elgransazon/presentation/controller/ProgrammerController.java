@@ -8,8 +8,10 @@ import com.aatechsolutions.elgransazon.application.service.ImageStorageService;
 import com.aatechsolutions.elgransazon.application.service.LandingImageService;
 import com.aatechsolutions.elgransazon.application.service.LicenseService;
 import com.aatechsolutions.elgransazon.domain.repository.CustomerRepository;
+import com.aatechsolutions.elgransazon.domain.repository.GlobalInvoiceRepository;
 import com.aatechsolutions.elgransazon.domain.repository.ItemMenuRepository;
 import com.aatechsolutions.elgransazon.domain.repository.OrderRepository;
+import com.aatechsolutions.elgransazon.domain.repository.PaymentRepository;
 import com.aatechsolutions.elgransazon.domain.entity.Company;
 import com.aatechsolutions.elgransazon.domain.entity.GlobalSystemConfig;
 import com.aatechsolutions.elgransazon.domain.entity.LandingImage;
@@ -53,6 +55,8 @@ public class ProgrammerController {
     private final EmployeeService employeeService;
     private final ItemMenuRepository itemMenuRepository;
     private final OrderRepository orderRepository;
+    private final PaymentRepository paymentRepository;
+    private final GlobalInvoiceRepository globalInvoiceRepository;
     private final CustomerRepository customerRepository;
 
     /**
@@ -643,7 +647,12 @@ public class ProgrammerController {
             LocalDateTime startUtc = fromDate.atStartOfDay(zone).withZoneSameInstant(ZoneId.of("UTC")).toLocalDateTime();
             LocalDateTime endUtc = toDate.plusDays(1).atStartOfDay(zone).withZoneSameInstant(ZoneId.of("UTC")).toLocalDateTime();
 
-            long count = orderRepository.countCfdisByCompanyAndDateRange(company, startUtc, endUtc);
+            // Order-level invoices (normal single-ticket orders) + per-account
+            // invoices (split bills) + global invoices (público en general):
+            // every generated CFDI/timbre is counted.
+            long count = orderRepository.countCfdisByCompanyAndDateRange(company, startUtc, endUtc)
+                    + paymentRepository.countCfdisByCompanyAndDateRange(company, startUtc, endUtc)
+                    + globalInvoiceRepository.countByCompanyAndCreatedAtRange(company, startUtc, endUtc);
 
             Map<String, Object> result = new HashMap<>();
             result.put("count", count);

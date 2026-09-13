@@ -56,8 +56,14 @@ public class ItemMenu implements Serializable {
 
     // ========== Pricing ==========
 
+    /**
+     * Price with IVA included. A price of {@code 0} is allowed to model a
+     * <b>cortesía</b> (free item, e.g. the courtesy coffee in the morning): it is
+     * charged at $0.00 but its recipe stock is still deducted when the order is
+     * accepted. Courtesy items must be dine-in only — see {@link #isCourtesy()}.
+     */
     @NotNull(message = "El precio es requerido")
-    @DecimalMin(value = "0.0", inclusive = false, message = "El precio debe ser mayor a 0")
+    @DecimalMin(value = "0.0", inclusive = true, message = "El precio no puede ser negativo")
     @Digits(integer = 8, fraction = 2, message = "El precio debe tener máximo 8 dígitos y 2 decimales")
     @Column(name = "price", precision = 10, scale = 2, nullable = false)
     private BigDecimal price;
@@ -766,6 +772,25 @@ public class ItemMenu implements Serializable {
             return "$0.00";
         }
         return String.format("$%.2f", price);
+    }
+
+    /**
+     * A courtesy item is sold at $0.00 (free) but still consumes its recipe stock.
+     *
+     * <p>Because it is given away, a courtesy item is forced to be
+     * {@code dineInOnly} so it can never be ordered through takeout or delivery,
+     * and it is only registered by staff from inside the restaurant.</p>
+     */
+    public boolean isCourtesy() {
+        return price != null && price.compareTo(BigDecimal.ZERO) == 0;
+    }
+
+    /**
+     * Whether this item is a courtesy <b>and</b> the flag that keeps it inside the
+     * restaurant is set. Used by the form/controller validation.
+     */
+    public boolean isCourtesyProperlyRestricted() {
+        return !isCourtesy() || Boolean.TRUE.equals(dineInOnly);
     }
 
     /**

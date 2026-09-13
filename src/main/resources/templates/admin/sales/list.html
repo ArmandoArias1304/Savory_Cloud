@@ -347,6 +347,11 @@
                     <th
                       class="px-6 py-4 font-semibold text-gray-700 dark:text-gray-300"
                     >
+                      Mesero
+                    </th>
+                    <th
+                      class="px-6 py-4 font-semibold text-gray-700 dark:text-gray-300"
+                    >
                       Método de Pago
                     </th>
                     <th
@@ -415,6 +420,14 @@
                       class="px-6 py-4 whitespace-nowrap text-gray-600 dark:text-gray-400"
                     >
                       <span
+                        th:text="${sale.employee != null ? (sale.employee.nombre + ' ' + sale.employee.apellido) : '-'}"
+                        >Mesero</span
+                      >
+                    </td>
+                    <td
+                      class="px-6 py-4 whitespace-nowrap text-gray-600 dark:text-gray-400"
+                    >
+                      <span
                         th:text="${sale.paymentMethod != null ? sale.paymentMethod.displayName : 'N/A'}"
                         >Efectivo</span
                       >
@@ -453,7 +466,7 @@
                 </tbody>
                 <tbody th:if="${sales.empty}">
                   <tr>
-                    <td colspan="9" class="px-6 py-12 text-center">
+                    <td colspan="10" class="px-6 py-12 text-center">
                       <div class="flex flex-col items-center gap-3">
                         <span
                           class="material-symbols-outlined text-6xl text-gray-300 dark:text-gray-700"

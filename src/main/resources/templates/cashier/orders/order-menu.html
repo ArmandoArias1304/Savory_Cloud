@@ -3587,7 +3587,9 @@
                         : `<span class="line-through text-gray-400 dark:text-gray-600 font-normal mr-1">$${item.price.toFixed(2)}</span>
                            <span class="text-green-600 dark:text-green-400">$${item.promotionAppliedPrice.toFixed(2)}</span>
                            <span class="text-xs text-gray-500 dark:text-gray-400 font-normal ml-1">(aproximado)</span>`
-                      : `$${item.price.toFixed(2)}`
+                      : item.price === 0
+                        ? `<span class="text-rose-600 dark:text-rose-400 font-bold">Cortesía</span>`
+                        : `$${item.price.toFixed(2)}`
                   }
                 </p>
               </div>

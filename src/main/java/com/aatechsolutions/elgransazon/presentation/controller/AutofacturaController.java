@@ -3,7 +3,9 @@ package com.aatechsolutions.elgransazon.presentation.controller;
 import com.aatechsolutions.elgransazon.application.service.FacturamaService;
 import com.aatechsolutions.elgransazon.domain.entity.FacturamaConfig;
 import com.aatechsolutions.elgransazon.domain.entity.Order;
+import com.aatechsolutions.elgransazon.domain.entity.Payment;
 import com.aatechsolutions.elgransazon.domain.repository.OrderRepository;
+import com.aatechsolutions.elgransazon.domain.repository.PaymentRepository;
 import com.aatechsolutions.elgransazon.infrastructure.context.CompanyContext;
 import com.aatechsolutions.elgransazon.infrastructure.util.CompanyLocalTime;
 import lombok.RequiredArgsConstructor;
@@ -24,10 +26,11 @@ import java.util.concurrent.ConcurrentHashMap;
  * No authentication required — the client accesses this via a URL printed on their ticket.
  *
  * Flow:
- * 1. Client pays at restaurant → ticket prints autofactura URL with unique key
+ * 1. Client pays at restaurant → ticket prints autofactura URL with unique key.
+ *    For split bills, EACH account prints its own QR with its own key (Payment).
  * 2. Client visits URL (e.g. https://pizzamax.domain.com/autofactura/{key})
  * 3. Client enters their fiscal data (RFC, razón social, régimen fiscal, uso CFDI, C.P.)
- * 4. System creates a CFDI 4.0 via Facturama API Multiemisor
+ * 4. System creates a CFDI 4.0 via Facturama API Multiemisor (one CFDI per account)
  * 5. Client can download PDF and XML of their invoice
  */
 @Controller
@@ -37,13 +40,14 @@ import java.util.concurrent.ConcurrentHashMap;
 public class AutofacturaController {
 
     private final OrderRepository orderRepository;
+    private final PaymentRepository paymentRepository;
     private final FacturamaService facturamaService;
 
     // Guard against concurrent CFDI creation for the same autofactura key
     private final Set<String> activeCfdiCreations = ConcurrentHashMap.newKeySet();
 
     /**
-     * Show the autofactura form for a specific order.
+     * Show the autofactura form for a specific ticket/account.
      */
     @GetMapping("/{key}")
     public String showAutofacturaForm(@PathVariable String key, Model model) {
@@ -55,9 +59,16 @@ public class AutofacturaController {
             return "autofactura";
         }
 
-        // Find order by autofactura key within the current company context
-        Order order = orderRepository.findByAutofacturaKeyAndCompany(key, CompanyContext.getCurrentCompany())
+        // Resolve the key: per-account Payment (split bills) first, legacy Order fallback.
+        Payment payment = paymentRepository.findByAutofacturaKeyAndCompany(key, CompanyContext.getCurrentCompany())
                 .orElse(null);
+        Order order = null;
+        if (payment == null) {
+            order = orderRepository.findByAutofacturaKeyAndCompany(key, CompanyContext.getCurrentCompany())
+                    .orElse(null);
+        } else {
+            order = payment.getOrder();
+        }
 
         if (order == null) {
             model.addAttribute("error", "No se encontró la orden asociada a este enlace. " +
@@ -65,18 +76,38 @@ public class AutofacturaController {
             return "autofactura";
         }
 
-        // Check if already invoiced
-        if (order.getFacturamaCfdiId() != null && !order.getFacturamaCfdiId().isBlank()) {
+        // Always expose both status flags as booleans so the template can branch on them safely
+        model.addAttribute("alreadyInvoiced", isAlreadyInvoiced(payment, order));
+        model.addAttribute("inGlobalInvoice", isInGlobalInvoice(payment, order));
+
+        // Block if the operation was already included in a global invoice (público en general)
+        if (isInGlobalInvoice(payment, order)) {
             model.addAttribute("order", order);
+            if (payment != null) {
+                model.addAttribute("payment", payment);
+            }
+            model.addAttribute("inGlobalInvoice", true);
+            return "autofactura";
+        }
+
+        // Check if already invoiced
+        if (isAlreadyInvoiced(payment, order)) {
+            model.addAttribute("order", order);
+            if (payment != null) {
+                model.addAttribute("payment", payment);
+            }
             model.addAttribute("alreadyInvoiced", true);
             return "autofactura";
         }
 
         // Check if the invoicing window has expired (strict cutoff at end of payment month
         // in the company's local timezone — aligned with the SAT monthly declaration cycle).
-        if (order.isAutofacturaExpired(CompanyLocalTime.getZone())) {
-            String deadlineText = order.getInvoiceDeadline(CompanyLocalTime.getZone())
-                    .format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+        java.time.LocalDate deadline = (payment != null)
+                ? payment.getInvoiceDeadline(CompanyLocalTime.getZone())
+                : order.getInvoiceDeadline(CompanyLocalTime.getZone());
+        if ((payment != null && payment.isAutofacturaExpired(CompanyLocalTime.getZone()))
+                || (payment == null && order.isAutofacturaExpired(CompanyLocalTime.getZone()))) {
+            String deadlineText = deadline.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
             model.addAttribute("error", "El plazo para facturar esta orden venció el " + deadlineText);
             return "autofactura";
         }
@@ -92,6 +123,9 @@ public class AutofacturaController {
         }
 
         model.addAttribute("order", order);
+        if (payment != null) {
+            model.addAttribute("payment", payment);
+        }
         model.addAttribute("alreadyInvoiced", false);
         model.addAttribute("taxSystems", getTaxSystems());
         model.addAttribute("cfdiUses", getCfdiUses());
@@ -114,9 +148,16 @@ public class AutofacturaController {
 
         log.info("Processing autofactura for key: {}, RFC: {}", key, rfc);
 
-        // Find order
-        Order order = orderRepository.findByAutofacturaKeyAndCompany(key, CompanyContext.getCurrentCompany())
+        // Resolve the key: per-account Payment first, legacy Order fallback.
+        Payment payment = paymentRepository.findByAutofacturaKeyAndCompany(key, CompanyContext.getCurrentCompany())
                 .orElse(null);
+        Order order = null;
+        if (payment == null) {
+            order = orderRepository.findByAutofacturaKeyAndCompany(key, CompanyContext.getCurrentCompany())
+                    .orElse(null);
+        } else {
+            order = payment.getOrder();
+        }
 
         if (order == null) {
             model.addAttribute("error", "No se encontró la orden asociada a este enlace.");
@@ -124,17 +165,37 @@ public class AutofacturaController {
             return "autofactura";
         }
 
-        // Check if already invoiced
-        if (order.getFacturamaCfdiId() != null && !order.getFacturamaCfdiId().isBlank()) {
+        // Always expose both status flags as booleans so the template can branch on them safely
+        model.addAttribute("alreadyInvoiced", isAlreadyInvoiced(payment, order));
+        model.addAttribute("inGlobalInvoice", isInGlobalInvoice(payment, order));
+
+        // Block if the operation was already included in a global invoice (público en general)
+        if (isInGlobalInvoice(payment, order)) {
             model.addAttribute("order", order);
+            if (payment != null) {
+                model.addAttribute("payment", payment);
+            }
+            model.addAttribute("inGlobalInvoice", true);
+            return "autofactura";
+        }
+
+        // Check if already invoiced
+        if (isAlreadyInvoiced(payment, order)) {
+            model.addAttribute("order", order);
+            if (payment != null) {
+                model.addAttribute("payment", payment);
+            }
             model.addAttribute("alreadyInvoiced", true);
             return "autofactura";
         }
 
         // Re-check expiry on POST (defends against expiry crossing while user was filling the form)
-        if (order.isAutofacturaExpired(CompanyLocalTime.getZone())) {
-            String deadlineText = order.getInvoiceDeadline(CompanyLocalTime.getZone())
-                    .format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+        if ((payment != null && payment.isAutofacturaExpired(CompanyLocalTime.getZone()))
+                || (payment == null && order.isAutofacturaExpired(CompanyLocalTime.getZone()))) {
+            java.time.LocalDate deadline = (payment != null)
+                    ? payment.getInvoiceDeadline(CompanyLocalTime.getZone())
+                    : order.getInvoiceDeadline(CompanyLocalTime.getZone());
+            String deadlineText = deadline.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
             model.addAttribute("error", "El plazo para facturar esta orden venció el " + deadlineText);
             return "autofactura";
         }
@@ -154,6 +215,9 @@ public class AutofacturaController {
         if (rfc == null || !rfc.trim().toUpperCase().matches("^[A-ZÑ&]{3,4}\\d{6}[A-V1-9][0-9A-Z]\\d$")) {
             model.addAttribute("error", "El RFC ingresado no tiene un formato válido.");
             model.addAttribute("order", order);
+            if (payment != null) {
+                model.addAttribute("payment", payment);
+            }
             model.addAttribute("alreadyInvoiced", false);
             model.addAttribute("taxSystems", getTaxSystems());
             model.addAttribute("cfdiUses", getCfdiUses());
@@ -163,6 +227,9 @@ public class AutofacturaController {
         if (zipCode == null || !zipCode.trim().matches("^\\d{5}$")) {
             model.addAttribute("error", "El código postal fiscal debe ser de 5 dígitos.");
             model.addAttribute("order", order);
+            if (payment != null) {
+                model.addAttribute("payment", payment);
+            }
             model.addAttribute("alreadyInvoiced", false);
             model.addAttribute("taxSystems", getTaxSystems());
             model.addAttribute("cfdiUses", getCfdiUses());
@@ -174,6 +241,9 @@ public class AutofacturaController {
             log.warn("Duplicate autofactura submission blocked for key: {}", key);
             model.addAttribute("error", "Ya se está procesando su factura, por favor espere.");
             model.addAttribute("order", order);
+            if (payment != null) {
+                model.addAttribute("payment", payment);
+            }
             model.addAttribute("alreadyInvoiced", false);
             model.addAttribute("taxSystems", getTaxSystems());
             model.addAttribute("cfdiUses", getCfdiUses());
@@ -182,38 +252,66 @@ public class AutofacturaController {
 
         try {
             // Re-check after acquiring lock (another request may have finished)
-            Order freshOrder = orderRepository.findByAutofacturaKeyAndCompany(key, CompanyContext.getCurrentCompany())
+            Payment freshPayment = paymentRepository.findByAutofacturaKeyAndCompany(key, CompanyContext.getCurrentCompany())
                     .orElse(null);
-            if (freshOrder != null && freshOrder.getFacturamaCfdiId() != null && !freshOrder.getFacturamaCfdiId().isBlank()) {
+            Order freshOrder = (freshPayment != null) ? freshPayment.getOrder()
+                    : orderRepository.findByAutofacturaKeyAndCompany(key, CompanyContext.getCurrentCompany())
+                            .orElse(null);
+            if (freshOrder != null && isAlreadyInvoiced(freshPayment, freshOrder)) {
                 model.addAttribute("order", freshOrder);
+                if (freshPayment != null) {
+                    model.addAttribute("payment", freshPayment);
+                }
                 model.addAttribute("alreadyInvoiced", true);
                 return "autofactura";
             }
 
-            // Create CFDI via Facturama
-            Map<String, String> cfdiResult = facturamaService.createCfdi(
-                    order, config,
-                    rfc.trim().toUpperCase(),
-                    legalName.trim().toUpperCase(),
-                    fiscalRegime,
-                    cfdiUse,
-                    zipCode.trim()
-            );
+            // Create CFDI via Facturama (per-account overload when this key belongs to a Payment)
+            Map<String, String> cfdiResult;
+            if (payment != null) {
+                cfdiResult = facturamaService.createCfdi(
+                        payment, config,
+                        rfc.trim().toUpperCase(),
+                        legalName.trim().toUpperCase(),
+                        fiscalRegime,
+                        cfdiUse,
+                        zipCode.trim()
+                );
+            } else {
+                cfdiResult = facturamaService.createCfdi(
+                        order, config,
+                        rfc.trim().toUpperCase(),
+                        legalName.trim().toUpperCase(),
+                        fiscalRegime,
+                        cfdiUse,
+                        zipCode.trim()
+                );
+            }
 
-            // Save CFDI data on order.
-            // Mark updatedBy as AUTOFACTURA so audit logs distinguish customer-driven self-invoicing
-            // from employee edits. paidAt is intentionally NOT touched here — it must keep the value
-            // set when the order originally transitioned to PAID.
-            order.setFacturamaCfdiId(cfdiResult.get("cfdi_id"));
-            order.setFacturamaCfdiUuid(cfdiResult.get("cfdi_uuid"));
-            order.setFacturamaCfdiCreatedAt(LocalDateTime.now(java.time.ZoneOffset.UTC));
-            order.setUpdatedBy("AUTOFACTURA");
-            orderRepository.save(order);
+            // Save CFDI data. paidAt is intentionally NOT touched here — it must keep the value
+            // set when the account/order originally transitioned to PAID.
+            if (payment != null) {
+                payment.setFacturamaCfdiId(cfdiResult.get("cfdi_id"));
+                payment.setFacturamaCfdiUuid(cfdiResult.get("cfdi_uuid"));
+                payment.setFacturamaCfdiCreatedAt(LocalDateTime.now(java.time.ZoneOffset.UTC));
+                payment.setUpdatedBy("AUTOFACTURA");
+                paymentRepository.save(payment);
+            } else {
+                order.setFacturamaCfdiId(cfdiResult.get("cfdi_id"));
+                order.setFacturamaCfdiUuid(cfdiResult.get("cfdi_uuid"));
+                order.setFacturamaCfdiCreatedAt(LocalDateTime.now(java.time.ZoneOffset.UTC));
+                order.setUpdatedBy("AUTOFACTURA");
+                orderRepository.save(order);
+            }
 
-            log.info("Autofactura CFDI created for order: {} (CFDI ID: {})",
-                    order.getOrderNumber(), cfdiResult.get("cfdi_id"));
+            log.info("Autofactura CFDI created for {}: {} (CFDI ID: {})",
+                    payment != null ? "payment " + payment.getPaymentFolio() : "order " + order.getOrderNumber(),
+                    cfdiResult.get("cfdi_id"));
 
             model.addAttribute("order", order);
+            if (payment != null) {
+                model.addAttribute("payment", payment);
+            }
             model.addAttribute("alreadyInvoiced", true);
             model.addAttribute("successMessage", "¡Factura generada exitosamente!");
 
@@ -221,6 +319,9 @@ public class AutofacturaController {
             log.error("Error creating autofactura CFDI: {}", e.getMessage());
             model.addAttribute("error", "Error al generar la factura: " + e.getMessage());
             model.addAttribute("order", order);
+            if (payment != null) {
+                model.addAttribute("payment", payment);
+            }
             model.addAttribute("alreadyInvoiced", false);
             model.addAttribute("taxSystems", getTaxSystems());
             model.addAttribute("cfdiUses", getCfdiUses());
@@ -232,7 +333,7 @@ public class AutofacturaController {
     }
 
     /**
-     * Download CFDI PDF for a specific order.
+     * Download CFDI PDF for a specific ticket/account.
      */
     @GetMapping("/{key}/pdf")
     public ResponseEntity<byte[]> downloadPdf(@PathVariable String key) {
@@ -240,7 +341,7 @@ public class AutofacturaController {
     }
 
     /**
-     * Download CFDI XML for a specific order.
+     * Download CFDI XML for a specific ticket/account.
      */
     @GetMapping("/{key}/xml")
     public ResponseEntity<byte[]> downloadXml(@PathVariable String key) {
@@ -248,19 +349,33 @@ public class AutofacturaController {
     }
 
     private ResponseEntity<byte[]> downloadCfdi(String key, String format) {
-        Order order = orderRepository.findByAutofacturaKeyAndCompany(key, CompanyContext.getCurrentCompany())
+        Payment payment = paymentRepository.findByAutofacturaKeyAndCompany(key, CompanyContext.getCurrentCompany())
                 .orElse(null);
+        String cfdiId;
+        String folio;
+        if (payment != null) {
+            cfdiId = payment.getFacturamaCfdiId();
+            folio = payment.getPaymentFolio();
+        } else {
+            Order order = orderRepository.findByAutofacturaKeyAndCompany(key, CompanyContext.getCurrentCompany())
+                    .orElse(null);
+            if (order == null) {
+                return ResponseEntity.notFound().build();
+            }
+            cfdiId = order.getFacturamaCfdiId();
+            folio = order.getOrderNumber();
+        }
 
-        if (order == null || order.getFacturamaCfdiId() == null || order.getFacturamaCfdiId().isBlank()) {
+        if (cfdiId == null || cfdiId.isBlank()) {
             return ResponseEntity.notFound().build();
         }
 
         try {
-            byte[] fileBytes = facturamaService.downloadCfdi(order.getFacturamaCfdiId(), format);
+            byte[] fileBytes = facturamaService.downloadCfdi(cfdiId, format);
 
             String extension = format.equals("pdf") ? ".pdf" : ".xml";
             String contentType = format.equals("pdf") ? "application/pdf" : "application/xml";
-            String filename = "Factura_" + order.getOrderNumber() + extension;
+            String filename = "Factura_" + folio + extension;
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.parseMediaType(contentType));
@@ -271,6 +386,20 @@ public class AutofacturaController {
             log.error("Error downloading CFDI {}: {}", format, e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
+    }
+
+    private boolean isAlreadyInvoiced(Payment payment, Order order) {
+        if (payment != null) {
+            return payment.getFacturamaCfdiId() != null && !payment.getFacturamaCfdiId().isBlank();
+        }
+        return order.getFacturamaCfdiId() != null && !order.getFacturamaCfdiId().isBlank();
+    }
+
+    private boolean isInGlobalInvoice(Payment payment, Order order) {
+        if (payment != null) {
+            return payment.getFacturaGlobalCfdiId() != null && !payment.getFacturaGlobalCfdiId().isBlank();
+        }
+        return order.getFacturaGlobalCfdiId() != null && !order.getFacturaGlobalCfdiId().isBlank();
     }
 
     // ========== Helpers ==========
@@ -331,4 +460,4 @@ public class AutofacturaController {
         uses.put("CN01", "CN01 - Nómina");
         return uses;
     }
-}
+}

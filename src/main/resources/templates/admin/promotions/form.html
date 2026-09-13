@@ -484,6 +484,60 @@
                 </div>
               </div>
 
+              <!-- Horario de la promoción (opcional) -->
+              <div
+                class="mb-6 rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50/60 dark:bg-amber-900/20 p-4"
+              >
+                <label
+                  class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1"
+                  >🕒 Horario de la promoción (opcional)</label
+                >
+                <p class="text-xs text-gray-600 dark:text-gray-400 mb-3">
+                  Define a qué hora aplica la promoción <strong>dentro de cada día seleccionado</strong>.
+                  Si dejas las horas vacías, aplica <strong>todo el día</strong>.
+                </p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label
+                      for="promotionStartTime"
+                      class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+                      >Hora de inicio</label
+                    >
+                    <input
+                      type="time"
+                      name="startTime"
+                      id="promotionStartTime"
+                      th:value="${promotion.startTime != null ? #temporals.format(promotion.startTime, 'HH:mm') : ''}"
+                      class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                    />
+                  </div>
+                  <div>
+                    <label
+                      for="promotionEndTime"
+                      class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+                      >Hora de fin</label
+                    >
+                    <input
+                      type="time"
+                      name="endTime"
+                      id="promotionEndTime"
+                      th:value="${promotion.endTime != null ? #temporals.format(promotion.endTime, 'HH:mm') : ''}"
+                      class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                      onchange="syncPromotionTimeHint()"
+                    />
+                    <p
+                      th:if="${#fields.hasErrors('endTime')}"
+                      th:errors="*{endTime}"
+                      class="text-red-500 text-sm mt-1"
+                    ></p>
+                  </div>
+                </div>
+                <p
+                  id="timeWindowHint"
+                  class="hidden text-xs font-semibold mt-3 rounded-lg px-3 py-2"
+                ></p>
+              </div>
+
               <!-- Days of Week -->
               <div class="mb-6">
                 <label
@@ -861,6 +915,68 @@
         return false; // Prevent default form submission
       }
 
+      // ========== Horario de la promoción (opcional) ==========
+      // The window applies inside each selected day: 07:00 - 12:00 means the
+      // promotion is active on those days from 7am and stops at noon.
+      function syncPromotionTimeHint() {
+        const startEl = document.getElementById("promotionStartTime");
+        const endEl = document.getElementById("promotionEndTime");
+        const hint = document.getElementById("timeWindowHint");
+        if (!startEl || !endEl || !hint) {
+          return;
+        }
+
+        const start = startEl.value;
+        const end = endEl.value;
+
+        if (!start && !end) {
+          hint.className = "hidden text-xs font-semibold mt-3 rounded-lg px-3 py-2";
+          hint.textContent = "";
+          return;
+        }
+
+        hint.classList.remove("hidden");
+
+        if (!start || !end) {
+          hint.className =
+            "text-xs font-semibold mt-3 rounded-lg px-3 py-2 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300";
+          hint.textContent =
+            "Indica la hora de inicio y la hora de fin (o deja ambas vacías para que aplique todo el día).";
+          return;
+        }
+
+        if (end <= start) {
+          hint.className =
+            "text-xs font-semibold mt-3 rounded-lg px-3 py-2 bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300";
+          hint.textContent =
+            "Cruza la medianoche: aplicará de " +
+            start +
+            " a " +
+            end +
+            " del día siguiente.";
+          return;
+        }
+
+        hint.className =
+          "text-xs font-semibold mt-3 rounded-lg px-3 py-2 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300";
+        hint.textContent =
+          "Aplicará en los días seleccionados de " +
+          start +
+          " a " +
+          end +
+          " (deja de aplicar a las " +
+          end +
+          ").";
+      }
+
+      document.addEventListener("DOMContentLoaded", function () {
+        ["promotionStartTime", "promotionEndTime"].forEach(function (id) {
+          const el = document.getElementById(id);
+          if (el) el.addEventListener("input", syncPromotionTimeHint);
+        });
+        syncPromotionTimeHint();
+      });
+
       function prepareFormSubmit() {
         // Trim leading/trailing whitespace from text fields before submit
         document
@@ -919,6 +1035,31 @@
           Swal.fire({
             title: "Fechas inválidas",
             text: "La fecha de inicio no puede ser posterior a la fecha de fin",
+            icon: "error",
+            confirmButtonColor: "#38e07b",
+            confirmButtonText: "Entendido",
+            background: document.documentElement.classList.contains("dark")
+              ? "#1f2937"
+              : "#ffffff",
+            color: document.documentElement.classList.contains("dark")
+              ? "#f3f4f6"
+              : "#1f2937",
+            customClass: {
+              popup: "rounded-2xl",
+              confirmButton: "rounded-lg px-4 py-2",
+            },
+          });
+          return false;
+        }
+
+        // Validate the optional time window: either both hours or none
+        const startTime = document.getElementById("promotionStartTime").value;
+        const endTime = document.getElementById("promotionEndTime").value;
+
+        if ((startTime && !endTime) || (!startTime && endTime)) {
+          Swal.fire({
+            title: "Horario incompleto",
+            text: "Indica la hora de inicio y la hora de fin de la promoción, o deja ambas vacías para que aplique todo el día",
             icon: "error",
             confirmButtonColor: "#38e07b",
             confirmButtonText: "Entendido",

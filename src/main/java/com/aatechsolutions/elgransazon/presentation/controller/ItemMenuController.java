@@ -11,6 +11,9 @@ import com.aatechsolutions.elgransazon.domain.repository.ItemMenuComplementRepos
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -50,28 +53,143 @@ public class ItemMenuController {
     private final BusinessHoursService businessHoursService;
 
     /**
-     * Show list of all menu items
+     * Show list of menu items with server-side pagination (20 per page) and filters.
+     * Only the items of the requested page are loaded from the database.
      */
     @GetMapping
-    public String listMenuItems(Model model) {
-        log.debug("Displaying menu items list");
+    public String listMenuItems(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) String name,
+            @RequestParam(required = false) String categoryId,
+            @RequestParam(required = false) String price,
+            @RequestParam(required = false) String availability,
+            @RequestParam(required = false) String status,
+            Model model) {
+        log.debug("Displaying menu items list - page={}, size={}", page, size);
 
-        List<ItemMenu> menuItems = itemMenuService.findAllOrderByCategoryAndName();
+        // Parse filters (received as strings to avoid conversion errors on empty values)
+        String nameFilter = (name != null && !name.isBlank()) ? name.trim() : null;
+        Long categoryFilter = parseLongOrNull(categoryId);
+        Boolean availabilityFilter = parseBooleanOrNull(availability);
+        Boolean statusFilter = parseBooleanOrNull(status);
+
+        // Parse price range: "0-50", "100-200", "500+"
+        BigDecimal minPrice = null;
+        BigDecimal maxPrice = null;
+        if (price != null && !price.isBlank()) {
+            String priceFilter = price.trim();
+            if (priceFilter.endsWith("+")) {
+                minPrice = new BigDecimal(priceFilter.substring(0, priceFilter.length() - 1));
+            } else {
+                String[] parts = priceFilter.split("-");
+                if (parts.length == 2) {
+                    minPrice = new BigDecimal(parts[0].trim());
+                    maxPrice = new BigDecimal(parts[1].trim());
+                }
+            }
+        }
+
+        int safeSize = Math.max(1, Math.min(size, 100));
+        Pageable pageable = PageRequest.of(Math.max(page, 0), safeSize);
+
+        Page<ItemMenu> menuPage = itemMenuService.searchMenuItemsPage(
+                nameFilter, categoryFilter, minPrice, maxPrice, statusFilter, availabilityFilter, pageable);
+
+        // If the requested page is out of range, fall back to the last valid page
+        int currentPage = menuPage.getNumber();
+        if (menuPage.getTotalPages() > 0 && currentPage >= menuPage.getTotalPages()) {
+            currentPage = menuPage.getTotalPages() - 1;
+            menuPage = itemMenuService.searchMenuItemsPage(
+                    nameFilter, categoryFilter, minPrice, maxPrice, statusFilter, availabilityFilter,
+                    PageRequest.of(currentPage, safeSize));
+        }
+
         List<Category> categories = categoryService.getAllCategories();
+        long totalElements = menuPage.getTotalElements();
 
-        long totalCount = itemMenuService.countAll();
-        long activeCount = itemMenuService.countActive();
-        long availableCount = itemMenuService.countAvailable();
-        long unavailableCount = itemMenuService.countUnavailable();
+        // Stats cards (company-scoped, same semantics as the full list before pagination)
+        model.addAttribute("totalCount", itemMenuService.countAllByCompany());
+        model.addAttribute("activeCount", itemMenuService.countActiveByCompany());
+        model.addAttribute("availableCount", itemMenuService.countAvailableByCompany());
+        model.addAttribute("unavailableCount", itemMenuService.countUnavailableByCompany());
 
-        model.addAttribute("menuItems", menuItems);
+        model.addAttribute("menuItems", menuPage.getContent());
         model.addAttribute("categories", categories);
-        model.addAttribute("totalCount", totalCount);
-        model.addAttribute("activeCount", activeCount);
-        model.addAttribute("availableCount", availableCount);
-        model.addAttribute("unavailableCount", unavailableCount);
+        model.addAttribute("currentPage", currentPage);
+        model.addAttribute("totalPages", menuPage.getTotalPages());
+        model.addAttribute("totalElements", totalElements);
+        model.addAttribute("pageSize", safeSize);
+        model.addAttribute("pageStart", totalElements == 0 ? 0 : (long) currentPage * safeSize + 1);
+        model.addAttribute("pageEnd", Math.min((long) (currentPage + 1) * safeSize, totalElements));
+        model.addAttribute("pageNumbers", buildPageNumbers(currentPage, menuPage.getTotalPages()));
+
+        // Echo filters back so the form keeps its values
+        model.addAttribute("nameFilter", nameFilter == null ? "" : nameFilter);
+        model.addAttribute("categoryFilter", categoryFilter == null ? "" : String.valueOf(categoryFilter));
+        model.addAttribute("priceFilter", price == null ? "" : price.trim());
+        model.addAttribute("availabilityFilter", availabilityFilter == null ? "" : String.valueOf(availabilityFilter));
+        model.addAttribute("statusFilter", statusFilter == null ? "" : String.valueOf(statusFilter));
+        model.addAttribute("hasFilters",
+                nameFilter != null || categoryFilter != null || (price != null && !price.isBlank())
+                        || availabilityFilter != null || statusFilter != null);
 
         return "admin/menu-items/list";
+    }
+
+    /**
+     * Build the list of page numbers to render in the pagination bar (0-based).
+     * Uses -1 as a sentinel for an ellipsis "…" separator.
+     */
+    private List<Integer> buildPageNumbers(int currentPage, int totalPages) {
+        List<Integer> numbers = new ArrayList<>();
+        if (totalPages <= 1) {
+            return numbers;
+        }
+        if (totalPages <= 9) {
+            for (int i = 0; i < totalPages; i++) {
+                numbers.add(i);
+            }
+            return numbers;
+        }
+        int start = Math.max(0, currentPage - 2);
+        int end = Math.min(totalPages - 1, currentPage + 2);
+        if (start > 1) {
+            numbers.add(0);
+            numbers.add(-1);
+        } else {
+            start = 0;
+        }
+        if (end < totalPages - 2) {
+            for (int i = start; i <= end; i++) {
+                numbers.add(i);
+            }
+            numbers.add(-1);
+            numbers.add(totalPages - 1);
+        } else {
+            for (int i = start; i <= totalPages - 1; i++) {
+                numbers.add(i);
+            }
+        }
+        return numbers;
+    }
+
+    private Long parseLongOrNull(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            return Long.valueOf(value.trim());
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    private Boolean parseBooleanOrNull(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        return Boolean.valueOf(value.trim());
     }
 
     /**
@@ -293,6 +411,17 @@ public class ItemMenuController {
             return "admin/menu-items/form";
         }
 
+        // A $0.00 price means cortesía: it may only be sold inside the restaurant, so
+        // "solo para consumo en establecimiento" is mandatory for courtesy items.
+        if (!itemMenu.isCourtesyProperlyRestricted()) {
+            model.addAttribute("errorMessage",
+                    "Un artículo con precio $0.00 es una cortesía: marca '¿Solo para consumo en establecimiento?' " +
+                    "para que solo se pueda vender dentro del restaurante.");
+            loadFormData(model, itemMenu, buildRecipe(ingredientIds, quantities, units));
+            loadAvailabilityFormData(model, itemMenu);
+            return "admin/menu-items/form";
+        }
+
         try {
             // Handle image upload
             if (imageFile != null && !imageFile.isEmpty()) {
@@ -510,6 +639,18 @@ public class ItemMenuController {
 
         if (bindingResult.hasErrors()) {
             loadFormData(model, itemMenu, itemMenuService.getRecipe(id));
+            loadAvailabilityFormData(model, itemMenu);
+            model.addAttribute("formAction", "/admin/menu-items/" + id);
+            return "admin/menu-items/form";
+        }
+
+        // A $0.00 price means cortesía: it may only be sold inside the restaurant, so
+        // "solo para consumo en establecimiento" is mandatory for courtesy items.
+        if (!itemMenu.isCourtesyProperlyRestricted()) {
+            model.addAttribute("errorMessage",
+                    "Un artículo con precio $0.00 es una cortesía: marca '¿Solo para consumo en establecimiento?' " +
+                    "para que solo se pueda vender dentro del restaurante.");
+            loadFormData(model, itemMenu, buildRecipe(ingredientIds, convertQuantities(quantities), units));
             loadAvailabilityFormData(model, itemMenu);
             model.addAttribute("formAction", "/admin/menu-items/" + id);
             return "admin/menu-items/form";

@@ -269,8 +269,17 @@
                     <h2
                       class="text-6xl sm:text-7xl font-black text-primary tracking-tighter mt-2"
                       id="displayTotal"
-                      th:text="${order.formattedTotal}"
+                      th:text="${order.hasPartialCollections() ? order.formattedRemainingTotal : order.formattedTotal}"
                     ></h2>
+                    <p
+                      th:if="${order.hasPartialCollections()}"
+                      class="mt-2 text-sm text-gray-500 dark:text-gray-400"
+                    >
+                      Total del pedido:
+                      <span class="font-semibold" th:text="${order.formattedTotal}"></span>
+                      · Ya cobrado:
+                      <span class="font-semibold" th:text="${order.formattedCollectedAmount}"></span>
+                    </p>
                   </div>
 
                   <!-- Payment Methods -->
@@ -415,52 +424,128 @@
                     <div
                       class="space-y-4 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-5"
                     >
+                      <label class="flex items-center gap-3 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          id="splitToggle"
+                          class="w-5 h-5 rounded border-gray-300 text-primary focus:ring-primary"
+                        />
+                        <span
+                          class="text-sm font-semibold text-gray-700 dark:text-gray-300"
+                          >Dividir cuenta entre varias personas</span
+                        >
+                      </label>
+
+                      <div id="splitPanel" style="display: none">
+                        <p
+                          class="text-xs text-gray-500 dark:text-gray-400 font-medium"
+                        >
+                          Asigna a cada persona los productos completos que
+                          consumió. Un producto no se divide para facturación
+                          (SAT).
+                        </p>
+
+                        <!-- Add person -->
+                        <div id="splitAddPersonRow" style="display: none">
+                          <button
+                            type="button"
+                            id="splitAddPerson"
+                            class="w-full rounded-xl border-2 border-dashed border-primary/50 text-primary py-2.5 font-bold text-sm hover:bg-primary/5"
+                          >
+                            + Agregar persona
+                          </button>
+                        </div>
+
+                        <!-- Per-person accounts -->
+                        <div id="splitAccountList" class="space-y-3"></div>
+
+                        <p
+                          id="splitSummary"
+                          class="text-xs text-gray-500 dark:text-gray-400 font-medium"
+                        ></p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Quick split: visual reference only (never splits the payment) -->
+                  <div class="space-y-4">
+                    <div
+                      id="quickSplitToggle"
+                      role="button"
+                      tabindex="0"
+                      aria-expanded="false"
+                      class="flex items-center justify-between cursor-pointer select-none"
+                    >
+                      <h3
+                        class="text-lg font-bold text-gray-900 dark:text-white"
+                      >
+                        ¿Entre cuántas personas?
+                        <span class="text-sm font-semibold text-gray-400"
+                          >(solo referencia)</span
+                        >
+                      </h3>
+                      <span
+                        id="quickSplitChevron"
+                        class="material-symbols-outlined text-gray-400 transition-transform"
+                        >expand_more</span
+                      >
+                    </div>
+                    <div
+                      id="quickSplitBody"
+                      style="display: none"
+                      class="space-y-4 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-5"
+                    >
                       <div class="flex items-center justify-between">
                         <p class="text-gray-600 dark:text-gray-400 font-medium">
-                          Dividir en partes iguales
+                          Personas
                         </p>
                         <div class="flex items-center gap-3">
                           <button
                             type="button"
+                            id="quickSplitDec"
                             class="counter-btn w-10 h-10 rounded-lg flex items-center justify-center font-bold"
-                            onclick="updateSplit(-1)"
                           >
-                            <span class="material-symbols-outlined"
-                              >remove</span
-                            >
+                            <span class="material-symbols-outlined">remove</span>
                           </button>
                           <span
                             class="text-2xl font-black text-gray-900 dark:text-white min-w-[2rem] text-center"
-                            id="split-count"
-                            >1</span
+                            id="quickSplitCount"
+                            >2</span
                           >
                           <button
                             type="button"
+                            id="quickSplitInc"
                             class="counter-btn w-10 h-10 rounded-lg flex items-center justify-center font-bold"
-                            onclick="updateSplit(1)"
                           >
                             <span class="material-symbols-outlined">add</span>
                           </button>
                         </div>
                       </div>
-                      <div class="border-t border-gray-300 dark:border-gray-700 pt-4">
-                        <p
-                          class="text-gray-600 dark:text-gray-400 font-medium mb-2"
-                        >
-                          Monto por persona
-                        </p>
-                        <p
-                          class="text-4xl font-black bg-gradient-to-r from-primary to-primary-dark bg-clip-text text-transparent"
-                          id="per-person-amount"
-                        >
-                          $0.00
-                        </p>
+                      <div
+                        class="rounded-xl bg-primary/10 border-2 border-primary p-4"
+                      >
+                        <div class="flex justify-between items-center">
+                          <span
+                            class="text-gray-700 dark:text-gray-300 font-semibold"
+                            >Cada persona pagaría</span
+                          >
+                          <span
+                            class="text-2xl font-black text-primary"
+                            id="quickSplitPerPerson"
+                            >$0.00</span
+                          >
+                        </div>
                       </div>
+                      <p class="text-xs text-gray-500 dark:text-gray-400 italic">
+                        Conversión rápida únicamente visual: el cobro se hace en
+                        un solo ticket con el total del pedido. Un producto no se
+                        divide para facturación (SAT).
+                      </p>
                     </div>
                   </div>
 
                   <!-- Tip Section -->
-                  <div class="space-y-4">
+                  <div class="space-y-4" id="tipSection">
                     <h3
                       class="text-lg font-bold text-gray-900 dark:text-white dark:text-white"
                     >
@@ -577,7 +662,7 @@
               <div
                 th:each="detail : ${order.orderDetails}"
                 class="order-item flex flex-col"
-                th:classappend="${detail.comboChild} ? 'pl-5' : ''"
+                th:classappend="${(detail.comboChild ? 'pl-5' : '') + (detail.isFullyPaid() ? ' opacity-50' : '')}"
               >
                 <div class="flex justify-between items-start">
                   <div class="flex-1">
@@ -588,6 +673,11 @@
                     <span class="text-gray-600 dark:text-gray-400 text-sm ml-2">
                       x<span th:text="${detail.quantity}"></span>
                     </span>
+                    <span
+                      th:if="${detail.hasPaidUnits()}"
+                      class="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300"
+                      th:text="${detail.isFullyPaid() ? 'Pagado' : 'Pagado ' + detail.formattedPaidQuantity + ' de ' + detail.quantity}"
+                    ></span>
                   </div>
                   <span
                     class="font-bold text-gray-900 dark:text-white dark:text-white"
@@ -679,9 +769,18 @@
                 <span
                   class="text-primary text-2xl"
                   id="grand-total"
-                  th:text="${order.formattedTotal}"
+                  th:text="${order.hasPartialCollections() ? order.formattedRemainingTotal : order.formattedTotal}"
                 ></span>
               </div>
+              <p
+                th:if="${order.hasPartialCollections()}"
+                class="text-right text-xs text-gray-500 dark:text-gray-400 italic"
+              >
+                Total del pedido:
+                <span class="font-semibold" th:text="${order.formattedTotal}"></span>
+                · Ya cobrado:
+                <span class="font-semibold" th:text="${order.formattedCollectedAmount}"></span>
+              </p>
               <!-- Nota informativa de envío (después del TOTAL) -->
               <div
                 th:if="${order.orderType != null and order.orderType.name() == 'DELIVERY' and order.deliveryCost != null and order.deliveryCost.compareTo(T(java.math.BigDecimal).ZERO) > 0}"
@@ -760,35 +859,46 @@
     <script th:inline="javascript">
       /*<![CDATA[*/
       window.ORDER_DATA = {
-        total: /*[[${order.total}]]*/ 0,
+        // Con cobros parciales, el total operable es lo que resta por cobrar
+        total: /*[[${order.hasPartialCollections() ? order.remainingTotal : order.total}]]*/ 0,
         subtotal: /*[[${order.subtotal}]]*/ 0,
+      };
+
+      // Split-bill configuration (real "Dividir Cuenta")
+      window.SPLIT_CONFIG = {
+        total: /*[[${order.total}]]*/ 0,
+        role: /*[[${currentRole}]]*/ "waiter",
+        methods: /*[[${enabledPaymentMethods.![name]}]]*/ [],
+        fixedMethod: null,
+        // qty = unidades aún no cobradas; delivered = ítem ya ENTREGADO
+        // comps = complementos efectivos: para un combo padre incluye los complementos de sus hijos
+        items: /*[[${order.splitBillItems}]]*/ [],
+        // departure: orden abierta con ítems pendientes → cobro parcial (solo ENTREGADOS)
+        departure: /*[[${splitDeparture}]]*/ false,
+        // Cash accounts never register a tip in the restaurant (delivery allows it)
+        zeroCashTips: /*[[${splitZeroCashTips}]]*/ true,
+        // Parts-equal removed (SAT): the split editor is per-person only; this
+        // flag keeps any cached JS in per-person mode.
+        allowEqual: false,
+        // autoEnable: (sin uso activo) el cobro global del saldo restante sí
+        // está permitido tras cobros parciales; la división queda a elección
+        autoEnable: /*[[${splitAutoEnable}]]*/ false,
+        // Numeración continua: siguiente número de persona para este pedido
+        nextPersonNumber: /*[[${nextPersonNumber}]]*/ 1
       };
       /*]]>*/
     </script>
+    <script th:src="@{/js/split-bill.js}"></script>
 
     <!-- Application JavaScript -->
     <script>
       let orderTotal = 0;
       let orderSubtotal = 0;
-      let splitCount = 1;
 
       // Initialize data from backend
       if (window.ORDER_DATA) {
         orderTotal = parseFloat(window.ORDER_DATA.total) || 0;
         orderSubtotal = parseFloat(window.ORDER_DATA.subtotal) || 0;
-      }
-
-      // Update split count
-      function updateSplit(delta) {
-        const tip = parseFloat(document.getElementById("tip").value) || 0;
-        const totalWithTip = orderTotal + tip;
-
-        splitCount = Math.max(1, Math.min(10, splitCount + delta));
-        document.getElementById("split-count").textContent = splitCount;
-
-        const perPerson = (totalWithTip / splitCount).toFixed(2);
-        document.getElementById("per-person-amount").textContent =
-          "$" + perPerson;
       }
 
       // Payment method selection
@@ -852,16 +962,53 @@
         updateElementText("tipDisplay", tipText);
         updateElementText("tip-summary", tipText);
 
-        // Update split amount
-        const perPerson = (totalWithTip / splitCount).toFixed(2);
-        document.getElementById("per-person-amount").textContent =
-          "$" + perPerson;
+        // Refresh split-bill preview (if enabled)
+        if (window.SPLIT_BILL) window.SPLIT_BILL.refresh();
       }
 
       // Form validation
       document
         .getElementById("paymentForm")
         .addEventListener("submit", function (e) {
+          // ========== SPLIT BILL: build the per-account plan and confirm ==========
+          if (window.SPLIT_BILL && window.SPLIT_BILL.enabled()) {
+            e.preventDefault();
+            var plan = window.SPLIT_BILL.buildPlan();
+            if (!plan) return false;
+            Swal.fire({
+              title: window.SPLIT_BILL.confirmTitle
+                ? window.SPLIT_BILL.confirmTitle()
+                : "¿Confirmar división de cuenta?",
+              html: window.SPLIT_BILL.summaryHtml(plan),
+              icon: "question",
+              showCancelButton: true,
+              confirmButtonColor: "#38e07b",
+              cancelButtonColor: "#6b7280",
+              confirmButtonText: "Sí, procesar pagos",
+              cancelButtonText: "Cancelar",
+              background: document.documentElement.classList.contains("dark")
+                ? "#1f2937"
+                : "#ffffff",
+              color: document.documentElement.classList.contains("dark")
+                ? "#f3f4f6"
+                : "#1f2937",
+              customClass: {
+                popup: "rounded-2xl",
+                confirmButton: "rounded-xl px-6 py-3 font-bold",
+                cancelButton: "rounded-xl px-6 py-3 font-bold",
+              },
+            }).then(function (result) {
+              if (result.isConfirmed) {
+                var form = document.getElementById("paymentForm");
+                window.SPLIT_BILL.appendToForm(form);
+                playPaymentSound(function () {
+                  form.submit();
+                });
+              }
+            });
+            return false;
+          }
+
           const paymentMethod =
             document.getElementById("paymentMethodInput").value;
 
