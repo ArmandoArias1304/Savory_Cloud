@@ -60,13 +60,19 @@
           <span th:text="${errorMessage}"></span>
         </div>
 
-        <div id="qzStatusBar" class="mb-4 flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-medium bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300 border border-yellow-200 dark:border-yellow-800/40">
+        <div id="qzStatusBar" class="mb-4 flex flex-wrap items-center gap-2 px-4 py-3 rounded-xl text-sm font-medium bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300 border border-yellow-200 dark:border-yellow-800/40">
           <span id="qzStatusIcon" class="material-symbols-outlined text-lg">pending</span>
-          <span id="qzStatusText">Conectando con QZ Tray...</span>
+          <span id="qzStatusText" class="flex-1">Conectando con QZ Tray...</span>
+          <button type="button" id="qzRetryBtn" onclick="connectQZ()"
+                  class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-white/80 dark:bg-gray-800/80 border border-current hover:opacity-80">
+            Reintentar detección
+          </button>
         </div>
 
         <div class="mb-6 p-4 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800/40 text-sm text-amber-800 dark:text-amber-200">
-          Abre esta página en la <strong>PC que tiene las impresoras instaladas</strong> (drivers USB o Wi‑Fi) y con QZ Tray en ejecución. QZ Tray solo lista las colas de Windows de esta computadora.
+          Necesitas <strong>QZ Tray abierto</strong> en esta PC (icono en la bandeja de Windows). Sin eso no aparecen las impresoras instaladas.
+          Descárgalo en <a href="https://qz.io/download/" target="_blank" rel="noopener" class="underline font-medium">qz.io/download</a>
+          y pulsa <strong>Reintentar detección</strong>.
         </div>
 
         <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3">Comandas (se guardan en el servidor)</h2>
@@ -86,12 +92,15 @@
               Guardada: <span class="font-mono text-primary" th:text="${entry.get().name}"></span>
             </p>
             <p class="saved-label text-xs text-gray-400 dark:text-gray-500 mb-3 italic" th:unless="${entry.isPresent()}">Sin asignar</p>
-            <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Impresora en esta PC</label>
-            <select class="printer-select w-full mb-2 px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white text-sm"></select>
-            <input type="text" class="printer-fallback hidden w-full mb-2 px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white text-sm" placeholder="Nombre exacto en Windows" />
-            <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">IP <span class="font-normal text-gray-400">(opcional, solo referencia)</span></label>
-            <input type="text" class="printer-ip w-full mb-3 px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white text-sm" maxlength="50" placeholder="ej. 192.168.1.100"
+            <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Impresoras instaladas en Windows</label>
+            <select class="printer-select w-full mb-3 px-3 py-2.5 rounded-xl border-2 border-primary/40 dark:border-primary/30 bg-white dark:bg-gray-700 text-gray-800 dark:text-white text-sm">
+              <option value="">Detectando impresoras...</option>
+            </select>
+            <details class="mb-3">
+              <summary class="text-xs text-gray-400 dark:text-gray-500 cursor-pointer">IP opcional (no se usa para imprimir)</summary>
+              <input type="text" class="printer-ip mt-2 w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white text-sm" maxlength="50" placeholder="ej. 192.168.1.100"
                    th:value="${entry.isPresent() and entry.get().ipAddress != null ? entry.get().ipAddress : ''}" />
+            </details>
             <div class="flex flex-wrap gap-2">
               <button type="button" onclick="saveComandaPrinter('KITCHEN')"
                       class="flex-1 px-3 py-2 text-sm rounded-lg bg-primary hover:bg-primary-dark text-white font-medium transition">Guardar</button>
@@ -118,12 +127,15 @@
               Guardada: <span class="font-mono text-primary" th:text="${entry.get().name}"></span>
             </p>
             <p class="saved-label text-xs text-gray-400 dark:text-gray-500 mb-3 italic" th:unless="${entry.isPresent()}">Sin asignar</p>
-            <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Impresora en esta PC</label>
-            <select class="printer-select w-full mb-2 px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white text-sm"></select>
-            <input type="text" class="printer-fallback hidden w-full mb-2 px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white text-sm" placeholder="Nombre exacto en Windows" />
-            <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">IP <span class="font-normal text-gray-400">(opcional, solo referencia)</span></label>
-            <input type="text" class="printer-ip w-full mb-3 px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white text-sm" maxlength="50" placeholder="ej. 192.168.1.100"
+            <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Impresoras instaladas en Windows</label>
+            <select class="printer-select w-full mb-3 px-3 py-2.5 rounded-xl border-2 border-primary/40 dark:border-primary/30 bg-white dark:bg-gray-700 text-gray-800 dark:text-white text-sm">
+              <option value="">Detectando impresoras...</option>
+            </select>
+            <details class="mb-3">
+              <summary class="text-xs text-gray-400 dark:text-gray-500 cursor-pointer">IP opcional (no se usa para imprimir)</summary>
+              <input type="text" class="printer-ip mt-2 w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white text-sm" maxlength="50" placeholder="ej. 192.168.1.100"
                    th:value="${entry.isPresent() and entry.get().ipAddress != null ? entry.get().ipAddress : ''}" />
+            </details>
             <div class="flex flex-wrap gap-2">
               <button type="button" onclick="saveComandaPrinter('BAR')"
                       class="flex-1 px-3 py-2 text-sm rounded-lg bg-primary hover:bg-primary-dark text-white font-medium transition">Guardar</button>
@@ -150,12 +162,15 @@
               Guardada: <span class="font-mono text-primary" th:text="${entry.get().name}"></span>
             </p>
             <p class="saved-label text-xs text-gray-400 dark:text-gray-500 mb-3 italic" th:unless="${entry.isPresent()}">Sin asignar</p>
-            <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Impresora en esta PC</label>
-            <select class="printer-select w-full mb-2 px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white text-sm"></select>
-            <input type="text" class="printer-fallback hidden w-full mb-2 px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white text-sm" placeholder="Nombre exacto en Windows" />
-            <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">IP <span class="font-normal text-gray-400">(opcional, solo referencia)</span></label>
-            <input type="text" class="printer-ip w-full mb-3 px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white text-sm" maxlength="50" placeholder="ej. 192.168.1.100"
+            <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Impresoras instaladas en Windows</label>
+            <select class="printer-select w-full mb-3 px-3 py-2.5 rounded-xl border-2 border-primary/40 dark:border-primary/30 bg-white dark:bg-gray-700 text-gray-800 dark:text-white text-sm">
+              <option value="">Detectando impresoras...</option>
+            </select>
+            <details class="mb-3">
+              <summary class="text-xs text-gray-400 dark:text-gray-500 cursor-pointer">IP opcional (no se usa para imprimir)</summary>
+              <input type="text" class="printer-ip mt-2 w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white text-sm" maxlength="50" placeholder="ej. 192.168.1.100"
                    th:value="${entry.isPresent() and entry.get().ipAddress != null ? entry.get().ipAddress : ''}" />
+            </details>
             <div class="flex flex-wrap gap-2">
               <button type="button" onclick="saveComandaPrinter('PARRILLERO')"
                       class="flex-1 px-3 py-2 text-sm rounded-lg bg-primary hover:bg-primary-dark text-white font-medium transition">Guardar</button>
@@ -179,9 +194,10 @@
             Se guarda solo en este navegador, no en el servidor. Quien cobre en esta caja imprime aquí. Si se limpian los datos del navegador, vuelve a elegirla en segundos.
           </p>
           <p id="ticketSavedLabel" class="text-xs text-gray-400 dark:text-gray-500 mb-3">Sin configurar en esta PC</p>
-          <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Impresora en esta PC</label>
-          <select id="ticketSelect" class="w-full mb-2 px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white text-sm"></select>
-          <input type="text" id="ticketFallback" class="hidden w-full mb-3 px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white text-sm" placeholder="Nombre exacto en Windows" />
+          <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Impresoras instaladas en Windows</label>
+          <select id="ticketSelect" class="w-full mb-3 px-3 py-2.5 rounded-xl border-2 border-primary/40 dark:border-primary/30 bg-white dark:bg-gray-700 text-gray-800 dark:text-white text-sm">
+            <option value="">Detectando impresoras...</option>
+          </select>
           <div class="flex flex-wrap gap-2">
             <button type="button" onclick="saveTicketPrinter()"
                     class="flex-1 px-3 py-2 text-sm rounded-lg bg-primary hover:bg-primary-dark text-white font-medium transition">Guardar en esta PC</button>
@@ -237,18 +253,28 @@
         var bar = document.getElementById("qzStatusBar");
         var icon = document.getElementById("qzStatusIcon");
         var text = document.getElementById("qzStatusText");
-        bar.className = "mb-4 flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-medium border " +
+        bar.className = "mb-4 flex flex-wrap items-center gap-2 px-4 py-3 rounded-xl text-sm font-medium border " +
           (ok ? "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800/40"
               : "bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800/40");
         icon.textContent = ok ? "check_circle" : "error";
         text.textContent = msg;
       }
 
+      function qzErrorMessage(e) {
+        var s = String(e && e.message ? e.message : e);
+        if (s.indexOf("sendData") >= 0 || s.indexOf("not a function") >= 0 || s.indexOf("Unable to establish") >= 0 || s.indexOf("connect") >= 0) {
+          return "QZ Tray no está instalado o no está abierto. Descárgalo en qz.io/download, ábrelo y pulsa Reintentar detección.";
+        }
+        return s;
+      }
+
       function fillSelect(selectEl, list, selectedName) {
         selectEl.innerHTML = "";
         var placeholder = document.createElement("option");
         placeholder.value = "";
-        placeholder.textContent = "-- Selecciona impresora --";
+        placeholder.textContent = (!list || list.length === 0)
+          ? "-- No se detectaron impresoras --"
+          : "-- Selecciona impresora --";
         selectEl.appendChild(placeholder);
         var found = false;
         (list || []).forEach(function (p) {
@@ -270,70 +296,49 @@
         }
       }
 
-      function showFallback(useFallback) {
-        document.querySelectorAll(".printer-select").forEach(function (el) { el.classList.toggle("hidden", useFallback); });
-        document.querySelectorAll(".printer-fallback").forEach(function (el) { el.classList.toggle("hidden", !useFallback); });
-        document.getElementById("ticketSelect").classList.toggle("hidden", useFallback);
-        document.getElementById("ticketFallback").classList.toggle("hidden", !useFallback);
-        if (useFallback) {
-          document.querySelectorAll(".printer-card").forEach(function (c) {
-            c.querySelector(".printer-fallback").value = c.getAttribute("data-name") || "";
-          });
-          document.getElementById("ticketFallback").value = localStorage.getItem(ticketKey()) || "";
-        }
-      }
-
       async function populateFromQz() {
-        var list = await qz.printers.getList();
+        var list = await qz.printers.find();
+        if (!Array.isArray(list)) list = list ? [list] : [];
         ["KITCHEN", "BAR", "PARRILLERO"].forEach(function (type) {
           var c = card(type);
           fillSelect(c.querySelector(".printer-select"), list, c.getAttribute("data-name") || "");
         });
         fillSelect(document.getElementById("ticketSelect"), list, localStorage.getItem(ticketKey()) || "");
-        showFallback(false);
+        return list;
       }
 
       function connectQZ() {
         if (typeof qz === "undefined" || !qz.websocket) {
-          setQzStatus(false, "QZ Tray no cargado — recarga la página o escribe el nombre a mano");
-          showFallback(true);
+          setQzStatus(false, "No se cargó QZ Tray. Recarga la página.");
           return;
         }
-        var probe = new WebSocket("ws://localhost:8182");
-        var timer = setTimeout(function () { probe.close(); }, 1500);
-        probe.onopen = function () {
-          clearTimeout(timer);
-          probe.close();
-          qz.websocket.connect()
-            .then(function () {
-              qzConnected = true;
-              return populateFromQz();
-            })
-            .then(function () {
-              setQzStatus(true, "QZ Tray conectado — impresoras detectadas en esta PC");
-            })
-            .catch(function (e) {
-              setQzStatus(false, "Error al conectar QZ Tray: " + e + ". Puedes escribir el nombre a mano.");
-              showFallback(true);
-            });
+        var start = function () {
+          qzConnected = true;
+          return populateFromQz().then(function (list) {
+            var n = (list && list.length) ? list.length : 0;
+            setQzStatus(true, "QZ Tray conectado — " + n + " impresora(s) de Windows en esta PC");
+          });
         };
-        probe.onerror = function () {
-          clearTimeout(timer);
-          setQzStatus(false, "QZ Tray no está corriendo. Instálalo o ábrelo, o escribe el nombre a mano.");
-          showFallback(true);
-        };
+        if (qz.websocket.isActive()) {
+          start().catch(function (e) {
+            qzConnected = false;
+            setQzStatus(false, qzErrorMessage(e));
+          });
+          return;
+        }
+        qz.websocket.connect()
+          .then(start)
+          .catch(function (e) {
+            qzConnected = false;
+            setQzStatus(false, qzErrorMessage(e));
+          });
       }
 
       function selectedName(type) {
         if (type === "TICKET") {
-          var sel = document.getElementById("ticketSelect");
-          var fb = document.getElementById("ticketFallback");
-          return (fb.classList.contains("hidden") ? sel.value : fb.value).trim();
+          return (document.getElementById("ticketSelect").value || "").trim();
         }
-        var c = card(type);
-        var sel = c.querySelector(".printer-select");
-        var fb = c.querySelector(".printer-fallback");
-        return (fb.classList.contains("hidden") ? sel.value : fb.value).trim();
+        return (card(type).querySelector(".printer-select").value || "").trim();
       }
 
       function saveComandaPrinter(type) {
@@ -379,7 +384,6 @@
       function resetTicketPrinter() {
         localStorage.removeItem(ticketKey());
         document.getElementById("ticketSelect").value = "";
-        document.getElementById("ticketFallback").value = "";
         refreshTicketLabel();
       }
 

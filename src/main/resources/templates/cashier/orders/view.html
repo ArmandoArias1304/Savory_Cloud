@@ -900,7 +900,7 @@
       function resolveTicketPrinterName() {
         var key = ticketPrinterStorageKey();
         var stored = localStorage.getItem(key);
-        return qz.printers.getList().then(function (list) {
+        return qz.printers.find().then(function (list) {
           if (stored) {
             var listLower = (list || []).map(function (p) { return String(p).toLowerCase(); });
             if (listLower.indexOf(stored.toLowerCase()) >= 0) return stored;
@@ -1064,7 +1064,7 @@
         try {
           if (!qz.websocket.isActive()) await qz.websocket.connect();
 
-          var availList = await qz.printers.getList();
+          var availList = await qz.printers.find();
           var availLower = availList.map(function(p) { return p.toLowerCase(); });
           if (availLower.indexOf(printerName.toLowerCase()) < 0) {
             Swal.fire({ icon:"warning", title:"Impresora no encontrada",

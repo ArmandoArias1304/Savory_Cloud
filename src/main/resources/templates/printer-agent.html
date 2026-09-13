@@ -240,36 +240,33 @@
           setQzStatus(false, "QZ Tray no cargado — recarga la página");
           return;
         }
-        var probe = new WebSocket("ws://localhost:8182");
-        var timer = setTimeout(function() { probe.close(); }, 1500);
-        probe.onopen = function() {
-          clearTimeout(timer);
-          probe.close();
-          qz.websocket.connect()
-            .then(function() {
-              qzConnected = true;
-              setQzStatus(true, "QZ Tray conectado ✓");
-              log("QZ Tray conectado", "success");
-              checkPrinterAvailability();
-              promptTicketPrinterIfNeeded();
-            })
-            .catch(function(e) {
-              setQzStatus(false, "Error al conectar QZ Tray: " + e);
-              log("Error QZ Tray: " + e, "error");
-            });
+        var onConnected = function() {
+          qzConnected = true;
+          setQzStatus(true, "QZ Tray conectado ✓");
+          log("QZ Tray conectado", "success");
+          checkPrinterAvailability().then(function(ok) {
+            if (ok) promptTicketPrinterIfNeeded();
+          });
         };
-        probe.onerror = function() {
-          clearTimeout(timer);
-          setQzStatus(false, "QZ Tray no está corriendo — instala o abre QZ Tray");
-          log("QZ Tray no disponible en ws://localhost:8182", "warn");
-        };
+        if (qz.websocket.isActive()) {
+          onConnected();
+          return;
+        }
+        qz.websocket.connect()
+          .then(onConnected)
+          .catch(function(e) {
+            qzConnected = false;
+            setQzStatus(false, "QZ Tray no está instalado o no está abierto. Descárgalo en qz.io/download");
+            log("QZ Tray no disponible: instálalo y ábrelo. " + e, "error");
+          });
       }
 
       async function checkPrinterAvailability() {
-        if (!qzConnected) return;
+        if (!qzConnected) return false;
         try {
-          var list = await qz.printers.getList();
-          var listLower = list.map(function(p) { return p.toLowerCase(); });
+          var list = await qz.printers.find();
+          if (!Array.isArray(list)) list = list ? [list] : [];
+          var listLower = list.map(function(p) { return String(p).toLowerCase(); });
           for (var type of ["KITCHEN", "BAR", "PARRILLERO"]) {
             var configured = printers[type];
             if (configured) {
@@ -280,8 +277,17 @@
               }
             }
           }
+          return true;
         } catch (e) {
-          log("Error al listar impresoras: " + e, "error");
+          qzConnected = false;
+          var msg = String(e && e.message ? e.message : e);
+          if (msg.indexOf("sendData") >= 0 || msg.indexOf("not a function") >= 0) {
+            log("QZ Tray no está instalado o no está abierto. Sin QZ Tray el navegador no puede ver las impresoras de Windows. Descárgalo en https://qz.io/download/", "error");
+            setQzStatus(false, "QZ Tray no está instalado o no está abierto");
+          } else {
+            log("Error al listar impresoras: " + e, "error");
+          }
+          return false;
         }
       }
 
@@ -321,7 +327,7 @@
 
         try {
           // Verify the printer is actually available on this PC before printing
-          var list = await qz.printers.getList();
+          var list = await qz.printers.find();
           var listLower = list.map(function(p) { return p.toLowerCase(); });
           if (listLower.indexOf(printerName.toLowerCase()) < 0) {
             log("Impresora '" + printerName + "' no instalada en esta PC — comanda " + type + " omitida", "warn");
@@ -438,7 +444,7 @@
         var key = "ticketPrinter_" + COMPANY_ID;
         if (!force && localStorage.getItem(key)) return localStorage.getItem(key);
         try {
-          var list = await qz.printers.getList();
+          var list = await qz.printers.find();
           if (!list || list.length === 0) {
             var def = await qz.printers.getDefault();
             if (def) {
@@ -473,7 +479,12 @@
           }
           return null;
         } catch(e) {
-          log("No se pudo listar impresoras de tickets: " + e, "error");
+          var msg = String(e && e.message ? e.message : e);
+          if (msg.indexOf("sendData") >= 0 || msg.indexOf("not a function") >= 0) {
+            log("QZ Tray no está instalado. Sin él no se pueden listar impresoras. https://qz.io/download/", "error");
+          } else {
+            log("No se pudo listar impresoras de tickets: " + e, "error");
+          }
           return null;
         }
       }
@@ -518,7 +529,7 @@
           // Verify the printer is physically connected on THIS PC before printing.
           // This allows multiple agents to run on different PCs without duplicate prints:
           // only the PC that actually has the ticket printer connected will print.
-          var list = await qz.printers.getList();
+          var list = await qz.printers.find();
           var listLower = list.map(function(p) { return p.toLowerCase(); });
           if (listLower.indexOf(printerName.toLowerCase()) < 0) {
             log("Impresora de tickets '" + printerName + "' no conectada en esta PC — omitido", "warn");
