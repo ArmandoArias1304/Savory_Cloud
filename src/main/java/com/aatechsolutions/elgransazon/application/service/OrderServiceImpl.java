@@ -888,6 +888,23 @@ public class OrderServiceImpl implements OrderService {
             log.error("Failed to send WebSocket notification for status change: {}", savedOrder.getOrderNumber(), e);
         }
 
+        // Notify the printer agent to print the ticket (non-delivery paid orders only).
+        // Use paidBy.getUsername() — it is set in the controller BEFORE calling changeStatus
+        // and is immutable after that (updatedBy can be overwritten later by autofactura, etc.).
+        // Falls back to updatedBy if paidBy is somehow null.
+        if (newStatus == OrderStatus.PAID && order.getOrderType() != OrderType.DELIVERY) {
+            try {
+                String payerUsername = (savedOrder.getPaidBy() != null
+                        && savedOrder.getPaidBy().getUsername() != null)
+                        ? savedOrder.getPaidBy().getUsername()
+                        : updatedBy;
+                wsNotificationService.notifyPrintTicket(savedOrder, payerUsername);
+            } catch (Exception e) {
+                log.error("Failed to send print ticket WS notification for order {}: {}",
+                          savedOrder.getOrderNumber(), e.getMessage());
+            }
+        }
+
         return savedOrder;
     }
 

@@ -41,6 +41,7 @@ public class TicketEscPosService {
     // ESC/POS commands
     private static final byte[] INIT            = {0x1B, 0x40};                // Initialize printer
     private static final byte[] ALIGN_CENTER    = {0x1B, 0x61, 0x01};         // Center alignment
+    private static final byte[] ALIGN_LEFT      = {0x1B, 0x61, 0x00};         // Left alignment
     private static final byte[] ALIGN_RIGHT     = {0x1B, 0x61, 0x02};         // Right alignment
     private static final byte[] BOLD_ON         = {0x1B, 0x45, 0x01};         // Bold on
     private static final byte[] BOLD_OFF        = {0x1B, 0x45, 0x00};         // Bold off
@@ -560,5 +561,40 @@ public class TicketEscPosService {
         } catch (Exception e) {
             log.warn("Could not generate QR code for ESC/POS ticket: {}", e.getMessage());
         }
+    }
+
+    /**
+     * Short ESC/POS test page for the ticket printer on this PC.
+     * Uses the current company's restaurant name and timezone.
+     */
+    public byte[] generateTestPage() throws IOException {
+        SystemConfiguration config = systemConfigurationService.getConfiguration();
+        ByteArrayOutputStream out = new ByteArrayOutputStream(512);
+
+        out.write(INIT);
+        out.write(SET_CP1252);
+        out.write(ALIGN_CENTER);
+        out.write(BOLD_ON);
+        out.write(DOUBLE_HEIGHT);
+        printLine(out, "PRUEBA");
+        out.write(NORMAL_SIZE);
+        printLine(out, "TICKET DE COBRO");
+        out.write(BOLD_OFF);
+        if (config != null && config.getRestaurantName() != null) {
+            out.write(FONT_B);
+            printLine(out, truncate(config.getRestaurantName(), LINE_WIDTH));
+            out.write(FONT_A);
+        }
+        printSeparator(out);
+        out.write(ALIGN_LEFT);
+        out.write(FONT_B);
+        String now = dateTimeService.nowLocal().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
+        printLine(out, "Hora: " + now);
+        printLine(out, "Si lees esto, la impresora");
+        printLine(out, "de tickets funciona.");
+        out.write(FONT_A);
+        out.write(new byte[]{LF, LF, LF});
+        out.write(FEED_CUT);
+        return out.toByteArray();
     }
 }

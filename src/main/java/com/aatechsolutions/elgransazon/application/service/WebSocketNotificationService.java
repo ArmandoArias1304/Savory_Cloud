@@ -1,8 +1,11 @@
 package com.aatechsolutions.elgransazon.application.service;
 
 import com.aatechsolutions.elgransazon.domain.entity.Order;
+import com.aatechsolutions.elgransazon.domain.entity.OrderDetail;
 import com.aatechsolutions.elgransazon.presentation.dto.KitchenStatsDTO;
 import com.aatechsolutions.elgransazon.presentation.dto.OrderNotificationDTO;
+import com.aatechsolutions.elgransazon.presentation.dto.PrintComandaNotificationDTO;
+import com.aatechsolutions.elgransazon.presentation.dto.PrintTicketNotificationDTO;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -95,6 +98,8 @@ public class WebSocketNotificationService {
         } else {
             log.info("🔔 WebSocket: New order notification sent - {} - Chef: {}, Barista: {}, Parrillero: {}", 
                 order.getOrderNumber(), hasChefItems, hasBaristaItems, hasParrilleroItems);
+            // Trigger auto-print on comanda agents for non-TO_ACCEPT orders
+            notifyPrintComanda(order, order.getOrderDetails());
         }
     }
 
@@ -447,8 +452,90 @@ public class WebSocketNotificationService {
         // Send to general orders topic for view updates
         messagingTemplate.convertAndSend(getCompanyTopic("/topic/orders", order), notification);
         
+        // Trigger auto-print on comanda agents for the newly added actionable items
+        notifyPrintComanda(order, actionableItems);
+        
         log.info("🔔 WebSocket: Items added notification completed - Order {} - Chef items: {}, Barista items: {} - Assigned Chef: {}, Assigned Barista: {}", 
             order.getOrderNumber(), hasChefItems, hasBaristaItems, hasAssignedChef, hasAssignedBarista);
+    }
+
+    /**
+     * Sends print-comanda WebSocket notifications to comanda agents.
+     * Each topic maps to one printer type; the agent only prints if that printer is
+     * physically installed on the agent PC (resolved via qz.printers.find(name)).
+     *
+     * @param order The order to print
+     * @param items The items to check for preparation types (new items on add, all items on new order)
+     */
+    public void notifyPrintComanda(Order order, java.util.List<OrderDetail> items) {
+        if (order == null || items == null || items.isEmpty()) return;
+        Long companyId = order.getCompany() != null ? order.getCompany().getIdCompany() : null;
+        if (companyId == null) return;
+
+        if (hasPreparationTypeInItems(items, "CHEF")) {
+            messagingTemplate.convertAndSend(
+                "/topic/print/comanda/kitchen/" + companyId,
+                new PrintComandaNotificationDTO(order.getIdOrder(), order.getOrderNumber(), companyId, "KITCHEN"));
+        }
+        if (hasPreparationTypeInItems(items, "BARISTA")) {
+            messagingTemplate.convertAndSend(
+                "/topic/print/comanda/bar/" + companyId,
+                new PrintComandaNotificationDTO(order.getIdOrder(), order.getOrderNumber(), companyId, "BAR"));
+        }
+        if (hasPreparationTypeInItems(items, "PARRILLERO")) {
+            messagingTemplate.convertAndSend(
+                "/topic/print/comanda/parrillero/" + companyId,
+                new PrintComandaNotificationDTO(order.getIdOrder(), order.getOrderNumber(), companyId, "PARRILLERO"));
+        }
+    }
+
+    /**
+     * Sends a print-ticket WebSocket notification to the specific user who processed
+     * the payment. Using convertAndSendToUser ensures only THAT user's printer-agent
+     * receives the event — so two cashiers each with their own PC and printer will
+     * only print on the PC that actually processed the payment, matching the old
+     * list.html flash-attribute behavior.
+     * <p>
+     * DELIVERY orders are excluded: the delivery person is remote and ticket printing
+     * at the restaurant is not needed.
+     *
+     * @param order          The order that was paid
+     * @param paidByUsername The Spring Security username of who processed the payment
+     */
+    public void notifyPrintTicket(Order order, String paidByUsername) {
+        if (order == null || order.getCompany() == null || paidByUsername == null) return;
+        Long companyId = order.getCompany().getIdCompany();
+        if (companyId == null) return;
+        // Use a company+user scoped topic so server-side isolation is guaranteed.
+        // Two companies sharing the same username receive messages on different topics:
+        //   /topic/print/ticket/1/juan  ≠  /topic/print/ticket/2/juan
+        // This makes manipulation of the client-side companyId check irrelevant.
+        messagingTemplate.convertAndSend(
+            "/topic/print/ticket/" + companyId + "/" + paidByUsername,
+            new PrintTicketNotificationDTO(order.getIdOrder(), order.getOrderNumber(), companyId));
+        log.info("Ticket print WS notification sent to user '{}' (company {}) for order {}",
+            paidByUsername, companyId, order.getOrderNumber());
+    }
+
+    /**
+     * Checks whether any item in the list belongs to the given preparation type.
+     * Uses preparationTypeSnapshot first; falls back to live ItemMenu flags for legacy rows.
+     */
+    private boolean hasPreparationTypeInItems(java.util.List<OrderDetail> items, String preparationType) {
+        return items.stream().anyMatch(d -> {
+            if (Boolean.TRUE.equals(d.getIsComboParentSnapshot())) return false;
+            String snap = d.getPreparationTypeSnapshot();
+            if (snap != null) {
+                return preparationType.equals(snap) && !"COMBO".equals(snap);
+            }
+            if (d.getItemMenu() == null) return false;
+            return switch (preparationType) {
+                case "CHEF"       -> Boolean.TRUE.equals(d.getItemMenu().getRequiresPreparation());
+                case "BARISTA"    -> Boolean.TRUE.equals(d.getItemMenu().getRequiresBaristaPreparation());
+                case "PARRILLERO" -> Boolean.TRUE.equals(d.getItemMenu().getRequiresParrilleroPreparation());
+                default -> false;
+            };
+        });
     }
 
     /**

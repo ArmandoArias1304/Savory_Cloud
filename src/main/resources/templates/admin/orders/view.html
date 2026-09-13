@@ -841,6 +841,25 @@
                 <span class="material-symbols-outlined">edit</span>
                 Editar Pedido
               </a>
+              <!-- Print Comanda via QZ Tray -->
+              <div class="flex gap-2">
+                <select id="comandaType"
+                        class="flex-shrink-0 px-2 py-3 rounded-xl bg-emerald-700 dark:bg-emerald-800 text-white text-xs font-medium border-0 focus:ring-2 focus:ring-primary cursor-pointer">
+                  <option value="KITCHEN">Cocina</option>
+                  <option value="BAR">Barra</option>
+                  <option value="PARRILLERO">Parrillero</option>
+                </select>
+                <button
+                  id="btn-print-comanda"
+                  th:data-order-id="${order.idOrder}"
+                  onclick="printComandaFromView(this)"
+                  class="flex items-center justify-center gap-2 flex-1 px-4 py-3 rounded-xl bg-emerald-600 dark:bg-emerald-700 hover:bg-emerald-700 dark:hover:bg-emerald-600 text-white font-semibold transition-all shadow-md hover:shadow-lg"
+                >
+                  <span class="material-symbols-outlined">restaurant</span>
+                  Imprimir Comanda
+                </button>
+              </div>
+
               <!-- Print Ticket via QZ Tray / PDF fallback -->
               <button
                 id="btn-print-ticket"
@@ -874,6 +893,49 @@
 
     <script th:inline="javascript">
       /*<![CDATA[*/
+
+      var COMPANY_ID = /*[[${order.company != null ? order.company.idCompany : 0}]]*/ 0;
+
+      function ticketPrinterStorageKey() {
+        return "ticketPrinter_" + COMPANY_ID;
+      }
+
+      function resolveTicketPrinterName() {
+        var key = ticketPrinterStorageKey();
+        var stored = localStorage.getItem(key);
+        return qz.printers.getList().then(function (list) {
+          if (stored) {
+            var listLower = (list || []).map(function (p) { return String(p).toLowerCase(); });
+            if (listLower.indexOf(stored.toLowerCase()) >= 0) return stored;
+          }
+          if (!list || list.length === 0) return qz.printers.getDefault();
+          if (list.length === 1) {
+            localStorage.setItem(key, list[0]);
+            return list[0];
+          }
+          var inputOptions = {};
+          list.forEach(function (p) { inputOptions[p] = p; });
+          var isDark = document.documentElement.classList.contains("dark");
+          return Swal.fire({
+            title: "Selecciona impresora de tickets",
+            text: "Elige qué impresora se usará para los tickets de cobro en esta PC.",
+            input: "select",
+            inputOptions: inputOptions,
+            inputPlaceholder: "-- Selecciona --",
+            showCancelButton: true,
+            confirmButtonText: "Seleccionar",
+            cancelButtonText: "Cancelar",
+            background: isDark ? "#1f2937" : "#ffffff",
+            color: isDark ? "#f3f4f6" : "#1f2937",
+          }).then(function (result) {
+            if (result.isConfirmed && result.value) {
+              localStorage.setItem(key, result.value);
+              return result.value;
+            }
+            return null;
+          });
+        });
+      }
 
       // ========== Accept TO_ACCEPT items ==========
       function acceptToAcceptItems(btn) {
@@ -974,6 +1036,88 @@
           });
       }
 
+      // ========== Comanda Print via QZ Tray ==========
+      async function printComandaFromView(btn) {
+        var orderId = btn.dataset.orderId;
+        var type = document.getElementById("comandaType").value;
+        var isDark = document.documentElement.classList.contains("dark");
+        var swalBg    = isDark ? "#1f2937" : "#ffffff";
+        var swalColor = isDark ? "#f3f4f6" : "#1f2937";
+
+        // Get configured printers from server
+        var printerName;
+        try {
+          var resp = await fetch("/api/printers");
+          var printerList = await resp.json();
+          var found = printerList.find(function(p) { return p.printerType === type; });
+          printerName = found ? found.name : null;
+        } catch(e) {
+          Swal.fire({ icon:"error", title:"Error", text:"No se pudo obtener la configuración de impresoras", background:swalBg, color:swalColor });
+          return;
+        }
+
+        if (!printerName) {
+          var _typeLabel = {KITCHEN:"Cocina",BAR:"Barra",PARRILLERO:"Parrillero"}[type] || type;
+          Swal.fire({ icon:"warning", title:"Sin impresora configurada",
+            text:"No hay impresora configurada para comandas de " + _typeLabel + ". Configúrala en Administración → Impresoras de Comanda.",
+            background:swalBg, color:swalColor });
+          return;
+        }
+
+        if (typeof qz === "undefined" || !qz.websocket) {
+          Swal.fire({ icon:"error", title:"QZ Tray no disponible", text:"Instala y abre QZ Tray para imprimir comandas.", background:swalBg, color:swalColor });
+          return;
+        }
+
+        try {
+          if (!qz.websocket.isActive()) await qz.websocket.connect();
+
+          var availList = await qz.printers.getList();
+          var availLower = availList.map(function(p) { return p.toLowerCase(); });
+          if (availLower.indexOf(printerName.toLowerCase()) < 0) {
+            Swal.fire({ icon:"warning", title:"Impresora no encontrada",
+              html:"La impresora <b>" + printerName + "</b> no está instalada en esta PC. Verifique que coincide con el nombre exacto en Windows.",
+              background:swalBg, color:swalColor });
+            return;
+          }
+
+          btn.disabled = true;
+          btn.classList.add("opacity-50", "cursor-not-allowed");
+
+          var apiResp = await fetch("/api/print/comanda/" + orderId + "?type=" + type);
+          if (apiResp.status === 204) {
+            Swal.fire({ icon:"info", title:"Sin ítems",
+              text:"Este pedido no tiene ítems para " + type + ".",
+              timer:2000, showConfirmButton:false, background:swalBg, color:swalColor });
+            btn.disabled = false; btn.classList.remove("opacity-50","cursor-not-allowed");
+            return;
+          }
+          if (!apiResp.ok) throw new Error("HTTP " + apiResp.status);
+
+          var buf = await apiResp.arrayBuffer();
+          var bytes = new Uint8Array(buf);
+          var binary = "";
+          for (var i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+          var b64 = btoa(binary);
+
+          var config = qz.configs.create(printerName);
+          await qz.print(config, [{ type:"raw", format:"base64", data:b64 }]);
+
+          btn.disabled = false; btn.classList.remove("opacity-50","cursor-not-allowed");
+          Swal.fire({ icon:"success", title:"Comanda enviada",
+            text:"Comanda de " + type + " enviada a la impresora.",
+            timer:1800, showConfirmButton:false, background:swalBg, color:swalColor });
+
+        } catch(e) {
+          btn.disabled = false; btn.classList.remove("opacity-50","cursor-not-allowed");
+          console.error("Error imprimiendo comanda:", e);
+          Swal.fire({ icon:"error", title:"Error al imprimir",
+            text:"No se pudo imprimir la comanda: " + e.message,
+            background:swalBg, color:swalColor });
+        }
+      }
+      // ========== END Comanda Print ==========
+
       // ========== QZ Tray Ticket Printing ==========
       var _printingInProgress = false;
       function printTicketFromView(btn) {
@@ -1028,7 +1172,8 @@
             for (var i = 0; i < bytes.length; i++)
               binary += String.fromCharCode(bytes[i]);
             var b64 = btoa(binary);
-            return qz.printers.getDefault().then(function (printer) {
+            return resolveTicketPrinterName().then(function (printer) {
+              if (!printer) throw new Error("No se seleccionó impresora de tickets");
               var config = qz.configs.create(printer);
               return qz.print(config, [
                 { type: "raw", format: "base64", data: b64 },

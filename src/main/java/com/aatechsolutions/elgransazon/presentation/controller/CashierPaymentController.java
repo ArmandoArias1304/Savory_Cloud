@@ -236,17 +236,9 @@ public class CashierPaymentController {
             log.info("Order {} updated with tip: {}, payment method: {}, and paid by: {}", 
                      order.getOrderNumber(), tip, paymentMethod, cashier.getFullName());
 
-            // Change status to PAID
-            // This will automatically free the table if applicable
-            cashierOrderService.changeStatus(orderId, OrderStatus.PAID, username);
-
-            log.info("Payment processed successfully by cashier {} for order: {}", username, order.getOrderNumber());
-            
-            // Reload order to get updated values
-            order = cashierOrderService.findByIdWithDetails(orderId).orElse(order);
-            final var paidOrder = order;
-
-            // Generate autofactura key (if Facturama billing is configured for this company)
+            // Autofactura key MUST be saved before changeStatus(PAID): that method notifies
+            // the printer agent immediately, and the ticket needs the QR already present.
+            final Order orderForBilling = order;
             try {
                 facturamaService.getConfigForCurrentCompany()
                     .filter(com.aatechsolutions.elgransazon.domain.entity.FacturamaConfig::isReady)
@@ -259,14 +251,21 @@ public class CashierPaymentController {
                         String baseUrl = req.getScheme() + "://" + req.getServerName()
                                 + (req.getServerPort() == 80 || req.getServerPort() == 443 ? "" : ":" + req.getServerPort());
                         String selfInvoiceUrl = baseUrl + "/autofactura/" + autofacturaKey;
-                        paidOrder.setAutofacturaKey(autofacturaKey);
-                        paidOrder.setSelfInvoiceUrl(selfInvoiceUrl);
-                        orderRepository.save(paidOrder);
-                        log.info("Autofactura key generated for order: {}", paidOrder.getOrderNumber());
+                        orderForBilling.setAutofacturaKey(autofacturaKey);
+                        orderForBilling.setSelfInvoiceUrl(selfInvoiceUrl);
+                        orderRepository.save(orderForBilling);
+                        log.info("Autofactura key generated for order: {}", orderForBilling.getOrderNumber());
                     });
             } catch (Exception ex) {
                 log.warn("Autofactura key generation failed (non-blocking): {}", ex.getMessage());
             }
+
+            // Change status to PAID (frees the table and triggers ticket auto-print)
+            cashierOrderService.changeStatus(orderId, OrderStatus.PAID, username);
+
+            log.info("Payment processed successfully by cashier {} for order: {}", username, order.getOrderNumber());
+
+            order = cashierOrderService.findByIdWithDetails(orderId).orElse(order);
 
             redirectAttributes.addFlashAttribute("successMessage",
                     "Pago procesado exitosamente para el pedido " + order.getOrderNumber() + 

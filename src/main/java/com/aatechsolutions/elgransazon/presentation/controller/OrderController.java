@@ -55,6 +55,7 @@ public class OrderController {
     private final BusinessHoursService businessHoursService;
     private final TicketPdfService ticketPdfService;
     private final TicketEscPosService ticketEscPosService;
+    private final ComandaEscPosService comandaEscPosService;
     private final com.aatechsolutions.elgransazon.domain.repository.ComplementRepository complementRepository;
     private final com.aatechsolutions.elgransazon.domain.repository.ItemMenuComplementRepository itemMenuComplementRepository;
     private final com.aatechsolutions.elgransazon.domain.repository.ItemMenuComboItemRepository itemMenuComboItemRepository;
@@ -86,6 +87,7 @@ public class OrderController {
             BusinessHoursService businessHoursService,
             TicketPdfService ticketPdfService,
             TicketEscPosService ticketEscPosService,
+            ComandaEscPosService comandaEscPosService,
             com.aatechsolutions.elgransazon.domain.repository.ComplementRepository complementRepository,
             com.aatechsolutions.elgransazon.domain.repository.ItemMenuComplementRepository itemMenuComplementRepository,
             com.aatechsolutions.elgransazon.domain.repository.ItemMenuComboItemRepository itemMenuComboItemRepository,
@@ -115,6 +117,7 @@ public class OrderController {
         this.businessHoursService = businessHoursService;
         this.ticketPdfService = ticketPdfService;
         this.ticketEscPosService = ticketEscPosService;
+        this.comandaEscPosService = comandaEscPosService;
         this.complementRepository = complementRepository;
         this.itemMenuComplementRepository = itemMenuComplementRepository;
         this.itemMenuComboItemRepository = itemMenuComboItemRepository;
@@ -3865,6 +3868,60 @@ public class OrderController {
             return ResponseEntity.notFound().build();
         } catch (Exception e) {
             log.error("Error generating ESC/POS ticket for order {}", orderId, e);
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    /**
+     * Download ESC/POS raw comanda for a given preparation type (for kitchen thermal printers via QZ Tray)
+     * GET /{role}/orders/{orderId}/download-comanda-raw?type=KITCHEN|BAR|PARRILLERO
+     * Returns HTTP 204 No Content when the order has no items for the requested type.
+     */
+    @GetMapping("/{orderId}/download-comanda-raw")
+    public ResponseEntity<byte[]> downloadComandaRaw(
+            @PathVariable String role,
+            @PathVariable Long orderId,
+            @org.springframework.web.bind.annotation.RequestParam String type,
+            Authentication authentication) {
+
+        log.info("User {} downloading ESC/POS comanda ({}) for order {}", authentication.getName(), type, orderId);
+
+        validateRole(role, authentication);
+
+        com.aatechsolutions.elgransazon.domain.entity.PrinterType printerType;
+        try {
+            printerType = com.aatechsolutions.elgransazon.domain.entity.PrinterType.valueOf(type.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        try {
+            OrderService orderService = getOrderService(role);
+            Order order = orderService.findByIdWithDetails(orderId)
+                    .orElseThrow(() -> new IllegalArgumentException("Orden no encontrada"));
+
+            byte[] escposBytes = comandaEscPosService.generateComanda(order, printerType);
+
+            if (escposBytes.length == 0) {
+                // No items for this printer type in this order
+                return ResponseEntity.noContent().build();
+            }
+
+            org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+            headers.setContentType(org.springframework.http.MediaType.APPLICATION_OCTET_STREAM);
+            headers.setContentDispositionFormData("attachment",
+                    "comanda_" + type.toLowerCase() + "_" + order.getOrderNumber() + ".bin");
+            headers.setCacheControl("no-cache, no-store, must-revalidate");
+
+            return ResponseEntity.ok()
+                    .headers(headers)
+                    .body(escposBytes);
+
+        } catch (IllegalArgumentException e) {
+            log.warn("Order not found for comanda: {}", orderId);
+            return ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            log.error("Error generating ESC/POS comanda for order {}", orderId, e);
             return ResponseEntity.internalServerError().build();
         }
     }
