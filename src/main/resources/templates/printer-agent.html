@@ -313,7 +313,10 @@
       }
 
       // ── Print a comanda ──
-      async function printComanda(orderId, orderNumber, type) {
+      // The server returns only the items of that station that are still pending to print,
+      // so a comanda never repeats what already went out and a missed event is recovered
+      // by the next comanda of the same station. announcedIds is only used for logging.
+      async function printComanda(orderId, orderNumber, type, announcedIds) {
         var printerName = printers[type];
         if (!printerName) {
           log("No hay impresora configurada para " + type + " — omitido", "warn");
@@ -334,13 +337,18 @@
             return;
           }
 
-          log("Descargando comanda " + type + " para pedido #" + orderNumber + "...");
+          var announced = (announcedIds && announcedIds.length) ? announcedIds.length : 0;
+          log("Descargando comanda " + type + " para pedido #" + orderNumber
+              + (announced ? " (" + announced + " ítem(s) nuevos anunciados)" : "") + "...");
 
           var resp = await fetch("/api/print/comanda/" + orderId + "?type=" + type);
           if (resp.status === 204) {
-            log("Pedido #" + orderNumber + ": sin ítems para " + type, "warn");
+            log("Pedido #" + orderNumber + ": sin ítems nuevos para " + type, "warn");
             return;
           }
+
+          // Ids que realmente se imprimieron (el servidor decide el conjunto final)
+          var printedIds = (resp.headers.get("X-Comanda-Detail-Ids") || "").split(",").filter(function(x) { return x; });
           if (!resp.ok) {
             log("Error HTTP " + resp.status + " al descargar comanda " + type, "error");
             return;
@@ -358,6 +366,18 @@
           log("✓ Comanda " + type + " impresa — pedido #" + orderNumber, "success");
           recordLastPrint(type);
           updatePrinterCard(type, printerName, true);
+
+          // Confirmar la impresión: esos ítems ya no vuelven a salir en la próxima comanda.
+          // Si el fetch falla, se reimprimen en la siguiente comanda de esa estación.
+          if (printedIds.length) {
+            try {
+              await fetch("/api/print/comanda/" + orderId + "/ack?type=" + type
+                         + "&details=" + printedIds.join(","), { method: "POST" });
+              log("Confirmados " + printedIds.length + " ítem(s) de la comanda " + type, "success");
+            } catch (ackErr) {
+              log("No se pudo confirmar la comanda " + type + ": " + ackErr, "warn");
+            }
+          }
 
         } catch (e) {
           log("Error al imprimir comanda " + type + ": " + e, "error");
@@ -378,19 +398,19 @@
             stompClient.subscribe("/topic/print/comanda/kitchen/" + COMPANY_ID, function(msg) {
               var data = JSON.parse(msg.body);
               log("Evento KITCHEN recibido — pedido #" + data.orderNumber);
-              printComanda(data.orderId, data.orderNumber, "KITCHEN");
+              printComanda(data.orderId, data.orderNumber, "KITCHEN", data.detailIds);
             });
 
             stompClient.subscribe("/topic/print/comanda/bar/" + COMPANY_ID, function(msg) {
               var data = JSON.parse(msg.body);
               log("Evento BAR recibido — pedido #" + data.orderNumber);
-              printComanda(data.orderId, data.orderNumber, "BAR");
+              printComanda(data.orderId, data.orderNumber, "BAR", data.detailIds);
             });
 
             stompClient.subscribe("/topic/print/comanda/parrillero/" + COMPANY_ID, function(msg) {
               var data = JSON.parse(msg.body);
               log("Evento PARRILLERO recibido — pedido #" + data.orderNumber);
-              printComanda(data.orderId, data.orderNumber, "PARRILLERO");
+              printComanda(data.orderId, data.orderNumber, "PARRILLERO", data.detailIds);
             });
 
             // Company+user scoped topic: server-side isolation ensures only THIS user

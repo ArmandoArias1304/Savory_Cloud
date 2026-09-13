@@ -472,20 +472,25 @@ public class WebSocketNotificationService {
         Long companyId = order.getCompany() != null ? order.getCompany().getIdCompany() : null;
         if (companyId == null) return;
 
-        if (hasPreparationTypeInItems(items, "CHEF")) {
+        // Send the ids of the items of each station so the agent prints ONLY those items
+        // (never the whole order) and can mark them as printed when the ticket comes out.
+        java.util.List<Long> kitchenIds = detailIdsForPreparationType(items, "CHEF");
+        if (!kitchenIds.isEmpty()) {
             messagingTemplate.convertAndSend(
                 "/topic/print/comanda/kitchen/" + companyId,
-                new PrintComandaNotificationDTO(order.getIdOrder(), order.getOrderNumber(), companyId, "KITCHEN"));
+                new PrintComandaNotificationDTO(order.getIdOrder(), order.getOrderNumber(), companyId, "KITCHEN", kitchenIds));
         }
-        if (hasPreparationTypeInItems(items, "BARISTA")) {
+        java.util.List<Long> barIds = detailIdsForPreparationType(items, "BARISTA");
+        if (!barIds.isEmpty()) {
             messagingTemplate.convertAndSend(
                 "/topic/print/comanda/bar/" + companyId,
-                new PrintComandaNotificationDTO(order.getIdOrder(), order.getOrderNumber(), companyId, "BAR"));
+                new PrintComandaNotificationDTO(order.getIdOrder(), order.getOrderNumber(), companyId, "BAR", barIds));
         }
-        if (hasPreparationTypeInItems(items, "PARRILLERO")) {
+        java.util.List<Long> parrilleroIds = detailIdsForPreparationType(items, "PARRILLERO");
+        if (!parrilleroIds.isEmpty()) {
             messagingTemplate.convertAndSend(
                 "/topic/print/comanda/parrillero/" + companyId,
-                new PrintComandaNotificationDTO(order.getIdOrder(), order.getOrderNumber(), companyId, "PARRILLERO"));
+                new PrintComandaNotificationDTO(order.getIdOrder(), order.getOrderNumber(), companyId, "PARRILLERO", parrilleroIds));
         }
     }
 
@@ -522,20 +527,31 @@ public class WebSocketNotificationService {
      * Uses preparationTypeSnapshot first; falls back to live ItemMenu flags for legacy rows.
      */
     private boolean hasPreparationTypeInItems(java.util.List<OrderDetail> items, String preparationType) {
-        return items.stream().anyMatch(d -> {
-            if (Boolean.TRUE.equals(d.getIsComboParentSnapshot())) return false;
-            String snap = d.getPreparationTypeSnapshot();
-            if (snap != null) {
-                return preparationType.equals(snap) && !"COMBO".equals(snap);
-            }
-            if (d.getItemMenu() == null) return false;
-            return switch (preparationType) {
-                case "CHEF"       -> Boolean.TRUE.equals(d.getItemMenu().getRequiresPreparation());
-                case "BARISTA"    -> Boolean.TRUE.equals(d.getItemMenu().getRequiresBaristaPreparation());
-                case "PARRILLERO" -> Boolean.TRUE.equals(d.getItemMenu().getRequiresParrilleroPreparation());
-                default -> false;
-            };
-        });
+        return !detailIdsForPreparationType(items, preparationType).isEmpty();
+    }
+
+    /**
+     * Ids of the items in the list that belong to the given preparation type.
+     */
+    private java.util.List<Long> detailIdsForPreparationType(java.util.List<OrderDetail> items, String preparationType) {
+        return items.stream()
+            .filter(d -> {
+                if (Boolean.TRUE.equals(d.getIsComboParentSnapshot())) return false;
+                String snap = d.getPreparationTypeSnapshot();
+                if (snap != null) {
+                    return preparationType.equals(snap) && !"COMBO".equals(snap);
+                }
+                if (d.getItemMenu() == null) return false;
+                return switch (preparationType) {
+                    case "CHEF"       -> Boolean.TRUE.equals(d.getItemMenu().getRequiresPreparation());
+                    case "BARISTA"    -> Boolean.TRUE.equals(d.getItemMenu().getRequiresBaristaPreparation());
+                    case "PARRILLERO" -> Boolean.TRUE.equals(d.getItemMenu().getRequiresParrilleroPreparation());
+                    default -> false;
+                };
+            })
+            .map(OrderDetail::getIdOrderDetail)
+            .filter(java.util.Objects::nonNull)
+            .collect(java.util.stream.Collectors.toList());
     }
 
     /**

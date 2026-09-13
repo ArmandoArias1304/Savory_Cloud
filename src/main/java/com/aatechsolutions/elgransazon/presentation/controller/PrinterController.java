@@ -5,6 +5,7 @@ import com.aatechsolutions.elgransazon.application.service.OrderService;
 import com.aatechsolutions.elgransazon.application.service.PrinterService;
 import com.aatechsolutions.elgransazon.application.service.TicketEscPosService;
 import com.aatechsolutions.elgransazon.domain.entity.Order;
+import com.aatechsolutions.elgransazon.domain.entity.OrderDetail;
 import com.aatechsolutions.elgransazon.domain.entity.Printer;
 import com.aatechsolutions.elgransazon.domain.entity.PrinterType;
 import com.aatechsolutions.elgransazon.infrastructure.context.CompanyContext;
@@ -20,7 +21,9 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 /**
  * Handles admin CRUD for Printer configuration and exposes API endpoints
@@ -32,6 +35,20 @@ public class PrinterController {
 
     static final String STAFF =
             "hasAnyRole('ROLE_ADMIN', 'ROLE_MANAGER', 'ROLE_WAITER', 'ROLE_CHEF', 'ROLE_BARISTA', 'ROLE_PARRILLERO', 'ROLE_CASHIER')";
+
+    /**
+     * Roles allowed to manage (view/create/edit/delete) the comanda printers.
+     * CASHIER is intentionally excluded: the cashier only opens the printing agent
+     * (/printer-agent), which is covered by STAFF.
+     */
+    static final String PRINTERS_MANAGER =
+            "hasAnyRole('ROLE_ADMIN', 'ROLE_MANAGER')";
+
+    /**
+     * Response header carrying the order-detail ids that were actually printed, so the
+     * client can confirm them with the ack endpoint after a successful print.
+     */
+    private static final String HEADER_COMANDA_DETAIL_IDS = "X-Comanda-Detail-Ids";
 
     private final PrinterService printerService;
     private final ComandaEscPosService comandaEscPosService;
@@ -58,7 +75,7 @@ public class PrinterController {
      * GET /admin/printers
      */
     @GetMapping("/admin/printers")
-    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_MANAGER')")
+    @PreAuthorize(PRINTERS_MANAGER)
     public String list(Model model) {
         List<Printer> printers = printerService.findAll();
 
@@ -79,7 +96,7 @@ public class PrinterController {
      * POST /admin/printers/save
      */
     @PostMapping("/admin/printers/save")
-    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_MANAGER')")
+    @PreAuthorize(PRINTERS_MANAGER)
     public String save(
             @RequestParam(required = false) Long id,
             @RequestParam String name,
@@ -88,11 +105,15 @@ public class PrinterController {
             RedirectAttributes ra) {
 
         try {
+            // The printer form sends an empty (or absent) ipAddress for most printers, so
+            // null and blank must be treated the same; never call methods on the raw value.
+            String normalizedIp = (ipAddress == null || ipAddress.isBlank()) ? null : ipAddress.trim();
+
             Printer printer = new Printer();
             printer.setId(id);
-            printer.setName(name.trim());
+            printer.setName(name == null ? "" : name.trim());
             printer.setPrinterType(printerType);
-            printer.setIpAddress(ipAddress.isBlank() ? null : ipAddress.trim());
+            printer.setIpAddress(normalizedIp);
 
             printerService.save(printer);
             ra.addFlashAttribute("successMessage", "Impresora guardada correctamente");
@@ -110,7 +131,7 @@ public class PrinterController {
      * POST /admin/printers/{id}/delete
      */
     @PostMapping("/admin/printers/{id}/delete")
-    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_MANAGER')")
+    @PreAuthorize(PRINTERS_MANAGER)
     public String delete(@PathVariable Long id, RedirectAttributes ra) {
         try {
             printerService.deleteById(id);
@@ -171,14 +192,21 @@ public class PrinterController {
 
     /**
      * Download ESC/POS comanda bytes for a given order and printer type.
-     * GET /api/print/comanda/{orderId}?type=KITCHEN|BAR|PARRILLERO
+     * GET /api/print/comanda/{orderId}?type=KITCHEN|BAR|PARRILLERO&mode=delta|full
+     *
+     * mode=delta (default): every item of that station that was NOT printed yet, which is what
+     *   the printer agent uses automatically. A ticket never repeats what already went out
+     *   (paper has no live status) and a missed event is picked up by the next comanda.
+     *   Returns 204 when the station has nothing pending.
+     * mode=full: complete comanda of the station, for manual reprints.
      */
     @GetMapping("/api/print/comanda/{orderId}")
     @ResponseBody
     @PreAuthorize(STAFF)
     public ResponseEntity<byte[]> apiDownloadComanda(
             @PathVariable Long orderId,
-            @RequestParam String type) {
+            @RequestParam String type,
+            @RequestParam(required = false, defaultValue = "delta") String mode) {
 
         PrinterType printerType;
         try {
@@ -193,14 +221,66 @@ public class PrinterController {
                 return ResponseEntity.notFound().build();
             }
 
-            byte[] bytes = comandaEscPosService.generateComanda(order, printerType);
+            boolean full = "full".equalsIgnoreCase(mode);
+            List<OrderDetail> items = full
+                    ? comandaEscPosService.stationItems(order, printerType)
+                    : comandaEscPosService.pendingItems(order, printerType);
+
+            byte[] bytes = comandaEscPosService.generateComanda(order, printerType, items, !full);
             if (bytes.length == 0) {
+                log.debug("No pending comanda items for {} on order {} (mode={})", printerType, order.getOrderNumber(), mode);
                 return ResponseEntity.noContent().build();
             }
 
-            return octetStream(bytes, "comanda_" + type.toLowerCase() + "_" + order.getOrderNumber() + ".bin");
+            String printedIds = items.stream()
+                    .map(OrderDetail::getIdOrderDetail)
+                    .filter(Objects::nonNull)
+                    .map(String::valueOf)
+                    .collect(Collectors.joining(","));
+
+            org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
+            headers.setContentDispositionFormData("attachment",
+                    "comanda_" + (full ? "completa_" : "nuevos_") + type.toLowerCase()
+                            + "_" + order.getOrderNumber() + ".bin");
+            headers.setCacheControl("no-cache, no-store, must-revalidate");
+            headers.add(HEADER_COMANDA_DETAIL_IDS, printedIds);
+
+            return ResponseEntity.ok().headers(headers).body(bytes);
         } catch (Exception e) {
             log.error("Error generating comanda for order {}", orderId, e);
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    /**
+     * Confirms that a comanda was printed, so those items are never printed again on this station.
+     * POST /api/print/comanda/{orderId}/ack?type=KITCHEN&details=1,2,3   (or &all=true)
+     *
+     * Called by the printer agent (and by the manual "solo pendientes" button) AFTER a successful
+     * print. If the print fails nothing is confirmed and the items go out again on the next comanda.
+     */
+    @PostMapping("/api/print/comanda/{orderId}/ack")
+    @ResponseBody
+    @PreAuthorize(STAFF)
+    public ResponseEntity<Map<String, Object>> apiAckComanda(
+            @PathVariable Long orderId,
+            @RequestParam String type,
+            @RequestParam(required = false) List<Long> details,
+            @RequestParam(required = false, defaultValue = "false") boolean all) {
+
+        PrinterType printerType;
+        try {
+            printerType = PrinterType.valueOf(type.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        try {
+            int marked = comandaEscPosService.markComandaPrinted(orderId, printerType, details, all);
+            return ResponseEntity.ok(Map.of("marked", marked));
+        } catch (Exception e) {
+            log.error("Error marking comanda as printed for order {} ({})", orderId, printerType, e);
             return ResponseEntity.internalServerError().build();
         }
     }

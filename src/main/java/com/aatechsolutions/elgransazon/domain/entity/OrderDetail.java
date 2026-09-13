@@ -149,6 +149,61 @@ public class OrderDetail implements Serializable {
     @Column(name = "prepared_by")
     private String preparedBy;
 
+    // ========== Comanda print tracking (one marker per station) ==========
+
+    /**
+     * Timestamp when this item was already printed on the station's comanda printer.
+     * NULL means "not printed yet" → it will be included in the next comanda of that station.
+     *
+     * Why: paper tickets have no live status, so a comanda must only carry the items that
+     * are new since the previous printed comanda. The marker is set by the printer agent
+     * once the ticket has actually been printed (see ComandaEscPosService.markComandaPrinted).
+     */
+    @Column(name = "comanda_printed_kitchen_at")
+    private LocalDateTime comandaPrintedKitchenAt;
+
+    @Column(name = "comanda_printed_bar_at")
+    private LocalDateTime comandaPrintedBarAt;
+
+    @Column(name = "comanda_printed_parrillero_at")
+    private LocalDateTime comandaPrintedParrilleroAt;
+
+    /**
+     * Timestamp of the last comanda print for the given station, or null when it was never printed.
+     */
+    public LocalDateTime getComandaPrintedAt(PrinterType printerType) {
+        if (printerType == null) {
+            return null;
+        }
+        return switch (printerType) {
+            case KITCHEN -> comandaPrintedKitchenAt;
+            case BAR -> comandaPrintedBarAt;
+            case PARRILLERO -> comandaPrintedParrilleroAt;
+        };
+    }
+
+    /**
+     * True when this item already went out on a printed comanda for that station.
+     */
+    public boolean isComandaPrintedFor(PrinterType printerType) {
+        return getComandaPrintedAt(printerType) != null;
+    }
+
+    /**
+     * Marks this item as already printed on the given station's comanda.
+     */
+    public void markComandaPrintedFor(PrinterType printerType) {
+        if (printerType == null) {
+            return;
+        }
+        LocalDateTime now = LocalDateTime.now();
+        switch (printerType) {
+            case KITCHEN -> comandaPrintedKitchenAt = now;
+            case BAR -> comandaPrintedBarAt = now;
+            case PARRILLERO -> comandaPrintedParrilleroAt = now;
+        }
+    }
+
     // ========== Combo Grouping ==========
 
     /**

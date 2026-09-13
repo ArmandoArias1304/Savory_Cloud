@@ -359,7 +359,8 @@
         }
         document.getElementById("saveType").value = type;
         document.getElementById("saveName").value = name;
-        document.getElementById("saveIp").value = (c.querySelector(".printer-ip").value || "").trim();
+        var ipInput = c.querySelector(".printer-ip");
+        document.getElementById("saveIp").value = ipInput ? (ipInput.value || "").trim() : "";
         document.getElementById("saveForm").submit();
       }
 

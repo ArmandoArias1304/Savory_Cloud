@@ -814,11 +814,22 @@
                 <button
                   id="btn-print-comanda"
                   th:data-order-id="${order.idOrder}"
-                  onclick="printComandaFromView(this)"
-                  class="flex items-center justify-center gap-2 flex-1 px-4 py-3 rounded-xl bg-emerald-600 dark:bg-emerald-700 hover:bg-emerald-700 dark:hover:bg-emerald-600 text-white font-semibold transition-all shadow-md hover:shadow-lg"
+                  onclick="printComandaFromView(this, 'full')"
+                  title="Reimprime la comanda completa de esa estación"
+                  class="flex items-center justify-center gap-2 flex-1 px-3 py-3 rounded-xl bg-emerald-600 dark:bg-emerald-700 hover:bg-emerald-700 dark:hover:bg-emerald-600 text-white text-xs font-semibold transition-all shadow-md hover:shadow-lg"
                 >
                   <span class="material-symbols-outlined">restaurant</span>
-                  Imprimir Comanda
+                  Comanda completa
+                </button>
+                <button
+                  id="btn-print-comanda-pending"
+                  th:data-order-id="${order.idOrder}"
+                  onclick="printComandaFromView(this, 'delta')"
+                  title="Imprime solo los ítems que aún no se han enviado a esa impresora"
+                  class="flex items-center justify-center gap-2 flex-1 px-3 py-3 rounded-xl bg-teal-600 dark:bg-teal-700 hover:bg-teal-700 dark:hover:bg-teal-600 text-white text-xs font-semibold transition-all shadow-md hover:shadow-lg"
+                >
+                  <span class="material-symbols-outlined">playlist_add</span>
+                  Solo pendientes
                 </button>
               </div>
 
@@ -900,9 +911,10 @@
       }
 
       // ========== Comanda Print via QZ Tray ==========
-      async function printComandaFromView(btn) {
+      async function printComandaFromView(btn, mode) {
         var orderId = btn.dataset.orderId;
         var type = document.getElementById("comandaType").value;
+        mode = (mode === "full") ? "full" : "delta";
         var isDark = document.documentElement.classList.contains("dark");
         var swalBg    = isDark ? "#1f2937" : "#ffffff";
         var swalColor = isDark ? "#f3f4f6" : "#1f2937";
@@ -945,13 +957,17 @@
 
           btn.disabled = true; btn.classList.add("opacity-50", "cursor-not-allowed");
 
-          var apiResp = await fetch("/api/print/comanda/" + orderId + "?type=" + type);
+          var apiResp = await fetch("/api/print/comanda/" + orderId + "?type=" + type + "&mode=" + mode);
           if (apiResp.status === 204) {
-            Swal.fire({ icon:"info", title:"Sin ítems", text:"Este pedido no tiene ítems para " + type + ".",
+            Swal.fire({ icon:"info", title:"Sin ítems nuevos",
+              text: (mode === "full" ? "Este pedido no tiene ítems para " : "No hay ítems nuevos por enviar a ") + type + ".",
               timer:2000, showConfirmButton:false, background:swalBg, color:swalColor });
             btn.disabled = false; btn.classList.remove("opacity-50","cursor-not-allowed"); return;
           }
           if (!apiResp.ok) throw new Error("HTTP " + apiResp.status);
+
+          // Ids que realmente se imprimieron: el servidor decide el conjunto final
+          var printedIds = (apiResp.headers.get("X-Comanda-Detail-Ids") || "").split(",").filter(function(x){ return x; });
 
           var buf = await apiResp.arrayBuffer();
           var bytes = new Uint8Array(buf), binary = "";
@@ -961,8 +977,18 @@
           var config = qz.configs.create(printerName);
           await qz.print(config, [{ type:"raw", format:"base64", data:b64 }]);
 
+          // Confirmar la impresión para que estos ítems no vuelvan a salir en la próxima comanda
+          try {
+            if (mode === "full") {
+              await fetch("/api/print/comanda/" + orderId + "/ack?type=" + type + "&all=true", { method:"POST" });
+            } else if (printedIds.length) {
+              await fetch("/api/print/comanda/" + orderId + "/ack?type=" + type + "&details=" + printedIds.join(","), { method:"POST" });
+            }
+          } catch (ackErr) { console.warn("No se pudo confirmar la comanda:", ackErr); }
+
           btn.disabled = false; btn.classList.remove("opacity-50","cursor-not-allowed");
-          Swal.fire({ icon:"success", title:"Comanda enviada", text:"Comanda de " + type + " enviada a la impresora.",
+          Swal.fire({ icon:"success", title:"Comanda enviada",
+            text: (mode === "full" ? "Comanda completa de " : "Ítems nuevos de ") + type + " enviados a la impresora.",
             timer:1800, showConfirmButton:false, background:swalBg, color:swalColor });
         } catch(e) {
           btn.disabled = false; btn.classList.remove("opacity-50","cursor-not-allowed");

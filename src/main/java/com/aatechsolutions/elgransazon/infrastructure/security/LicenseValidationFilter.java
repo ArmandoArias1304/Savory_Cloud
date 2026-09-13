@@ -53,7 +53,12 @@ public class LicenseValidationFilter extends OncePerRequestFilter {
             // Validate license
             SystemLicense license = licenseService.getLicense();
             if (license != null && license.isExpired()) {
-                log.warn("License expired. Blocking access for user: {}", auth.getName());
+                // Log the exact license that caused the block: without this it is
+                // impossible to tell which company's license expired (multi-tenant).
+                log.warn("License expired (licenseId={}, key={}, status={}, expiresAt={} UTC). " +
+                         "Blocking {} {} for user: {}",
+                        license.getId(), license.getLicenseKey(), license.getStatus(),
+                        license.getExpirationDate(), request.getMethod(), requestPath, auth.getName());
 
                 // Sync DB status if the job hasn't run yet (status still ACTIVE in DB)
                 if (license.getStatus() != SystemLicense.LicenseStatus.EXPIRED) {
@@ -82,8 +87,12 @@ public class LicenseValidationFilter extends OncePerRequestFilter {
      */
     private boolean isExcludedPath(String path) {
         return path.startsWith("/login") ||
+               path.startsWith("/perform_login") ||
                path.startsWith("/logout") ||
                path.startsWith("/error") ||
+               path.startsWith("/fonts/") ||
+               path.startsWith("/sounds/") ||
+               path.startsWith("/webjars/") ||
                path.startsWith("/css") ||
                path.startsWith("/js") ||
                path.startsWith("/images") ||

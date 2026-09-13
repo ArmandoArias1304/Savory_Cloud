@@ -445,6 +445,12 @@ public class OrderServiceImpl implements OrderService {
                 newDetail.setPreparedBy(oldDetail.getPreparedBy());
                 newDetail.setIsNewItem(oldDetail.getIsNewItem());
                 newDetail.setAddedAt(oldDetail.getAddedAt());
+
+                // Keep comanda print tracking: editing an order must NOT make the station
+                // printer reprint items that were already sent to the kitchen/bar/grill.
+                newDetail.setComandaPrintedKitchenAt(oldDetail.getComandaPrintedKitchenAt());
+                newDetail.setComandaPrintedBarAt(oldDetail.getComandaPrintedBarAt());
+                newDetail.setComandaPrintedParrilleroAt(oldDetail.getComandaPrintedParrilleroAt());
                 
                 log.info("Restored state for item '{}': status={}, preparedBy={}", 
                         item.getName(), oldDetail.getItemStatus(), oldDetail.getPreparedBy());

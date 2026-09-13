@@ -13,6 +13,7 @@ import org.springframework.security.core.session.SessionRegistry;
 import org.springframework.security.core.session.SessionRegistryImpl;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.session.HttpSessionEventPublisher;
 
 /**
  * Spring Security configuration for stateful session management
@@ -48,6 +49,16 @@ public class SecurityConfig {
     @Bean
     public SessionRegistry sessionRegistry() {
         return new SessionRegistryImpl();
+    }
+
+    /**
+     * Publishes HttpSession destroyed events so the SessionRegistry removes
+     * finished sessions. Without it, dead sessions accumulate and keep being
+     * treated as active logins (maximumSessions/invalidateUserSessions).
+     */
+    @Bean
+    public HttpSessionEventPublisher httpSessionEventPublisher() {
+        return new HttpSessionEventPublisher();
     }
 
     /**
