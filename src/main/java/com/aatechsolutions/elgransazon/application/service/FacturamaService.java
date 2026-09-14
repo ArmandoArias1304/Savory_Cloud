@@ -18,19 +18,24 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDateTime;
 import java.util.*;
 
 /**
  * Service for interacting with the Facturama REST API (Multiemisor mode).
  *
  * Handles:
- * - CSD certificate upload per RFC (forwarded to Facturama, never stored locally)
- * - CFDI 4.0 creation for autofactura (client fills RFC data, we create the CFDI)
+ * - CSD certificate upload per RFC (forwarded to Facturama, never stored
+ * locally)
+ * - CFDI 4.0 creation for autofactura (client fills RFC data, we create the
+ * CFDI)
  * - PDF/XML download from Facturama
  *
  * SECURITY:
- * - CSD files (.cer, .key) and CSD password are NEVER stored — only forwarded to Facturama.
- * - Facturama credentials (user/password) are stored as environment variables, never in DB.
+ * - CSD files (.cer, .key) and CSD password are NEVER stored — only forwarded
+ * to Facturama.
+ * - Facturama credentials (user/password) are stored as environment variables,
+ * never in DB.
  * - Basic Auth is used (base64 of user:password).
  */
 @Service
@@ -43,7 +48,7 @@ public class FacturamaService {
 
     // SAT c_ClaveProdServ codes
     private static final String PROD_CODE_RESTAURANT = "90101500"; // Restaurantes y comida para llevar
-    private static final String PROD_CODE_DELIVERY = "78102203";   // Servicios de mensajería de entrega rápida
+    private static final String PROD_CODE_DELIVERY = "78102203"; // Servicios de mensajería de entrega rápida
 
     private final FacturamaConfigRepository facturamaConfigRepository;
     private final ObjectMapper objectMapper;
@@ -64,14 +69,14 @@ public class FacturamaService {
      * Upload CSD certificates to Facturama for a specific RFC.
      * Files are forwarded directly and NEVER stored locally.
      *
-     * @param config      The Facturama configuration for the company
-     * @param cerFile     The .cer certificate file
-     * @param keyFile     The .key private key file
-     * @param password    The CSD password
-     * @param rfc         The RFC associated with the CSD
+     * @param config   The Facturama configuration for the company
+     * @param cerFile  The .cer certificate file
+     * @param keyFile  The .key private key file
+     * @param password The CSD password
+     * @param rfc      The RFC associated with the CSD
      */
     public void uploadCsd(FacturamaConfig config, MultipartFile cerFile, MultipartFile keyFile,
-                          String password, String rfc) {
+            String password, String rfc) {
         validateCredentials();
 
         log.info("Uploading CSD certificates to Facturama for RFC: {}", rfc);
@@ -90,8 +95,7 @@ public class FacturamaService {
                     getBaseUrl(defaultLiveMode) + "api-lite/csds",
                     HttpMethod.POST,
                     new HttpEntity<>(body.toString(), headers),
-                    JsonNode.class
-            );
+                    JsonNode.class);
 
             config.setRfc(rfc);
             config.setCsdUploaded(true);
@@ -119,8 +123,7 @@ public class FacturamaService {
                     getBaseUrl(defaultLiveMode) + "api-lite/csds/" + config.getRfc(),
                     HttpMethod.DELETE,
                     new HttpEntity<>(headers),
-                    Void.class
-            );
+                    Void.class);
             config.setCsdUploaded(false);
             facturamaConfigRepository.save(config);
             log.info("CSD removed for RFC: {}", config.getRfc());
@@ -133,15 +136,16 @@ public class FacturamaService {
     // ========== Legal Data ==========
 
     /**
-     * Save legal/fiscal data for the company (stored locally, used when creating CFDIs).
+     * Save legal/fiscal data for the company (stored locally, used when creating
+     * CFDIs).
      *
-     * @param config         The Facturama configuration
-     * @param legalName      Legal name (razón social)
-     * @param fiscalRegime   Fiscal regime code (e.g. "601")
+     * @param config          The Facturama configuration
+     * @param legalName       Legal name (razón social)
+     * @param fiscalRegime    Fiscal regime code (e.g. "601")
      * @param expeditionPlace Zip code from where invoices are issued
      */
     public void updateLegalData(FacturamaConfig config, String legalName,
-                                String fiscalRegime, String expeditionPlace) {
+            String fiscalRegime, String expeditionPlace) {
         config.setLegalName(legalName);
         config.setFiscalRegime(fiscalRegime);
         config.setExpeditionPlace(expeditionPlace);
@@ -156,19 +160,19 @@ public class FacturamaService {
      * Create a CFDI 4.0 (Ingreso) via Facturama API Multiemisor for a paid order.
      * Called when the client fills the autofactura form with their fiscal data.
      *
-     * @param order            The paid order
-     * @param config           The Facturama configuration for the issuing company
-     * @param receiverRfc      Client's RFC
-     * @param receiverName     Client's legal name (razón social)
-     * @param receiverRegime   Client's fiscal regime code
-     * @param receiverCfdiUse  Client's CFDI use code (e.g. "G03")
-     * @param receiverZipCode  Client's fiscal zip code
+     * @param order           The paid order
+     * @param config          The Facturama configuration for the issuing company
+     * @param receiverRfc     Client's RFC
+     * @param receiverName    Client's legal name (razón social)
+     * @param receiverRegime  Client's fiscal regime code
+     * @param receiverCfdiUse Client's CFDI use code (e.g. "G03")
+     * @param receiverZipCode Client's fiscal zip code
      * @return Map with cfdi_id and cfdi_uuid
      */
     public Map<String, String> createCfdi(Order order, FacturamaConfig config,
-                                          String receiverRfc, String receiverName,
-                                          String receiverRegime, String receiverCfdiUse,
-                                          String receiverZipCode) {
+            String receiverRfc, String receiverName,
+            String receiverRegime, String receiverCfdiUse,
+            String receiverZipCode) {
         validateCredentials();
 
         if (!config.isReady()) {
@@ -209,11 +213,11 @@ public class FacturamaService {
             // as individual lines to preserve the exact detail of the order.
             //
             // Two-pass build:
-            //   1) Collect all candidate lines with their tax-included totals (pre-discount).
-            //   2) If order.hasOrderDiscount(), distribute the discount pro-rata across the
-            //      lines (with last-line residual absorption) and emit Concepto.Descuento per
-            //      line — required by SAT CFDI 4.0, which validates
-            //      Comprobante.Discount == Σ Concepto.Descuento and disallows negative concepts.
+            // 1) Collect all candidate lines with their tax-included totals (pre-discount).
+            // 2) If order.hasOrderDiscount(), distribute the discount pro-rata across the
+            // lines (with last-line residual absorption) and emit Concepto.Descuento per
+            // line — required by SAT CFDI 4.0, which validates
+            // Comprobante.Discount == Σ Concepto.Descuento and disallows negative concepts.
             List<CfdiLine> candidateLines = new ArrayList<>();
 
             for (OrderDetail detail : order.getOrderDetails()) {
@@ -252,7 +256,8 @@ public class FacturamaService {
             }
 
             // Delivery cost (only for DELIVERY orders, includes IVA like the other items)
-            // SAT ProductCode 78102203 = Servicios de mensajería de entrega rápida (delivery local).
+            // SAT ProductCode 78102203 = Servicios de mensajería de entrega rápida
+            // (delivery local).
             if (order.getOrderType() == OrderType.DELIVERY
                     && order.getDeliveryCost() != null
                     && order.getDeliveryCost().compareTo(BigDecimal.ZERO) > 0) {
@@ -261,13 +266,15 @@ public class FacturamaService {
             }
 
             // A ticket made only of cortesías ($0.00 lines, which are skipped above) has no
-            // fiscal value to bill: fail with a clear message instead of an empty concept list.
+            // fiscal value to bill: fail with a clear message instead of an empty concept
+            // list.
             if (candidateLines.isEmpty()) {
                 throw new IllegalStateException(
                         "No hay conceptos con valor para facturar: el pedido quedó en $0.00 (solo cortesías).");
             }
 
-            // Pro-rata distribution of orderDiscount across line totals (con IVA) + emission.
+            // Pro-rata distribution of orderDiscount across line totals (con IVA) +
+            // emission.
             // After distribution, Σ adjustedLineTotal == order.getTotal() exactly
             // (the last line absorbs any rounding residual).
             ArrayNode items = objectMapper.createArrayNode();
@@ -275,7 +282,8 @@ public class FacturamaService {
 
             body.set("Items", items);
 
-            // Comprobante.Discount must equal Σ Concepto.Descuento (sin IVA), per CFDI 4.0 spec.
+            // Comprobante.Discount must equal Σ Concepto.Descuento (sin IVA), per CFDI 4.0
+            // spec.
             if (sumConceptDiscount.compareTo(BigDecimal.ZERO) > 0) {
                 body.put("Discount", sumConceptDiscount.toPlainString());
             }
@@ -288,8 +296,7 @@ public class FacturamaService {
                     getBaseUrl(defaultLiveMode) + "api-lite/3/cfdis",
                     HttpMethod.POST,
                     new HttpEntity<>(body.toString(), headers),
-                    JsonNode.class
-            );
+                    JsonNode.class);
 
             JsonNode respBody = response.getBody();
             if (respBody == null) {
@@ -314,11 +321,12 @@ public class FacturamaService {
 
     /**
      * Download a CFDI file (PDF or XML) from Facturama.
-     * Facturama returns a JSON object with "Content" field containing Base64-encoded data.
+     * Facturama returns a JSON object with "Content" field containing
+     * Base64-encoded data.
      * Uses the global liveMode setting (FACTURAMA_LIVE_MODE env var).
      *
-     * @param cfdiId   The Facturama CFDI ID
-     * @param format   "pdf" or "xml"
+     * @param cfdiId The Facturama CFDI ID
+     * @param format "pdf" or "xml"
      * @return byte[] of the decoded file content
      */
     public byte[] downloadCfdi(String cfdiId, String format) {
@@ -331,8 +339,7 @@ public class FacturamaService {
                 getBaseUrl(defaultLiveMode) + "cfdi/" + format + "/issuedLite/" + cfdiId,
                 HttpMethod.GET,
                 new HttpEntity<>(headers),
-                JsonNode.class
-        );
+                JsonNode.class);
 
         JsonNode body = response.getBody();
         if (body == null) {
@@ -403,6 +410,104 @@ public class FacturamaService {
     }
 
     /**
+     * Verify API authentication and return only safe connection/CSD metadata.
+     * The Facturama response may contain certificate material, so it must never
+     * be exposed to controllers, views, logs, or clients.
+     */
+    public FacturamaConnectionStatus verifyApiConnection(String rfc) {
+        LocalDateTime checkedAt = LocalDateTime.now();
+        try {
+            validateCredentials();
+
+            ResponseEntity<JsonNode> response = restTemplate.exchange(
+                    getBaseUrl(defaultLiveMode) + "api-lite/csds",
+                    HttpMethod.GET,
+                    new HttpEntity<>(authHeaders(defaultLiveMode)),
+                    JsonNode.class);
+
+            JsonNode csds = response.getBody();
+            int registeredCsdCount = csds != null && csds.isArray() ? csds.size() : 0;
+            List<String> registeredRfcs = getRegisteredRfcs(csds);
+            JsonNode restaurantCsd = findCsd(csds, rfc);
+            boolean restaurantCsdRegistered = restaurantCsd != null;
+            boolean restaurantCsdValid = restaurantCsdRegistered && isCsdValid(restaurantCsd);
+
+            return new FacturamaConnectionStatus(
+                    true,
+                    defaultLiveMode,
+                    true,
+                    registeredCsdCount,
+                    registeredRfcs,
+                    restaurantCsdRegistered,
+                    restaurantCsdValid,
+                    checkedAt,
+                    null);
+        } catch (Exception e) {
+            log.warn("Facturama API connection check failed: {}", e.getMessage());
+            return new FacturamaConnectionStatus(
+                    false,
+                    defaultLiveMode,
+                    false,
+                    0,
+                    List.of(),
+                    false,
+                    false,
+                    checkedAt,
+                    parseFacturamaError(e));
+        }
+    }
+
+    private JsonNode findCsd(JsonNode csds, String rfc) {
+        if (rfc == null || rfc.isBlank() || csds == null || !csds.isArray()) {
+            return null;
+        }
+        for (JsonNode csd : csds) {
+            if (rfc.equalsIgnoreCase(csd.path("Rfc").asText())) {
+                return csd;
+            }
+        }
+        return null;
+    }
+
+    private List<String> getRegisteredRfcs(JsonNode csds) {
+        if (csds == null || !csds.isArray()) {
+            return List.of();
+        }
+        List<String> rfcs = new ArrayList<>();
+        for (JsonNode csd : csds) {
+            String rfc = csd.path("Rfc").asText(null);
+            if (rfc != null && !rfc.isBlank()) {
+                rfcs.add(rfc);
+            }
+        }
+        return List.copyOf(rfcs);
+    }
+
+    private boolean isCsdValid(JsonNode csd) {
+        String expiration = csd.path("CsdExpirationDate").asText(null);
+        if (expiration == null || expiration.isBlank()) {
+            return false;
+        }
+        try {
+            return java.time.OffsetDateTime.parse(expiration).isAfter(java.time.OffsetDateTime.now());
+        } catch (java.time.format.DateTimeParseException e) {
+            return false;
+        }
+    }
+
+    public record FacturamaConnectionStatus(
+            boolean connected,
+            boolean production,
+            boolean apiMultiemisorAvailable,
+            int registeredCsdCount,
+            List<String> registeredRfcs,
+            boolean restaurantCsdRegistered,
+            boolean restaurantCsdValid,
+            LocalDateTime checkedAt,
+            String errorMessage) {
+    }
+
+    /**
      * Initialize a new FacturamaConfig for a company.
      */
     public FacturamaConfig initConfig(Company company) {
@@ -424,7 +529,7 @@ public class FacturamaService {
 
     private void validateCredentials() {
         if (facturamaUser == null || facturamaUser.isBlank() ||
-            facturamaPassword == null || facturamaPassword.isBlank()) {
+                facturamaPassword == null || facturamaPassword.isBlank()) {
             throw new IllegalStateException(
                     "FACTURAMA_USER y FACTURAMA_PASSWORD no están configurados. Contacte al administrador del sistema.");
         }
@@ -443,23 +548,24 @@ public class FacturamaService {
     }
 
     /**
-     * Create a CFDI 4.0 (Ingreso) via Facturama API Multiemisor for ONE account of a
+     * Create a CFDI 4.0 (Ingreso) via Facturama API Multiemisor for ONE account of
+     * a
      * split bill (Payment). Each account invoices independently with its own folio
      * (parent order number + "-XX"), its own lines, totals and payment form.
      *
-     * @param payment          The per-person account (Payment)
-     * @param config           The Facturama configuration for the issuing company
-     * @param receiverRfc      Client's RFC
-     * @param receiverName     Client's legal name (razón social)
-     * @param receiverRegime   Client's fiscal regime code
-     * @param receiverCfdiUse  Client's CFDI use code (e.g. "G03")
-     * @param receiverZipCode  Client's fiscal zip code
+     * @param payment         The per-person account (Payment)
+     * @param config          The Facturama configuration for the issuing company
+     * @param receiverRfc     Client's RFC
+     * @param receiverName    Client's legal name (razón social)
+     * @param receiverRegime  Client's fiscal regime code
+     * @param receiverCfdiUse Client's CFDI use code (e.g. "G03")
+     * @param receiverZipCode Client's fiscal zip code
      * @return Map with cfdi_id and cfdi_uuid
      */
     public Map<String, String> createCfdi(Payment payment, FacturamaConfig config,
-                                          String receiverRfc, String receiverName,
-                                          String receiverRegime, String receiverCfdiUse,
-                                          String receiverZipCode) {
+            String receiverRfc, String receiverName,
+            String receiverRegime, String receiverCfdiUse,
+            String receiverZipCode) {
         validateCredentials();
 
         if (!config.isReady()) {
@@ -476,7 +582,8 @@ public class FacturamaService {
             body.put("Currency", "MXN");
             body.put("ExpeditionPlace", config.getExpeditionPlace());
 
-            // Folio: account folio (parent order number + suffix, e.g. "ORD-20260906-001-02")
+            // Folio: account folio (parent order number + suffix, e.g.
+            // "ORD-20260906-001-02")
             body.put("Folio", payment.getPaymentFolio());
 
             // Issuer (company data from config)
@@ -504,7 +611,8 @@ public class FacturamaService {
                     continue;
                 }
                 String description = pd.getItemName() != null && !pd.getItemName().isBlank()
-                        ? pd.getItemName() : "Producto";
+                        ? pd.getItemName()
+                        : "Producto";
                 if (pd.getComplementDetails() != null && !pd.getComplementDetails().isBlank()) {
                     description = description + " (" + pd.getComplementDetails() + ")";
                 }
@@ -517,7 +625,8 @@ public class FacturamaService {
             }
 
             // A ticket made only of cortesías ($0.00 lines, which are skipped above) has no
-            // fiscal value to bill: fail with a clear message instead of an empty concept list.
+            // fiscal value to bill: fail with a clear message instead of an empty concept
+            // list.
             if (candidateLines.isEmpty()) {
                 throw new IllegalStateException(
                         "No hay conceptos con valor para facturar: la cuenta quedó en $0.00 (solo cortesías).");
@@ -528,7 +637,8 @@ public class FacturamaService {
 
             body.set("Items", items);
 
-            // Comprobante.Discount must equal Σ Concepto.Descuento (sin IVA), per CFDI 4.0 spec.
+            // Comprobante.Discount must equal Σ Concepto.Descuento (sin IVA), per CFDI 4.0
+            // spec.
             if (sumConceptDiscount.compareTo(BigDecimal.ZERO) > 0) {
                 body.put("Discount", sumConceptDiscount.toPlainString());
             }
@@ -541,8 +651,7 @@ public class FacturamaService {
                     getBaseUrl(defaultLiveMode) + "api-lite/3/cfdis",
                     HttpMethod.POST,
                     new HttpEntity<>(body.toString(), headers),
-                    JsonNode.class
-            );
+                    JsonNode.class);
 
             JsonNode respBody = response.getBody();
             if (respBody == null) {
@@ -568,29 +677,37 @@ public class FacturamaService {
     // ========== CFDI Global (Público en General) ==========
 
     /**
-     * One operation to be included in the global invoice: a paid ticket (normal order)
+     * One operation to be included in the global invoice: a paid ticket (normal
+     * order)
      * or a paid split account (Payment). Each becomes ONE CFDI concept with its own
-     * folio, per regla 2.7.1.21 de la RMF (the folio of each operation must be stated).
+     * folio, per regla 2.7.1.21 de la RMF (the folio of each operation must be
+     * stated).
      *
-     * @param description CFDI concept description (includes the ticket folio)
-     * @param totalConIva Total of the operation incl. IVA (exactly the ticket amount)
+     * @param description   CFDI concept description (includes the ticket folio)
+     * @param totalConIva   Total of the operation incl. IVA (exactly the ticket
+     *                      amount)
      * @param paymentMethod Payment method used to settle the operation
      */
     public record GlobalCfdiTicket(String description, BigDecimal totalConIva, PaymentMethodType paymentMethod) {
     }
 
     /**
-     * Create a CFDI 4.0 GLOBAL invoice (operaciones con el público en general) via the
-     * Facturama API Multiemisor. Emitted by the ADMIN for a period (one day or one full
+     * Create a CFDI 4.0 GLOBAL invoice (operaciones con el público en general) via
+     * the
+     * Facturama API Multiemisor. Emitted by the ADMIN for a period (one day or one
+     * full
      * month) covering every paid ticket that was NOT individually invoiced.
      *
-     * SAT/Facturama requirements (regla 2.7.1.21 RMF + Facturama guía CFDI global 4.0):
-     * - Receiver: RFC XAXX010101000, "PUBLICO EN GENERAL", régimen 616, uso CFDI S01,
-     *   C.P. fiscal = mismo de expedición.
+     * SAT/Facturama requirements (regla 2.7.1.21 RMF + Facturama guía CFDI global
+     * 4.0):
+     * - Receiver: RFC XAXX010101000, "PUBLICO EN GENERAL", régimen 616, uso CFDI
+     * S01,
+     * C.P. fiscal = mismo de expedición.
      * - PaymentForm: forma de pago de MAYOR monto entre las operaciones incluidas.
      * - PaymentMethod: "PUE".
      * - InformacionGlobal: Periodicidad (01 diario / 04 mensual), Mes(es) y Año.
-     * - One concept per operation, IVA 16% desglosado, sin descuentos a nivel comprobante.
+     * - One concept per operation, IVA 16% desglosado, sin descuentos a nivel
+     * comprobante.
      *
      * @param config      The Facturama configuration for the issuing company
      * @param tickets     The paid operations to amparar (never empty)
@@ -601,7 +718,7 @@ public class FacturamaService {
      * @return Map with cfdi_id and cfdi_uuid
      */
     public Map<String, String> createGlobalCfdi(FacturamaConfig config, List<GlobalCfdiTicket> tickets,
-                                                String periodicity, int month, int year, String folio) {
+            String periodicity, int month, int year, String folio) {
         validateCredentials();
 
         if (!config.isReady()) {
@@ -662,8 +779,7 @@ public class FacturamaService {
                     getBaseUrl(defaultLiveMode) + "api-lite/3/cfdis",
                     HttpMethod.POST,
                     new HttpEntity<>(body.toString(), headers),
-                    JsonNode.class
-            );
+                    JsonNode.class);
 
             JsonNode respBody = response.getBody();
             if (respBody == null) {
@@ -687,8 +803,10 @@ public class FacturamaService {
     }
 
     /**
-     * SAT c_FormaPago for the global invoice: the payment form with the HIGHEST total
-     * amount among the included operations (Facturama requirement). Fallback "99" (por
+     * SAT c_FormaPago for the global invoice: the payment form with the HIGHEST
+     * total
+     * amount among the included operations (Facturama requirement). Fallback "99"
+     * (por
      * definir) when no payment method is known.
      */
     public String dominantPaymentForm(List<GlobalCfdiTicket> tickets) {
@@ -712,7 +830,8 @@ public class FacturamaService {
     }
 
     /**
-     * Distribute an order/account-level discount (con IVA) pro-rata across candidate
+     * Distribute an order/account-level discount (con IVA) pro-rata across
+     * candidate
      * lines (last line absorbs the residual) and emit the CFDI items.
      *
      * @return the sum of per-concept Discounts (sin IVA), for Comprobante.Discount.
@@ -724,7 +843,8 @@ public class FacturamaService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add)
                 .setScale(2, RoundingMode.HALF_UP);
 
-        BigDecimal effectiveDiscount = discountConIva != null ? discountConIva.setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO;
+        BigDecimal effectiveDiscount = discountConIva != null ? discountConIva.setScale(2, RoundingMode.HALF_UP)
+                : BigDecimal.ZERO;
         if (effectiveDiscount.compareTo(BigDecimal.ZERO) > 0 && sumLineTotalConIva.compareTo(BigDecimal.ZERO) > 0) {
             BigDecimal expectedTotalConIva = sumLineTotalConIva.subtract(effectiveDiscount);
             BigDecimal accumulated = BigDecimal.ZERO;
@@ -764,27 +884,31 @@ public class FacturamaService {
      * Add a CFDI line item with IVA 16% (desglosado) supporting per-line discount.
      *
      * The caller passes:
-     *   - {@code lineTotalConIva}: ORIGINAL tax-included total of the line (pre-discount).
-     *     Used to declare Concepto.Subtotal (Importe) and UnitPrice — these reflect the
-     *     full price of the line BEFORE the order-level discount is applied.
-     *   - {@code lineTotalConIvaAfterDiscount}: tax-included total AFTER the pro-rata
-     *     share of the order-level discount has been subtracted. Drives Base / IVA / Total
-     *     so that {@code Σ Concepto.Total == order.getTotal()} exactly (last line absorbs
-     *     residual upstream).
+     * - {@code lineTotalConIva}: ORIGINAL tax-included total of the line
+     * (pre-discount).
+     * Used to declare Concepto.Subtotal (Importe) and UnitPrice — these reflect the
+     * full price of the line BEFORE the order-level discount is applied.
+     * - {@code lineTotalConIvaAfterDiscount}: tax-included total AFTER the pro-rata
+     * share of the order-level discount has been subtracted. Drives Base / IVA /
+     * Total
+     * so that {@code Σ Concepto.Total == order.getTotal()} exactly (last line
+     * absorbs
+     * residual upstream).
      *
      * Per-concept invariants enforced here:
-     *   Subtotal − Discount + Tax.Total == Total           (exact)
-     *   Base == Subtotal − Discount                         (exact)
-     *   Tax.Total == Total − Base                           (exact, NOT base × 0.16)
-     *   |UnitPrice × Quantity − Subtotal| ≤ 0.01            (6-decimal UnitPrice keeps tolerance)
+     * Subtotal − Discount + Tax.Total == Total (exact)
+     * Base == Subtotal − Discount (exact)
+     * Tax.Total == Total − Base (exact, NOT base × 0.16)
+     * |UnitPrice × Quantity − Subtotal| ≤ 0.01 (6-decimal UnitPrice keeps
+     * tolerance)
      *
      * @return the per-line Discount (sin IVA) emitted, so the caller can sum it for
      *         Comprobante.Discount (which SAT requires == Σ Concepto.Descuento).
      */
     private BigDecimal addCfdiItem(ArrayNode items, String description, BigDecimal quantity,
-                                   BigDecimal lineTotalConIva,
-                                   BigDecimal lineTotalConIvaAfterDiscount,
-                                   String productCode) {
+            BigDecimal lineTotalConIva,
+            BigDecimal lineTotalConIvaAfterDiscount,
+            String productCode) {
         ObjectNode item = objectMapper.createObjectNode();
 
         // Snap both totals to 2 decimals defensively
@@ -803,7 +927,8 @@ public class FacturamaService {
         BigDecimal base = totalAfter.divide(BigDecimal.valueOf(1.16), 2, RoundingMode.HALF_UP);
         BigDecimal taxAmount = totalAfter.subtract(base);
 
-        // Concepto.Descuento = Subtotal − Base, so Subtotal − Discount + Tax = Total exactly
+        // Concepto.Descuento = Subtotal − Base, so Subtotal − Discount + Tax = Total
+        // exactly
         BigDecimal discount = subtotal.subtract(base);
 
         item.put("ProductCode", productCode);
@@ -836,7 +961,8 @@ public class FacturamaService {
     }
 
     /**
-     * Internal candidate line used during the two-pass CFDI build (collect → distribute discount → emit).
+     * Internal candidate line used during the two-pass CFDI build (collect →
+     * distribute discount → emit).
      */
     private static final class CfdiLine {
         final String description;
@@ -860,16 +986,17 @@ public class FacturamaService {
             return "99"; // Por definir
         }
         return switch (paymentMethod) {
-            case CASH -> "01";           // Efectivo
-            case CREDIT_CARD -> "04";    // Tarjeta de crédito
-            case DEBIT_CARD -> "28";     // Tarjeta de débito
-            case TRANSFER -> "03";       // Transferencia electrónica
+            case CASH -> "01"; // Efectivo
+            case CREDIT_CARD -> "04"; // Tarjeta de crédito
+            case DEBIT_CARD -> "28"; // Tarjeta de débito
+            case TRANSFER -> "03"; // Transferencia electrónica
         };
     }
 
     /**
      * Parse a Facturama API error into a user-friendly Spanish message.
-     * Facturama returns JSON like: {"Message":"...","ModelState":{"field":["error msg"]}}
+     * Facturama returns JSON like: {"Message":"...","ModelState":{"field":["error
+     * msg"]}}
      */
     private String parseFacturamaError(Exception e) {
         if (e instanceof RestClientResponseException restEx) {
@@ -884,8 +1011,10 @@ public class FacturamaService {
                     modelState.properties().forEach(entry -> {
                         for (JsonNode msg : entry.getValue()) {
                             String text = msg.asText();
-                            // Sanitize: remove RFC values leaked by Facturama to avoid information disclosure
-                            text = text.replaceAll("(?i)pertenece al RFC\\s*'[A-Z0-9]+'", "no corresponde al RFC ingresado");
+                            // Sanitize: remove RFC values leaked by Facturama to avoid information
+                            // disclosure
+                            text = text.replaceAll("(?i)pertenece al RFC\\s*'[A-Z0-9]+'",
+                                    "no corresponde al RFC ingresado");
                             text = text.replaceAll("(?i)(el rfc|RFC)[:\\s]+[A-Z&Ñ0-9]{10,14}", "$1 configurado");
                             messages.add(text);
                         }

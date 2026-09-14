@@ -54,11 +54,11 @@ public class CompanyController {
             @RequestParam(required = false) String search,
             Model model,
             Authentication authentication) {
-        
+
         log.info("Programmer {} accessing companies list", authentication.getName());
-        
+
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-        
+
         Page<Company> companies;
         if (search != null && !search.trim().isEmpty()) {
             companies = companyRepository.findByNameContainingIgnoreCaseOrSlugContainingIgnoreCase(
@@ -67,16 +67,17 @@ public class CompanyController {
         } else {
             companies = companyRepository.findAll(pageable);
         }
-        
+
         model.addAttribute("companies", companies);
         model.addAttribute("currentPage", page);
         model.addAttribute("totalPages", companies.getTotalPages());
         model.addAttribute("totalElements", companies.getTotalElements());
-        
+        model.addAttribute("facturamaStatus", facturamaService.verifyApiConnection(null));
+
         // Statistics
         model.addAttribute("activeCount", companyRepository.countByActiveTrue());
         model.addAttribute("inactiveCount", companyRepository.countByActiveFalse());
-        
+
         return "programmer/companies/list";
     }
 
@@ -99,25 +100,25 @@ public class CompanyController {
             RedirectAttributes redirectAttributes,
             Model model,
             Authentication authentication) {
-        
+
         log.info("Programmer {} creating new company: {}", authentication.getName(), dto.getSlug());
-        
+
         // Validate slug uniqueness
         if (companyRepository.existsBySlug(dto.getSlug())) {
             bindingResult.rejectValue("slug", "duplicate", "Este slug ya está en uso");
         }
-        
+
         // Validate custom domain uniqueness if provided
         if (dto.getCustomDomain() != null && !dto.getCustomDomain().trim().isEmpty()) {
             if (companyRepository.existsByCustomDomain(dto.getCustomDomain())) {
                 bindingResult.rejectValue("customDomain", "duplicate", "Este dominio ya está en uso");
             }
         }
-        
+
         if (bindingResult.hasErrors()) {
             return "programmer/companies/form";
         }
-        
+
         try {
             Company company = companyService.create(
                     dto.getSlug(),
@@ -140,15 +141,14 @@ public class CompanyController {
                     dto.getLicenseMonths(),
                     dto.getLicenseAmount(),
                     dto.getTaxRate(),
-                    authentication.getName()
-            );
-            
-            redirectAttributes.addFlashAttribute("success", 
+                    authentication.getName());
+
+            redirectAttributes.addFlashAttribute("success",
                     "Empresa '" + company.getName() + "' creada exitosamente. " +
-                    "URL: " + dto.getSlug() + ".tudominio.com");
-            
+                            "URL: " + dto.getSlug() + ".tudominio.com");
+
             log.info("Company {} created successfully by {}", company.getSlug(), authentication.getName());
-            
+
         } catch (jakarta.validation.ConstraintViolationException e) {
             log.error("Validation error creating company: {}", e.getMessage());
             String messages = e.getConstraintViolations().stream()
@@ -177,7 +177,7 @@ public class CompanyController {
             model.addAttribute("error", "Error al crear la empresa: " + e.getMessage());
             return "programmer/companies/form";
         }
-        
+
         return "redirect:/programmer/companies";
     }
 
@@ -188,13 +188,15 @@ public class CompanyController {
     public String viewCompany(@PathVariable Long id, Model model) {
         Company company = companyRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Empresa no encontrada"));
-        
+
         model.addAttribute("company", company);
-        
+
         // Facturama config for this company
         FacturamaConfig facturamaConfig = facturamaService.getConfigForCompany(company).orElse(null);
         model.addAttribute("facturamaConfig", facturamaConfig);
         model.addAttribute("facturamaLiveMode", facturamaService.isLiveMode());
+        model.addAttribute("facturamaStatus",
+                facturamaService.verifyApiConnection(facturamaConfig != null ? facturamaConfig.getRfc() : null));
         // Order-level invoices (normal single-ticket orders) + per-account invoices
         // (split bills, saved on the Payment) + global invoices (público en general):
         // every generated CFDI/timbre used counts.
@@ -202,7 +204,7 @@ public class CompanyController {
                 + paymentRepository.countByCompanyAndFacturamaCfdiCreatedAtIsNotNull(company)
                 + globalInvoiceRepository.countByCompany(company);
         model.addAttribute("totalCfdis", totalCfdis);
-        
+
         return "programmer/companies/view";
     }
 
@@ -251,7 +253,8 @@ public class CompanyController {
                     .orElseThrow(() -> new IllegalArgumentException("Empresa no encontrada"));
 
             FacturamaConfig config = facturamaService.getConfigForCompany(company)
-                    .orElseThrow(() -> new IllegalStateException("No se ha inicializado la configuración de Facturama"));
+                    .orElseThrow(
+                            () -> new IllegalStateException("No se ha inicializado la configuración de Facturama"));
 
             if (enabled) {
                 if (!config.getCsdUploaded() || !config.getLegalDataConfigured()) {
@@ -268,7 +271,8 @@ public class CompanyController {
                         "Facturación electrónica desactivada.");
             }
 
-            log.info("Facturama toggled to {} for company {} by {}", enabled, company.getSlug(), authentication.getName());
+            log.info("Facturama toggled to {} for company {} by {}", enabled, company.getSlug(),
+                    authentication.getName());
 
         } catch (Exception e) {
             log.error("Error toggling Facturama for company {}: {}", id, e.getMessage());
@@ -285,7 +289,7 @@ public class CompanyController {
     public String showEditForm(@PathVariable Long id, Model model) {
         Company company = companyRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Empresa no encontrada"));
-        
+
         model.addAttribute("company", company);
         model.addAttribute("isEdit", true);
         return "programmer/companies/edit";
@@ -310,15 +314,15 @@ public class CompanyController {
             @RequestParam(required = false) BigDecimal taxRate,
             RedirectAttributes redirectAttributes,
             Authentication authentication) {
-        
+
         log.info("Programmer {} updating company {}", authentication.getName(), id);
-        
+
         try {
             Company company = companyRepository.findById(id)
                     .orElseThrow(() -> new IllegalArgumentException("Empresa no encontrada"));
-            
+
             company.setName(name);
-            
+
             // Validate slug uniqueness if changed
             if (!slug.equals(company.getSlug())) {
                 if (companyRepository.existsBySlug(slug)) {
@@ -327,11 +331,11 @@ public class CompanyController {
                 }
                 company.setSlug(slug);
             }
-            
+
             // Validate custom domain uniqueness if changed
             if (customDomain != null && !customDomain.trim().isEmpty()) {
-                if (!customDomain.equals(company.getCustomDomain()) && 
-                    companyRepository.existsByCustomDomain(customDomain)) {
+                if (!customDomain.equals(company.getCustomDomain()) &&
+                        companyRepository.existsByCustomDomain(customDomain)) {
                     redirectAttributes.addFlashAttribute("error", "El dominio personalizado ya está en uso");
                     return "redirect:/programmer/companies/" + id + "/edit";
                 }
@@ -339,7 +343,7 @@ public class CompanyController {
             } else {
                 company.setCustomDomain(null);
             }
-            
+
             // Update all company fields
             company.setSenderEmail(senderEmail);
             company.setSenderName(senderName);
@@ -350,21 +354,21 @@ public class CompanyController {
             if (timezone != null && !timezone.isBlank()) {
                 company.setTimezone(timezone);
             }
-            
+
             // Update taxRate on the company's SystemConfiguration
             if (taxRate != null && company.getSystemConfiguration() != null) {
                 company.getSystemConfiguration().setTaxRate(taxRate);
             }
-            
+
             companyRepository.save(company);
-            
+
             redirectAttributes.addFlashAttribute("success", "Empresa actualizada exitosamente");
-            
+
         } catch (Exception e) {
             log.error("Error updating company: {}", e.getMessage(), e);
             redirectAttributes.addFlashAttribute("error", "Error al actualizar: " + e.getMessage());
         }
-        
+
         return "redirect:/programmer/companies/" + id;
     }
 
@@ -376,23 +380,23 @@ public class CompanyController {
             @PathVariable Long id,
             RedirectAttributes redirectAttributes,
             Authentication authentication) {
-        
+
         try {
             Company company = companyRepository.findById(id)
                     .orElseThrow(() -> new IllegalArgumentException("Empresa no encontrada"));
-            
+
             company.setActive(!company.getActive());
             companyRepository.save(company);
-            
+
             String status = company.getActive() ? "activada" : "desactivada";
             redirectAttributes.addFlashAttribute("success", "Empresa " + status + " exitosamente");
-            
+
             log.info("Company {} {} by {}", company.getSlug(), status, authentication.getName());
-            
+
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("error", "Error: " + e.getMessage());
         }
-        
+
         return "redirect:/programmer/companies";
     }
 
@@ -404,24 +408,24 @@ public class CompanyController {
             @PathVariable Long id,
             RedirectAttributes redirectAttributes,
             Authentication authentication) {
-        
+
         try {
             Company company = companyRepository.findById(id)
                     .orElseThrow(() -> new IllegalArgumentException("Empresa no encontrada"));
-            
+
             // Soft delete - just deactivate
             company.setActive(false);
             companyRepository.save(company);
-            
-            redirectAttributes.addFlashAttribute("success", 
+
+            redirectAttributes.addFlashAttribute("success",
                     "Empresa '" + company.getName() + "' desactivada exitosamente");
-            
+
             log.info("Company {} deleted (deactivated) by {}", company.getSlug(), authentication.getName());
-            
+
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("error", "Error: " + e.getMessage());
         }
-        
+
         return "redirect:/programmer/companies";
     }
 }
