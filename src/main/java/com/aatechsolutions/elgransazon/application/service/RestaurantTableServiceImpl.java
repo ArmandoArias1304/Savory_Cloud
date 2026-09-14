@@ -5,6 +5,7 @@ import com.aatechsolutions.elgransazon.domain.entity.Reservation;
 import com.aatechsolutions.elgransazon.domain.entity.RestaurantTable;
 import com.aatechsolutions.elgransazon.domain.entity.SystemConfiguration;
 import com.aatechsolutions.elgransazon.domain.entity.TableStatus;
+import com.aatechsolutions.elgransazon.domain.repository.OrderRepository;
 import com.aatechsolutions.elgransazon.domain.repository.ReservationRepository;
 import com.aatechsolutions.elgransazon.domain.repository.RestaurantTableRepository;
 import com.aatechsolutions.elgransazon.infrastructure.context.CompanyContext;
@@ -36,6 +37,7 @@ public class RestaurantTableServiceImpl implements RestaurantTableService {
 
     private final RestaurantTableRepository tableRepository;
     private final ReservationRepository reservationRepository;
+    private final OrderRepository orderRepository;
     private final SystemConfigurationService systemConfigurationService;
     private final DateTimeService dateTimeService;
 
@@ -567,5 +569,77 @@ public class RestaurantTableServiceImpl implements RestaurantTableService {
 
         log.debug("Active reservation for table {}: customer is '{}'", tableId, customerName);
         return customerName;
+    }
+
+    @Override
+    public boolean hasRelatedRecords(Long tableId) {
+        log.debug("Checking related records for table {}", tableId);
+
+        Company company = CompanyContext.requireCurrentCompany();
+        tableRepository.findByIdAndCompany(tableId, company)
+                .orElseThrow(() -> {
+                    String error = "Mesa no encontrada con ID: " + tableId;
+                    log.error(error);
+                    return new IllegalArgumentException(error);
+                });
+
+        return countRelatedRecords(tableId) > 0;
+    }
+
+    @Override
+    @Transactional
+    public void deleteTable(Long id, String username) {
+        log.info("Deleting restaurant table with ID: {}", id);
+
+        Company company = CompanyContext.requireCurrentCompany();
+
+        RestaurantTable table = tableRepository.findByIdAndCompany(id, company)
+                .orElseThrow(() -> {
+                    String error = "Mesa no encontrada con ID: " + id;
+                    log.error(error);
+                    return new IllegalArgumentException(error);
+                });
+
+        long orders = orderRepository.countOrdersByTableId(id);
+        long reservations = reservationRepository.countReservationsByTableId(id);
+
+        // A table with history (orders or reservations) is never deleted: it is
+        // kept for reporting and only inactivated (OUT_OF_SERVICE).
+        if (orders > 0 || reservations > 0) {
+            String error = "No se puede eliminar la Mesa #" + table.getTableNumber()
+                    + " porque ya tiene " + buildRelatedRecordsDetail(orders, reservations)
+                    + ", solo se puede inactivar.";
+            log.warn(error);
+            throw new IllegalStateException(error);
+        }
+
+        tableRepository.delete(table);
+        log.info("Restaurant table {} deleted successfully by {}", id, username);
+    }
+
+    /**
+     * Total records (orders + reservations) that reference a table.
+     */
+    private long countRelatedRecords(Long tableId) {
+        return orderRepository.countOrdersByTableId(tableId)
+                + reservationRepository.countReservationsByTableId(tableId);
+    }
+
+    /**
+     * Human readable summary of the records that block a deletion.
+     */
+    private String buildRelatedRecordsDetail(long orders, long reservations) {
+        StringBuilder detail = new StringBuilder();
+        if (orders > 0) {
+            detail.append(orders).append(orders == 1 ? " pedido" : " pedidos");
+        }
+        if (reservations > 0) {
+            if (detail.length() > 0) {
+                detail.append(" y ");
+            }
+            detail.append(reservations)
+                    .append(reservations == 1 ? " reservación" : " reservaciones");
+        }
+        return detail.toString();
     }
 }

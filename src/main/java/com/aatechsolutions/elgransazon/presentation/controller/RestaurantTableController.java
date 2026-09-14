@@ -7,6 +7,7 @@ import com.aatechsolutions.elgransazon.domain.entity.TableStatus;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
@@ -298,6 +299,60 @@ public class RestaurantTableController {
             log.error("Error checking table availability: {}", id, e);
             response.put("success", false);
             response.put("message", e.getMessage());
+        }
+
+        return response;
+    }
+
+    /**
+     * Delete a table (AJAX).
+     *
+     * Business rule: a table is only physically deleted when it has NO related
+     * records in the database (orders or reservations). When it already has
+     * history the deletion is rejected and the caller is told that the table can
+     * only be inactivated (OUT_OF_SERVICE).
+     */
+    @PostMapping("/{id}/delete")
+    @ResponseBody
+    public Map<String, Object> deleteTable(@PathVariable Long id, Authentication authentication) {
+        Map<String, Object> response = new HashMap<>();
+
+        try {
+            tableService.deleteTable(id, authentication.getName());
+
+            log.info("Table {} deleted successfully", id);
+            response.put("success", true);
+            response.put("deleted", true);
+            response.put("message", "Mesa eliminada correctamente");
+
+        } catch (IllegalStateException e) {
+            // Business validation: the table has orders/reservations, so it cannot be deleted
+            log.warn("Table {} cannot be deleted: {}", id, e.getMessage());
+            response.put("success", false);
+            response.put("deleted", false);
+            response.put("canInactivate", true);
+            response.put("message", e.getMessage());
+
+        } catch (DataIntegrityViolationException e) {
+            // Safety net: another reference in the database still blocks the delete
+            log.warn("Table {} is still referenced in the database: {}", id, e.getMessage());
+            response.put("success", false);
+            response.put("deleted", false);
+            response.put("canInactivate", true);
+            response.put("message",
+                    "No se puede eliminar la mesa porque tiene registros asociados, solo se puede inactivar.");
+
+        } catch (IllegalArgumentException e) {
+            log.error("Validation error deleting table: {}", e.getMessage());
+            response.put("success", false);
+            response.put("deleted", false);
+            response.put("message", e.getMessage());
+
+        } catch (Exception e) {
+            log.error("Unexpected error deleting table {}", id, e);
+            response.put("success", false);
+            response.put("deleted", false);
+            response.put("message", "Error al eliminar la mesa");
         }
 
         return response;

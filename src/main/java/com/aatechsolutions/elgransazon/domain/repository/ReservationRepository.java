@@ -41,6 +41,13 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
             RestaurantTable table, LocalDate date);
 
     /**
+     * Count all reservations (any status) linked to a table.
+     * Used to decide whether a table can be deleted or only inactivated.
+     */
+    @Query("SELECT COUNT(r) FROM Reservation r WHERE r.restaurantTable.id = :tableId")
+    long countReservationsByTableId(@Param("tableId") Long tableId);
+
+    /**
      * Find reservations by date range
      */
     List<Reservation> findByReservationDateBetweenOrderByReservationDateAscReservationTimeAsc(

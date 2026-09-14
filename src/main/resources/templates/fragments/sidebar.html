@@ -437,6 +437,18 @@
               e.preventDefault();
               const isDark =
                 document.documentElement.classList.contains("dark");
+
+              // Respaldo: si la vista no cargó SweetAlert2, cerrar sesión con el
+              // confirm() nativo en lugar de dejar el botón sin respuesta.
+              if (typeof window.Swal === "undefined" || !window.Swal.fire) {
+                if (
+                  window.confirm("¿Estás seguro de que deseas cerrar sesión?")
+                ) {
+                  logoutForm.submit();
+                }
+                return;
+              }
+
               Swal.fire({
                 title: "¿Cerrar sesión?",
                 text: "¿Estás seguro de que deseas cerrar sesión?",

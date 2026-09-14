@@ -77,6 +77,13 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     List<Order> findByTableId(@Param("tableId") Long tableId);
 
     /**
+     * Count all orders (any status) linked to a table.
+     * Used to decide whether a table can be deleted or only inactivated.
+     */
+    @Query("SELECT COUNT(o) FROM Order o WHERE o.table.id = :tableId")
+    long countOrdersByTableId(@Param("tableId") Long tableId);
+
+    /**
      * Find all orders by table ID and company
      */
     @Query("SELECT o FROM Order o WHERE o.table.id = :tableId AND o.company = :company ORDER BY o.createdAt DESC")

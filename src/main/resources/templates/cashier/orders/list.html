@@ -379,10 +379,10 @@
                     <th class="px-6 py-4 font-semibold">Total</th>
                     <th class="px-6 py-4 font-semibold">Pago</th>
                     <th class="px-6 py-4 font-semibold">Estado</th>
-                    <th class="px-6 py-4 font-semibold">Cobrado por</th>
                     <th class="px-6 py-4 font-semibold text-center">
                       Acciones
                     </th>
+                    <th class="px-6 py-4 font-semibold">Cobrado por</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -494,20 +494,6 @@
                         th:text="${order.status.displayName}"
                       >
                       </span>
-                    </td>
-
-                    <!-- Paid By -->
-                    <td class="px-6 py-4 whitespace-nowrap">
-                      <div
-                        th:if="${order.paidBy != null}"
-                        class="text-sm text-gray-900 dark:text-white"
-                        th:text="${order.paidBy.nombre + ' ' + order.paidBy.apellido}"
-                      ></div>
-                      <span
-                        th:if="${order.paidBy == null}"
-                        class="text-sm text-gray-400"
-                        >-</span
-                      >
                     </td>
 
                     <!-- Actions -->
@@ -650,6 +636,20 @@
                           <i class="fas fa-times-circle"></i>
                         </button>
                       </div>
+                    </td>
+
+                    <!-- Paid By (Cobrado por) -->
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <div
+                        th:if="${order.paidBy != null}"
+                        class="text-sm text-gray-900 dark:text-white"
+                        th:text="${order.paidBy.nombre + ' ' + order.paidBy.apellido}"
+                      ></div>
+                      <span
+                        th:if="${order.paidBy == null}"
+                        class="text-sm text-gray-400"
+                        >-</span
+                      >
                     </td>
                   </tr>
                   <!-- Acordeón de tickets: cuando la orden se pagó en varias cuentas (diferentes personas) -->
@@ -869,10 +869,10 @@
                     <th class="px-6 py-4 font-semibold">Total</th>
                     <th class="px-6 py-4 font-semibold">Pago</th>
                     <th class="px-6 py-4 font-semibold">Estado</th>
-                    <th class="px-6 py-4 font-semibold">Cobrado por</th>
                     <th class="px-6 py-4 font-semibold text-center">
                       Acciones
                     </th>
+                    <th class="px-6 py-4 font-semibold">Cobrado por</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -984,20 +984,6 @@
                         th:text="${order.status.displayName}"
                       >
                       </span>
-                    </td>
-
-                    <!-- Paid By -->
-                    <td class="px-6 py-4 whitespace-nowrap">
-                      <div
-                        th:if="${order.paidBy != null}"
-                        class="text-sm text-gray-900 dark:text-white"
-                        th:text="${order.paidBy.nombre + ' ' + order.paidBy.apellido}"
-                      ></div>
-                      <span
-                        th:if="${order.paidBy == null}"
-                        class="text-sm text-gray-400"
-                        >-</span
-                      >
                     </td>
 
                     <!-- Actions -->
@@ -1140,6 +1126,20 @@
                           <i class="fas fa-times-circle"></i>
                         </button>
                       </div>
+                    </td>
+
+                    <!-- Paid By (Cobrado por) -->
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <div
+                        th:if="${order.paidBy != null}"
+                        class="text-sm text-gray-900 dark:text-white"
+                        th:text="${order.paidBy.nombre + ' ' + order.paidBy.apellido}"
+                      ></div>
+                      <span
+                        th:if="${order.paidBy == null}"
+                        class="text-sm text-gray-400"
+                        >-</span
+                      >
                     </td>
                   </tr>
                 </tbody>

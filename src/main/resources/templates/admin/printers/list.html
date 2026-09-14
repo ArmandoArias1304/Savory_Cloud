@@ -37,18 +37,31 @@
   <body class="bg-background-light dark:bg-background-dark font-display min-h-screen">
     <div th:replace="~{fragments/sidebar :: menuControls}"></div>
 
-    <div class="flex min-h-screen">
+    <div class="flex min-h-screen h-screen overflow-hidden">
       <div th:replace="~{fragments/sidebar :: sidebar(activeMenu='printers')}"></div>
 
-      <main class="flex-1 overflow-y-auto">
+      <main class="flex-1 overflow-y-auto h-screen">
         <div class="p-4 md:p-6 max-w-5xl mx-auto pt-16 lg:pt-6">
 
-        <div class="flex items-center gap-3 mb-6">
-          <span class="material-symbols-outlined text-3xl text-primary">print</span>
-          <div>
-            <h1 class="text-2xl font-bold text-gray-800 dark:text-white">Impresoras</h1>
-            <p class="text-sm text-gray-500 dark:text-gray-400">Elige las impresoras instaladas en esta PC. La misma impresora puede usarse en más de un rol.</p>
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          <div class="flex items-center gap-3">
+            <span class="material-symbols-outlined text-3xl text-primary">print</span>
+            <div>
+              <h1 class="text-2xl font-bold text-gray-800 dark:text-white">Impresoras</h1>
+              <p class="text-sm text-gray-500 dark:text-gray-400">Elige las impresoras instaladas en esta PC. La misma impresora puede usarse en más de un rol.</p>
+            </div>
           </div>
+
+          <!-- Acceso destacado al Agente de Impresión (mismo destino que la tarjeta inferior) -->
+          <a
+            href="/printer-agent"
+            target="_blank"
+            rel="noopener"
+            class="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-primary to-primary-dark text-white font-semibold text-sm shadow-md hover:shadow-lg hover:shadow-primary/30 transition-all flex-shrink-0"
+          >
+            <span class="material-symbols-outlined text-lg">open_in_new</span>
+            <span>Abrir Agente de Impresión</span>
+          </a>
         </div>
 
         <div th:if="${successMessage}" class="mb-4 p-4 rounded-xl bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 flex items-center gap-2">
@@ -71,8 +84,6 @@
 
         <div class="mb-6 p-4 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800/40 text-sm text-amber-800 dark:text-amber-200">
           Necesitas <strong>QZ Tray abierto</strong> en esta PC (icono en la bandeja de Windows). Sin eso no aparecen las impresoras instaladas.
-          Descárgalo en <a href="https://qz.io/download/" target="_blank" rel="noopener" class="underline font-medium">qz.io/download</a>
-          y pulsa <strong>Reintentar detección</strong>.
         </div>
 
         <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3">Comandas (se guardan en el servidor)</h2>

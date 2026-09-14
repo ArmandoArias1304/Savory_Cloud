@@ -176,4 +176,16 @@ public interface RestaurantTableService {
      * Returns null if no active reservation exists
      */
     String getActiveReservationCustomerName(Long tableId);
+
+    /**
+     * Check whether a table has related records in the database (orders or reservations).
+     * Tables with records cannot be deleted, only inactivated (OUT_OF_SERVICE).
+     */
+    boolean hasRelatedRecords(Long tableId);
+
+    /**
+     * Delete a table only when it has no related records.
+     * Throws IllegalStateException when the table already has orders or reservations.
+     */
+    void deleteTable(Long id, String username);
 }
