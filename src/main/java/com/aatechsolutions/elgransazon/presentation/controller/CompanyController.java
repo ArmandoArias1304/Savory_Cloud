@@ -283,6 +283,29 @@ public class CompanyController {
     }
 
     /**
+     * AJAX endpoint: unlock fiscal data so the admin can edit Steps 1 and 2 again.
+     */
+    @PostMapping("/{id}/facturama/unlock-fiscal-data")
+    @ResponseBody
+    public java.util.Map<String, Object> unlockFiscalData(@PathVariable Long id) {
+        try {
+            Company company = companyRepository.findById(id)
+                    .orElseThrow(() -> new IllegalArgumentException("Empresa no encontrada"));
+
+            FacturamaConfig config = facturamaService.getConfigForCompany(company)
+                    .orElseThrow(() -> new IllegalStateException("No hay configuración de facturación"));
+
+            facturamaService.unlockFiscalData(config);
+
+            log.info("Fiscal data unlocked for company {} by programmer", company.getSlug());
+            return java.util.Map.of("success", true, "message", "Edición de datos fiscales habilitada");
+        } catch (Exception e) {
+            log.error("Error unlocking fiscal data for company {}: {}", id, e.getMessage());
+            return java.util.Map.of("error", e.getMessage());
+        }
+    }
+
+    /**
      * Show edit form
      */
     @GetMapping("/{id}/edit")

@@ -24,6 +24,7 @@
       rel="stylesheet"
     />
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
       tailwind.config = {
         darkMode: "class",
@@ -540,6 +541,35 @@
             </div>
           </div>
 
+          <!-- Permitir Edición de Datos Fiscales (solo cuando están bloqueados) -->
+          <div
+            class="mb-4 p-4 rounded-xl bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 flex items-center justify-between gap-4"
+            th:if="${facturamaConfig != null and facturamaConfig.fiscalDataConfirmed}"
+          >
+            <div class="flex items-center gap-3">
+              <span
+                class="material-symbols-outlined text-purple-600 dark:text-purple-400 text-2xl"
+                >lock</span
+              >
+              <div>
+                <p class="font-semibold text-purple-800 dark:text-purple-300">
+                  Datos fiscales bloqueados
+                </p>
+                <p class="text-sm text-purple-600 dark:text-purple-400">
+                  El admin no puede editar los datos fiscales. Presione para desbloquear.
+                </p>
+              </div>
+            </div>
+            <button
+              id="unlockFiscalBtn"
+              type="button"
+              class="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-purple-600 text-white font-semibold hover:bg-purple-700 transition-colors shadow-md whitespace-nowrap"
+            >
+              <span class="material-symbols-outlined">lock_open</span>
+              Permitir Edición
+            </button>
+          </div>
+
           <!-- Toggle Activate / Deactivate -->
           <div
             class="mb-4"
@@ -658,5 +688,82 @@
     </main>
 
     <th:block th:replace="~{fragments/theme :: themeScript}"></th:block>
+
+    <!-- Unlock Fiscal Data Modal -->
+    <script>
+      (function () {
+        var companyId = "[[${company.idCompany}]]";
+        var unlockBtn = document.getElementById("unlockFiscalBtn");
+        if (!unlockBtn) return;
+
+        unlockBtn.addEventListener("click", function () {
+          Swal.fire({
+            title: "\u00BFPermitir edici\u00F3n de datos fiscales?",
+            html:
+              '<div class="text-left">' +
+              '<p class="mb-3">Al editar sus datos fiscales, el admin tiene <b>obligaci\u00F3n</b> de volver a facturar todas las facturas anteriores que se emitieron con los datos previos.</p>' +
+              '<div class="p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">' +
+              '<p class="text-sm text-amber-700 dark:text-amber-400 flex items-start gap-2">' +
+              '<span class="material-symbols-outlined text-sm mt-0.5">warning</span>' +
+              '<span><b>Advertencia:</b> Esto desbloquear\u00E1 los campos del Paso 1 (CSD) y Paso 2 (Datos Fiscales) para que el admin pueda modificarlos. Se recomienda realizar este cambio solo si es estrictamente necesario.</span>' +
+              '</p>' +
+              '</div>' +
+              '</div>',
+            icon: "warning",
+            showCancelButton: true,
+            confirmButtonColor: "#7c3aed",
+            cancelButtonColor: "#6b7280",
+            confirmButtonText: "S\u00ED, permitir edici\u00F3n",
+            cancelButtonText: "Cancelar",
+          }).then(function (result) {
+            if (!result.isConfirmed) return;
+
+            unlockBtn.disabled = true;
+            var originalHtml = unlockBtn.innerHTML;
+            unlockBtn.innerHTML =
+              '<span class="material-symbols-outlined text-lg animate-spin">progress_activity</span> Desbloqueando...';
+
+            fetch("/programmer/companies/" + companyId + "/facturama/unlock-fiscal-data", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/x-www-form-urlencoded",
+              },
+            })
+              .then(function (r) { return r.json(); })
+              .then(function (data) {
+                if (data.error) {
+                  Swal.fire({
+                    title: "Error",
+                    text: data.error,
+                    icon: "error",
+                    confirmButtonColor: "#dc2626",
+                  });
+                  return;
+                }
+                Swal.fire({
+                  title: "Edici\u00F3n habilitada",
+                  text: "Los datos fiscales han sido desbloqueados. El admin ahora puede editarlos.",
+                  icon: "success",
+                  confirmButtonColor: "#16a34a",
+                }).then(function () {
+                  location.reload();
+                });
+              })
+              .catch(function () {
+                Swal.fire({
+                  title: "Error",
+                  text: "No se pudo desbloquear los datos fiscales.",
+                  icon: "error",
+                  confirmButtonColor: "#dc2626",
+                });
+              })
+              .finally(function () {
+                unlockBtn.disabled = false;
+                unlockBtn.innerHTML = originalHtml;
+              });
+          });
+        });
+      })();
+    </script>
   </body>
 </html>

@@ -222,30 +222,24 @@
 
                 <!-- Upload form -->
                 <div th:if="${facturamaConfig != null}">
-                  <div
-                    class="p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 mb-4"
-                  >
-                    <p
-                      class="text-sm text-amber-700 dark:text-amber-400 flex items-start gap-2"
+                  <!-- LOCKED: fiscal data confirmed -->
+                  <div th:if="${facturamaConfig.fiscalDataConfirmed}"
+                    class="space-y-4">
+                    <div
+                      class="p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800"
                     >
-                      <span class="material-symbols-outlined text-sm mt-0.5"
-                        >security</span
+                      <p
+                        class="text-sm text-amber-700 dark:text-amber-400 flex items-start gap-2"
                       >
-                      <span>
-                        <strong>Seguridad:</strong> Los archivos .cer, .key y la
-                        contraseña se envían directamente a Facturama mediante
-                        conexión HTTPS. <strong>No se almacenan</strong> en
-                        nuestro sistema en ningún momento.
-                      </span>
-                    </p>
-                  </div>
-
-                  <form
-                    th:action="@{/admin/facturacion/upload-csd}"
-                    method="post"
-                    enctype="multipart/form-data"
-                    class="space-y-4"
-                  >
+                        <span class="material-symbols-outlined text-sm mt-0.5"
+                          >lock</span
+                        >
+                        <span>
+                          <strong>Bloqueado:</strong> Los datos fiscales han sido
+                          confirmados. Para editar, solicite permiso al programador.
+                        </span>
+                      </p>
+                    </div>
                     <div>
                       <label
                         class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1"
@@ -254,68 +248,110 @@
                       </label>
                       <input
                         type="text"
-                        name="rfc"
-                        required
-                        maxlength="13"
-                        placeholder="Ej: AAA010101AAA"
                         th:value="${facturamaConfig.rfc}"
-                        class="w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary focus:border-transparent uppercase"
+                        disabled
+                        class="w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed"
                       />
                     </div>
-                    <div>
-                      <label
-                        class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1"
-                      >
-                        Certificado (.cer)
-                      </label>
-                      <input
-                        type="file"
-                        name="cerFile"
-                        accept=".cer"
-                        required
-                        class="w-full px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:bg-primary/10 file:text-primary file:font-semibold"
-                      />
-                    </div>
-                    <div>
-                      <label
-                        class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1"
-                      >
-                        Llave privada (.key)
-                      </label>
-                      <input
-                        type="file"
-                        name="keyFile"
-                        accept=".key"
-                        required
-                        class="w-full px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:bg-primary/10 file:text-primary file:font-semibold"
-                      />
-                    </div>
-                    <div>
-                      <label
-                        class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1"
-                      >
-                        Contraseña del CSD
-                      </label>
-                      <input
-                        type="password"
-                        name="csdPassword"
-                        required
-                        autocomplete="off"
-                        placeholder="Contraseña de la llave privada"
-                        class="w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary focus:border-transparent"
-                      />
-                    </div>
-                    <button
-                      type="submit"
-                      class="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-white font-semibold hover:bg-primary-dark transition-colors"
+                  </div>
+
+                  <!-- EDITABLE: not confirmed yet -->
+                  <div th:unless="${facturamaConfig.fiscalDataConfirmed}">
+                    <div
+                      class="p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 mb-4"
                     >
-                      <span class="material-symbols-outlined">upload_file</span>
-                      <span
-                        th:text="${facturamaConfig.csdUploaded ? 'Reemplazar Certificados' : 'Subir Certificados'}"
-                        >Subir Certificados</span
+                      <p
+                        class="text-sm text-amber-700 dark:text-amber-400 flex items-start gap-2"
                       >
-                    </button>
-                  </form>
+                        <span class="material-symbols-outlined text-sm mt-0.5"
+                          >security</span
+                        >
+                        <span>
+                          <strong>Seguridad:</strong> Los archivos .cer, .key y la
+                          contraseña se envían directamente a Facturama mediante
+                          conexión HTTPS. <strong>No se almacenan</strong> en
+                          nuestro sistema en ningún momento.
+                        </span>
+                      </p>
+                    </div>
+
+                    <form
+                      th:action="@{/admin/facturacion/upload-csd}"
+                      method="post"
+                      enctype="multipart/form-data"
+                      class="space-y-4"
+                    >
+                      <div>
+                        <label
+                          class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1"
+                        >
+                          RFC del Emisor
+                        </label>
+                        <input
+                          type="text"
+                          name="rfc"
+                          required
+                          maxlength="13"
+                          placeholder="Ej: AAA010101AAA"
+                          th:value="${facturamaConfig.rfc}"
+                          class="w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary focus:border-transparent uppercase"
+                        />
+                      </div>
+                      <div>
+                        <label
+                          class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1"
+                        >
+                          Certificado (.cer)
+                        </label>
+                        <input
+                          type="file"
+                          name="cerFile"
+                          accept=".cer"
+                          required
+                          class="w-full px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:bg-primary/10 file:text-primary file:font-semibold"
+                        />
+                      </div>
+                      <div>
+                        <label
+                          class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1"
+                        >
+                          Llave privada (.key)
+                        </label>
+                        <input
+                          type="file"
+                          name="keyFile"
+                          accept=".key"
+                          required
+                          class="w-full px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:bg-primary/10 file:text-primary file:font-semibold"
+                        />
+                      </div>
+                      <div>
+                        <label
+                          class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1"
+                        >
+                          Contraseña del CSD
+                        </label>
+                        <input
+                          type="password"
+                          name="csdPassword"
+                          required
+                          autocomplete="off"
+                          placeholder="Contraseña de la llave privada"
+                          class="w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary focus:border-transparent"
+                        />
+                      </div>
+                      <button
+                        type="submit"
+                        class="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-white font-semibold hover:bg-primary-dark transition-colors"
+                      >
+                        <span class="material-symbols-outlined">upload_file</span>
+                        <span
+                          th:text="${facturamaConfig.csdUploaded ? 'Reemplazar Certificados' : 'Subir Certificados'}"
+                          >Subir Certificados</span
+                        >
+                      </button>
+                    </form>
+                  </div>
                 </div>
 
                 <!-- Config not initialized -->
@@ -365,11 +401,24 @@
 
                 <!-- Form -->
                 <div th:if="${facturamaConfig != null}">
-                  <form
-                    th:action="@{/admin/facturacion/update-legal}"
-                    method="post"
-                    class="space-y-4"
-                  >
+                  <!-- LOCKED: fiscal data confirmed -->
+                  <div th:if="${facturamaConfig.fiscalDataConfirmed}"
+                    class="space-y-4">
+                    <div
+                      class="p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800"
+                    >
+                      <p
+                        class="text-sm text-amber-700 dark:text-amber-400 flex items-start gap-2"
+                      >
+                        <span class="material-symbols-outlined text-sm mt-0.5"
+                          >lock</span
+                        >
+                        <span>
+                          <strong>Bloqueado:</strong> Los datos fiscales han sido
+                          confirmados. Para editar, solicite permiso al programador.
+                        </span>
+                      </p>
+                    </div>
                     <div>
                       <label
                         class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1"
@@ -378,17 +427,10 @@
                       </label>
                       <input
                         type="text"
-                        name="legalName"
-                        required
-                        maxlength="300"
-                        placeholder="Ej: Alimentos Pizza Max S.A. de C.V."
                         th:value="${facturamaConfig.legalName}"
-                        class="w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary focus:border-transparent"
+                        disabled
+                        class="w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed"
                       />
-                      <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        Nombre legal registrado ante el SAT (debe coincidir
-                        exactamente con el CSD)
-                      </p>
                     </div>
                     <div>
                       <label
@@ -396,19 +438,12 @@
                       >
                         Régimen Fiscal
                       </label>
-                      <select
-                        name="taxSystem"
-                        required
-                        class="w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary focus:border-transparent"
-                      >
-                        <option value="">Seleccione...</option>
-                        <option
-                          th:each="entry : ${taxSystems}"
-                          th:value="${entry.key}"
-                          th:text="${entry.value}"
-                          th:selected="${facturamaConfig.fiscalRegime == entry.key}"
-                        ></option>
-                      </select>
+                      <input
+                        type="text"
+                        th:value="${taxSystems[facturamaConfig.fiscalRegime]}"
+                        disabled
+                        class="w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed"
+                      />
                     </div>
                     <div>
                       <label
@@ -418,27 +453,90 @@
                       </label>
                       <input
                         type="text"
-                        name="zipCode"
-                        required
-                        maxlength="5"
-                        pattern="[0-9]{5}"
-                        placeholder="Ej: 06600"
                         th:value="${facturamaConfig.expeditionPlace}"
-                        class="w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary focus:border-transparent"
+                        disabled
+                        class="w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed"
                       />
-                      <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        C.P. del domicilio fiscal desde donde se emiten las
-                        facturas
-                      </p>
                     </div>
-                    <button
-                      type="submit"
-                      class="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-white font-semibold hover:bg-primary-dark transition-colors"
+                  </div>
+
+                  <!-- EDITABLE: not confirmed yet -->
+                  <div th:unless="${facturamaConfig.fiscalDataConfirmed}">
+                    <form
+                      th:action="@{/admin/facturacion/update-legal}"
+                      method="post"
+                      class="space-y-4"
                     >
-                      <span class="material-symbols-outlined">save</span>
-                      Guardar Datos Fiscales
-                    </button>
-                  </form>
+                      <div>
+                        <label
+                          class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1"
+                        >
+                          Razón Social
+                        </label>
+                        <input
+                          type="text"
+                          name="legalName"
+                          required
+                          maxlength="300"
+                          placeholder="Ej: Alimentos Pizza Max S.A. de C.V."
+                          th:value="${facturamaConfig.legalName}"
+                          class="w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary focus:border-transparent"
+                        />
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          Nombre legal registrado ante el SAT (debe coincidir
+                          exactamente con el CSD)
+                        </p>
+                      </div>
+                      <div>
+                        <label
+                          class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1"
+                        >
+                          Régimen Fiscal
+                        </label>
+                        <select
+                          name="taxSystem"
+                          required
+                          class="w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary focus:border-transparent"
+                        >
+                          <option value="">Seleccione...</option>
+                          <option
+                            th:each="entry : ${taxSystems}"
+                            th:value="${entry.key}"
+                            th:text="${entry.value}"
+                            th:selected="${facturamaConfig.fiscalRegime == entry.key}"
+                          ></option>
+                        </select>
+                      </div>
+                      <div>
+                        <label
+                          class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1"
+                        >
+                          Código Postal de Expedición
+                        </label>
+                        <input
+                          type="text"
+                          name="zipCode"
+                          required
+                          maxlength="5"
+                          pattern="[0-9]{5}"
+                          placeholder="Ej: 06600"
+                          th:value="${facturamaConfig.expeditionPlace}"
+                          class="w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary focus:border-transparent"
+                        />
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          C.P. del domicilio fiscal desde donde se emiten las
+                          facturas
+                        </p>
+                      </div>
+                      <button
+                        type="submit"
+                        class="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-white font-semibold hover:bg-primary-dark transition-colors"
+                      >
+                        <span class="material-symbols-outlined">save</span>
+                        Guardar Datos Fiscales
+                      </button>
+                    </form>
+                  </div>
                 </div>
 
                 <!-- Config not initialized -->
@@ -1463,6 +1561,8 @@
         });
       });
     </script>
+
+
 
     <!-- Sidebar Scripts Fragment -->
     <div th:replace="~{fragments/sidebar :: sidebarScripts}"></div>

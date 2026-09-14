@@ -135,6 +135,9 @@ public class FacturamaController {
 
             facturamaService.uploadCsd(config, cerFile, keyFile, csdPassword, rfc.toUpperCase().trim());
 
+            // Lock fiscal data after successful CSD upload
+            facturamaService.confirmFiscalData(config);
+
             redirectAttributes.addFlashAttribute("successMessage",
                     "Certificados CSD subidos exitosamente a Facturama. Los archivos NO fueron almacenados en nuestro sistema.");
 
@@ -174,6 +177,9 @@ public class FacturamaController {
                     .orElseThrow(() -> new IllegalStateException("Primero debe inicializar la configuración"));
 
             facturamaService.updateLegalData(config, legalName.trim(), taxSystem, zipCode.trim());
+
+            // Lock fiscal data after successful legal data save
+            facturamaService.confirmFiscalData(config);
 
             redirectAttributes.addFlashAttribute("successMessage",
                     "Datos fiscales guardados exitosamente.");

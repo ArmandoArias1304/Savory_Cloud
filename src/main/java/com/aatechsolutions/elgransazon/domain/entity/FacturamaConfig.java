@@ -100,6 +100,16 @@ public class FacturamaConfig implements Serializable {
     @Builder.Default
     private Boolean legalDataConfigured = false;
 
+    /**
+     * Whether the admin has confirmed/saved all fiscal data (CSD + legal data).
+     * When true, Steps 1 and 2 are locked (read-only) for the admin.
+     * Only a PROGRAMMER can unlock editing via the "Permitir Edición" button,
+     * which resets this field to false.
+     */
+    @Column(name = "fiscal_data_confirmed", nullable = false)
+    @Builder.Default
+    private Boolean fiscalDataConfirmed = false;
+
     // ========== Timestamps ==========
 
     @Column(name = "created_at", nullable = false, updatable = false)

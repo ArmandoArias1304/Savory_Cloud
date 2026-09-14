@@ -401,6 +401,28 @@ public class FacturamaService {
         log.info("Facturama integration disabled for RFC: {}", config.getRfc());
     }
 
+    // ========== Fiscal Data Lock/Unlock ==========
+
+    /**
+     * Mark fiscal data as confirmed (locked) after the admin saves CSD or legal data.
+     * Steps 1 and 2 become read-only until a programmer unlocks them.
+     */
+    public void confirmFiscalData(FacturamaConfig config) {
+        config.setFiscalDataConfirmed(true);
+        facturamaConfigRepository.save(config);
+        log.info("Fiscal data confirmed (locked) for RFC: {}", config.getRfc());
+    }
+
+    /**
+     * Unlock fiscal data so the admin can edit Steps 1 and 2 again.
+     * Only callable by a programmer.
+     */
+    public void unlockFiscalData(FacturamaConfig config) {
+        config.setFiscalDataConfirmed(false);
+        facturamaConfigRepository.save(config);
+        log.info("Fiscal data unlocked for RFC: {}", config.getRfc());
+    }
+
     /**
      * Get whether the system is in live (production) mode.
      * This is a global setting controlled by the FACTURAMA_LIVE_MODE env var.
