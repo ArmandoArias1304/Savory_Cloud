@@ -4,8 +4,12 @@ import com.aatechsolutions.elgransazon.application.service.CustomerService;
 import com.aatechsolutions.elgransazon.application.service.EmployeeService;
 import com.aatechsolutions.elgransazon.application.service.EmailVerificationService;
 import com.aatechsolutions.elgransazon.application.service.LicenseService;
+import com.aatechsolutions.elgransazon.application.service.BusinessHoursService;
+import com.aatechsolutions.elgransazon.application.service.DateTimeService;
+import com.aatechsolutions.elgransazon.application.service.ShiftService;
 import com.aatechsolutions.elgransazon.domain.entity.Company;
 import com.aatechsolutions.elgransazon.domain.entity.Customer;
+import com.aatechsolutions.elgransazon.domain.entity.Employee;
 import com.aatechsolutions.elgransazon.domain.entity.Role;
 import com.aatechsolutions.elgransazon.domain.repository.EmployeeRepository;
 import com.aatechsolutions.elgransazon.infrastructure.context.CompanyContext;
@@ -36,36 +40,45 @@ public class CustomAuthenticationSuccessHandler implements AuthenticationSuccess
     private final EmailVerificationService emailVerificationService;
     private final LicenseService licenseService;
     private final EmployeeRepository employeeRepository;
-    
+    private final BusinessHoursService businessHoursService;
+    private final DateTimeService dateTimeService;
+    private final ShiftService shiftService;
+
     public CustomAuthenticationSuccessHandler(@Lazy EmployeeService employeeService,
-                                             @Lazy CustomerService customerService,
-                                             @Lazy EmailVerificationService emailVerificationService,
-                                             @Lazy LicenseService licenseService,
-                                             EmployeeRepository employeeRepository) {
+            @Lazy CustomerService customerService,
+            @Lazy EmailVerificationService emailVerificationService,
+            @Lazy LicenseService licenseService,
+            EmployeeRepository employeeRepository,
+            BusinessHoursService businessHoursService,
+            DateTimeService dateTimeService,
+            ShiftService shiftService) {
         this.employeeService = employeeService;
         this.customerService = customerService;
         this.emailVerificationService = emailVerificationService;
         this.licenseService = licenseService;
         this.employeeRepository = employeeRepository;
+        this.businessHoursService = businessHoursService;
+        this.dateTimeService = dateTimeService;
+        this.shiftService = shiftService;
     }
 
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request,
-                                        HttpServletResponse response,
-                                        Authentication authentication) throws IOException, ServletException {
-        
+            HttpServletResponse response,
+            Authentication authentication) throws IOException, ServletException {
+
         String username = authentication.getName();
         log.info("User {} logged in successfully", username);
-        
+
         // Check if it's a customer (has ROLE_CLIENT) or employee
         boolean isCustomer = authentication.getAuthorities().stream()
                 .anyMatch(auth -> auth.getAuthority().equals(Role.CLIENT));
-        
+
         // Get the login URL to validate if user is using correct login page
         String referer = request.getHeader("Referer");
-        
+
         log.debug("Referer: {}", referer);
-        
+
         // Validate: Customer trying to login via employee login
         if (isCustomer && (referer != null && !referer.contains("/client/login"))) {
             log.warn("Customer {} attempted to login via employee login page", username);
@@ -73,7 +86,7 @@ public class CustomAuthenticationSuccessHandler implements AuthenticationSuccess
             response.sendRedirect("/login?error=clientAttempt");
             return;
         }
-        
+
         // Validate: Employee trying to login via client login
         if (!isCustomer && (referer != null && referer.contains("/client/login"))) {
             log.warn("Employee {} attempted to login via client login page", username);
@@ -81,14 +94,14 @@ public class CustomAuthenticationSuccessHandler implements AuthenticationSuccess
             response.sendRedirect("/client/login?error=true");
             return;
         }
-        
+
         // Validate: Customer email verification (async to not block login redirect)
         if (isCustomer) {
             try {
                 // MULTI-TENANT: Get customer by username/email AND company
                 Company currentCompany = CompanyContext.getCurrentCompany();
                 Customer customer = null;
-                
+
                 if (currentCompany != null) {
                     customer = customerService.findByUsernameOrEmailAndCompany(username, currentCompany)
                             .orElseThrow(() -> new RuntimeException("Customer not found for company"));
@@ -99,11 +112,11 @@ public class CustomAuthenticationSuccessHandler implements AuthenticationSuccess
                     response.sendRedirect("/client/login?error=noCompanyContext");
                     return;
                 }
-                
+
                 // Check if email is verified
                 if (!Boolean.TRUE.equals(customer.getEmailVerified())) {
                     log.warn("Customer {} attempted to login without verifying email", username);
-                    
+
                     boolean emailSent = false;
                     boolean emailSendError = false;
                     try {
@@ -113,58 +126,94 @@ public class CustomAuthenticationSuccessHandler implements AuthenticationSuccess
                         log.error("Error sending verification email to unverified customer {}", username, e);
                         emailSendError = true;
                     }
-                    
+
                     request.getSession().invalidate();
-                    
+
                     if (emailSent) {
                         response.sendRedirect("/client/login?error=emailNotVerified&emailSent=true");
                     } else if (emailSendError) {
                         response.sendRedirect("/client/login?error=emailNotVerified&emailError=true");
                     } else {
                         long minutesLeft = emailVerificationService.getTokenMinutesRemaining(customer);
-                        response.sendRedirect("/client/login?error=emailNotVerified&emailSent=false&minutesLeft=" + minutesLeft);
+                        response.sendRedirect(
+                                "/client/login?error=emailNotVerified&emailSent=false&minutesLeft=" + minutesLeft);
                     }
                     return;
                 }
-                
+
                 // Update last access asynchronously (don't wait for it)
                 updateLastAccessAsync(username, true, currentCompany);
-                
+
             } catch (Exception e) {
                 log.error("Error checking email verification for customer {}", username, e);
                 // Continue with normal flow if check fails
             }
         } else {
-            // Update last access asynchronously for employees
-            // Capture company context here (on the request thread) before launching async thread
-            updateLastAccessAsync(username, false, CompanyContext.getCurrentCompany());
-            
-            // Check user limit enforcement for non-customer logins
             boolean isProgrammer = authentication.getAuthorities().stream()
                     .anyMatch(auth -> auth.getAuthority().equals(Role.PROGRAMMER));
             boolean isAdminRole = authentication.getAuthorities().stream()
                     .anyMatch(auth -> auth.getAuthority().equals(Role.ADMIN));
-            
+            boolean isManagerRole = authentication.getAuthorities().stream()
+                    .anyMatch(auth -> auth.getAuthority().equals(Role.MANAGER));
+
+            // Management and programmer accounts can access the system regardless
+            // of restaurant hours; operational employees must be on shift.
+            if (!isProgrammer && !isAdminRole && !isManagerRole) {
+                if (!businessHoursService.isOpenNow()) {
+                    log.warn("Employee {} login blocked: restaurant is closed", username);
+                    request.getSession().invalidate();
+                    response.sendRedirect("/login?error=restaurantClosed");
+                    return;
+                }
+
+                Employee employee = employeeService.findByUsername(username)
+                        .orElse(null);
+                if (employee != null) {
+                    java.time.LocalDateTime now = dateTimeService.nowLocal();
+                    boolean hasAssignedShifts = !shiftService
+                        .getShiftsByEmployee(employee.getIdEmpleado())
+                        .isEmpty();
+
+                    // No assigned shifts means the employee is not schedule-restricted.
+                    if (hasAssignedShifts
+                        && !shiftService.isEmployeeInActiveShift(
+                            employee.getIdEmpleado(), now.getDayOfWeek(), now.toLocalTime())) {
+                    log.warn("Employee {} login blocked: no active shift at {}", username, now);
+                    request.getSession().invalidate();
+                    response.sendRedirect("/login?error=outsideShift");
+                    return;
+                    }
+                }
+            }
+
+            // Update last access asynchronously for employees
+            // Capture company context here (on the request thread) before launching async
+            // thread
+            updateLastAccessAsync(username, false, CompanyContext.getCurrentCompany());
+
+            // Check user limit enforcement for non-customer logins
             if (!isProgrammer) {
                 // MULTI-TENANT: Count employees only for the current company
                 Company company = CompanyContext.getCurrentCompany();
-                long currentActiveUsers = company != null 
-                    ? employeeRepository.countEnabledByCompanyExcludingProgrammer(company)
-                    : employeeRepository.countEnabledExcludingProgrammer();
+                long currentActiveUsers = company != null
+                        ? employeeRepository.countEnabledByCompanyExcludingProgrammer(company)
+                        : employeeRepository.countEnabledExcludingProgrammer();
                 boolean limitExceeded = licenseService.isUserLimitExceeded(currentActiveUsers);
-                
+
                 if (limitExceeded) {
                     if (isAdminRole) {
                         // ADMIN can enter but must go to employees page
                         Integer maxUsers = licenseService.getMaxUsers();
                         request.getSession().setAttribute("userLimitExceeded", true);
                         request.getSession().setAttribute("userLimitExceededInfo",
-                            String.format("El límite de usuarios se ha reducido a %d, pero actualmente hay %d empleados activos. " +
-                                "Debes desactivar %d empleado(s) para continuar usando el sistema normalmente.",
-                                maxUsers, currentActiveUsers, currentActiveUsers - maxUsers));
+                                String.format(
+                                        "El límite de usuarios se ha reducido a %d, pero actualmente hay %d empleados activos. "
+                                                +
+                                                "Debes desactivar %d empleado(s) para continuar usando el sistema normalmente.",
+                                        maxUsers, currentActiveUsers, currentActiveUsers - maxUsers));
                         request.getSession().setAttribute("userLimitMax", maxUsers);
                         request.getSession().setAttribute("userLimitCurrent", currentActiveUsers);
-                        request.getSession().setAttribute("userLimitExcess", (int)(currentActiveUsers - maxUsers));
+                        request.getSession().setAttribute("userLimitExcess", (int) (currentActiveUsers - maxUsers));
                         log.warn("User limit exceeded. Redirecting ADMIN {} to /admin/employees", username);
                         response.sendRedirect("/admin/employees");
                         return;
@@ -178,18 +227,19 @@ public class CustomAuthenticationSuccessHandler implements AuthenticationSuccess
                 }
             }
         }
-        
+
         String targetUrl = determineTargetUrl(authentication);
         log.debug("Redirecting user {} to {}", username, targetUrl);
-        
+
         response.sendRedirect(targetUrl);
     }
-    
+
     /**
      * Update last access timestamp asynchronously to avoid blocking login
-     * @param username The user's email/username
+     * 
+     * @param username   The user's email/username
      * @param isCustomer Whether this is a customer (true) or employee (false)
-     * @param company The company context for customers (null for employees)
+     * @param company    The company context for customers (null for employees)
      */
     private void updateLastAccessAsync(String username, boolean isCustomer, Company company) {
         // Run in a separate thread to not block the response
@@ -215,15 +265,16 @@ public class CustomAuthenticationSuccessHandler implements AuthenticationSuccess
 
     /**
      * Determine the target URL based on user's roles
-     * Priority: CLIENT > ADMIN > MANAGER > CHEF > BARISTA > WAITER > CASHIER > DELIVERY > default
+     * Priority: CLIENT > ADMIN > MANAGER > CHEF > BARISTA > WAITER > CASHIER >
+     * DELIVERY > default
      */
     private String determineTargetUrl(Authentication authentication) {
         Collection<? extends GrantedAuthority> authorities = authentication.getAuthorities();
-        
+
         for (GrantedAuthority authority : authorities) {
             String role = authority.getAuthority();
             log.debug("Checking role: {}", role);
-            
+
             if (Role.CLIENT.equals(role)) {
                 return "/client/dashboard";
             } else if (Role.PROGRAMMER.equals(role)) {
@@ -246,7 +297,7 @@ public class CustomAuthenticationSuccessHandler implements AuthenticationSuccess
                 return "/delivery/dashboard";
             }
         }
-        
+
         // Default redirect
         log.warn("No specific role found for user {}, redirecting to default home", authentication.getName());
         return "/home";

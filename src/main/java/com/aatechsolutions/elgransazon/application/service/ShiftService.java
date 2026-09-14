@@ -85,6 +85,11 @@ public interface ShiftService {
     List<Shift> getShiftsByEmployee(Long employeeId);
 
     /**
+     * Check whether an employee has an active shift at the given local date/time.
+     */
+    boolean isEmployeeInActiveShift(Long employeeId, java.time.DayOfWeek day, LocalTime time);
+
+    /**
      * Get employees assigned to a shift
      */
     List<Employee> getEmployeesByShift(Long shiftId);

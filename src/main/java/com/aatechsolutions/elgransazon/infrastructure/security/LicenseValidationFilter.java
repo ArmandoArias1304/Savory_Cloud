@@ -28,35 +28,35 @@ public class LicenseValidationFilter extends OncePerRequestFilter {
     private final LicenseService licenseService;
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, 
-                                   HttpServletResponse response, 
-                                   FilterChain filterChain) throws ServletException, IOException {
-        
+    protected void doFilterInternal(HttpServletRequest request,
+            HttpServletResponse response,
+            FilterChain filterChain) throws ServletException, IOException {
+
         // Get current authentication
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        
+
         // Only validate for authenticated users
         if (auth != null && auth.isAuthenticated() && !auth.getPrincipal().equals("anonymousUser")) {
-            
+
             // Check if user has PROGRAMMER role
             boolean isProgrammer = auth.getAuthorities().stream()
-                .map(GrantedAuthority::getAuthority)
-                .anyMatch(role -> role.equals("ROLE_PROGRAMMER"));
-            
+                    .map(GrantedAuthority::getAuthority)
+                    .anyMatch(role -> role.equals("ROLE_PROGRAMMER"));
+
             // Skip license validation for PROGRAMMER and certain paths
             String requestPath = request.getRequestURI();
             if (isProgrammer || isExcludedPath(requestPath)) {
                 filterChain.doFilter(request, response);
                 return;
             }
-            
+
             // Validate license
             SystemLicense license = licenseService.getLicense();
             if (license != null && license.isExpired()) {
                 // Log the exact license that caused the block: without this it is
                 // impossible to tell which company's license expired (multi-tenant).
                 log.warn("License expired (licenseId={}, key={}, status={}, expiresAt={} UTC). " +
-                         "Blocking {} {} for user: {}",
+                        "Blocking {} {} for user: {}",
                         license.getId(), license.getLicenseKey(), license.getStatus(),
                         license.getExpirationDate(), request.getMethod(), requestPath, auth.getName());
 
@@ -67,18 +67,18 @@ public class LicenseValidationFilter extends OncePerRequestFilter {
 
                 // Detect client role BEFORE invalidating session
                 boolean isClientRedirect = auth.getAuthorities().stream()
-                    .anyMatch(a -> a.getAuthority().equals("ROLE_CLIENT"));
+                        .anyMatch(a -> a.getAuthority().equals("ROLE_CLIENT"));
 
                 // Invalidate session
                 request.getSession().invalidate();
                 SecurityContextHolder.clearContext();
-                
+
                 // Redirect to license expired page
                 response.sendRedirect("/license-expired" + (isClientRedirect ? "?client=true" : ""));
                 return;
             }
         }
-        
+
         filterChain.doFilter(request, response);
     }
 
@@ -87,32 +87,33 @@ public class LicenseValidationFilter extends OncePerRequestFilter {
      */
     private boolean isExcludedPath(String path) {
         return path.startsWith("/login") ||
-               path.startsWith("/perform_login") ||
-               path.startsWith("/logout") ||
-               path.startsWith("/error") ||
-               path.startsWith("/fonts/") ||
-               path.startsWith("/sounds/") ||
-               path.startsWith("/webjars/") ||
-               path.startsWith("/css") ||
-               path.startsWith("/js") ||
-               path.startsWith("/images") ||
-               path.startsWith("/system-landing") ||
-               path.startsWith("/license-expired") ||
-               path.startsWith("/support") ||
-               path.startsWith("/help") ||
-               path.startsWith("/helpClient") ||
-               path.startsWith("/programmer") ||
-               path.startsWith("/client/login") ||
-               path.startsWith("/client/register") ||
-               path.startsWith("/client/verify-email") ||
-               path.startsWith("/autofactura/") ||
-               path.startsWith("/qz/") ||
-               path.startsWith("/ws") ||
-               path.startsWith("/topic/") ||
-               path.startsWith("/flyers/") ||  // Flyers editor (public static resource)
-               path.startsWith("/.well-known/") ||
-               path.startsWith("/home") ||
-               path.equals("/favicon.ico") ||
-               path.equals("/");  // Only exact root path, not all paths
+                path.startsWith("/perform_login") ||
+                path.startsWith("/logout") ||
+                path.startsWith("/error") ||
+                path.startsWith("/fonts/") ||
+                path.startsWith("/sounds/") ||
+                path.endsWith(".mp3") ||
+                path.startsWith("/webjars/") ||
+                path.startsWith("/css") ||
+                path.startsWith("/js") ||
+                path.startsWith("/images") ||
+                path.startsWith("/system-landing") ||
+                path.startsWith("/license-expired") ||
+                path.startsWith("/support") ||
+                path.startsWith("/help") ||
+                path.startsWith("/helpClient") ||
+                path.startsWith("/programmer") ||
+                path.startsWith("/client/login") ||
+                path.startsWith("/client/register") ||
+                path.startsWith("/client/verify-email") ||
+                path.startsWith("/autofactura/") ||
+                path.startsWith("/qz/") ||
+                path.startsWith("/ws") ||
+                path.startsWith("/topic/") ||
+                path.startsWith("/flyers/") || // Flyers editor (public static resource)
+                path.startsWith("/.well-known/") ||
+                path.startsWith("/home") ||
+                path.equals("/favicon.ico") ||
+                path.equals("/"); // Only exact root path, not all paths
     }
 }

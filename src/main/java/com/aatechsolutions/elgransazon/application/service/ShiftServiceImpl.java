@@ -128,19 +128,17 @@ public class ShiftServiceImpl implements ShiftService {
         // Check if shift has employees assigned
         if (shift.hasEmployees()) {
             throw new IllegalStateException(
-                    "No se puede eliminar el turno porque tiene " + shift.getEmployeeCount() + 
-                    " empleados asignados. Remueva los empleados primero."
-            );
+                    "No se puede eliminar el turno porque tiene " + shift.getEmployeeCount() +
+                            " empleados asignados. Remueva los empleados primero.");
         }
 
         // Check if shift has history records
         long historyCount = historyService.countHistoryByShift(id);
         if (historyCount > 0) {
             throw new IllegalStateException(
-                    "No se puede eliminar el turno porque tiene " + historyCount + 
-                    " registros en el historial de asignaciones. Para mantener la integridad de los datos, " +
-                    "desactive el turno en lugar de eliminarlo."
-            );
+                    "No se puede eliminar el turno porque tiene " + historyCount +
+                            " registros en el historial de asignaciones. Para mantener la integridad de los datos, " +
+                            "desactive el turno en lugar de eliminarlo.");
         }
 
         shiftRepository.delete(shift);
@@ -221,13 +219,25 @@ public class ShiftServiceImpl implements ShiftService {
 
     @Override
     @Transactional(readOnly = true)
+    public boolean isEmployeeInActiveShift(Long employeeId, java.time.DayOfWeek day, LocalTime time) {
+        DayOfWeek currentDay = DayOfWeek.valueOf(day.name());
+
+        return getShiftsByEmployee(employeeId).stream()
+                .filter(shift -> Boolean.TRUE.equals(shift.getActive()))
+                .filter(shift -> shift.getWorkDays() != null && shift.getWorkDays().contains(currentDay))
+                .anyMatch(shift -> !time.isBefore(shift.getStartTime())
+                        && !time.isAfter(shift.getEndTime()));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<Employee> getEmployeesByShift(Long shiftId) {
         log.debug("Fetching employees for shift ID: {}", shiftId);
-        
+
         Company company = CompanyContext.requireCurrentCompany();
         Shift shift = shiftRepository.findByIdAndCompany(shiftId, company)
                 .orElseThrow(() -> new IllegalArgumentException("Turno no encontrado con ID: " + shiftId));
-        
+
         return new ArrayList<>(shift.getEmployees());
     }
 
@@ -243,8 +253,7 @@ public class ShiftServiceImpl implements ShiftService {
             throw new IllegalStateException("No se pueden asignar empleados a un turno inactivo");
         }
 
-        Employee actionBy = actionById != null ? 
-                employeeRepository.findById(actionById).orElse(null) : null;
+        Employee actionBy = actionById != null ? employeeRepository.findById(actionById).orElse(null) : null;
 
         List<Employee> assignedEmployees = new ArrayList<>();
 
@@ -269,16 +278,15 @@ public class ShiftServiceImpl implements ShiftService {
 
         if (!assignedEmployees.isEmpty()) {
             shiftRepository.save(shift);
-            
+
             // Create history records
             historyService.createHistoryRecords(
-                    assignedEmployees, 
-                    shift, 
-                    ShiftAction.ASSIGNED, 
-                    actionBy, 
-                    null
-            );
-            
+                    assignedEmployees,
+                    shift,
+                    ShiftAction.ASSIGNED,
+                    actionBy,
+                    null);
+
             log.info("Successfully assigned {} employees to shift", assignedEmployees.size());
         } else {
             log.info("No new employees were assigned");
@@ -293,8 +301,7 @@ public class ShiftServiceImpl implements ShiftService {
         Shift shift = shiftRepository.findByIdAndCompany(shiftId, company)
                 .orElseThrow(() -> new IllegalArgumentException("Turno no encontrado con ID: " + shiftId));
 
-        Employee actionBy = actionById != null ? 
-                employeeRepository.findById(actionById).orElse(null) : null;
+        Employee actionBy = actionById != null ? employeeRepository.findById(actionById).orElse(null) : null;
 
         List<Employee> removedEmployees = new ArrayList<>();
 
@@ -313,16 +320,15 @@ public class ShiftServiceImpl implements ShiftService {
 
         if (!removedEmployees.isEmpty()) {
             shiftRepository.save(shift);
-            
+
             // Create history records
             historyService.createHistoryRecords(
-                    removedEmployees, 
-                    shift, 
-                    ShiftAction.REMOVED, 
-                    actionBy, 
-                    reason
-            );
-            
+                    removedEmployees,
+                    shift,
+                    ShiftAction.REMOVED,
+                    actionBy,
+                    reason);
+
             log.info("Successfully removed {} employees from shift", removedEmployees.size());
         } else {
             log.info("No employees were removed");
@@ -348,14 +354,13 @@ public class ShiftServiceImpl implements ShiftService {
         }
 
         SystemConfiguration config = configurationService.getConfiguration();
-        
+
         // Get work days from business hours (days where is_closed = false)
         List<DayOfWeek> workDays = config.getSortedWorkDays();
 
         if (workDays == null || workDays.isEmpty()) {
             throw new IllegalStateException(
-                    "No hay días laborales configurados en el sistema. Configure los horarios de negocio primero."
-            );
+                    "No hay días laborales configurados en el sistema. Configure los horarios de negocio primero.");
         }
 
         // Validate each shift day is a work day
@@ -363,8 +368,7 @@ public class ShiftServiceImpl implements ShiftService {
             if (!config.isWorkDay(day)) {
                 throw new IllegalArgumentException(
                         "El día " + day.getDisplayName() + " no es un día laboral del restaurante. " +
-                        "El restaurante está cerrado este día."
-                );
+                                "El restaurante está cerrado este día.");
             }
         }
 
@@ -389,33 +393,29 @@ public class ShiftServiceImpl implements ShiftService {
 
             if (businessHours.isEmpty()) {
                 throw new IllegalStateException(
-                        "No hay horarios configurados para el día " + day.getDisplayName() + 
-                        ". Configure los horarios del restaurante primero."
-                );
+                        "No hay horarios configurados para el día " + day.getDisplayName() +
+                                ". Configure los horarios del restaurante primero.");
             }
 
             BusinessHours hours = businessHours.get();
 
             if (hours.getIsClosed()) {
                 throw new IllegalArgumentException(
-                        "El restaurante está cerrado el día " + day.getDisplayName()
-                );
+                        "El restaurante está cerrado el día " + day.getDisplayName());
             }
 
             // Validate start time
             if (startTime.isBefore(hours.getOpenTime())) {
                 throw new IllegalArgumentException(
-                        "La hora de inicio del turno (" + startTime + ") para " + day.getDisplayName() + 
-                        " debe ser a partir de las " + hours.getOpenTime()
-                );
+                        "La hora de inicio del turno (" + startTime + ") para " + day.getDisplayName() +
+                                " debe ser a partir de las " + hours.getOpenTime());
             }
 
             // Validate end time
             if (endTime.isAfter(hours.getCloseTime())) {
                 throw new IllegalArgumentException(
-                        "La hora de fin del turno (" + endTime + ") para " + day.getDisplayName() + 
-                        " debe ser antes de las " + hours.getCloseTime()
-                );
+                        "La hora de fin del turno (" + endTime + ") para " + day.getDisplayName() +
+                                " debe ser antes de las " + hours.getCloseTime());
             }
         }
 

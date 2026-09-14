@@ -49,27 +49,27 @@ public class PromotionController {
             @RequestParam(required = false) PromotionType type,
             @RequestParam(required = false) Boolean active,
             Model model) {
-        
+
         log.debug("Displaying promotions list. Type: {}, Active: {}", type, active);
 
         List<Promotion> promotions;
-        
+
         // Apply filters
         if (type != null) {
             promotions = promotionService.findByType(type);
             if (active != null) {
                 boolean isActive = active;
                 promotions = promotions.stream()
-                    .filter(p -> p.getActive() == isActive)
-                    .collect(Collectors.toList());
+                        .filter(p -> p.getActive() == isActive)
+                        .collect(Collectors.toList());
             }
         } else if (active != null) {
             if (active) {
                 promotions = promotionService.findActivePromotions();
             } else {
                 promotions = promotionService.findAll().stream()
-                    .filter(p -> !p.getActive())
-                    .collect(Collectors.toList());
+                        .filter(p -> !p.getActive())
+                        .collect(Collectors.toList());
             }
         } else {
             promotions = promotionService.findAllOrderedByName();
@@ -102,12 +102,11 @@ public class PromotionController {
         promotion.setActive(true);
 
         List<ItemMenu> menuItems = itemMenuService.findAllActive();
-        
+
         // Group items by category for better UX
         Map<String, List<ItemMenu>> itemsByCategory = menuItems.stream()
-            .collect(Collectors.groupingBy(item -> 
-                item.getCategory() != null ? item.getCategory().getName() : "Sin Categoría"
-            ));
+                .collect(Collectors.groupingBy(
+                        item -> item.getCategory() != null ? item.getCategory().getName() : "Sin Categoría"));
 
         // Create a map with Spanish day names
         Map<String, String> daysOfWeekMap = new LinkedHashMap<>();
@@ -134,52 +133,52 @@ public class PromotionController {
      * Show form to edit an existing promotion
      */
     @GetMapping("/edit/{id}")
-    public String editPromotionForm(@PathVariable String role, @PathVariable Long id, 
-            Model model, 
+    public String editPromotionForm(@PathVariable String role, @PathVariable Long id,
+            Model model,
             RedirectAttributes redirectAttributes) {
-        
+
         log.debug("Displaying edit form for promotion ID: {}", id);
 
         return promotionService.findById(id)
-            .map(promotion -> {
-                List<ItemMenu> menuItems = itemMenuService.findAllActive();
-                
-                Map<String, List<ItemMenu>> itemsByCategory = menuItems.stream()
-                    .collect(Collectors.groupingBy(item -> 
-                        item.getCategory() != null ? item.getCategory().getName() : "Sin Categoría"
-                    ));
+                .map(promotion -> {
+                    List<ItemMenu> menuItems = itemMenuService.findAllActive();
 
-                // Get selected item IDs for pre-selecting in form
-                List<Long> selectedItemIds = promotion.getItems().stream()
-                    .map(ItemMenu::getIdItemMenu)
-                    .collect(Collectors.toList());
+                    Map<String, List<ItemMenu>> itemsByCategory = menuItems.stream()
+                            .collect(Collectors
+                                    .groupingBy(item -> item.getCategory() != null ? item.getCategory().getName()
+                                            : "Sin Categoría"));
 
-                // Create a map with Spanish day names
-                Map<String, String> daysOfWeekMap = new LinkedHashMap<>();
-                daysOfWeekMap.put("MONDAY", "Lunes");
-                daysOfWeekMap.put("TUESDAY", "Martes");
-                daysOfWeekMap.put("WEDNESDAY", "Miércoles");
-                daysOfWeekMap.put("THURSDAY", "Jueves");
-                daysOfWeekMap.put("FRIDAY", "Viernes");
-                daysOfWeekMap.put("SATURDAY", "Sábado");
-                daysOfWeekMap.put("SUNDAY", "Domingo");
+                    // Get selected item IDs for pre-selecting in form
+                    List<Long> selectedItemIds = promotion.getItems().stream()
+                            .map(ItemMenu::getIdItemMenu)
+                            .collect(Collectors.toList());
 
-                model.addAttribute("promotion", promotion);
-                model.addAttribute("promotionTypes", PromotionType.values());
-                model.addAttribute("allDaysOfWeek", DayOfWeek.values());
-                model.addAttribute("daysOfWeekMap", daysOfWeekMap);
-                model.addAttribute("menuItems", menuItems);
-                model.addAttribute("itemsByCategory", itemsByCategory);
-                model.addAttribute("selectedItemIds", selectedItemIds);
-                model.addAttribute("selectedDays", promotion.getValidDaysSet());
-                model.addAttribute("formAction", "/admin/promotions/" + id);
+                    // Create a map with Spanish day names
+                    Map<String, String> daysOfWeekMap = new LinkedHashMap<>();
+                    daysOfWeekMap.put("MONDAY", "Lunes");
+                    daysOfWeekMap.put("TUESDAY", "Martes");
+                    daysOfWeekMap.put("WEDNESDAY", "Miércoles");
+                    daysOfWeekMap.put("THURSDAY", "Jueves");
+                    daysOfWeekMap.put("FRIDAY", "Viernes");
+                    daysOfWeekMap.put("SATURDAY", "Sábado");
+                    daysOfWeekMap.put("SUNDAY", "Domingo");
 
-                return role + "/promotions/form";
-            })
-            .orElseGet(() -> {
-                redirectAttributes.addFlashAttribute("error", "Promoción no encontrada");
-                return "redirect:/" + role + "/promotions";
-            });
+                    model.addAttribute("promotion", promotion);
+                    model.addAttribute("promotionTypes", PromotionType.values());
+                    model.addAttribute("allDaysOfWeek", DayOfWeek.values());
+                    model.addAttribute("daysOfWeekMap", daysOfWeekMap);
+                    model.addAttribute("menuItems", menuItems);
+                    model.addAttribute("itemsByCategory", itemsByCategory);
+                    model.addAttribute("selectedItemIds", selectedItemIds);
+                    model.addAttribute("selectedDays", promotion.getValidDaysSet());
+                    model.addAttribute("formAction", "/admin/promotions/" + id);
+
+                    return role + "/promotions/form";
+                })
+                .orElseGet(() -> {
+                    redirectAttributes.addFlashAttribute("error", "Promoción no encontrada");
+                    return "redirect:/" + role + "/promotions";
+                });
     }
 
     /**
@@ -207,7 +206,7 @@ public class PromotionController {
         // Leaving both empty means the promotion applies all day on the selected days.
         if ((promotion.getStartTime() == null) != (promotion.getEndTime() == null)) {
             bindingResult.rejectValue("endTime", "error.promotion",
-                "Indica la hora de inicio y la hora de fin, o deja ambas vacías para que aplique todo el día");
+                    "Indica la hora de inicio y la hora de fin, o deja ambas vacías para que aplique todo el día");
         }
 
         // Validate items
@@ -225,7 +224,8 @@ public class PromotionController {
             // Handle image upload
             if (imageFile != null && !imageFile.isEmpty()) {
                 if (!imageStorageService.isValidImage(imageFile)) {
-                    model.addAttribute("error", "Imagen inválida. Solo se permiten imágenes JPG, PNG, GIF o WEBP de máximo 5MB");
+                    model.addAttribute("error",
+                            "Imagen inválida. Solo se permiten imágenes JPG, PNG, GIF o WEBP de máximo 5MB");
                     loadFormData(model, promotion, role);
                     return role + "/promotions/form";
                 }
@@ -244,17 +244,16 @@ public class PromotionController {
             if (promotion.getPromotionType() == PromotionType.FIXED_AMOUNT_DISCOUNT) {
                 Map<String, Object> validationResult = promotionService.validateFixedDiscountAmount(promotion);
                 boolean isValid = (boolean) validationResult.get("valid");
-                
+
                 if (!isValid) {
                     @SuppressWarnings("unchecked")
                     List<String> invalidItems = (List<String>) validationResult.get("invalidItems");
                     String errorMsg = String.format(
-                        "El descuento de $%.2f es mayor que el precio de los siguientes items: %s. " +
-                        "El descuento fijo no puede ser mayor al precio del item.",
-                        promotion.getDiscountAmount(),
-                        String.join(", ", invalidItems)
-                    );
-                    
+                            "El descuento de $%.2f es mayor que el precio de los siguientes items: %s. " +
+                                    "El descuento fijo no puede ser mayor al precio del item.",
+                            promotion.getDiscountAmount(),
+                            String.join(", ", invalidItems));
+
                     log.warn("Fixed discount validation failed: {}", errorMsg);
                     model.addAttribute("error", errorMsg);
                     loadFormData(model, promotion, role);
@@ -263,8 +262,8 @@ public class PromotionController {
             }
 
             promotionService.save(promotion);
-            redirectAttributes.addFlashAttribute("success", 
-                "Promoción '" + promotion.getName() + "' creada exitosamente");
+            redirectAttributes.addFlashAttribute("success",
+                    "Promoción '" + promotion.getName() + "' creada exitosamente");
             return "redirect:/" + role + "/promotions";
 
         } catch (IllegalArgumentException e) {
@@ -306,7 +305,7 @@ public class PromotionController {
         // Leaving both empty means the promotion applies all day on the selected days.
         if ((promotion.getStartTime() == null) != (promotion.getEndTime() == null)) {
             bindingResult.rejectValue("endTime", "error.promotion",
-                "Indica la hora de inicio y la hora de fin, o deja ambas vacías para que aplique todo el día");
+                    "Indica la hora de inicio y la hora de fin, o deja ambas vacías para que aplique todo el día");
         }
 
         // Validate items
@@ -324,12 +323,13 @@ public class PromotionController {
         try {
             // Get existing promotion
             Promotion existing = promotionService.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("promoción no encontrada"));
+                    .orElseThrow(() -> new IllegalArgumentException("promoción no encontrada"));
 
             // Handle image upload
             if (imageFile != null && !imageFile.isEmpty()) {
                 if (!imageStorageService.isValidImage(imageFile)) {
-                    model.addAttribute("error", "Imagen inválida. Solo se permiten imágenes JPG, PNG, GIF o WEBP de máximo 5MB");
+                    model.addAttribute("error",
+                            "Imagen inválida. Solo se permiten imágenes JPG, PNG, GIF o WEBP de máximo 5MB");
                     model.addAttribute("formAction", "/admin/promotions/" + id);
                     loadFormData(model, promotion, role);
                     return role + "/promotions/form";
@@ -342,9 +342,9 @@ public class PromotionController {
                 existing.setImageUrl(imageUrl);
             } else {
                 // No new server-side file uploaded. Possible cases:
-                //  (a) empty submittedUrl  → user removed image (delete old)
-                //  (b) same as existing    → no change
-                //  (c) different URL       → Direct Upload replaced the image (delete old)
+                // (a) empty submittedUrl → user removed image (delete old)
+                // (b) same as existing → no change
+                // (c) different URL → Direct Upload replaced the image (delete old)
                 String submittedUrl = promotion.getImageUrl();
                 if (submittedUrl == null || submittedUrl.trim().isEmpty()) {
                     if (existing.getImageUrl() != null && !existing.getImageUrl().isEmpty()) {
@@ -373,6 +373,8 @@ public class PromotionController {
             existing.setMinQuantityForFixedDiscount(promotion.getMinQuantityForFixedDiscount());
             existing.setStartDate(promotion.getStartDate());
             existing.setEndDate(promotion.getEndDate());
+            existing.setStartTime(promotion.getStartTime());
+            existing.setEndTime(promotion.getEndTime());
             existing.setValidDays(promotion.getValidDays());
             existing.setActive(promotion.getActive());
 
@@ -388,17 +390,16 @@ public class PromotionController {
             if (existing.getPromotionType() == PromotionType.FIXED_AMOUNT_DISCOUNT) {
                 Map<String, Object> validationResult = promotionService.validateFixedDiscountAmount(existing);
                 boolean isValid = (boolean) validationResult.get("valid");
-                
+
                 if (!isValid) {
                     @SuppressWarnings("unchecked")
                     List<String> invalidItems = (List<String>) validationResult.get("invalidItems");
                     String errorMsg = String.format(
-                        "El descuento de $%.2f es mayor que el precio de los siguientes items: %s. " +
-                        "El descuento fijo no puede ser mayor al precio del item.",
-                        existing.getDiscountAmount(),
-                        String.join(", ", invalidItems)
-                    );
-                    
+                            "El descuento de $%.2f es mayor que el precio de los siguientes items: %s. " +
+                                    "El descuento fijo no puede ser mayor al precio del item.",
+                            existing.getDiscountAmount(),
+                            String.join(", ", invalidItems));
+
                     log.warn("Fixed discount validation failed during update: {}", errorMsg);
                     model.addAttribute("error", errorMsg);
                     model.addAttribute("formAction", "/admin/promotions/" + id);
@@ -408,8 +409,8 @@ public class PromotionController {
             }
 
             promotionService.save(existing);
-            redirectAttributes.addFlashAttribute("success", 
-                "promoción '" + existing.getName() + "' actualizada exitosamente");
+            redirectAttributes.addFlashAttribute("success",
+                    "promoción '" + existing.getName() + "' actualizada exitosamente");
             return "redirect:/" + role + "/promotions";
 
         } catch (IllegalArgumentException e) {
@@ -431,13 +432,14 @@ public class PromotionController {
      * Activate a promotion
      */
     @PostMapping("/{id}/activate")
-    public String activatePromotion(@PathVariable String role, @PathVariable Long id, RedirectAttributes redirectAttributes) {
+    public String activatePromotion(@PathVariable String role, @PathVariable Long id,
+            RedirectAttributes redirectAttributes) {
         log.info("Activating promotion with ID: {}", id);
 
         try {
             Promotion promotion = promotionService.activate(id);
-            redirectAttributes.addFlashAttribute("success", 
-                "promoción '" + promotion.getName() + "' activada exitosamente");
+            redirectAttributes.addFlashAttribute("success",
+                    "promoción '" + promotion.getName() + "' activada exitosamente");
         } catch (Exception e) {
             log.error("Error activating promotion", e);
             redirectAttributes.addFlashAttribute("error", e.getMessage());
@@ -450,13 +452,14 @@ public class PromotionController {
      * Deactivate a promotion
      */
     @PostMapping("/{id}/deactivate")
-    public String deactivatePromotion(@PathVariable String role, @PathVariable Long id, RedirectAttributes redirectAttributes) {
+    public String deactivatePromotion(@PathVariable String role, @PathVariable Long id,
+            RedirectAttributes redirectAttributes) {
         log.info("Deactivating promotion with ID: {}", id);
 
         try {
             Promotion promotion = promotionService.deactivate(id);
-            redirectAttributes.addFlashAttribute("success", 
-                "promoción '" + promotion.getName() + "' desactivada exitosamente");
+            redirectAttributes.addFlashAttribute("success",
+                    "promoción '" + promotion.getName() + "' desactivada exitosamente");
         } catch (Exception e) {
             log.error("Error deactivating promotion", e);
             redirectAttributes.addFlashAttribute("error", e.getMessage());
@@ -469,18 +472,19 @@ public class PromotionController {
      * Delete a promotion
      */
     @PostMapping("/{id}/delete")
-    public String deletePromotion(@PathVariable String role, @PathVariable Long id, RedirectAttributes redirectAttributes) {
+    public String deletePromotion(@PathVariable String role, @PathVariable Long id,
+            RedirectAttributes redirectAttributes) {
         log.info("Deleting promotion with ID: {}", id);
 
         try {
             Promotion promotion = promotionService.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("promoción no encontrada"));
-            
+                    .orElseThrow(() -> new IllegalArgumentException("promoción no encontrada"));
+
             String name = promotion.getName();
             promotionService.deleteById(id);
-            
-            redirectAttributes.addFlashAttribute("success", 
-                "promoción '" + name + "' eliminada exitosamente");
+
+            redirectAttributes.addFlashAttribute("success",
+                    "promoción '" + name + "' eliminada exitosamente");
         } catch (Exception e) {
             log.error("Error deleting promotion", e);
             redirectAttributes.addFlashAttribute("error", e.getMessage());
@@ -501,13 +505,13 @@ public class PromotionController {
 
         try {
             List<Promotion> promotions = promotionService.findActivePromotionsByItemId(itemId);
-            
+
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
             response.put("promotions", promotions.stream()
-                .map(this::convertToMap)
-                .collect(Collectors.toList()));
-            
+                    .map(this::convertToMap)
+                    .collect(Collectors.toList()));
+
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             log.error("Error getting promotions for item", e);
@@ -527,13 +531,13 @@ public class PromotionController {
             @RequestParam Long promotionId,
             @RequestParam BigDecimal originalPrice,
             @RequestParam int quantity) {
-        
-        log.debug("Calculating discount for promotion ID: {}, price: {}, quantity: {}", 
-            promotionId, originalPrice, quantity);
+
+        log.debug("Calculating discount for promotion ID: {}, price: {}, quantity: {}",
+                promotionId, originalPrice, quantity);
 
         try {
             Promotion promotion = promotionService.findById(promotionId)
-                .orElseThrow(() -> new IllegalArgumentException("promoción no encontrada"));
+                    .orElseThrow(() -> new IllegalArgumentException("promoción no encontrada"));
 
             BigDecimal discountedPrice = promotionService.calculateDiscountedPrice(originalPrice, promotion, quantity);
             BigDecimal savings = promotionService.calculateSavings(originalPrice, promotion, quantity);
@@ -544,7 +548,7 @@ public class PromotionController {
             response.put("discountedTotal", discountedPrice);
             response.put("savings", savings);
             response.put("promotionLabel", promotion.getDisplayLabel());
-            
+
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             log.error("Error calculating discount", e);
@@ -562,39 +566,40 @@ public class PromotionController {
     @ResponseBody
     public ResponseEntity<List<Map<String, Object>>> getActivePromotionsJson() {
         log.debug("Getting active promotions as JSON");
-        
+
         try {
             List<Promotion> activePromotions = promotionService.findActivePromotions();
-            
+
             // Get company context once outside the stream for efficiency
             final Company currentCompany = CompanyContext.requireCurrentCompany();
-            
+
             List<Map<String, Object>> response = activePromotions.stream()
-                .map(promo -> {
-                    Map<String, Object> promoMap = new HashMap<>();
-                    promoMap.put("id", promo.getIdPromotion());
-                    promoMap.put("name", promo.getName());
-                    promoMap.put("description", promo.getDescription());
-                    promoMap.put("promotionType", promo.getPromotionType().name());
-                    promoMap.put("displayLabel", promo.getDisplayLabel());
-                    promoMap.put("buyQuantity", promo.getBuyQuantity());
-                    promoMap.put("payQuantity", promo.getPayQuantity());
-                    promoMap.put("discountPercentage", promo.getDiscountPercentage());
-                    promoMap.put("discountAmount", promo.getDiscountAmount());
-                    promoMap.put("minQuantityForFixedDiscount", promo.getEffectiveMinQuantityForFixedDiscount());
-                    
-                    // Get item IDs for this promotion (filtered by current company and distinct)
-                    List<Long> itemIds = promo.getItems().stream()
-                        .filter(item -> item.getCompany() != null && currentCompany.getIdCompany().equals(item.getCompany().getIdCompany()))
-                        .map(ItemMenu::getIdItemMenu)
-                        .distinct()
-                        .collect(Collectors.toList());
-                    promoMap.put("itemIds", itemIds);
-                    
-                    return promoMap;
-                })
-                .collect(Collectors.toList());
-            
+                    .map(promo -> {
+                        Map<String, Object> promoMap = new HashMap<>();
+                        promoMap.put("id", promo.getIdPromotion());
+                        promoMap.put("name", promo.getName());
+                        promoMap.put("description", promo.getDescription());
+                        promoMap.put("promotionType", promo.getPromotionType().name());
+                        promoMap.put("displayLabel", promo.getDisplayLabel());
+                        promoMap.put("buyQuantity", promo.getBuyQuantity());
+                        promoMap.put("payQuantity", promo.getPayQuantity());
+                        promoMap.put("discountPercentage", promo.getDiscountPercentage());
+                        promoMap.put("discountAmount", promo.getDiscountAmount());
+                        promoMap.put("minQuantityForFixedDiscount", promo.getEffectiveMinQuantityForFixedDiscount());
+
+                        // Get item IDs for this promotion (filtered by current company and distinct)
+                        List<Long> itemIds = promo.getItems().stream()
+                                .filter(item -> item.getCompany() != null
+                                        && currentCompany.getIdCompany().equals(item.getCompany().getIdCompany()))
+                                .map(ItemMenu::getIdItemMenu)
+                                .distinct()
+                                .collect(Collectors.toList());
+                        promoMap.put("itemIds", itemIds);
+
+                        return promoMap;
+                    })
+                    .collect(Collectors.toList());
+
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             log.error("Error getting active promotions JSON", e);
@@ -609,11 +614,10 @@ public class PromotionController {
      */
     private void loadFormData(Model model, Promotion promotion, String role) {
         List<ItemMenu> menuItems = itemMenuService.findAllActive();
-        
+
         Map<String, List<ItemMenu>> itemsByCategory = menuItems.stream()
-            .collect(Collectors.groupingBy(item -> 
-                item.getCategory() != null ? item.getCategory().getName() : "Sin Categoría"
-            ));
+                .collect(Collectors.groupingBy(
+                        item -> item.getCategory() != null ? item.getCategory().getName() : "Sin Categoría"));
 
         // Create a map with Spanish day names
         Map<String, String> daysOfWeekMap = new LinkedHashMap<>();
@@ -631,7 +635,7 @@ public class PromotionController {
         model.addAttribute("daysOfWeekMap", daysOfWeekMap);
         model.addAttribute("menuItems", menuItems);
         model.addAttribute("itemsByCategory", itemsByCategory);
-        
+
         if (!model.containsAttribute("formAction")) {
             model.addAttribute("formAction", "/" + role + "/promotions");
         }
