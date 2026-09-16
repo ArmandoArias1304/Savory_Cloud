@@ -752,18 +752,23 @@
                         <span
                           class="font-bold text-gray-900 dark:text-white"
                           th:text="${pd.quantityDisplay}"
-                        >2</span
-                        ><span class="text-gray-600 dark:text-gray-400"> × <span th:text="${pd.itemName}">Coca-Cola</span></span>
+                          >2</span
+                        ><span class="text-gray-600 dark:text-gray-400">
+                          ×
+                          <span th:text="${pd.itemName}">Coca-Cola</span></span
+                        >
                         <span
                           th:if="${pd.complementDetails != null and !pd.complementDetails.isEmpty()}"
                           class="block text-[11px] text-gray-400 dark:text-gray-500 italic mt-0.5"
                           th:text="${'+ ' + pd.complementDetails}"
-                        >+ Extra queso x2</span>
+                          >+ Extra queso x2</span
+                        >
                       </span>
                       <span
                         class="font-semibold text-gray-800 dark:text-gray-200 shrink-0"
                         th:text="${'$' + #numbers.formatDecimal(pd.total, 1, 2)}"
-                      >$0.00</span>
+                        >$0.00</span
+                      >
                     </div>
                   </div>
                 </div>
@@ -935,8 +940,10 @@
 
               <!-- Print Comanda via QZ Tray -->
               <div class="flex gap-2">
-                <select id="comandaType"
-                        class="flex-shrink-0 px-2 py-3 rounded-xl bg-emerald-700 dark:bg-emerald-800 text-white text-xs font-medium border-0 focus:ring-2 focus:ring-primary cursor-pointer">
+                <select
+                  id="comandaType"
+                  class="flex-shrink-0 px-2 py-3 rounded-xl bg-emerald-700 dark:bg-emerald-800 text-white text-xs font-medium border-0 focus:ring-2 focus:ring-primary cursor-pointer"
+                >
                   <option value="KITCHEN">Cocina</option>
                   <option value="BAR">Barra</option>
                   <option value="PARRILLERO">Parrillero</option>
@@ -1003,7 +1010,9 @@
         var stored = localStorage.getItem(key);
         return qz.printers.find().then(function (list) {
           if (stored) {
-            var listLower = (list || []).map(function (p) { return String(p).toLowerCase(); });
+            var listLower = (list || []).map(function (p) {
+              return String(p).toLowerCase();
+            });
             if (listLower.indexOf(stored.toLowerCase()) >= 0) return stored;
           }
           if (!list || list.length === 0) return qz.printers.getDefault();
@@ -1012,7 +1021,9 @@
             return list[0];
           }
           var inputOptions = {};
-          list.forEach(function (p) { inputOptions[p] = p; });
+          list.forEach(function (p) {
+            inputOptions[p] = p;
+          });
           var isDark = document.documentElement.classList.contains("dark");
           return Swal.fire({
             title: "Selecciona impresora de tickets",
@@ -1042,9 +1053,7 @@
         if (!orderId) return;
         if (typeof Swal === "undefined") {
           if (
-            !confirm(
-              "¿Aceptar los items pendientes? Se descontará el stock.",
-            )
+            !confirm("¿Aceptar los items pendientes? Se descontará el stock.")
           )
             return;
           _doAcceptToAcceptItemsCashier(btn, orderId);
@@ -1090,7 +1099,8 @@
           .then(function (data) {
             if (data && data.success) {
               if (typeof Swal !== "undefined") {
-                var isDark = document.documentElement.classList.contains("dark");
+                var isDark =
+                  document.documentElement.classList.contains("dark");
                 Swal.fire({
                   icon: "success",
                   title: "Items aceptados",
@@ -1109,8 +1119,15 @@
               btn.disabled = false;
               var msg = (data && data.message) || "Error al aceptar los items";
               if (typeof Swal !== "undefined") {
-                var isDark = document.documentElement.classList.contains("dark");
-                Swal.fire({ icon: "error", title: "Error", text: msg, background: isDark ? "#1f2937" : "#ffffff", color: isDark ? "#f3f4f6" : "#1f2937" });
+                var isDark =
+                  document.documentElement.classList.contains("dark");
+                Swal.fire({
+                  icon: "error",
+                  title: "Error",
+                  text: msg,
+                  background: isDark ? "#1f2937" : "#ffffff",
+                  color: isDark ? "#f3f4f6" : "#1f2937",
+                });
               } else alert(msg);
             }
           })
@@ -1131,35 +1148,94 @@
       }
 
       // ========== Comanda Print via QZ Tray ==========
+      async function handComandaToAgent(
+        orderId,
+        type,
+        mode,
+        btn,
+        swalBg,
+        swalColor,
+      ) {
+        try {
+          var response = await fetch(
+            "/api/print/comanda/" +
+              orderId +
+              "/agent?type=" +
+              encodeURIComponent(type) +
+              "&mode=" +
+              mode,
+            { method: "POST" },
+          );
+          if (!response.ok && response.status !== 204)
+            throw new Error("HTTP " + response.status);
+          if (response.status === 204)
+            throw new Error("No hay items para esa estación");
+          Swal.fire({
+            icon: "info",
+            title: "Enviado al agente",
+            text: "La comanda se imprimirá desde la computadora disponible.",
+            timer: 2200,
+            showConfirmButton: false,
+            background: swalBg,
+            color: swalColor,
+          });
+        } catch (e) {
+          Swal.fire({
+            icon: "error",
+            title: "Impresión no disponible",
+            text:
+              "No se pudo imprimir localmente ni enviar al agente: " +
+              e.message,
+            background: swalBg,
+            color: swalColor,
+          });
+        } finally {
+          btn.disabled = false;
+          btn.classList.remove("opacity-50", "cursor-not-allowed");
+        }
+      }
+
       async function printComandaFromView(btn, mode) {
         var orderId = btn.dataset.orderId;
         var type = document.getElementById("comandaType").value;
-        mode = (mode === "full") ? "full" : "delta";
+        mode = mode === "full" ? "full" : "delta";
         var isDark = document.documentElement.classList.contains("dark");
-        var swalBg    = isDark ? "#1f2937" : "#ffffff";
+        var swalBg = isDark ? "#1f2937" : "#ffffff";
         var swalColor = isDark ? "#f3f4f6" : "#1f2937";
 
         var printerName;
         try {
           var resp = await fetch("/api/printers");
           var printerList = await resp.json();
-          var found = printerList.find(function(p) { return p.printerType === type; });
+          var found = printerList.find(function (p) {
+            return p.printerType === type;
+          });
           printerName = found ? found.name : null;
-        } catch(e) {
-          Swal.fire({ icon:"error", title:"Error", text:"No se pudo obtener la configuración de impresoras", background:swalBg, color:swalColor });
+        } catch (e) {
+          btn.disabled = true;
+          btn.classList.add("opacity-50", "cursor-not-allowed");
+          await handComandaToAgent(orderId, type, mode, btn, swalBg, swalColor);
           return;
         }
 
         if (!printerName) {
-          var _typeLabel = {KITCHEN:"Cocina",BAR:"Barra",PARRILLERO:"Parrillero"}[type] || type;
-          Swal.fire({ icon:"warning", title:"Sin impresora configurada",
+          var _typeLabel =
+            { KITCHEN: "Cocina", BAR: "Barra", PARRILLERO: "Parrillero" }[
+              type
+            ] || type;
+          btn.disabled = true;
+          btn.classList.add("opacity-50", "cursor-not-allowed");
+          await handComandaToAgent(orderId, type, mode, btn, swalBg, swalColor);
+          /* Swal.fire({ icon:"warning", title:"Sin impresora configurada",
             text:"No hay impresora configurada para comandas de " + _typeLabel + ". Configúrala en Administración → Impresoras de Comanda.",
-            background:swalBg, color:swalColor });
+            background:swalBg, color:swalColor }); */
           return;
         }
 
         if (typeof qz === "undefined" || !qz.websocket) {
-          Swal.fire({ icon:"error", title:"QZ Tray no disponible", text:"Instala y abre QZ Tray para imprimir comandas.", background:swalBg, color:swalColor });
+          btn.disabled = true;
+          btn.classList.add("opacity-50", "cursor-not-allowed");
+          await handComandaToAgent(orderId, type, mode, btn, swalBg, swalColor);
           return;
         }
 
@@ -1167,52 +1243,114 @@
           if (!qz.websocket.isActive()) await qz.websocket.connect();
 
           var availList = await qz.printers.find();
-          var availLower = availList.map(function(p) { return p.toLowerCase(); });
+          var availLower = availList.map(function (p) {
+            return p.toLowerCase();
+          });
           if (availLower.indexOf(printerName.toLowerCase()) < 0) {
-            Swal.fire({ icon:"warning", title:"Impresora no encontrada",
+            await handComandaToAgent(
+              orderId,
+              type,
+              mode,
+              btn,
+              swalBg,
+              swalColor,
+            );
+            /* Swal.fire({ icon:"warning", title:"Impresora no encontrada",
               html:"La impresora <b>" + printerName + "</b> no está instalada en esta PC.",
-              background:swalBg, color:swalColor });
+              background:swalBg, color:swalColor }); */
             return;
           }
 
-          btn.disabled = true; btn.classList.add("opacity-50", "cursor-not-allowed");
+          btn.disabled = true;
+          btn.classList.add("opacity-50", "cursor-not-allowed");
 
-          var apiResp = await fetch("/api/print/comanda/" + orderId + "?type=" + type + "&mode=" + mode);
+          var apiResp = await fetch(
+            "/api/print/comanda/" + orderId + "?type=" + type + "&mode=" + mode,
+          );
           if (apiResp.status === 204) {
-            Swal.fire({ icon:"info", title:"Sin ítems nuevos",
-              text: (mode === "full" ? "Este pedido no tiene ítems para " : "No hay ítems nuevos por enviar a ") + type + ".",
-              timer:2000, showConfirmButton:false, background:swalBg, color:swalColor });
-            btn.disabled = false; btn.classList.remove("opacity-50","cursor-not-allowed"); return;
+            Swal.fire({
+              icon: "info",
+              title: "Sin ítems nuevos",
+              text:
+                (mode === "full"
+                  ? "Este pedido no tiene ítems para "
+                  : "No hay ítems nuevos por enviar a ") +
+                type +
+                ".",
+              timer: 2000,
+              showConfirmButton: false,
+              background: swalBg,
+              color: swalColor,
+            });
+            btn.disabled = false;
+            btn.classList.remove("opacity-50", "cursor-not-allowed");
+            return;
           }
           if (!apiResp.ok) throw new Error("HTTP " + apiResp.status);
 
           // Ids que realmente se imprimieron: el servidor decide el conjunto final
-          var printedIds = (apiResp.headers.get("X-Comanda-Detail-Ids") || "").split(",").filter(function(x){ return x; });
+          var printedIds = (apiResp.headers.get("X-Comanda-Detail-Ids") || "")
+            .split(",")
+            .filter(function (x) {
+              return x;
+            });
 
           var buf = await apiResp.arrayBuffer();
-          var bytes = new Uint8Array(buf), binary = "";
-          for (var i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+          var bytes = new Uint8Array(buf),
+            binary = "";
+          for (var i = 0; i < bytes.length; i++)
+            binary += String.fromCharCode(bytes[i]);
           var b64 = btoa(binary);
 
           var config = qz.configs.create(printerName);
-          await qz.print(config, [{ type:"raw", format:"base64", data:b64 }]);
+          await qz.print(config, [
+            { type: "raw", format: "base64", data: b64 },
+          ]);
 
           // Confirmar la impresión para que estos ítems no vuelvan a salir en la próxima comanda
           try {
             if (mode === "full") {
-              await fetch("/api/print/comanda/" + orderId + "/ack?type=" + type + "&all=true", { method:"POST" });
+              await fetch(
+                "/api/print/comanda/" +
+                  orderId +
+                  "/ack?type=" +
+                  type +
+                  "&all=true",
+                { method: "POST" },
+              );
             } else if (printedIds.length) {
-              await fetch("/api/print/comanda/" + orderId + "/ack?type=" + type + "&details=" + printedIds.join(","), { method:"POST" });
+              await fetch(
+                "/api/print/comanda/" +
+                  orderId +
+                  "/ack?type=" +
+                  type +
+                  "&details=" +
+                  printedIds.join(","),
+                { method: "POST" },
+              );
             }
-          } catch (ackErr) { console.warn("No se pudo confirmar la comanda:", ackErr); }
+          } catch (ackErr) {
+            console.warn("No se pudo confirmar la comanda:", ackErr);
+          }
 
-          btn.disabled = false; btn.classList.remove("opacity-50","cursor-not-allowed");
-          Swal.fire({ icon:"success", title:"Comanda enviada",
-            text: (mode === "full" ? "Comanda completa de " : "Ítems nuevos de ") + type + " enviados a la impresora.",
-            timer:1800, showConfirmButton:false, background:swalBg, color:swalColor });
-        } catch(e) {
-          btn.disabled = false; btn.classList.remove("opacity-50","cursor-not-allowed");
-          Swal.fire({ icon:"error", title:"Error al imprimir", text:"No se pudo imprimir la comanda: " + e.message, background:swalBg, color:swalColor });
+          btn.disabled = false;
+          btn.classList.remove("opacity-50", "cursor-not-allowed");
+          Swal.fire({
+            icon: "success",
+            title: "Comanda enviada",
+            text:
+              (mode === "full" ? "Comanda completa de " : "Ítems nuevos de ") +
+              type +
+              " enviados a la impresora.",
+            timer: 1800,
+            showConfirmButton: false,
+            background: swalBg,
+            color: swalColor,
+          });
+        } catch (e) {
+          btn.disabled = false;
+          btn.classList.remove("opacity-50", "cursor-not-allowed");
+          await handComandaToAgent(orderId, type, mode, btn, swalBg, swalColor);
         }
       }
       // ========== END Comanda Print ==========
@@ -1248,13 +1386,13 @@
         }
 
         if (typeof qz === "undefined" || !qz.websocket) {
-          _fallbackPdfDownload(pdfUrls, _unlock);
+          _fallbackTicketToAgent(orderId, paymentIds, pdfUrls, _unlock);
           return;
         }
         var probe = new WebSocket("ws://localhost:8182");
         var probeTimer = setTimeout(function () {
           probe.close();
-          _fallbackPdfDownload(pdfUrls, _unlock);
+          _fallbackTicketToAgent(orderId, paymentIds, pdfUrls, _unlock);
         }, 1500);
         probe.onopen = function () {
           clearTimeout(probeTimer);
@@ -1263,7 +1401,7 @@
         };
         probe.onerror = function () {
           clearTimeout(probeTimer);
-          _fallbackPdfDownload(pdfUrls, _unlock);
+          _fallbackTicketToAgent(orderId, paymentIds, pdfUrls, _unlock);
         };
       }
 
@@ -1288,7 +1426,8 @@
                     binary += String.fromCharCode(bytes[i]);
                   var b64 = btoa(binary);
                   return resolveTicketPrinterName().then(function (printer) {
-                    if (!printer) throw new Error("No se seleccionó impresora de tickets");
+                    if (!printer)
+                      throw new Error("No se seleccionó impresora de tickets");
                     var config = qz.configs.create(printer);
                     return qz.print(config, [
                       { type: "raw", format: "base64", data: b64 },
@@ -1323,7 +1462,7 @@
           .catch(function (err) {
             console.error("QZ Tray print error:", err);
             if (qz.websocket.isActive()) qz.websocket.disconnect();
-            _fallbackPdfDownload(pdfUrls, unlock);
+            _fallbackTicketToAgent(orderId, paymentIds, pdfUrls, unlock);
           });
       }
 
@@ -1358,6 +1497,41 @@
             }
           }
         });
+      }
+
+      function _fallbackTicketToAgent(orderId, paymentIds, pdfUrls, unlock) {
+        var ids = paymentIds ? paymentIds.split(",").filter(Boolean) : [];
+        var requests = ids.length
+          ? ids.map(function (id) {
+              return fetch("/api/print/ticket/payment/" + id + "/release", {
+                method: "POST",
+              });
+            })
+          : [
+              fetch("/api/print/ticket/" + orderId + "/release", {
+                method: "POST",
+              }),
+            ];
+        Promise.all(requests)
+          .then(function (responses) {
+            if (
+              responses.some(function (r) {
+                return !r.ok;
+              })
+            )
+              throw new Error("HTTP al enviar al agente");
+            unlock();
+            Swal.fire({
+              icon: "info",
+              title: "Enviado al agente",
+              text: "El ticket se imprimirá desde la computadora disponible.",
+              timer: 2200,
+              showConfirmButton: false,
+            });
+          })
+          .catch(function () {
+            _fallbackPdfDownload(pdfUrls, unlock);
+          });
       }
       // ========== END QZ Tray ==========
 
@@ -1398,7 +1572,9 @@
             '<p class="text-sm text-green-600 dark:text-green-400 mt-3">✅ El stock será devuelto automáticamente (item no requiere preparación)</p>';
         } else if (
           itemStatus === "READY" &&
-          (requiresPrep === "true" || requiresBaristaPrep === "true" || requiresParrilleroPrep === "true")
+          (requiresPrep === "true" ||
+            requiresBaristaPrep === "true" ||
+            requiresParrilleroPrep === "true")
         ) {
           stockWarning =
             '<p class="text-sm text-orange-600 dark:text-orange-400 mt-3">⚠️ El stock debe ser devuelto manualmente (item ya fue preparado)</p>';
@@ -1678,7 +1854,9 @@
             '<p class="text-sm text-green-600 dark:text-green-400 mt-3">✅ El stock del complemento será devuelto automáticamente (item no requiere preparación)</p>';
         } else if (
           itemStatus === "READY" &&
-          (requiresPrep === "true" || requiresBaristaPrep === "true" || requiresParrilleroPrep === "true")
+          (requiresPrep === "true" ||
+            requiresBaristaPrep === "true" ||
+            requiresParrilleroPrep === "true")
         ) {
           stockWarning =
             '<p class="text-sm text-orange-600 dark:text-orange-400 mt-3">⚠️ El stock del complemento debe ser devuelto manualmente (item ya fue preparado)</p>';

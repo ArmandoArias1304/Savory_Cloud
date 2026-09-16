@@ -171,17 +171,17 @@ public class CustomAuthenticationSuccessHandler implements AuthenticationSuccess
                 if (employee != null) {
                     java.time.LocalDateTime now = dateTimeService.nowLocal();
                     boolean hasAssignedShifts = !shiftService
-                        .getShiftsByEmployee(employee.getIdEmpleado())
-                        .isEmpty();
+                            .getShiftsByEmployee(employee.getIdEmpleado())
+                            .isEmpty();
 
                     // No assigned shifts means the employee is not schedule-restricted.
                     if (hasAssignedShifts
-                        && !shiftService.isEmployeeInActiveShift(
-                            employee.getIdEmpleado(), now.getDayOfWeek(), now.toLocalTime())) {
-                    log.warn("Employee {} login blocked: no active shift at {}", username, now);
-                    request.getSession().invalidate();
-                    response.sendRedirect("/login?error=outsideShift");
-                    return;
+                            && !shiftService.isEmployeeInActiveShift(
+                                    employee.getIdEmpleado(), now.getDayOfWeek(), now.toLocalTime())) {
+                        log.warn("Employee {} login blocked: no active shift at {}", username, now);
+                        request.getSession().invalidate();
+                        response.sendRedirect("/login?error=outsideShift");
+                        return;
                     }
                 }
             }

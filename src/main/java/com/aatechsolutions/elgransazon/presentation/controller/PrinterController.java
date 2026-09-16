@@ -38,19 +38,18 @@ import java.util.stream.Collectors;
 @Slf4j
 public class PrinterController {
 
-    static final String STAFF =
-            "hasAnyRole('ROLE_ADMIN', 'ROLE_MANAGER', 'ROLE_WAITER', 'ROLE_CHEF', 'ROLE_BARISTA', 'ROLE_PARRILLERO', 'ROLE_CASHIER')";
+    static final String STAFF = "hasAnyRole('ROLE_ADMIN', 'ROLE_MANAGER', 'ROLE_WAITER', 'ROLE_CHEF', 'ROLE_BARISTA', 'ROLE_PARRILLERO', 'ROLE_CASHIER')";
 
     /**
      * Roles allowed to manage (view/create/edit/delete) the comanda printers.
      * CASHIER is intentionally excluded: the cashier only opens the printing agent
      * (/printer-agent), which is covered by STAFF.
      */
-    static final String PRINTERS_MANAGER =
-            "hasAnyRole('ROLE_ADMIN', 'ROLE_MANAGER')";
+    static final String PRINTERS_MANAGER = "hasAnyRole('ROLE_ADMIN', 'ROLE_MANAGER')";
 
     /**
-     * Response header carrying the order-detail ids that were actually printed, so the
+     * Response header carrying the order-detail ids that were actually printed, so
+     * the
      * client can confirm them with the ack endpoint after a successful print.
      */
     private static final String HEADER_COMANDA_DETAIL_IDS = "X-Comanda-Detail-Ids";
@@ -81,7 +80,7 @@ public class PrinterController {
     }
 
     // ═══════════════════════════════════════════
-    //  Admin CRUD pages (admin/manager only)
+    // Admin CRUD pages (admin/manager only)
     // ═══════════════════════════════════════════
 
     /**
@@ -160,7 +159,7 @@ public class PrinterController {
     }
 
     // ═══════════════════════════════════════════
-    //  Printer-Agent page (staff only)
+    // Printer-Agent page (staff only)
     // ═══════════════════════════════════════════
 
     /**
@@ -180,7 +179,7 @@ public class PrinterController {
     }
 
     // ═══════════════════════════════════════════
-    //  REST API endpoints (staff only)
+    // REST API endpoints (staff only)
     // ═══════════════════════════════════════════
 
     /**
@@ -193,14 +192,13 @@ public class PrinterController {
     public ResponseEntity<List<Map<String, Object>>> apiListPrinters() {
         List<Printer> printers = printerService.findAll();
         List<Map<String, Object>> result = printers.stream()
-            .map(p -> Map.<String, Object>of(
-                "id",          p.getId(),
-                "name",        p.getName(),
-                "printerType", p.getPrinterType().name(),
-                "displayName", p.getPrinterType().getDisplayName(),
-                "ipAddress",   p.getIpAddress() != null ? p.getIpAddress() : ""
-            ))
-            .toList();
+                .map(p -> Map.<String, Object>of(
+                        "id", p.getId(),
+                        "name", p.getName(),
+                        "printerType", p.getPrinterType().name(),
+                        "displayName", p.getPrinterType().getDisplayName(),
+                        "ipAddress", p.getIpAddress() != null ? p.getIpAddress() : ""))
+                .toList();
         return ResponseEntity.ok(result);
     }
 
@@ -208,10 +206,13 @@ public class PrinterController {
      * Download ESC/POS comanda bytes for a given order and printer type.
      * GET /api/print/comanda/{orderId}?type=KITCHEN|BAR|PARRILLERO&mode=delta|full
      *
-     * mode=delta (default): every item of that station that was NOT printed yet, which is what
-     *   the printer agent uses automatically. A ticket never repeats what already went out
-     *   (paper has no live status) and a missed event is picked up by the next comanda.
-     *   Returns 204 when the station has nothing pending.
+     * mode=delta (default): every item of that station that was NOT printed yet,
+     * which is what
+     * the printer agent uses automatically. A ticket never repeats what already
+     * went out
+     * (paper has no live status) and a missed event is picked up by the next
+     * comanda.
+     * Returns 204 when the station has nothing pending.
      * mode=full: complete comanda of the station, for manual reprints.
      */
     @GetMapping("/api/print/comanda/{orderId}")
@@ -242,7 +243,8 @@ public class PrinterController {
 
             byte[] bytes = comandaEscPosService.generateComanda(order, printerType, items, !full);
             if (bytes.length == 0) {
-                log.debug("No pending comanda items for {} on order {} (mode={})", printerType, order.getOrderNumber(), mode);
+                log.debug("No pending comanda items for {} on order {} (mode={})", printerType, order.getOrderNumber(),
+                        mode);
                 return ResponseEntity.noContent().build();
             }
 
@@ -268,11 +270,15 @@ public class PrinterController {
     }
 
     /**
-     * Confirms that a comanda was printed, so those items are never printed again on this station.
-     * POST /api/print/comanda/{orderId}/ack?type=KITCHEN&details=1,2,3   (or &all=true)
+     * Confirms that a comanda was printed, so those items are never printed again
+     * on this station.
+     * POST /api/print/comanda/{orderId}/ack?type=KITCHEN&details=1,2,3 (or
+     * &all=true)
      *
-     * Called by the printer agent (and by the manual "solo pendientes" button) AFTER a successful
-     * print. If the print fails nothing is confirmed and the items go out again on the next comanda.
+     * Called by the printer agent (and by the manual "solo pendientes" button)
+     * AFTER a successful
+     * print. If the print fails nothing is confirmed and the items go out again on
+     * the next comanda.
      */
     @PostMapping("/api/print/comanda/{orderId}/ack")
     @ResponseBody
@@ -300,8 +306,44 @@ public class PrinterController {
     }
 
     /**
+     * Hands a manual comanda reprint to the printer agents after local QZ printing
+     * fails.
+     * The agent performs the actual print and acknowledges items only after
+     * success.
+     */
+    @PostMapping("/api/print/comanda/{orderId}/agent")
+    @ResponseBody
+    @PreAuthorize(STAFF)
+    public ResponseEntity<Map<String, Object>> apiHandComandaToAgents(
+            @PathVariable Long orderId,
+            @RequestParam String type,
+            @RequestParam(required = false, defaultValue = "delta") String mode) {
+        PrinterType printerType;
+        try {
+            printerType = PrinterType.valueOf(type.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        Order order = adminOrderService.findByIdWithDetails(orderId).orElse(null);
+        if (order == null)
+            return ResponseEntity.notFound().build();
+
+        boolean full = "full".equalsIgnoreCase(mode);
+        List<OrderDetail> items = full
+                ? comandaEscPosService.stationItems(order, printerType)
+                : comandaEscPosService.pendingItems(order, printerType);
+        if (items.isEmpty())
+            return ResponseEntity.noContent().build();
+
+        wsNotificationService.notifyPrintComanda(order, items, full ? "FULL" : "DELTA");
+        return ResponseEntity.accepted().body(Map.of("sent", true, "mode", full ? "FULL" : "DELTA"));
+    }
+
+    /**
      * Download ESC/POS cobro ticket bytes for a paid order in the current company.
-     * Used by printer-agent.html (any staff role) instead of the admin-only download URL.
+     * Used by printer-agent.html (any staff role) instead of the admin-only
+     * download URL.
      * GET /api/print/ticket/{orderId}
      */
     @GetMapping("/api/print/ticket/{orderId}")
@@ -343,7 +385,8 @@ public class PrinterController {
             Long accountCompanyId = payment.getCompany() != null
                     ? payment.getCompany().getIdCompany()
                     : (payment.getOrder().getCompany() != null
-                        ? payment.getOrder().getCompany().getIdCompany() : null);
+                            ? payment.getOrder().getCompany().getIdCompany()
+                            : null);
             Long currentCompanyId = CompanyContext.getCurrentCompanyId();
             if (currentCompanyId != null && !currentCompanyId.equals(accountCompanyId)) {
                 log.warn("Account ticket {} of order {} belongs to company {} (current {}) — denied",
@@ -360,7 +403,8 @@ public class PrinterController {
     }
 
     /**
-     * Exactly-once claim for ONE account (Payment): the split-bill ticket must not be
+     * Exactly-once claim for ONE account (Payment): the split-bill ticket must not
+     * be
      * printed twice when several PCs share the same printer.
      * POST /api/print/ticket/payment/{paymentId}/claim
      */
@@ -375,8 +419,10 @@ public class PrinterController {
      * Exactly-once claim for a company-wide ticket print.
      * POST /api/print/ticket/{orderId}/claim
      *
-     * The ticket event is broadcast to every printer agent of the company; each agent
-     * that has the ticket printer connected asks for the claim first, so only one PC
+     * The ticket event is broadcast to every printer agent of the company; each
+     * agent
+     * that has the ticket printer connected asks for the claim first, so only one
+     * PC
      * prints it even when the same printer is installed on several computers.
      */
     @PostMapping("/api/print/ticket/{orderId}/claim")
@@ -388,8 +434,10 @@ public class PrinterController {
     }
 
     /**
-     * Hands the whole-order ticket back when the PC that claimed it could not print it
-     * (no printer installed, QZ Tray error, paper out...). Releasing the claim lets the
+     * Hands the whole-order ticket back when the PC that claimed it could not print
+     * it
+     * (no printer installed, QZ Tray error, paper out...). Releasing the claim lets
+     * the
      * printer agents take the ticket on the next event instead of losing it for the
      * claim TTL.
      * POST /api/print/ticket/{orderId}/release
@@ -404,23 +452,27 @@ public class PrinterController {
     }
 
     /**
-     * Re-broadcasts a whole-order ticket the charging PC could not print. Never fails the
+     * Re-broadcasts a whole-order ticket the charging PC could not print. Never
+     * fails the
      * request: the release already happened and a manual reprint stays available.
      */
     private void handTicketToAgents(Long orderId) {
         try {
-            adminOrderService.findByIdWithDetails(orderId).ifPresent(order ->
-                wsNotificationService.notifyPrintTicketToAgents(order, List.of(), "local print failed"));
+            adminOrderService.findByIdWithDetails(orderId).ifPresent(
+                    order -> wsNotificationService.notifyPrintTicketToAgents(order, List.of(), "local print failed"));
         } catch (Exception e) {
             log.warn("Could not hand ticket {} to the agents: {}", orderId, e.getMessage());
         }
     }
 
-    /** Same as {@link #handTicketToAgents(Long)} for ONE account of a split bill. */
+    /**
+     * Same as {@link #handTicketToAgents(Long)} for ONE account of a split bill.
+     */
     private void handAccountToAgents(Long paymentId) {
         try {
             Payment payment = paymentRepository.findByIdWithDetails(paymentId).orElse(null);
-            if (payment == null || payment.getOrder() == null) return;
+            if (payment == null || payment.getOrder() == null)
+                return;
             wsNotificationService.notifyPrintTicketToAgents(
                     payment.getOrder(), List.of(paymentId), "local print failed");
         } catch (Exception e) {
@@ -429,7 +481,8 @@ public class PrinterController {
     }
 
     /**
-     * Hands ONE account (Payment) back when the PC that claimed it could not print it.
+     * Hands ONE account (Payment) back when the PC that claimed it could not print
+     * it.
      * POST /api/print/ticket/payment/{paymentId}/release
      */
     @PostMapping("/api/print/ticket/payment/{paymentId}/release")
@@ -470,8 +523,10 @@ public class PrinterController {
     }
 
     /**
-     * 500 with a readable reason in the body: the printer agent shows it in its log, so a
-     * failure can be diagnosed from the PC that prints instead of from the server console.
+     * 500 with a readable reason in the body: the printer agent shows it in its
+     * log, so a
+     * failure can be diagnosed from the PC that prints instead of from the server
+     * console.
      */
     private ResponseEntity<byte[]> internalServerError(Exception e) {
         String detail = e.getClass().getSimpleName()

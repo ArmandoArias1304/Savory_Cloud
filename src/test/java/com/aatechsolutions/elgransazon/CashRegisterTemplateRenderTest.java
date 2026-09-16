@@ -130,7 +130,8 @@ class CashRegisterTemplateRenderTest {
                 "the movement form must be wired to its confirmation dialog");
         assertTrue(html.contains("js-delete-movement"),
                 "every movement delete button must be wired to its confirmation dialog");
-        // Closing the drawer captures the counted cash in a modal, not in the footer panel
+        // Closing the drawer captures the counted cash in a modal, not in the footer
+        // panel
         assertTrue(html.contains("onclick=\"openCloseDrawer()\""),
                 "the close-drawer button must open the modal");
         assertTrue(html.contains("closeCountedInput") && html.contains("CLOSE_EXPECTED_TEXT"),

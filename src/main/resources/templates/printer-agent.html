@@ -3,13 +3,21 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title th:text="${globalSystemConfig.systemName + ' - Agente de Impresión'}">
+    <title
+      th:text="${globalSystemConfig.systemName + ' - Agente de Impresión'}"
+    >
       El Gran Sazón - Agente de Impresión
     </title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@300;400;500;600;700" rel="stylesheet" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@300;400;500;600;700"
+      rel="stylesheet"
+    />
     <div th:replace="~{fragments/theme :: themeResources}"></div>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
@@ -34,136 +42,255 @@
       };
     </script>
   </head>
-  <body class="bg-background-light dark:bg-background-dark font-display min-h-screen p-4 md:p-8">
-
+  <body
+    class="bg-background-light dark:bg-background-dark font-display min-h-screen p-4 md:p-8"
+  >
     <div class="max-w-3xl mx-auto">
-
       <!-- Header -->
       <div class="flex items-center gap-3 mb-6">
-        <span class="material-symbols-outlined text-4xl text-primary">print</span>
+        <span class="material-symbols-outlined text-4xl text-primary"
+          >print</span
+        >
         <div>
-          <h1 class="text-2xl font-bold text-gray-800 dark:text-white">Agente de Impresión de Comandas</h1>
-          <p class="text-sm text-gray-500 dark:text-gray-400">Mantén esta página abierta en la PC conectada a las impresoras de cocina.</p>
+          <h1 class="text-2xl font-bold text-gray-800 dark:text-white">
+            Agente de Impresión de Comandas
+          </h1>
+          <p class="text-sm text-gray-500 dark:text-gray-400">
+            Mantén esta página abierta en la PC conectada a las impresoras de
+            cocina.
+          </p>
         </div>
       </div>
 
       <!-- QZ Tray status bar -->
-      <div id="qzStatusBar" class="mb-4 flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-medium bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300 border border-yellow-200 dark:border-yellow-800/40">
-        <span id="qzStatusIcon" class="material-symbols-outlined text-lg">pending</span>
+      <div
+        id="qzStatusBar"
+        class="mb-4 flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-medium bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300 border border-yellow-200 dark:border-yellow-800/40"
+      >
+        <span id="qzStatusIcon" class="material-symbols-outlined text-lg"
+          >pending</span
+        >
         <span id="qzStatusText">Conectando con QZ Tray...</span>
       </div>
 
       <!-- WebSocket status bar -->
-      <div id="wsStatusBar" class="mb-6 flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-medium bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300 border border-yellow-200 dark:border-yellow-800/40">
-        <span id="wsStatusIcon" class="material-symbols-outlined text-lg">pending</span>
+      <div
+        id="wsStatusBar"
+        class="mb-6 flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-medium bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300 border border-yellow-200 dark:border-yellow-800/40"
+      >
+        <span id="wsStatusIcon" class="material-symbols-outlined text-lg"
+          >pending</span
+        >
         <span id="wsStatusText">Conectando al servidor WebSocket...</span>
       </div>
 
       <!-- Printer type cards -->
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-
-        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow p-4 border border-gray-100 dark:border-gray-700">
+        <div
+          class="bg-white dark:bg-gray-800 rounded-2xl shadow p-4 border border-gray-100 dark:border-gray-700"
+        >
           <div class="flex items-center gap-2 mb-2">
-            <span class="material-symbols-outlined text-xl text-orange-500">soup_kitchen</span>
-            <span class="font-semibold text-gray-700 dark:text-gray-200">Cocina</span>
+            <span class="material-symbols-outlined text-xl text-orange-500"
+              >soup_kitchen</span
+            >
+            <span class="font-semibold text-gray-700 dark:text-gray-200"
+              >Cocina</span
+            >
           </div>
-          <div id="kitchenPrinterName" class="text-xs font-mono text-gray-400 dark:text-gray-500 mb-2">—</div>
-          <div id="kitchenStatus" class="flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500">
-            <span class="w-2 h-2 rounded-full bg-gray-300 dark:bg-gray-600 inline-block" id="kitchenDot"></span>
+          <div
+            id="kitchenPrinterName"
+            class="text-xs font-mono text-gray-400 dark:text-gray-500 mb-2"
+          >
+            —
+          </div>
+          <div
+            id="kitchenStatus"
+            class="flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500"
+          >
+            <span
+              class="w-2 h-2 rounded-full bg-gray-300 dark:bg-gray-600 inline-block"
+              id="kitchenDot"
+            ></span>
             <span id="kitchenStatusText">Sin configurar</span>
           </div>
-          <div id="kitchenLastPrint" class="mt-1 text-xs text-gray-400 dark:text-gray-500 hidden">
+          <div
+            id="kitchenLastPrint"
+            class="mt-1 text-xs text-gray-400 dark:text-gray-500 hidden"
+          >
             Último: <span id="kitchenLastPrintTime">—</span>
           </div>
         </div>
 
-        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow p-4 border border-gray-100 dark:border-gray-700">
+        <div
+          class="bg-white dark:bg-gray-800 rounded-2xl shadow p-4 border border-gray-100 dark:border-gray-700"
+        >
           <div class="flex items-center gap-2 mb-2">
-            <span class="material-symbols-outlined text-xl text-blue-500">local_bar</span>
-            <span class="font-semibold text-gray-700 dark:text-gray-200">Barra</span>
+            <span class="material-symbols-outlined text-xl text-blue-500"
+              >local_bar</span
+            >
+            <span class="font-semibold text-gray-700 dark:text-gray-200"
+              >Barra</span
+            >
           </div>
-          <div id="barPrinterName" class="text-xs font-mono text-gray-400 dark:text-gray-500 mb-2">—</div>
-          <div id="barStatus" class="flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500">
-            <span class="w-2 h-2 rounded-full bg-gray-300 dark:bg-gray-600 inline-block" id="barDot"></span>
+          <div
+            id="barPrinterName"
+            class="text-xs font-mono text-gray-400 dark:text-gray-500 mb-2"
+          >
+            —
+          </div>
+          <div
+            id="barStatus"
+            class="flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500"
+          >
+            <span
+              class="w-2 h-2 rounded-full bg-gray-300 dark:bg-gray-600 inline-block"
+              id="barDot"
+            ></span>
             <span id="barStatusText">Sin configurar</span>
           </div>
-          <div id="barLastPrint" class="mt-1 text-xs text-gray-400 dark:text-gray-500 hidden">
+          <div
+            id="barLastPrint"
+            class="mt-1 text-xs text-gray-400 dark:text-gray-500 hidden"
+          >
             Último: <span id="barLastPrintTime">—</span>
           </div>
         </div>
 
-        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow p-4 border border-gray-100 dark:border-gray-700">
+        <div
+          class="bg-white dark:bg-gray-800 rounded-2xl shadow p-4 border border-gray-100 dark:border-gray-700"
+        >
           <div class="flex items-center gap-2 mb-2">
-            <span class="material-symbols-outlined text-xl text-red-500">outdoor_grill</span>
-            <span class="font-semibold text-gray-700 dark:text-gray-200">Parrillero</span>
+            <span class="material-symbols-outlined text-xl text-red-500"
+              >outdoor_grill</span
+            >
+            <span class="font-semibold text-gray-700 dark:text-gray-200"
+              >Parrillero</span
+            >
           </div>
-          <div id="parrillPrinterName" class="text-xs font-mono text-gray-400 dark:text-gray-500 mb-2">—</div>
-          <div id="parrillStatus" class="flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500">
-            <span class="w-2 h-2 rounded-full bg-gray-300 dark:bg-gray-600 inline-block" id="parrillDot"></span>
+          <div
+            id="parrillPrinterName"
+            class="text-xs font-mono text-gray-400 dark:text-gray-500 mb-2"
+          >
+            —
+          </div>
+          <div
+            id="parrillStatus"
+            class="flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500"
+          >
+            <span
+              class="w-2 h-2 rounded-full bg-gray-300 dark:bg-gray-600 inline-block"
+              id="parrillDot"
+            ></span>
             <span id="parrillStatusText">Sin configurar</span>
           </div>
-          <div id="parrillLastPrint" class="mt-1 text-xs text-gray-400 dark:text-gray-500 hidden">
+          <div
+            id="parrillLastPrint"
+            class="mt-1 text-xs text-gray-400 dark:text-gray-500 hidden"
+          >
             Último: <span id="parrillLastPrintTime">—</span>
           </div>
         </div>
-
       </div>
 
       <!-- Ticket printer card -->
-      <div class="bg-white dark:bg-gray-800 rounded-2xl shadow p-4 border border-gray-100 dark:border-gray-700 mb-6">
+      <div
+        class="bg-white dark:bg-gray-800 rounded-2xl shadow p-4 border border-gray-100 dark:border-gray-700 mb-6"
+      >
         <div class="flex items-center justify-between mb-2">
           <div class="flex items-center gap-2">
-            <span class="material-symbols-outlined text-xl text-emerald-500">receipt_long</span>
-            <span class="font-semibold text-gray-700 dark:text-gray-200">Impresora de Tickets de Cobro</span>
+            <span class="material-symbols-outlined text-xl text-emerald-500"
+              >receipt_long</span
+            >
+            <span class="font-semibold text-gray-700 dark:text-gray-200"
+              >Impresora de Tickets de Cobro</span
+            >
           </div>
           <div class="flex items-center gap-1">
-            <button onclick="selectTicketPrinter(true)" title="Seleccionar impresora de tickets"
-              class="text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-300 transition px-1">
+            <button
+              onclick="selectTicketPrinter(true)"
+              title="Seleccionar impresora de tickets"
+              class="text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-300 transition px-1"
+            >
               <span class="material-symbols-outlined text-base">print</span>
             </button>
-            <button onclick="resetTicketPrinter()" title="Restablecer impresora de tickets"
-              class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition px-1">
+            <button
+              onclick="resetTicketPrinter()"
+              title="Restablecer impresora de tickets"
+              class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition px-1"
+            >
               <span class="material-symbols-outlined text-base">settings</span>
             </button>
           </div>
         </div>
-        <div id="ticketPrinterName" class="text-xs font-mono text-gray-400 dark:text-gray-500 mb-2">—</div>
-        <div class="flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500">
-          <span class="w-2 h-2 rounded-full bg-gray-300 dark:bg-gray-600 inline-block" id="ticketDot"></span>
+        <div
+          id="ticketPrinterName"
+          class="text-xs font-mono text-gray-400 dark:text-gray-500 mb-2"
+        >
+          —
+        </div>
+        <div
+          class="flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500"
+        >
+          <span
+            class="w-2 h-2 rounded-full bg-gray-300 dark:bg-gray-600 inline-block"
+            id="ticketDot"
+          ></span>
           <span id="ticketStatusText">Sin configurar</span>
         </div>
-        <div id="ticketLastPrint" class="mt-1 text-xs text-gray-400 dark:text-gray-500 hidden">
+        <div
+          id="ticketLastPrint"
+          class="mt-1 text-xs text-gray-400 dark:text-gray-500 hidden"
+        >
           Último ticket: <span id="ticketLastPrintTime">—</span>
         </div>
-        <button type="button" onclick="selectTicketPrinter(true)"
-          class="mt-3 w-full px-3 py-2 text-sm rounded-lg bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 font-medium transition">
+        <button
+          type="button"
+          onclick="selectTicketPrinter(true)"
+          class="mt-3 w-full px-3 py-2 text-sm rounded-lg bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 font-medium transition"
+        >
           Seleccionar impresora
         </button>
       </div>
 
       <!-- Print log -->
-      <div class="bg-white dark:bg-gray-800 rounded-2xl shadow border border-gray-100 dark:border-gray-700">
-        <div class="flex items-center justify-between px-5 py-3 border-b border-gray-100 dark:border-gray-700">
-          <h2 class="font-semibold text-gray-700 dark:text-gray-200 text-sm">Registro de impresión</h2>
-          <button onclick="clearLog()" class="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition">Limpiar</button>
+      <div
+        class="bg-white dark:bg-gray-800 rounded-2xl shadow border border-gray-100 dark:border-gray-700"
+      >
+        <div
+          class="flex items-center justify-between px-5 py-3 border-b border-gray-100 dark:border-gray-700"
+        >
+          <h2 class="font-semibold text-gray-700 dark:text-gray-200 text-sm">
+            Registro de impresión
+          </h2>
+          <button
+            onclick="clearLog()"
+            class="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition"
+          >
+            Limpiar
+          </button>
         </div>
-        <div id="printLog" class="p-4 font-mono text-xs text-gray-600 dark:text-gray-300 space-y-1 max-h-64 overflow-y-auto">
-          <div class="text-gray-400 dark:text-gray-600 italic">Esperando eventos de impresión...</div>
+        <div
+          id="printLog"
+          class="p-4 font-mono text-xs text-gray-600 dark:text-gray-300 space-y-1 max-h-64 overflow-y-auto"
+        >
+          <div class="text-gray-400 dark:text-gray-600 italic">
+            Esperando eventos de impresión...
+          </div>
         </div>
       </div>
-
-    </div><!-- /max-w-3xl -->
+    </div>
+    <!-- /max-w-3xl -->
 
     <div th:replace="~{fragments/theme :: themeScript}"></div>
 
     <script th:inline="javascript">
       /*<![CDATA[*/
-      var COMPANY_ID       = /*[[${companyId}]]*/ 0;
-      var CURRENT_USERNAME = /*[[${currentUsername}]]*/ '';
+      var COMPANY_ID = /*[[${companyId}]]*/ 0;
+      var CURRENT_USERNAME = /*[[${currentUsername}]]*/ "";
       /*]]>*/
 
       // ── State ──
-      var printers = {};          // { KITCHEN: "HP TM-T20", BAR: "...", PARRILLERO: "..." }
+      var printers = {}; // { KITCHEN: "HP TM-T20", BAR: "...", PARRILLERO: "..." }
       var qzConnected = false;
       var stompClient = null;
 
@@ -171,11 +298,19 @@
       function log(msg, type) {
         var div = document.getElementById("printLog");
         var entry = document.createElement("div");
-        var now = new Date().toLocaleTimeString("es-PE", {hour:"2-digit", minute:"2-digit", second:"2-digit"});
-        entry.className = type === "error"   ? "text-red-500 dark:text-red-400" :
-                          type === "success" ? "text-green-600 dark:text-green-400" :
-                          type === "warn"    ? "text-yellow-600 dark:text-yellow-400" :
-                                              "text-gray-600 dark:text-gray-300";
+        var now = new Date().toLocaleTimeString("es-PE", {
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+        });
+        entry.className =
+          type === "error"
+            ? "text-red-500 dark:text-red-400"
+            : type === "success"
+              ? "text-green-600 dark:text-green-400"
+              : type === "warn"
+                ? "text-yellow-600 dark:text-yellow-400"
+                : "text-gray-600 dark:text-gray-300";
         entry.textContent = "[" + now + "] " + msg;
         div.appendChild(entry);
         div.scrollTop = div.scrollHeight;
@@ -185,16 +320,19 @@
       }
 
       function clearLog() {
-        document.getElementById("printLog").innerHTML = "<div class='text-gray-400 dark:text-gray-600 italic'>Log limpiado</div>";
+        document.getElementById("printLog").innerHTML =
+          "<div class='text-gray-400 dark:text-gray-600 italic'>Log limpiado</div>";
       }
 
       function setQzStatus(ok, msg) {
         var bar = document.getElementById("qzStatusBar");
         var icon = document.getElementById("qzStatusIcon");
         var text = document.getElementById("qzStatusText");
-        bar.className = "mb-4 flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-medium border " +
-          (ok ? "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800/40"
-              : "bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800/40");
+        bar.className =
+          "mb-4 flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-medium border " +
+          (ok
+            ? "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800/40"
+            : "bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800/40");
         icon.textContent = ok ? "check_circle" : "error";
         text.textContent = msg;
       }
@@ -203,35 +341,47 @@
         var bar = document.getElementById("wsStatusBar");
         var icon = document.getElementById("wsStatusIcon");
         var text = document.getElementById("wsStatusText");
-        bar.className = "mb-6 flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-medium border " +
-          (ok ? "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800/40"
-              : "bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800/40");
+        bar.className =
+          "mb-6 flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-medium border " +
+          (ok
+            ? "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800/40"
+            : "bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800/40");
         icon.textContent = ok ? "wifi" : "wifi_off";
         text.textContent = msg;
       }
 
       function updatePrinterCard(type, printerName, available) {
-        var prefix = type === "KITCHEN" ? "kitchen" : type === "BAR" ? "bar" : "parrill";
-        document.getElementById(prefix + "PrinterName").textContent = printerName || "—";
-        var dot  = document.getElementById(prefix + "Dot");
+        var prefix =
+          type === "KITCHEN" ? "kitchen" : type === "BAR" ? "bar" : "parrill";
+        document.getElementById(prefix + "PrinterName").textContent =
+          printerName || "—";
+        var dot = document.getElementById(prefix + "Dot");
         var stat = document.getElementById(prefix + "StatusText");
         if (!printerName) {
-          dot.className  = "w-2 h-2 rounded-full bg-gray-300 dark:bg-gray-600 inline-block";
+          dot.className =
+            "w-2 h-2 rounded-full bg-gray-300 dark:bg-gray-600 inline-block";
           stat.textContent = "Sin configurar";
         } else if (available) {
-          dot.className  = "w-2 h-2 rounded-full bg-green-400 inline-block";
+          dot.className = "w-2 h-2 rounded-full bg-green-400 inline-block";
           stat.textContent = "Conectada ✓";
         } else {
-          dot.className  = "w-2 h-2 rounded-full bg-yellow-400 inline-block";
+          dot.className = "w-2 h-2 rounded-full bg-yellow-400 inline-block";
           stat.textContent = "No detectada en esta PC";
         }
       }
 
       function recordLastPrint(type) {
-        var prefix = type === "KITCHEN" ? "kitchen" : type === "BAR" ? "bar" : "parrill";
-        var now = new Date().toLocaleTimeString("es-PE", {hour:"2-digit", minute:"2-digit", second:"2-digit"});
+        var prefix =
+          type === "KITCHEN" ? "kitchen" : type === "BAR" ? "bar" : "parrill";
+        var now = new Date().toLocaleTimeString("es-PE", {
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+        });
         document.getElementById(prefix + "LastPrintTime").textContent = now;
-        document.getElementById(prefix + "LastPrint").classList.remove("hidden");
+        document
+          .getElementById(prefix + "LastPrint")
+          .classList.remove("hidden");
       }
 
       // ── QZ Tray ──
@@ -240,11 +390,11 @@
           setQzStatus(false, "QZ Tray no cargado — recarga la página");
           return;
         }
-        var onConnected = function() {
+        var onConnected = function () {
           qzConnected = true;
           setQzStatus(true, "QZ Tray conectado ✓");
           log("QZ Tray conectado", "success");
-          checkPrinterAvailability().then(function(ok) {
+          checkPrinterAvailability().then(function (ok) {
             if (ok) promptTicketPrinterIfNeeded();
           });
         };
@@ -252,11 +402,15 @@
           onConnected();
           return;
         }
-        qz.websocket.connect()
+        qz.websocket
+          .connect()
           .then(onConnected)
-          .catch(function(e) {
+          .catch(function (e) {
             qzConnected = false;
-            setQzStatus(false, "QZ Tray no está instalado o no está abierto. Descárgalo en qz.io/download");
+            setQzStatus(
+              false,
+              "QZ Tray no está instalado o no está abierto. Descárgalo en qz.io/download",
+            );
             log("QZ Tray no disponible: instálalo y ábrelo. " + e, "error");
           });
       }
@@ -266,14 +420,23 @@
         try {
           var list = await qz.printers.find();
           if (!Array.isArray(list)) list = list ? [list] : [];
-          var listLower = list.map(function(p) { return String(p).toLowerCase(); });
+          var listLower = list.map(function (p) {
+            return String(p).toLowerCase();
+          });
           for (var type of ["KITCHEN", "BAR", "PARRILLERO"]) {
             var configured = printers[type];
             if (configured) {
               var available = listLower.indexOf(configured.toLowerCase()) >= 0;
               updatePrinterCard(type, configured, available);
               if (!available) {
-                log("Impresora '" + configured + "' (" + type + ") no encontrada en esta PC", "warn");
+                log(
+                  "Impresora '" +
+                    configured +
+                    "' (" +
+                    type +
+                    ") no encontrada en esta PC",
+                  "warn",
+                );
               }
             }
           }
@@ -281,8 +444,14 @@
         } catch (e) {
           qzConnected = false;
           var msg = String(e && e.message ? e.message : e);
-          if (msg.indexOf("sendData") >= 0 || msg.indexOf("not a function") >= 0) {
-            log("QZ Tray no está instalado o no está abierto. Sin QZ Tray el navegador no puede ver las impresoras de Windows. Descárgalo en https://qz.io/download/", "error");
+          if (
+            msg.indexOf("sendData") >= 0 ||
+            msg.indexOf("not a function") >= 0
+          ) {
+            log(
+              "QZ Tray no está instalado o no está abierto. Sin QZ Tray el navegador no puede ver las impresoras de Windows. Descárgalo en https://qz.io/download/",
+              "error",
+            );
             setQzStatus(false, "QZ Tray no está instalado o no está abierto");
           } else {
             log("Error al listar impresoras: " + e, "error");
@@ -298,12 +467,14 @@
           if (!resp.ok) throw new Error("HTTP " + resp.status);
           var data = await resp.json();
           printers = {};
-          data.forEach(function(p) { printers[p.printerType] = p.name; });
+          data.forEach(function (p) {
+            printers[p.printerType] = p.name;
+          });
           log("Impresoras cargadas: " + JSON.stringify(printers));
           if (qzConnected) checkPrinterAvailability();
           else {
             // Still update name labels without availability check
-            ["KITCHEN", "BAR", "PARRILLERO"].forEach(function(t) {
+            ["KITCHEN", "BAR", "PARRILLERO"].forEach(function (t) {
               updatePrinterCard(t, printers[t] || null, false);
             });
           }
@@ -324,8 +495,11 @@
             var resp = await fetch(url);
             if (resp.ok || resp.status === 204) return resp;
             var detail = "";
-            try { detail = (await resp.text()).trim().slice(0, 300); } catch (ignored) {}
-            lastError = "HTTP " + resp.status + (detail ? " (" + detail + ")" : "");
+            try {
+              detail = (await resp.text()).trim().slice(0, 300);
+            } catch (ignored) {}
+            lastError =
+              "HTTP " + resp.status + (detail ? " (" + detail + ")" : "");
             // 4xx that is not "not found yet" will not fix itself: stop retrying
             if (resp.status < 500 && resp.status !== 404) {
               log("No se puede descargar " + label + ": " + lastError, "error");
@@ -335,11 +509,30 @@
             lastError = String(e);
           }
           if (i < attempts) {
-            log("Intento " + i + " fallido al descargar " + label + ": " + lastError + " — reintentando...", "warn");
-            await new Promise(function(r) { setTimeout(r, 600 * i); });
+            log(
+              "Intento " +
+                i +
+                " fallido al descargar " +
+                label +
+                ": " +
+                lastError +
+                " — reintentando...",
+              "warn",
+            );
+            await new Promise(function (r) {
+              setTimeout(r, 600 * i);
+            });
           }
         }
-        log("No se pudo descargar " + label + " tras " + attempts + " intentos: " + lastError, "error");
+        log(
+          "No se pudo descargar " +
+            label +
+            " tras " +
+            attempts +
+            " intentos: " +
+            lastError,
+          "error",
+        );
         return null;
       }
 
@@ -350,7 +543,9 @@
 
       /** Exactly-once claim for ONE account (Payment) of a split bill. */
       async function claimAccountTicket(paymentId) {
-        return await askClaim("/api/print/ticket/payment/" + paymentId + "/claim");
+        return await askClaim(
+          "/api/print/ticket/payment/" + paymentId + "/claim",
+        );
       }
 
       async function askClaim(url) {
@@ -368,57 +563,110 @@
       // The server returns only the items of that station that are still pending to print,
       // so a comanda never repeats what already went out and a missed event is recovered
       // by the next comanda of the same station. announcedIds is only used for logging.
-      async function printComanda(orderId, orderNumber, type, announcedIds) {
+      async function printComanda(
+        orderId,
+        orderNumber,
+        type,
+        announcedIds,
+        mode,
+      ) {
         var printerName = printers[type];
         if (!printerName) {
-          log("No hay impresora configurada para " + type + " — omitido", "warn");
+          log(
+            "No hay impresora configurada para " + type + " — omitido",
+            "warn",
+          );
           return;
         }
 
         if (!qzConnected) {
-          log("QZ Tray no conectado — no se puede imprimir comanda " + type + " pedido #" + orderNumber, "error");
+          log(
+            "QZ Tray no conectado — no se puede imprimir comanda " +
+              type +
+              " pedido #" +
+              orderNumber,
+            "error",
+          );
           return;
         }
 
         try {
           // Verify the printer is actually available on this PC before printing
           var list = await qz.printers.find();
-          var listLower = list.map(function(p) { return p.toLowerCase(); });
+          var listLower = list.map(function (p) {
+            return p.toLowerCase();
+          });
           if (listLower.indexOf(printerName.toLowerCase()) < 0) {
-            log("Impresora '" + printerName + "' no instalada en esta PC — comanda " + type + " omitida", "warn");
+            log(
+              "Impresora '" +
+                printerName +
+                "' no instalada en esta PC — comanda " +
+                type +
+                " omitida",
+              "warn",
+            );
             return;
           }
 
-          var announced = (announcedIds && announcedIds.length) ? announcedIds.length : 0;
-          log("Descargando comanda " + type + " para pedido #" + orderNumber
-              + (announced ? " (" + announced + " ítem(s) nuevos anunciados)" : "") + "...");
+          var announced =
+            announcedIds && announcedIds.length ? announcedIds.length : 0;
+          log(
+            "Descargando comanda " +
+              type +
+              " para pedido #" +
+              orderNumber +
+              (announced
+                ? " (" + announced + " ítem(s) nuevos anunciados)"
+                : "") +
+              "...",
+          );
 
-          var resp = await downloadRaw("/api/print/comanda/" + orderId + "?type=" + type, "comanda " + type);
+          var modeParam = mode === "FULL" ? "&mode=full" : "";
+          var resp = await downloadRaw(
+            "/api/print/comanda/" + orderId + "?type=" + type + modeParam,
+            "comanda " + type,
+          );
           if (!resp) {
             return; // the reason is already in the log
           }
           if (resp.status === 204) {
-            log("Pedido #" + orderNumber + ": sin ítems nuevos para " + type, "warn");
+            log(
+              "Pedido #" + orderNumber + ": sin ítems nuevos para " + type,
+              "warn",
+            );
             return;
           }
 
           // Ids que realmente se imprimieron (el servidor decide el conjunto final)
-          var printedIds = (resp.headers.get("X-Comanda-Detail-Ids") || "").split(",").filter(function(x) { return x; });
+          var printedIds = (resp.headers.get("X-Comanda-Detail-Ids") || "")
+            .split(",")
+            .filter(function (x) {
+              return x;
+            });
           if (!resp.ok) {
-            log("Error HTTP " + resp.status + " al descargar comanda " + type, "error");
+            log(
+              "Error HTTP " + resp.status + " al descargar comanda " + type,
+              "error",
+            );
             return;
           }
 
           var buf = await resp.arrayBuffer();
           var bytes = new Uint8Array(buf);
           var binary = "";
-          for (var i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+          for (var i = 0; i < bytes.length; i++)
+            binary += String.fromCharCode(bytes[i]);
           var b64 = btoa(binary);
 
           var config = qz.configs.create(printerName);
-          await qz.print(config, [{ type: "raw", format: "base64", data: b64 }]);
+          await qz.print(config, [
+            { type: "raw", format: "base64", data: b64 },
+          ]);
 
-          log("✓ Comanda " + type + " impresa — pedido #" + orderNumber, "success");
+          log(
+            "✓ Comanda " + type + " impresa — pedido #" + orderNumber,
+            "success",
+          );
           recordLastPrint(type);
           updatePrinterCard(type, printerName, true);
 
@@ -426,14 +674,29 @@
           // Si el fetch falla, se reimprimen en la siguiente comanda de esa estación.
           if (printedIds.length) {
             try {
-              await fetch("/api/print/comanda/" + orderId + "/ack?type=" + type
-                         + "&details=" + printedIds.join(","), { method: "POST" });
-              log("Confirmados " + printedIds.length + " ítem(s) de la comanda " + type, "success");
+              await fetch(
+                "/api/print/comanda/" +
+                  orderId +
+                  "/ack?type=" +
+                  type +
+                  "&details=" +
+                  printedIds.join(","),
+                { method: "POST" },
+              );
+              log(
+                "Confirmados " +
+                  printedIds.length +
+                  " ítem(s) de la comanda " +
+                  type,
+                "success",
+              );
             } catch (ackErr) {
-              log("No se pudo confirmar la comanda " + type + ": " + ackErr, "warn");
+              log(
+                "No se pudo confirmar la comanda " + type + ": " + ackErr,
+                "warn",
+              );
             }
           }
-
         } catch (e) {
           log("Error al imprimir comanda " + type + ": " + e, "error");
         }
@@ -446,47 +709,89 @@
           stompClient = Stomp.over(socket);
           stompClient.debug = null;
 
-          stompClient.connect({}, function() {
-            setWsStatus(true, "WebSocket conectado ✓");
-            log("WebSocket conectado", "success");
+          stompClient.connect(
+            {},
+            function () {
+              setWsStatus(true, "WebSocket conectado ✓");
+              log("WebSocket conectado", "success");
 
-            stompClient.subscribe("/topic/print/comanda/kitchen/" + COMPANY_ID, function(msg) {
-              var data = JSON.parse(msg.body);
-              log("Evento KITCHEN recibido — pedido #" + data.orderNumber);
-              printComanda(data.orderId, data.orderNumber, "KITCHEN", data.detailIds);
-            });
+              stompClient.subscribe(
+                "/topic/print/comanda/kitchen/" + COMPANY_ID,
+                function (msg) {
+                  var data = JSON.parse(msg.body);
+                  log("Evento KITCHEN recibido — pedido #" + data.orderNumber);
+                  printComanda(
+                    data.orderId,
+                    data.orderNumber,
+                    "KITCHEN",
+                    data.detailIds,
+                    data.mode,
+                  );
+                },
+              );
 
-            stompClient.subscribe("/topic/print/comanda/bar/" + COMPANY_ID, function(msg) {
-              var data = JSON.parse(msg.body);
-              log("Evento BAR recibido — pedido #" + data.orderNumber);
-              printComanda(data.orderId, data.orderNumber, "BAR", data.detailIds);
-            });
+              stompClient.subscribe(
+                "/topic/print/comanda/bar/" + COMPANY_ID,
+                function (msg) {
+                  var data = JSON.parse(msg.body);
+                  log("Evento BAR recibido — pedido #" + data.orderNumber);
+                  printComanda(
+                    data.orderId,
+                    data.orderNumber,
+                    "BAR",
+                    data.detailIds,
+                    data.mode,
+                  );
+                },
+              );
 
-            stompClient.subscribe("/topic/print/comanda/parrillero/" + COMPANY_ID, function(msg) {
-              var data = JSON.parse(msg.body);
-              log("Evento PARRILLERO recibido — pedido #" + data.orderNumber);
-              printComanda(data.orderId, data.orderNumber, "PARRILLERO", data.detailIds);
-            });
+              stompClient.subscribe(
+                "/topic/print/comanda/parrillero/" + COMPANY_ID,
+                function (msg) {
+                  var data = JSON.parse(msg.body);
+                  log(
+                    "Evento PARRILLERO recibido — pedido #" + data.orderNumber,
+                  );
+                  printComanda(
+                    data.orderId,
+                    data.orderNumber,
+                    "PARRILLERO",
+                    data.detailIds,
+                    data.mode,
+                  );
+                },
+              );
 
-            // Company-wide topic: the ticket must come out of the PC whose ticket printer
-            // is connected, no matter who charged the order. Agents without that printer
-            // (or without a ticket printer configured) ignore the event, and the ones that
-            // share a printer resolve it with the exactly-once claim.
-            stompClient.subscribe("/topic/print/ticket/" + COMPANY_ID, function(msg) {
-              var data = JSON.parse(msg.body);
-              var accounts = (data.paymentIds && data.paymentIds.length) ? data.paymentIds : [];
-              log("🧾 Ticket solicitado para pedido #" + data.orderNumber
-                  + (accounts.length ? " (" + accounts.length + " cuenta(s))" : ""));
-              printTicket(data.orderId, data.orderNumber, accounts);
-            });
-
-          }, function(err) {
-            setWsStatus(false, "Desconectado del servidor WebSocket");
-            log("WebSocket desconectado: " + err, "error");
-            // Retry in 5 seconds
-            setTimeout(connectWebSocket, 5000);
-          });
-
+              // Company-wide topic: the ticket must come out of the PC whose ticket printer
+              // is connected, no matter who charged the order. Agents without that printer
+              // (or without a ticket printer configured) ignore the event, and the ones that
+              // share a printer resolve it with the exactly-once claim.
+              stompClient.subscribe(
+                "/topic/print/ticket/" + COMPANY_ID,
+                function (msg) {
+                  var data = JSON.parse(msg.body);
+                  var accounts =
+                    data.paymentIds && data.paymentIds.length
+                      ? data.paymentIds
+                      : [];
+                  log(
+                    "🧾 Ticket solicitado para pedido #" +
+                      data.orderNumber +
+                      (accounts.length
+                        ? " (" + accounts.length + " cuenta(s))"
+                        : ""),
+                  );
+                  printTicket(data.orderId, data.orderNumber, accounts);
+                },
+              );
+            },
+            function (err) {
+              setWsStatus(false, "Desconectado del servidor WebSocket");
+              log("WebSocket desconectado: " + err, "error");
+              // Retry in 5 seconds
+              setTimeout(connectWebSocket, 5000);
+            },
+          );
         } catch (e) {
           setWsStatus(false, "Error WebSocket: " + e);
           log("Error WebSocket: " + e, "error");
@@ -494,7 +799,7 @@
         }
       }
 
-      window.addEventListener("beforeunload", function() {
+      window.addEventListener("beforeunload", function () {
         if (stompClient && stompClient.connected) stompClient.disconnect();
         if (qzConnected && qz.websocket.isActive()) qz.websocket.disconnect();
       });
@@ -509,7 +814,8 @@
       /** Shows the SweetAlert printer list. force=true even if already stored (Cambiar). */
       async function selectTicketPrinter(force) {
         var key = "ticketPrinter_" + COMPANY_ID;
-        if (!force && localStorage.getItem(key)) return localStorage.getItem(key);
+        if (!force && localStorage.getItem(key))
+          return localStorage.getItem(key);
         try {
           var list = await qz.printers.find();
           if (!list || list.length === 0) {
@@ -526,17 +832,21 @@
             return list[0];
           }
           var inputOptions = {};
-          list.forEach(function(p) { inputOptions[p] = p; });
+          list.forEach(function (p) {
+            inputOptions[p] = p;
+          });
           var isDark = document.documentElement.classList.contains("dark");
           var result = await Swal.fire({
             title: "Selecciona impresora de tickets",
             text: "Elige qué impresora se usará para los tickets de cobro en esta PC. Esta elección se recuerda en este navegador.",
-            input: "select", inputOptions: inputOptions,
+            input: "select",
+            inputOptions: inputOptions,
             inputPlaceholder: "-- Selecciona --",
             showCancelButton: true,
-            confirmButtonText: "Seleccionar", cancelButtonText: "Cancelar",
+            confirmButtonText: "Seleccionar",
+            cancelButtonText: "Cancelar",
             background: isDark ? "#1f2937" : undefined,
-            color:      isDark ? "#f3f4f6" : undefined,
+            color: isDark ? "#f3f4f6" : undefined,
           });
           if (result.isConfirmed && result.value) {
             localStorage.setItem(key, result.value);
@@ -545,10 +855,16 @@
             return result.value;
           }
           return null;
-        } catch(e) {
+        } catch (e) {
           var msg = String(e && e.message ? e.message : e);
-          if (msg.indexOf("sendData") >= 0 || msg.indexOf("not a function") >= 0) {
-            log("QZ Tray no está instalado. Sin él no se pueden listar impresoras. https://qz.io/download/", "error");
+          if (
+            msg.indexOf("sendData") >= 0 ||
+            msg.indexOf("not a function") >= 0
+          ) {
+            log(
+              "QZ Tray no está instalado. Sin él no se pueden listar impresoras. https://qz.io/download/",
+              "error",
+            );
           } else {
             log("No se pudo listar impresoras de tickets: " + e, "error");
           }
@@ -559,12 +875,19 @@
       /** Updates the ticket card display. recordPrint=true only after a successful job. */
       function updateTicketCard(printerName, recordPrint) {
         if (printerName) {
-          document.getElementById("ticketPrinterName").textContent = printerName;
-          document.getElementById("ticketDot").className = "w-2 h-2 rounded-full bg-green-400 inline-block";
-          document.getElementById("ticketStatusText").textContent = "Configurada ✓";
+          document.getElementById("ticketPrinterName").textContent =
+            printerName;
+          document.getElementById("ticketDot").className =
+            "w-2 h-2 rounded-full bg-green-400 inline-block";
+          document.getElementById("ticketStatusText").textContent =
+            "Configurada ✓";
         }
         if (recordPrint) {
-          var now = new Date().toLocaleTimeString("es-PE", {hour:"2-digit", minute:"2-digit", second:"2-digit"});
+          var now = new Date().toLocaleTimeString("es-PE", {
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+          });
           document.getElementById("ticketLastPrintTime").textContent = now;
           document.getElementById("ticketLastPrint").classList.remove("hidden");
         }
@@ -574,8 +897,10 @@
       function resetTicketPrinter() {
         localStorage.removeItem("ticketPrinter_" + COMPANY_ID);
         document.getElementById("ticketPrinterName").textContent = "—";
-        document.getElementById("ticketDot").className = "w-2 h-2 rounded-full bg-gray-300 dark:bg-gray-600 inline-block";
-        document.getElementById("ticketStatusText").textContent = "Sin configurar";
+        document.getElementById("ticketDot").className =
+          "w-2 h-2 rounded-full bg-gray-300 dark:bg-gray-600 inline-block";
+        document.getElementById("ticketStatusText").textContent =
+          "Sin configurar";
         document.getElementById("ticketLastPrint").classList.add("hidden");
         log("Impresora de tickets restablecida. Elige otra.", "info");
         if (qzConnected) selectTicketPrinter(true);
@@ -599,22 +924,39 @@
           // agent of the company, so a dialog would open on unrelated PCs.
           var printerName = localStorage.getItem("ticketPrinter_" + COMPANY_ID);
           if (!printerName) {
-            log("Ticket #" + orderNumber + ": esta PC no tiene impresora de tickets configurada — omitido", "warn");
+            log(
+              "Ticket #" +
+                orderNumber +
+                ": esta PC no tiene impresora de tickets configurada — omitido",
+              "warn",
+            );
             return;
           }
           // Verify the printer is physically connected on THIS PC before printing.
           // This allows multiple agents to run on different PCs without duplicate prints:
           // only the PC that actually has the ticket printer connected will print.
           var list = await qz.printers.find();
-          var listLower = list.map(function(p) { return p.toLowerCase(); });
+          var listLower = list.map(function (p) {
+            return p.toLowerCase();
+          });
           if (listLower.indexOf(printerName.toLowerCase()) < 0) {
-            log("Impresora de tickets '" + printerName + "' no conectada en esta PC — omitido", "warn");
+            log(
+              "Impresora de tickets '" +
+                printerName +
+                "' no conectada en esta PC — omitido",
+              "warn",
+            );
             return;
           }
           // Split bill / departing guest: one ticket per account, no order ticket.
           if (paymentIds && paymentIds.length) {
             for (var i = 0; i < paymentIds.length; i++) {
-              await printOneAccountTicket(orderId, paymentIds[i], printerName, orderNumber);
+              await printOneAccountTicket(
+                orderId,
+                paymentIds[i],
+                printerName,
+                orderNumber,
+              );
             }
             updateTicketCard(printerName, true);
             return;
@@ -623,23 +965,39 @@
           // Exactly-once: only the agent that wins the claim prints this ticket.
           var claimed = await claimTicket(orderId);
           if (!claimed) {
-            log("Ticket #" + orderNumber + " ya fue tomado por otra PC — omitido", "warn");
+            log(
+              "Ticket #" + orderNumber + " ya fue tomado por otra PC — omitido",
+              "warn",
+            );
             return;
           }
           log("Descargando ticket para pedido #" + orderNumber + "...");
-          var resp = await downloadRaw("/api/print/ticket/" + orderId, "ticket #" + orderNumber);
+          var resp = await downloadRaw(
+            "/api/print/ticket/" + orderId,
+            "ticket #" + orderNumber,
+          );
           if (!resp) {
             return; // the reason is already in the log
           }
           var buf = await resp.arrayBuffer();
-          var bytes = new Uint8Array(buf), binary = "";
-          for (var i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+          var bytes = new Uint8Array(buf),
+            binary = "";
+          for (var i = 0; i < bytes.length; i++)
+            binary += String.fromCharCode(bytes[i]);
           var b64 = btoa(binary);
-          await qz.print(qz.configs.create(printerName), [{ type:"raw", format:"base64", data:b64 }]);
-          log("✓ Ticket #" + orderNumber + " enviado a " + printerName, "success");
+          await qz.print(qz.configs.create(printerName), [
+            { type: "raw", format: "base64", data: b64 },
+          ]);
+          log(
+            "✓ Ticket #" + orderNumber + " enviado a " + printerName,
+            "success",
+          );
           updateTicketCard(printerName, true);
-        } catch(e) {
-          log("❌ Error al imprimir ticket #" + orderNumber + ": " + e.message, "error");
+        } catch (e) {
+          log(
+            "❌ Error al imprimir ticket #" + orderNumber + ": " + e.message,
+            "error",
+          );
         }
       }
 
@@ -647,7 +1005,12 @@
        * One account of a split bill: claim it (exactly once, even if several PCs share the
        * printer) and print its own ESC/POS ticket on this PC's ticket printer.
        */
-      async function printOneAccountTicket(orderId, paymentId, printerName, orderNumber) {
+      async function printOneAccountTicket(
+        orderId,
+        paymentId,
+        printerName,
+        orderNumber,
+      ) {
         var label = "cuenta " + paymentId + " del pedido #" + orderNumber;
         try {
           var claimed = await claimAccountTicket(paymentId);
@@ -656,14 +1019,21 @@
             return;
           }
           log("Descargando " + label + "...");
-          var resp = await downloadRaw("/api/print/ticket/" + orderId + "/payment/" + paymentId, label);
+          var resp = await downloadRaw(
+            "/api/print/ticket/" + orderId + "/payment/" + paymentId,
+            label,
+          );
           if (!resp) {
             return; // the reason is already in the log
           }
           var buf = await resp.arrayBuffer();
-          var bytes = new Uint8Array(buf), binary = "";
-          for (var i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
-          await qz.print(qz.configs.create(printerName), [{ type: "raw", format: "base64", data: btoa(binary) }]);
+          var bytes = new Uint8Array(buf),
+            binary = "";
+          for (var i = 0; i < bytes.length; i++)
+            binary += String.fromCharCode(bytes[i]);
+          await qz.print(qz.configs.create(printerName), [
+            { type: "raw", format: "base64", data: btoa(binary) },
+          ]);
           log("✓ " + label + " impresa en " + printerName, "success");
         } catch (e) {
           log("❌ Error al imprimir la " + label + ": " + e.message, "error");
@@ -671,12 +1041,13 @@
       }
 
       // ── Boot ──
-      document.addEventListener("DOMContentLoaded", function() {
+      document.addEventListener("DOMContentLoaded", function () {
         // Restore stored ticket printer in card
         var stored = localStorage.getItem("ticketPrinter_" + COMPANY_ID);
         if (stored) {
           document.getElementById("ticketPrinterName").textContent = stored;
-          document.getElementById("ticketDot").className = "w-2 h-2 rounded-full bg-blue-400 inline-block";
+          document.getElementById("ticketDot").className =
+            "w-2 h-2 rounded-full bg-blue-400 inline-block";
           document.getElementById("ticketStatusText").textContent = "Guardada";
         }
         loadPrinters();

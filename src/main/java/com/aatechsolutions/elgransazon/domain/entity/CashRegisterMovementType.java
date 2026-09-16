@@ -16,7 +16,7 @@ public enum CashRegisterMovementType {
     INCOME("Entrada", false),
 
     /** Money taken out of the drawer (retiro / caja chica). */
-    WITHDRAWAL("Retiro", true);
+    WITHDRAWAL("Propinas efectivo", true);
 
     private final String displayName;
     private final boolean cashOut;

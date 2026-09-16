@@ -35,7 +35,7 @@ import java.util.List;
  */
 @Controller
 @RequestMapping("/cashier/cash-register")
-@PreAuthorize("hasRole('ROLE_CASHIER')")
+@PreAuthorize("hasAnyRole('CASHIER', 'ADMIN', 'MANAGER')")
 @RequiredArgsConstructor
 @Slf4j
 public class CashRegisterController {
@@ -65,7 +65,8 @@ public class CashRegisterController {
         }
 
         // NB: the model attribute is NOT named "session" — that is a reserved Thymeleaf
-        // expression object (the HTTP session), so "${session.id}" would resolve to null.
+        // expression object (the HTTP session), so "${session.id}" would resolve to
+        // null.
         model.addAttribute("cashSession", session);
         model.addAttribute("sessionOpen", sessionOpen);
         model.addAttribute("allowOpen", !sessionOpen);
@@ -80,9 +81,9 @@ public class CashRegisterController {
 
     @PostMapping("/open")
     public String open(@RequestParam(required = false) BigDecimal initialAmount,
-                       @RequestParam(required = false) String notes,
-                       Authentication authentication,
-                       RedirectAttributes redirectAttributes) {
+            @RequestParam(required = false) String notes,
+            Authentication authentication,
+            RedirectAttributes redirectAttributes) {
         try {
             Employee cashier = currentCashier(authentication);
             Company company = CompanyContext.requireCurrentCompany();
@@ -99,9 +100,9 @@ public class CashRegisterController {
 
     @PostMapping("/close")
     public String close(@RequestParam BigDecimal countedAmount,
-                        @RequestParam(required = false) String closingNotes,
-                        Authentication authentication,
-                        RedirectAttributes redirectAttributes) {
+            @RequestParam(required = false) String closingNotes,
+            Authentication authentication,
+            RedirectAttributes redirectAttributes) {
         try {
             Employee cashier = currentCashier(authentication);
             Company company = CompanyContext.requireCurrentCompany();
@@ -124,11 +125,11 @@ public class CashRegisterController {
 
     @PostMapping("/movements")
     public String addMovement(@RequestParam CashRegisterMovementType type,
-                              @RequestParam String concept,
-                              @RequestParam BigDecimal amount,
-                              @RequestParam(required = false) String notes,
-                              Authentication authentication,
-                              RedirectAttributes redirectAttributes) {
+            @RequestParam String concept,
+            @RequestParam BigDecimal amount,
+            @RequestParam(required = false) String notes,
+            Authentication authentication,
+            RedirectAttributes redirectAttributes) {
         try {
             Employee cashier = currentCashier(authentication);
             Company company = CompanyContext.requireCurrentCompany();
@@ -147,8 +148,8 @@ public class CashRegisterController {
 
     @PostMapping("/movements/{id}/delete")
     public String deleteMovement(@PathVariable Long id,
-                                 Authentication authentication,
-                                 RedirectAttributes redirectAttributes) {
+            Authentication authentication,
+            RedirectAttributes redirectAttributes) {
         try {
             Employee cashier = currentCashier(authentication);
             Company company = CompanyContext.requireCurrentCompany();
@@ -165,8 +166,7 @@ public class CashRegisterController {
 
     @GetMapping("/history")
     public String history(
-            @RequestParam(required = false)
-            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
             Authentication authentication,
             Model model) {
         Employee cashier = currentCashier(authentication);
@@ -187,7 +187,7 @@ public class CashRegisterController {
 
     @GetMapping("/session/{id}")
     public String sessionDetail(@PathVariable Long id, Authentication authentication,
-                                Model model, RedirectAttributes redirectAttributes) {
+            Model model, RedirectAttributes redirectAttributes) {
         Employee cashier = currentCashier(authentication);
         Company company = CompanyContext.requireCurrentCompany();
 
@@ -211,7 +211,7 @@ public class CashRegisterController {
 
     @GetMapping("/session/{id}/pdf")
     public ResponseEntity<byte[]> downloadPdf(@PathVariable Long id, Authentication authentication,
-                                              RedirectAttributes redirectAttributes) {
+            RedirectAttributes redirectAttributes) {
         try {
             Employee cashier = currentCashier(authentication);
             Company company = CompanyContext.requireCurrentCompany();

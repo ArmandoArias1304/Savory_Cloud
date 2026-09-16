@@ -82,32 +82,34 @@ public class ReportPdfService {
 
         // Summary Section
         addSectionTitle(document, boldFont, "Resumen General");
-        Table summaryTable = new Table(new float[]{1, 1, 1});
+        Table summaryTable = new Table(new float[] { 1, 1, 1 });
         summaryTable.setWidth(UnitValue.createPercentValue(100));
-        
-        addSummaryCell(summaryTable, boldFont, regularFont, "Total de Ventas", 
-            String.format("$%,.2f", totalSales));
-        addSummaryCell(summaryTable, boldFont, regularFont, "Órdenes Pagadas", 
-            String.valueOf(totalOrders));
-        addSummaryCell(summaryTable, boldFont, regularFont, "Ticket Promedio", 
-            totalOrders > 0 ? String.format("$%,.2f", totalSales.divide(BigDecimal.valueOf(totalOrders), 2, java.math.RoundingMode.HALF_UP)) : "$0.00");
-        
+
+        addSummaryCell(summaryTable, boldFont, regularFont, "Total de Ventas",
+                String.format("$%,.2f", totalSales));
+        addSummaryCell(summaryTable, boldFont, regularFont, "Órdenes Pagadas",
+                String.valueOf(totalOrders));
+        addSummaryCell(summaryTable, boldFont, regularFont, "Ticket Promedio",
+                totalOrders > 0
+                        ? String.format("$%,.2f",
+                                totalSales.divide(BigDecimal.valueOf(totalOrders), 2, java.math.RoundingMode.HALF_UP))
+                        : "$0.00");
+
         document.add(summaryTable);
         document.add(new Paragraph("\n"));
 
         // Top 5 Products
         addSectionTitle(document, boldFont, "Top 5 Productos Más Vendidos");
-        Table productsTable = new Table(new float[]{3, 1, 1, 2});
+        Table productsTable = new Table(new float[] { 3, 1, 1, 2 });
         productsTable.setWidth(UnitValue.createPercentValue(100));
         addTableHeader(productsTable, boldFont, "Producto", "Cant.", "Cat.", "Total");
-        
+
         topSellingItems.stream().limit(5).forEach(item -> {
             addTableRow(productsTable, regularFont,
-                item.get("name").toString(),
-                item.get("quantity").toString(),
-                item.get("category").toString(),
-                String.format("$%,.2f", item.get("total"))
-            );
+                    item.get("name").toString(),
+                    item.get("quantity").toString(),
+                    item.get("category").toString(),
+                    String.format("$%,.2f", item.get("total")));
         });
         document.add(productsTable);
         document.add(new Paragraph("\n"));
@@ -115,84 +117,81 @@ public class ReportPdfService {
         // Top 5 Complements
         if (topSellingComplements != null && !topSellingComplements.isEmpty()) {
             addSectionTitle(document, boldFont, "Top 5 Complementos Más Vendidos");
-            Table complementsTable = new Table(new float[]{3, 1, 1, 2});
+            Table complementsTable = new Table(new float[] { 3, 1, 1, 2 });
             complementsTable.setWidth(UnitValue.createPercentValue(100));
             addTableHeader(complementsTable, boldFont, "Complemento", "Cant.", "Cant. Pagada", "Total");
 
             topSellingComplements.stream().limit(5).forEach(comp -> {
                 addTableRow(complementsTable, regularFont,
-                    comp.get("name").toString(),
-                    comp.get("quantity").toString(),
-                    comp.get("paidQuantity").toString(),
-                    String.format("$%,.2f", comp.get("total"))
-                );
+                        comp.get("name").toString(),
+                        comp.get("quantity").toString(),
+                        comp.get("paidQuantity").toString(),
+                        String.format("$%,.2f", comp.get("total")));
             });
             document.add(complementsTable);
 
             // Total complements legend
             Paragraph complementsLegend = new Paragraph(
-                String.format("Total ventas de complementos: $%,.2f", totalComplementsSales))
-                .setFont(regularFont)
-                .setFontSize(9)
-                .setFontColor(GRAY_COLOR)
-                .setItalic()
-                .setTextAlignment(TextAlignment.RIGHT)
-                .setMarginTop(4);
+                    String.format("Total ventas de complementos: $%,.2f", totalComplementsSales))
+                    .setFont(regularFont)
+                    .setFontSize(9)
+                    .setFontColor(GRAY_COLOR)
+                    .setItalic()
+                    .setTextAlignment(TextAlignment.RIGHT)
+                    .setMarginTop(4);
             document.add(complementsLegend);
             document.add(new Paragraph("\n"));
         }
 
         // Sales by Category (uses item-only totals, excluding complements)
         addSectionTitle(document, boldFont, "Ventas por Categoría (solo productos)");
-        Table categoryTable = new Table(new float[]{3, 2, 2});
+        Table categoryTable = new Table(new float[] { 3, 2, 2 });
         categoryTable.setWidth(UnitValue.createPercentValue(100));
         addTableHeader(categoryTable, boldFont, "Categoría", "Total", "% Part.");
-        
+
         // Sum of category values (item-only, no complements)
         final BigDecimal totalItemSales = salesByCategory.values().stream()
-            .reduce(BigDecimal.ZERO, BigDecimal::add);
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         salesByCategory.entrySet().stream()
-            .sorted(Map.Entry.<String, BigDecimal>comparingByValue().reversed())
-            .forEach(entry -> {
-                BigDecimal percentage = totalItemSales.compareTo(BigDecimal.ZERO) > 0
-                    ? entry.getValue().multiply(BigDecimal.valueOf(100)).divide(totalItemSales, 2, java.math.RoundingMode.HALF_UP)
-                    : BigDecimal.ZERO;
-                addTableRow(categoryTable, regularFont,
-                    entry.getKey(),
-                    String.format("$%,.2f", entry.getValue()),
-                    String.format("%.2f%%", percentage)
-                );
-            });
+                .sorted(Map.Entry.<String, BigDecimal>comparingByValue().reversed())
+                .forEach(entry -> {
+                    BigDecimal percentage = totalItemSales.compareTo(BigDecimal.ZERO) > 0
+                            ? entry.getValue().multiply(BigDecimal.valueOf(100)).divide(totalItemSales, 2,
+                                    java.math.RoundingMode.HALF_UP)
+                            : BigDecimal.ZERO;
+                    addTableRow(categoryTable, regularFont,
+                            entry.getKey(),
+                            String.format("$%,.2f", entry.getValue()),
+                            String.format("%.2f%%", percentage));
+                });
         document.add(categoryTable);
         document.add(new Paragraph("\n"));
 
         // Sales by Employee
         if (!salesByEmployee.isEmpty()) {
             addSectionTitle(document, boldFont, "Ventas por Empleado (Cobradas)");
-            Table employeeTable = new Table(new float[]{4, 2, 2, 1});
+            Table employeeTable = new Table(new float[] { 4, 2, 2, 1 });
             employeeTable.setWidth(UnitValue.createPercentValue(100));
             addTableHeader(employeeTable, boldFont, "Empleado", "Rol", "Total Cobrado", "Órdenes");
-            
+
             // Map to count orders by employee who collected payment (paidBy)
             Map<String, Long> ordersByEmployee = paidOrders.stream()
-                .filter(o -> o.getPaidBy() != null)
-                .collect(Collectors.groupingBy(
-                    o -> o.getPaidBy().getNombre() + " " + o.getPaidBy().getApellido(),
-                    Collectors.counting()
-                ));
-            
+                    .filter(o -> o.getPaidBy() != null)
+                    .collect(Collectors.groupingBy(
+                            o -> o.getPaidBy().getNombre() + " " + o.getPaidBy().getApellido(),
+                            Collectors.counting()));
+
             for (Map<String, Object> employee : salesByEmployee) {
                 String name = (String) employee.get("name");
                 String role = (String) employee.get("role");
                 BigDecimal total = (BigDecimal) employee.get("total");
-                
+
                 addTableRow(employeeTable, regularFont,
-                    name,
-                    role,
-                    String.format("$%,.2f", total),
-                    String.valueOf(ordersByEmployee.getOrDefault(name, 0L))
-                );
+                        name,
+                        role,
+                        String.format("$%,.2f", total),
+                        String.valueOf(ordersByEmployee.getOrDefault(name, 0L)));
             }
             document.add(employeeTable);
             document.add(new Paragraph("\n"));
@@ -200,103 +199,105 @@ public class ReportPdfService {
 
         // Payment Methods
         addSectionTitle(document, boldFont, "Métodos de Pago");
-        Table paymentTable = new Table(new float[]{3, 2, 2, 2});
+        Table paymentTable = new Table(new float[] { 3, 2, 2, 2 });
         paymentTable.setWidth(UnitValue.createPercentValue(100));
         addTableHeader(paymentTable, boldFont, "Método", "Órdenes", "Total", "% Part.");
 
         // Calculate total sales per payment method
         Map<String, BigDecimal> totalByPaymentMethod = paidOrders.stream()
-            .filter(o -> o.getPaymentMethod() != null)
-            .collect(Collectors.groupingBy(
-                o -> o.getPaymentMethod().getDisplayName(),
-                Collectors.reducing(BigDecimal.ZERO,
-                    o -> o.getTotal() != null ? o.getTotal() : BigDecimal.ZERO,
-                    BigDecimal::add)
-            ));
+                .filter(o -> o.getPaymentMethod() != null)
+                .collect(Collectors.groupingBy(
+                        o -> o.getPaymentMethod().getDisplayName(),
+                        Collectors.reducing(BigDecimal.ZERO,
+                                o -> o.getTotal() != null ? o.getTotal() : BigDecimal.ZERO,
+                                BigDecimal::add)));
 
         ordersByPaymentMethod.entrySet().stream()
-            .sorted(Map.Entry.<String, Long>comparingByValue().reversed())
-            .forEach(entry -> {
-                double percentage = totalOrders > 0 
-                    ? (entry.getValue() * 100.0 / totalOrders) 
-                    : 0.0;
-                BigDecimal methodTotal = totalByPaymentMethod.getOrDefault(entry.getKey(), BigDecimal.ZERO);
-                addTableRow(paymentTable, regularFont,
-                    entry.getKey(),
-                    String.valueOf(entry.getValue()),
-                    String.format("$%,.2f", methodTotal),
-                    String.format("%.2f%%", percentage)
-                );
-            });
+                .sorted(Map.Entry.<String, Long>comparingByValue().reversed())
+                .forEach(entry -> {
+                    double percentage = totalOrders > 0
+                            ? (entry.getValue() * 100.0 / totalOrders)
+                            : 0.0;
+                    BigDecimal methodTotal = totalByPaymentMethod.getOrDefault(entry.getKey(), BigDecimal.ZERO);
+                    addTableRow(paymentTable, regularFont,
+                            entry.getKey(),
+                            String.valueOf(entry.getValue()),
+                            String.format("$%,.2f", methodTotal),
+                            String.format("%.2f%%", percentage));
+                });
         document.add(paymentTable);
         document.add(new Paragraph("\n"));
 
         // Web Orders Section (Orders created by customers)
         java.util.List<Order> webOrders = paidOrders.stream()
-            .filter(order -> order.getCustomer() != null && order.getEmployee() == null)
-            .collect(Collectors.toList());
-        
+                .filter(order -> order.getCustomer() != null && order.getEmployee() == null)
+                .collect(Collectors.toList());
+
         if (!webOrders.isEmpty()) {
             addSectionTitle(document, boldFont, "Pedidos Web (Clientes)");
-            
+
             // Web orders summary
             BigDecimal webOrdersTotal = webOrders.stream()
-                .map(order -> order.getTotal() != null ? order.getTotal() : BigDecimal.ZERO)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-            
-            BigDecimal webOrdersAverage = webOrders.size() > 0 
-                ? webOrdersTotal.divide(BigDecimal.valueOf(webOrders.size()), 2, java.math.RoundingMode.HALF_UP)
-                : BigDecimal.ZERO;
-            
-            Table webSummaryTable = new Table(new float[]{1, 1, 1});
+                    .map(order -> order.getTotal() != null ? order.getTotal() : BigDecimal.ZERO)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            BigDecimal webOrdersAverage = webOrders.size() > 0
+                    ? webOrdersTotal.divide(BigDecimal.valueOf(webOrders.size()), 2, java.math.RoundingMode.HALF_UP)
+                    : BigDecimal.ZERO;
+
+            Table webSummaryTable = new Table(new float[] { 1, 1, 1 });
             webSummaryTable.setWidth(UnitValue.createPercentValue(100));
-            
-            addSummaryCell(webSummaryTable, boldFont, regularFont, "Total Pedidos Web", 
-                String.valueOf(webOrders.size()));
-            addSummaryCell(webSummaryTable, boldFont, regularFont, "Ventas Totales", 
-                String.format("$%,.2f", webOrdersTotal));
-            addSummaryCell(webSummaryTable, boldFont, regularFont, "Ticket Promedio", 
-                String.format("$%,.2f", webOrdersAverage));
-            
+
+            addSummaryCell(webSummaryTable, boldFont, regularFont, "Total Pedidos Web",
+                    String.valueOf(webOrders.size()));
+            addSummaryCell(webSummaryTable, boldFont, regularFont, "Ventas Totales",
+                    String.format("$%,.2f", webOrdersTotal));
+            addSummaryCell(webSummaryTable, boldFont, regularFont, "Ticket Promedio",
+                    String.format("$%,.2f", webOrdersAverage));
+
             document.add(webSummaryTable);
             document.add(new Paragraph("\n"));
 
-            // Web orders detail table — commented out to avoid saturating the PDF with too many rows.
+            // Web orders detail table — commented out to avoid saturating the PDF with too
+            // many rows.
             // Uncomment the block below to re-enable the order-by-order breakdown.
             /*
-            Table webOrdersTable = new Table(new float[]{2, 3, 2, 2, 2});
-            webOrdersTable.setWidth(UnitValue.createPercentValue(100));
-            addTableHeader(webOrdersTable, boldFont, "Orden", "Cliente", "Tipo", "Total", "Pago");
-
-            webOrders.stream()
-                .sorted((o1, o2) -> {
-                    LocalDateTime date1 = o1.getPaidAt() != null ? o1.getPaidAt() : (o1.getUpdatedAt() != null ? o1.getUpdatedAt() : o1.getCreatedAt());
-                    LocalDateTime date2 = o2.getPaidAt() != null ? o2.getPaidAt() : (o2.getUpdatedAt() != null ? o2.getUpdatedAt() : o2.getCreatedAt());
-                    return date2.compareTo(date1); // Most recent first
-                })
-                .forEach(order -> {
-                    String customerName = order.getCustomer() != null
-                        ? order.getCustomer().getFullName()
-                        : "N/A";
-                    String orderType = order.getOrderType() != null
-                        ? order.getOrderType().getDisplayName()
-                        : "N/A";
-                    String paymentMethod = order.getPaymentMethod() != null
-                        ? order.getPaymentMethod().getDisplayName()
-                        : "N/A";
-
-                    addTableRow(webOrdersTable, regularFont,
-                        order.getOrderNumber(),
-                        customerName,
-                        orderType,
-                        String.format("$%,.2f", order.getTotal()),
-                        paymentMethod
-                    );
-                });
-
-            document.add(webOrdersTable);
-            document.add(new Paragraph("\n"));
-            */
+             * Table webOrdersTable = new Table(new float[]{2, 3, 2, 2, 2});
+             * webOrdersTable.setWidth(UnitValue.createPercentValue(100));
+             * addTableHeader(webOrdersTable, boldFont, "Orden", "Cliente", "Tipo", "Total",
+             * "Pago");
+             * 
+             * webOrders.stream()
+             * .sorted((o1, o2) -> {
+             * LocalDateTime date1 = o1.getPaidAt() != null ? o1.getPaidAt() :
+             * (o1.getUpdatedAt() != null ? o1.getUpdatedAt() : o1.getCreatedAt());
+             * LocalDateTime date2 = o2.getPaidAt() != null ? o2.getPaidAt() :
+             * (o2.getUpdatedAt() != null ? o2.getUpdatedAt() : o2.getCreatedAt());
+             * return date2.compareTo(date1); // Most recent first
+             * })
+             * .forEach(order -> {
+             * String customerName = order.getCustomer() != null
+             * ? order.getCustomer().getFullName()
+             * : "N/A";
+             * String orderType = order.getOrderType() != null
+             * ? order.getOrderType().getDisplayName()
+             * : "N/A";
+             * String paymentMethod = order.getPaymentMethod() != null
+             * ? order.getPaymentMethod().getDisplayName()
+             * : "N/A";
+             * 
+             * addTableRow(webOrdersTable, regularFont,
+             * order.getOrderNumber(),
+             * customerName,
+             * orderType,
+             * String.format("$%,.2f", order.getTotal()),
+             * paymentMethod
+             * );
+             * });
+             * 
+             * document.add(webOrdersTable);
+             * document.add(new Paragraph("\n"));
+             */
         }
 
         // Footer
@@ -333,49 +334,50 @@ public class ReportPdfService {
 
         // Summary
         BigDecimal totalProductSales = topSellingItems.stream()
-            .map(item -> (BigDecimal) item.get("total"))
-            .reduce(BigDecimal.ZERO, BigDecimal::add);
-        
+                .map(item -> (BigDecimal) item.get("total"))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
         int totalQuantity = topSellingItems.stream()
-            .mapToInt(item -> (Integer) item.get("quantity"))
-            .sum();
+                .mapToInt(item -> (Integer) item.get("quantity"))
+                .sum();
 
         addSectionTitle(document, boldFont, "Resumen de Productos");
-        Table summaryTable = new Table(new float[]{1, 1, 1});
+        Table summaryTable = new Table(new float[] { 1, 1, 1 });
         summaryTable.setWidth(UnitValue.createPercentValue(100));
-        
-        addSummaryCell(summaryTable, boldFont, regularFont, "Total Productos Vendidos", 
-            String.valueOf(totalQuantity));
-        addSummaryCell(summaryTable, boldFont, regularFont, "Variedades Diferentes", 
-            String.valueOf(topSellingItems.size()));
-        // Ingresos Generados shows ONLY product sales (complements are reported separately below)
-        addSummaryCell(summaryTable, boldFont, regularFont, "Ingresos Generados", 
-            String.format("$%,.2f", totalProductSales));
-        
+
+        addSummaryCell(summaryTable, boldFont, regularFont, "Total Productos Vendidos",
+                String.valueOf(totalQuantity));
+        addSummaryCell(summaryTable, boldFont, regularFont, "Variedades Diferentes",
+                String.valueOf(topSellingItems.size()));
+        // Ingresos Generados shows ONLY product sales (complements are reported
+        // separately below)
+        addSummaryCell(summaryTable, boldFont, regularFont, "Ingresos Generados",
+                String.format("$%,.2f", totalProductSales));
+
         document.add(summaryTable);
         document.add(new Paragraph("\n"));
 
         // Products Table
         addSectionTitle(document, boldFont, "Detalle de Productos");
-        Table table = new Table(new float[]{0.5f, 3, 2, 1, 2, 2});
+        Table table = new Table(new float[] { 0.5f, 3, 2, 1, 2, 2 });
         table.setWidth(UnitValue.createPercentValue(100));
         addTableHeader(table, boldFont, "#", "Producto", "Categoría", "Cant.", "Total", "% Part.");
-        
+
         int rank = 1;
         for (Map<String, Object> item : topSellingItems) {
             BigDecimal itemTotal = (BigDecimal) item.get("total");
             double percentage = totalProductSales.compareTo(BigDecimal.ZERO) > 0
-                ? itemTotal.multiply(BigDecimal.valueOf(100)).divide(totalProductSales, 2, java.math.RoundingMode.HALF_UP).doubleValue()
-                : 0.0;
-            
+                    ? itemTotal.multiply(BigDecimal.valueOf(100))
+                            .divide(totalProductSales, 2, java.math.RoundingMode.HALF_UP).doubleValue()
+                    : 0.0;
+
             addTableRow(table, regularFont,
-                String.valueOf(rank++),
-                item.get("name").toString(),
-                item.get("category").toString(),
-                item.get("quantity").toString(),
-                String.format("$%,.2f", itemTotal),
-                String.format("%.2f%%", percentage)
-            );
+                    String.valueOf(rank++),
+                    item.get("name").toString(),
+                    item.get("category").toString(),
+                    item.get("quantity").toString(),
+                    String.format("$%,.2f", itemTotal),
+                    String.format("%.2f%%", percentage));
         }
         document.add(table);
         document.add(new Paragraph("\n"));
@@ -384,60 +386,61 @@ public class ReportPdfService {
         if (allComplements != null && !allComplements.isEmpty()) {
             // Complements Summary (similar to Products Summary)
             int totalComplementsQuantity = allComplements.stream()
-                .mapToInt(comp -> (Integer) comp.get("quantity"))
-                .sum();
-            
+                    .mapToInt(comp -> (Integer) comp.get("quantity"))
+                    .sum();
+
             addSectionTitle(document, boldFont, "Resumen de Complementos");
-            Table complementsSummaryTable = new Table(new float[]{1, 1, 1});
+            Table complementsSummaryTable = new Table(new float[] { 1, 1, 1 });
             complementsSummaryTable.setWidth(UnitValue.createPercentValue(100));
-            
-            addSummaryCell(complementsSummaryTable, boldFont, regularFont, "Total Complementos Vendidos", 
-                String.valueOf(totalComplementsQuantity));
-            addSummaryCell(complementsSummaryTable, boldFont, regularFont, "Variedades Diferentes", 
-                String.valueOf(allComplements.size()));
-            addSummaryCell(complementsSummaryTable, boldFont, regularFont, "Ingresos Generados", 
-                String.format("$%,.2f", totalComplementsSales != null ? totalComplementsSales : BigDecimal.ZERO));
-            
+
+            addSummaryCell(complementsSummaryTable, boldFont, regularFont, "Total Complementos Vendidos",
+                    String.valueOf(totalComplementsQuantity));
+            addSummaryCell(complementsSummaryTable, boldFont, regularFont, "Variedades Diferentes",
+                    String.valueOf(allComplements.size()));
+            addSummaryCell(complementsSummaryTable, boldFont, regularFont, "Ingresos Generados",
+                    String.format("$%,.2f", totalComplementsSales != null ? totalComplementsSales : BigDecimal.ZERO));
+
             document.add(complementsSummaryTable);
             document.add(new Paragraph("\n"));
 
             // Complements Table
             addSectionTitle(document, boldFont, "Detalle de Complementos");
 
-            Table compTable = new Table(new float[]{0.5f, 3, 1, 1, 2, 2});
+            Table compTable = new Table(new float[] { 0.5f, 3, 1, 1, 2, 2 });
             compTable.setWidth(UnitValue.createPercentValue(100));
             addTableHeader(compTable, boldFont, "#", "Complemento", "Cant.", "Cant. Pagada", "Total", "% Part.");
 
-            BigDecimal totalCompSales = totalComplementsSales != null && totalComplementsSales.compareTo(BigDecimal.ZERO) > 0
-                ? totalComplementsSales : BigDecimal.ONE;
+            BigDecimal totalCompSales = totalComplementsSales != null
+                    && totalComplementsSales.compareTo(BigDecimal.ZERO) > 0
+                            ? totalComplementsSales
+                            : BigDecimal.ONE;
 
             int compRank = 1;
             for (Map<String, Object> comp : allComplements) {
                 BigDecimal compTotal = (BigDecimal) comp.get("total");
                 double compPercentage = compTotal.multiply(BigDecimal.valueOf(100))
-                    .divide(totalCompSales, 2, java.math.RoundingMode.HALF_UP).doubleValue();
+                        .divide(totalCompSales, 2, java.math.RoundingMode.HALF_UP).doubleValue();
 
                 addTableRow(compTable, regularFont,
-                    String.valueOf(compRank++),
-                    comp.get("name").toString(),
-                    comp.get("quantity").toString(),
-                    comp.get("paidQuantity").toString(),
-                    String.format("$%,.2f", compTotal),
-                    String.format("%.2f%%", compPercentage)
-                );
+                        String.valueOf(compRank++),
+                        comp.get("name").toString(),
+                        comp.get("quantity").toString(),
+                        comp.get("paidQuantity").toString(),
+                        String.format("$%,.2f", compTotal),
+                        String.format("%.2f%%", compPercentage));
             }
             document.add(compTable);
 
             // Combined total legend (products + complements)
             BigDecimal combinedTotal = totalProductSales.add(
-                totalComplementsSales != null ? totalComplementsSales : BigDecimal.ZERO);
+                    totalComplementsSales != null ? totalComplementsSales : BigDecimal.ZERO);
             Paragraph complementsLegend = new Paragraph(
-                String.format("Total de productos más complementos: $%,.2f", combinedTotal))
-                .setFont(boldFont)
-                .setFontSize(10)
-                .setFontColor(DARK_COLOR)
-                .setTextAlignment(TextAlignment.RIGHT)
-                .setMarginTop(6);
+                    String.format("Total de productos más complementos: $%,.2f", combinedTotal))
+                    .setFont(boldFont)
+                    .setFontSize(10)
+                    .setFontColor(DARK_COLOR)
+                    .setTextAlignment(TextAlignment.RIGHT)
+                    .setMarginTop(6);
             document.add(complementsLegend);
         }
 
@@ -476,21 +479,22 @@ public class ReportPdfService {
 
         // Note about date attribution
         Paragraph note = new Paragraph("📌 Nota: Incluye pedidos creados por clientes (en línea).")
-            .setFont(regularFont)
-            .setFontSize(9)
-            .setFontColor(GRAY_COLOR)
-            .setItalic()
-            .setTextAlignment(TextAlignment.CENTER)
-            .setMarginBottom(10);
+                .setFont(regularFont)
+                .setFontSize(9)
+                .setFontColor(GRAY_COLOR)
+                .setItalic()
+                .setTextAlignment(TextAlignment.CENTER)
+                .setMarginBottom(10);
         document.add(note);
 
-        // Get ALL enabled employees (except Programmer) to always show all role sections
+        // Get ALL enabled employees (except Programmer) to always show all role
+        // sections
         Company currentCompany = CompanyContext.getCurrentCompany();
         java.util.List<Employee> allEnabledEmployees = (currentCompany != null
-            ? employeeRepository.findByEnabledTrueAndCompany(currentCompany)
-            : employeeRepository.findByEnabledTrue()).stream()
-            .filter(emp -> !emp.hasRole(Role.PROGRAMMER))
-            .collect(Collectors.toList());
+                ? employeeRepository.findByEnabledTrueAndCompany(currentCompany)
+                : employeeRepository.findByEnabledTrue()).stream()
+                .filter(emp -> !emp.hasRole(Role.PROGRAMMER))
+                .collect(Collectors.toList());
 
         Set<Employee> allEmployees = new HashSet<>(allEnabledEmployees);
 
@@ -502,63 +506,74 @@ public class ReportPdfService {
         java.util.List<Employee> cashiers = new ArrayList<>();
         java.util.List<Employee> deliveryPersons = new ArrayList<>();
         java.util.List<Employee> admins = new ArrayList<>();
-        
+
         for (Employee emp : allEmployees) {
-            if (emp.hasRole(Role.WAITER)) waiters.add(emp);
-            if (emp.hasRole(Role.CHEF)) chefs.add(emp);
-            if (emp.hasRole(Role.BARISTA)) baristas.add(emp);
-            if (emp.hasRole(Role.PARRILLERO)) parrilleros.add(emp);
-            if (emp.hasRole(Role.CASHIER)) cashiers.add(emp);
-            if (emp.hasRole(Role.DELIVERY)) deliveryPersons.add(emp);
-            if (emp.hasRole(Role.ADMIN) || emp.hasRole(Role.MANAGER)) admins.add(emp);
+            if (emp.hasRole(Role.WAITER))
+                waiters.add(emp);
+            if (emp.hasRole(Role.CHEF))
+                chefs.add(emp);
+            if (emp.hasRole(Role.BARISTA))
+                baristas.add(emp);
+            if (emp.hasRole(Role.PARRILLERO))
+                parrilleros.add(emp);
+            if (emp.hasRole(Role.CASHIER))
+                cashiers.add(emp);
+            if (emp.hasRole(Role.DELIVERY))
+                deliveryPersons.add(emp);
+            if (emp.hasRole(Role.ADMIN) || emp.hasRole(Role.MANAGER))
+                admins.add(emp);
         }
 
         // Summary
         addSectionTitle(document, boldFont, "Resumen General");
-        Table summaryTable = new Table(new float[]{1, 1, 1});
+        Table summaryTable = new Table(new float[] { 1, 1, 1 });
         summaryTable.setWidth(UnitValue.createPercentValue(100));
-        
+
         long totalEmployees = allEmployees.size();
-        addSummaryCell(summaryTable, boldFont, regularFont, "Empleados Activos", 
-            String.valueOf(totalEmployees));
-        addSummaryCell(summaryTable, boldFont, regularFont, "Total Ventas", 
-            String.format("$%,.2f", totalSales));
-        addSummaryCell(summaryTable, boldFont, regularFont, "Promedio por Empleado", 
-            totalEmployees > 0 ? String.format("$%,.2f", totalSales.divide(BigDecimal.valueOf(totalEmployees), 2, java.math.RoundingMode.HALF_UP)) : "$0.00");
-        
+        addSummaryCell(summaryTable, boldFont, regularFont, "Empleados Activos",
+                String.valueOf(totalEmployees));
+        addSummaryCell(summaryTable, boldFont, regularFont, "Total Ventas",
+                String.format("$%,.2f", totalSales));
+        addSummaryCell(summaryTable, boldFont, regularFont, "Promedio por Empleado",
+                totalEmployees > 0 ? String.format("$%,.2f",
+                        totalSales.divide(BigDecimal.valueOf(totalEmployees), 2, java.math.RoundingMode.HALF_UP))
+                        : "$0.00");
+
         document.add(summaryTable);
         document.add(new Paragraph("\n"));
 
         // === CHEFS ===
         {
             addSectionTitle(document, boldFont, "👨‍🍳 Chefs - Órdenes Preparadas");
-            Table chefsTable = new Table(new float[]{0.5f, 3, 2, 2, 2});
+            Table chefsTable = new Table(new float[] { 0.5f, 3, 2, 2, 2 });
             chefsTable.setWidth(UnitValue.createPercentValue(100));
-            addTableHeader(chefsTable, boldFont, "#", "Nombre", "Órdenes Preparadas", "Platos Totales", "Promedio/Orden");
-            
+            addTableHeader(chefsTable, boldFont, "#", "Nombre", "Órdenes Preparadas", "Platos Totales",
+                    "Promedio/Orden");
+
             int rank = 1;
-            
+
             for (Employee emp : chefs) {
                 // Count orders where this chef was preparedBy
                 long ordersPrep = paidOrders.stream()
-                    .filter(o -> o.getPreparedBy() != null && o.getPreparedBy().getIdEmpleado().equals(emp.getIdEmpleado()))
-                    .count();
-                
+                        .filter(o -> o.getPreparedBy() != null
+                                && o.getPreparedBy().getIdEmpleado().equals(emp.getIdEmpleado()))
+                        .count();
+
                 // Count total dishes (order details)
                 long totalDishes = paidOrders.stream()
-                    .filter(o -> o.getPreparedBy() != null && o.getPreparedBy().getIdEmpleado().equals(emp.getIdEmpleado()))
-                    .mapToLong(o -> o.getOrderDetails().size())
-                    .sum();
-                
+                        .filter(o -> o.getPreparedBy() != null
+                                && o.getPreparedBy().getIdEmpleado().equals(emp.getIdEmpleado()))
+                        .mapToLong(o -> o.getOrderDetails().size())
+                        .sum();
+
                 double avgDishesPerOrder = ordersPrep > 0 ? (double) totalDishes / ordersPrep : 0.0;
-                
+
                 addTableRow(chefsTable, regularFont,
-                    String.valueOf(rank++),
-                    emp.getFullName(),
-                    String.valueOf(ordersPrep),
-                    String.valueOf(totalDishes),
-                    String.format("%.1f", avgDishesPerOrder)
-                );
+                        String.valueOf(rank++),
+                        emp.getFullName(),
+                        String.valueOf(ordersPrep),
+                        String.valueOf(totalDishes),
+                        String.format("%.1f", avgDishesPerOrder));
             }
             document.add(chefsTable);
             document.add(new Paragraph("\n"));
@@ -567,33 +582,35 @@ public class ReportPdfService {
         // === BARISTAS ===
         {
             addSectionTitle(document, boldFont, "☕ Baristas - Bebidas Preparadas");
-            Table baristasTable = new Table(new float[]{0.5f, 3, 2, 2, 2});
+            Table baristasTable = new Table(new float[] { 0.5f, 3, 2, 2, 2 });
             baristasTable.setWidth(UnitValue.createPercentValue(100));
-            addTableHeader(baristasTable, boldFont, "#", "Nombre", "Órdenes Preparadas", "Bebidas Totales", "Promedio/Orden");
-            
+            addTableHeader(baristasTable, boldFont, "#", "Nombre", "Órdenes Preparadas", "Bebidas Totales",
+                    "Promedio/Orden");
+
             int baristaRank = 1;
-            
+
             for (Employee emp : baristas) {
                 // Count orders where this barista was preparedByBarista
                 long ordersPrep = paidOrders.stream()
-                    .filter(o -> o.getPreparedByBarista() != null && o.getPreparedByBarista().getIdEmpleado().equals(emp.getIdEmpleado()))
-                    .count();
-                
+                        .filter(o -> o.getPreparedByBarista() != null
+                                && o.getPreparedByBarista().getIdEmpleado().equals(emp.getIdEmpleado()))
+                        .count();
+
                 // Count total items (order details)
                 long totalItems = paidOrders.stream()
-                    .filter(o -> o.getPreparedByBarista() != null && o.getPreparedByBarista().getIdEmpleado().equals(emp.getIdEmpleado()))
-                    .mapToLong(o -> o.getOrderDetails().size())
-                    .sum();
-                
+                        .filter(o -> o.getPreparedByBarista() != null
+                                && o.getPreparedByBarista().getIdEmpleado().equals(emp.getIdEmpleado()))
+                        .mapToLong(o -> o.getOrderDetails().size())
+                        .sum();
+
                 double avgItemsPerOrder = ordersPrep > 0 ? (double) totalItems / ordersPrep : 0.0;
-                
+
                 addTableRow(baristasTable, regularFont,
-                    String.valueOf(baristaRank++),
-                    emp.getFullName(),
-                    String.valueOf(ordersPrep),
-                    String.valueOf(totalItems),
-                    String.format("%.1f", avgItemsPerOrder)
-                );
+                        String.valueOf(baristaRank++),
+                        emp.getFullName(),
+                        String.valueOf(ordersPrep),
+                        String.valueOf(totalItems),
+                        String.format("%.1f", avgItemsPerOrder));
             }
             document.add(baristasTable);
             document.add(new Paragraph("\n"));
@@ -602,31 +619,33 @@ public class ReportPdfService {
         // === PARRILLEROS ===
         {
             addSectionTitle(document, boldFont, "🔥 Parrilleros - Órdenes Preparadas");
-            Table parrillerosTable = new Table(new float[]{0.5f, 3, 2, 2, 2});
+            Table parrillerosTable = new Table(new float[] { 0.5f, 3, 2, 2, 2 });
             parrillerosTable.setWidth(UnitValue.createPercentValue(100));
-            addTableHeader(parrillerosTable, boldFont, "#", "Nombre", "Órdenes Preparadas", "Platos Totales", "Promedio/Orden");
+            addTableHeader(parrillerosTable, boldFont, "#", "Nombre", "Órdenes Preparadas", "Platos Totales",
+                    "Promedio/Orden");
 
             int parrilleroRank = 1;
 
             for (Employee emp : parrilleros) {
                 long ordersPrep = paidOrders.stream()
-                    .filter(o -> o.getPreparedByParrillero() != null && o.getPreparedByParrillero().getIdEmpleado().equals(emp.getIdEmpleado()))
-                    .count();
+                        .filter(o -> o.getPreparedByParrillero() != null
+                                && o.getPreparedByParrillero().getIdEmpleado().equals(emp.getIdEmpleado()))
+                        .count();
 
                 long totalItems = paidOrders.stream()
-                    .filter(o -> o.getPreparedByParrillero() != null && o.getPreparedByParrillero().getIdEmpleado().equals(emp.getIdEmpleado()))
-                    .mapToLong(o -> o.getOrderDetails().size())
-                    .sum();
+                        .filter(o -> o.getPreparedByParrillero() != null
+                                && o.getPreparedByParrillero().getIdEmpleado().equals(emp.getIdEmpleado()))
+                        .mapToLong(o -> o.getOrderDetails().size())
+                        .sum();
 
                 double avgItemsPerOrder = ordersPrep > 0 ? (double) totalItems / ordersPrep : 0.0;
 
                 addTableRow(parrillerosTable, regularFont,
-                    String.valueOf(parrilleroRank++),
-                    emp.getFullName(),
-                    String.valueOf(ordersPrep),
-                    String.valueOf(totalItems),
-                    String.format("%.1f", avgItemsPerOrder)
-                );
+                        String.valueOf(parrilleroRank++),
+                        emp.getFullName(),
+                        String.valueOf(ordersPrep),
+                        String.valueOf(totalItems),
+                        String.format("%.1f", avgItemsPerOrder));
             }
             document.add(parrillerosTable);
             document.add(new Paragraph("\n"));
@@ -635,35 +654,37 @@ public class ReportPdfService {
         // === REPARTIDORES (Delivery) ===
         {
             addSectionTitle(document, boldFont, "🚗 Repartidores - Entregas Realizadas");
-            Table deliveryTable = new Table(new float[]{0.5f, 3, 1.5f, 2, 1.5f});
+            Table deliveryTable = new Table(new float[] { 0.5f, 3, 1.5f, 2, 1.5f });
             deliveryTable.setWidth(UnitValue.createPercentValue(100));
             addTableHeader(deliveryTable, boldFont, "#", "Nombre", "Entregas", "Total Cobrado", "Propinas");
-            
+
             int rank = 1;
-            
+
             for (Employee emp : deliveryPersons) {
                 // Count DELIVERY orders physically delivered by this person
                 long deliveries = paidOrders.stream()
-                    .filter(o -> o.getOrderType() == OrderType.DELIVERY)
-                    .filter(o -> o.getDeliveredBy() != null && o.getDeliveredBy().getIdEmpleado().equals(emp.getIdEmpleado()))
-                    .count();
+                        .filter(o -> o.getOrderType() == OrderType.DELIVERY)
+                        .filter(o -> o.getDeliveredBy() != null
+                                && o.getDeliveredBy().getIdEmpleado().equals(emp.getIdEmpleado()))
+                        .count();
 
-                // Total Cobrado: sum of orders where this person collected payment (paidBy), same as list.html
+                // Total Cobrado: sum of orders where this person collected payment (paidBy),
+                // same as list.html
                 BigDecimal totalDelivered = getEmployeeSales(salesByEmployee, emp.getFullName());
 
-                // Propinas: only from orders this person actually collected payment for (paidBy)
+                // Propinas: only from orders this person actually collected payment for
+                // (paidBy)
                 BigDecimal tips = paidOrders.stream()
-                    .filter(o -> o.getPaidBy() != null && o.getPaidBy().getIdEmpleado().equals(emp.getIdEmpleado()))
-                    .map(o -> o.getTip() != null ? o.getTip() : BigDecimal.ZERO)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-                
+                        .filter(o -> o.getPaidBy() != null && o.getPaidBy().getIdEmpleado().equals(emp.getIdEmpleado()))
+                        .map(o -> o.getTip() != null ? o.getTip() : BigDecimal.ZERO)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+
                 addTableRow(deliveryTable, regularFont,
-                    String.valueOf(rank++),
-                    emp.getFullName(),
-                    String.valueOf(deliveries),
-                    String.format("$%,.2f", totalDelivered),
-                    String.format("$%,.2f", tips)
-                );
+                        String.valueOf(rank++),
+                        emp.getFullName(),
+                        String.valueOf(deliveries),
+                        String.format("$%,.2f", totalDelivered),
+                        String.format("$%,.2f", tips));
             }
             document.add(deliveryTable);
             document.add(new Paragraph("\n"));
@@ -672,50 +693,53 @@ public class ReportPdfService {
         // === MESEROS (Waiters) ===
         {
             addSectionTitle(document, boldFont, "👔 Meseros - Cobros Realizados");
-            Table waitersTable = new Table(new float[]{0.5f, 2.5f, 1.8f, 1, 1, 1.5f, 1.2f});
+            Table waitersTable = new Table(new float[] { 0.5f, 2.5f, 1.8f, 1, 1, 1.5f, 1.2f });
             waitersTable.setWidth(UnitValue.createPercentValue(100));
-            addTableHeader(waitersTable, boldFont, "#", "Nombre", "Total Cobrado", "Cobradas", "Creadas", "Promedio", "Propinas");
-            
+            addTableHeader(waitersTable, boldFont, "#", "Nombre", "Total Cobrado", "Cobradas", "Creadas", "Promedio",
+                    "Propinas");
+
             int rank = 1;
-            
+
             // Sort by sales (using paidBy - who collected payment)
             waiters.sort((a, b) -> {
                 BigDecimal salesA = getEmployeeSales(salesByEmployee, a.getFullName());
                 BigDecimal salesB = getEmployeeSales(salesByEmployee, b.getFullName());
                 return salesB.compareTo(salesA);
             });
-            
+
             for (Employee emp : waiters) {
                 String empName = emp.getFullName();
                 BigDecimal sales = getEmployeeSales(salesByEmployee, empName);
-                
+
                 // Count orders where this employee collected payment (paidBy)
                 long ordersCobradas = paidOrders.stream()
-                    .filter(o -> o.getPaidBy() != null && o.getPaidBy().getIdEmpleado().equals(emp.getIdEmpleado()))
-                    .count();
-                
+                        .filter(o -> o.getPaidBy() != null && o.getPaidBy().getIdEmpleado().equals(emp.getIdEmpleado()))
+                        .count();
+
                 // Count orders created by this employee
                 long ordersCreadas = paidOrders.stream()
-                    .filter(o -> o.getEmployee() != null && o.getEmployee().getIdEmpleado().equals(emp.getIdEmpleado()))
-                    .count();
-                    
-                BigDecimal avgPerOrder = ordersCobradas > 0 ? sales.divide(BigDecimal.valueOf(ordersCobradas), 2, java.math.RoundingMode.HALF_UP) : BigDecimal.ZERO;
-                
+                        .filter(o -> o.getEmployee() != null
+                                && o.getEmployee().getIdEmpleado().equals(emp.getIdEmpleado()))
+                        .count();
+
+                BigDecimal avgPerOrder = ordersCobradas > 0
+                        ? sales.divide(BigDecimal.valueOf(ordersCobradas), 2, java.math.RoundingMode.HALF_UP)
+                        : BigDecimal.ZERO;
+
                 // Tips from orders collected by this employee
                 BigDecimal tips = paidOrders.stream()
-                    .filter(o -> o.getPaidBy() != null && o.getPaidBy().getIdEmpleado().equals(emp.getIdEmpleado()))
-                    .map(o -> o.getTip() != null ? o.getTip() : BigDecimal.ZERO)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-                
+                        .filter(o -> o.getPaidBy() != null && o.getPaidBy().getIdEmpleado().equals(emp.getIdEmpleado()))
+                        .map(o -> o.getTip() != null ? o.getTip() : BigDecimal.ZERO)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+
                 addTableRow(waitersTable, regularFont,
-                    String.valueOf(rank++),
-                    empName,
-                    String.format("$%,.2f", sales),
-                    String.valueOf(ordersCobradas),
-                    String.valueOf(ordersCreadas),
-                    String.format("$%,.2f", avgPerOrder),
-                    String.format("$%,.2f", tips)
-                );
+                        String.valueOf(rank++),
+                        empName,
+                        String.format("$%,.2f", sales),
+                        String.valueOf(ordersCobradas),
+                        String.valueOf(ordersCreadas),
+                        String.format("$%,.2f", avgPerOrder),
+                        String.format("$%,.2f", tips));
             }
             document.add(waitersTable);
             document.add(new Paragraph("\n"));
@@ -724,47 +748,47 @@ public class ReportPdfService {
         // === CAJEROS (Cashiers) ===
         {
             addSectionTitle(document, boldFont, "💰 Cajeros - Cobros Realizados");
-            Table cashiersTable = new Table(new float[]{0.5f, 2.5f, 2, 1, 1, 1.5f});
+            Table cashiersTable = new Table(new float[] { 0.5f, 2.5f, 2, 1, 1, 1.5f });
             cashiersTable.setWidth(UnitValue.createPercentValue(100));
             addTableHeader(cashiersTable, boldFont, "#", "Nombre", "Total Cobrado", "Cobradas", "Creadas", "Propinas");
-            
+
             int rank = 1;
-            
+
             // Sort by total collected (using paidBy)
             cashiers.sort((a, b) -> {
                 BigDecimal salesA = getEmployeeSales(salesByEmployee, a.getFullName());
                 BigDecimal salesB = getEmployeeSales(salesByEmployee, b.getFullName());
                 return salesB.compareTo(salesA);
             });
-            
+
             for (Employee emp : cashiers) {
                 String empName = emp.getFullName();
                 BigDecimal totalCollected = getEmployeeSales(salesByEmployee, empName);
-                
+
                 // Count orders where this cashier collected payment (paidBy)
                 long ordersCobradas = paidOrders.stream()
-                    .filter(o -> o.getPaidBy() != null && o.getPaidBy().getIdEmpleado().equals(emp.getIdEmpleado()))
-                    .count();
-                
+                        .filter(o -> o.getPaidBy() != null && o.getPaidBy().getIdEmpleado().equals(emp.getIdEmpleado()))
+                        .count();
+
                 // Count orders created by this cashier
                 long ordersCreadas = paidOrders.stream()
-                    .filter(o -> o.getEmployee() != null && o.getEmployee().getIdEmpleado().equals(emp.getIdEmpleado()))
-                    .count();
-                    
+                        .filter(o -> o.getEmployee() != null
+                                && o.getEmployee().getIdEmpleado().equals(emp.getIdEmpleado()))
+                        .count();
+
                 // Tips from orders collected by this cashier
                 BigDecimal tips = paidOrders.stream()
-                    .filter(o -> o.getPaidBy() != null && o.getPaidBy().getIdEmpleado().equals(emp.getIdEmpleado()))
-                    .map(o -> o.getTip() != null ? o.getTip() : BigDecimal.ZERO)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-                
+                        .filter(o -> o.getPaidBy() != null && o.getPaidBy().getIdEmpleado().equals(emp.getIdEmpleado()))
+                        .map(o -> o.getTip() != null ? o.getTip() : BigDecimal.ZERO)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+
                 addTableRow(cashiersTable, regularFont,
-                    String.valueOf(rank++),
-                    empName,
-                    String.format("$%,.2f", totalCollected),
-                    String.valueOf(ordersCobradas),
-                    String.valueOf(ordersCreadas),
-                    String.format("$%,.2f", tips)
-                );
+                        String.valueOf(rank++),
+                        empName,
+                        String.format("$%,.2f", totalCollected),
+                        String.valueOf(ordersCobradas),
+                        String.valueOf(ordersCreadas),
+                        String.format("$%,.2f", tips));
             }
             document.add(cashiersTable);
             document.add(new Paragraph("\n"));
@@ -773,37 +797,37 @@ public class ReportPdfService {
         // === ADMINISTRADORES y GERENTES ===
         {
             admins = admins.stream().distinct().collect(Collectors.toList());
-            
+
             addSectionTitle(document, boldFont, "👨‍💼 Administradores y Gerentes - Cobros Realizados");
-            Table adminsTable = new Table(new float[]{0.5f, 2.5f, 1.8f, 1, 1, 1.8f});
+            Table adminsTable = new Table(new float[] { 0.5f, 2.5f, 1.8f, 1, 1, 1.8f });
             adminsTable.setWidth(UnitValue.createPercentValue(100));
             addTableHeader(adminsTable, boldFont, "#", "Nombre", "Rol", "Cobradas", "Creadas", "Total Cobrado");
-            
+
             int rank = 1;
-            
+
             for (Employee emp : admins) {
                 String role = emp.hasRole(Role.ADMIN) ? "Administrador" : "Gerente";
                 String empName = emp.getFullName();
                 BigDecimal sales = getEmployeeSales(salesByEmployee, empName);
-                
+
                 // Count orders where this admin/manager collected payment (paidBy)
                 long ordersCobradas = paidOrders.stream()
-                    .filter(o -> o.getPaidBy() != null && o.getPaidBy().getIdEmpleado().equals(emp.getIdEmpleado()))
-                    .count();
-                
+                        .filter(o -> o.getPaidBy() != null && o.getPaidBy().getIdEmpleado().equals(emp.getIdEmpleado()))
+                        .count();
+
                 // Count orders created by this admin/manager
                 long ordersCreadas = paidOrders.stream()
-                    .filter(o -> o.getEmployee() != null && o.getEmployee().getIdEmpleado().equals(emp.getIdEmpleado()))
-                    .count();
-                
+                        .filter(o -> o.getEmployee() != null
+                                && o.getEmployee().getIdEmpleado().equals(emp.getIdEmpleado()))
+                        .count();
+
                 addTableRow(adminsTable, regularFont,
-                    String.valueOf(rank++),
-                    empName,
-                    role,
-                    String.valueOf(ordersCobradas),
-                    String.valueOf(ordersCreadas),
-                    String.format("$%,.2f", sales)
-                );
+                        String.valueOf(rank++),
+                        empName,
+                        role,
+                        String.valueOf(ordersCobradas),
+                        String.valueOf(ordersCreadas),
+                        String.format("$%,.2f", sales));
             }
             document.add(adminsTable);
             document.add(new Paragraph("\n"));
@@ -846,39 +870,40 @@ public class ReportPdfService {
         long inactiveCustomers = totalCustomers - activeCustomers;
 
         BigDecimal totalCustomerRevenue = customerOrders.stream()
-            .map(o -> o.getTotal() != null ? o.getTotal() : BigDecimal.ZERO)
-            .reduce(BigDecimal.ZERO, BigDecimal::add);
+                .map(o -> o.getTotal() != null ? o.getTotal() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         long totalCustomerOrdersCount = customerOrders.size();
 
         BigDecimal avgTicket = totalCustomerOrdersCount > 0
-            ? totalCustomerRevenue.divide(BigDecimal.valueOf(totalCustomerOrdersCount), 2, java.math.RoundingMode.HALF_UP)
-            : BigDecimal.ZERO;
+                ? totalCustomerRevenue.divide(BigDecimal.valueOf(totalCustomerOrdersCount), 2,
+                        java.math.RoundingMode.HALF_UP)
+                : BigDecimal.ZERO;
 
         addSectionTitle(document, boldFont, "Resumen General");
 
-        Table summaryTable = new Table(new float[]{1, 1, 1});
+        Table summaryTable = new Table(new float[] { 1, 1, 1 });
         summaryTable.setWidth(UnitValue.createPercentValue(100));
 
         addSummaryCell(summaryTable, boldFont, regularFont, "Clientes Registrados",
-            String.valueOf(totalCustomers));
+                String.valueOf(totalCustomers));
         addSummaryCell(summaryTable, boldFont, regularFont, "Pedidos de Clientes",
-            String.valueOf(totalCustomerOrdersCount));
+                String.valueOf(totalCustomerOrdersCount));
         addSummaryCell(summaryTable, boldFont, regularFont, "Ingresos de Clientes",
-            String.format("$%,.2f", totalCustomerRevenue));
+                String.format("$%,.2f", totalCustomerRevenue));
 
         document.add(summaryTable);
         document.add(new Paragraph("\n"));
 
-        Table summaryTable2 = new Table(new float[]{1, 1, 1});
+        Table summaryTable2 = new Table(new float[] { 1, 1, 1 });
         summaryTable2.setWidth(UnitValue.createPercentValue(100));
 
         addSummaryCell(summaryTable2, boldFont, regularFont, "Clientes Activos",
-            String.valueOf(activeCustomers));
+                String.valueOf(activeCustomers));
         addSummaryCell(summaryTable2, boldFont, regularFont, "Clientes Inactivos",
-            String.valueOf(inactiveCustomers));
+                String.valueOf(inactiveCustomers));
         addSummaryCell(summaryTable2, boldFont, regularFont, "Ticket Promedio",
-            String.format("$%,.2f", avgTicket));
+                String.format("$%,.2f", avgTicket));
 
         document.add(summaryTable2);
         document.add(new Paragraph("\n"));
@@ -888,8 +913,8 @@ public class ReportPdfService {
 
         // Group orders by customer and calculate stats
         Map<Long, java.util.List<Order>> ordersByCustomer = customerOrders.stream()
-            .filter(o -> o.getCustomer() != null)
-            .collect(Collectors.groupingBy(o -> o.getCustomer().getIdCustomer()));
+                .filter(o -> o.getCustomer() != null)
+                .collect(Collectors.groupingBy(o -> o.getCustomer().getIdCustomer()));
 
         // Build customer stats list
         java.util.List<Map<String, Object>> customerStats = new ArrayList<>();
@@ -899,28 +924,28 @@ public class ReportPdfService {
 
             java.util.List<Order> orders = ordersByCustomer.getOrDefault(customer.getIdCustomer(), new ArrayList<>());
             BigDecimal totalSpent = orders.stream()
-                .map(o -> o.getTotal() != null ? o.getTotal() : BigDecimal.ZERO)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+                    .map(o -> o.getTotal() != null ? o.getTotal() : BigDecimal.ZERO)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
             long orderCount = orders.size();
             BigDecimal customerAvgTicket = orderCount > 0
-                ? totalSpent.divide(BigDecimal.valueOf(orderCount), 2, java.math.RoundingMode.HALF_UP)
-                : BigDecimal.ZERO;
+                    ? totalSpent.divide(BigDecimal.valueOf(orderCount), 2, java.math.RoundingMode.HALF_UP)
+                    : BigDecimal.ZERO;
 
             // Preferred order type
             String preferredOrderType = orders.stream()
-                .collect(Collectors.groupingBy(Order::getOrderType, Collectors.counting()))
-                .entrySet().stream()
-                .max(Map.Entry.comparingByValue())
-                .map(e -> e.getKey().getDisplayName())
-                .orElse("Sin pedidos");
+                    .collect(Collectors.groupingBy(Order::getOrderType, Collectors.counting()))
+                    .entrySet().stream()
+                    .max(Map.Entry.comparingByValue())
+                    .map(e -> e.getKey().getDisplayName())
+                    .orElse("Sin pedidos");
 
             // Preferred payment method
             String preferredPayment = orders.stream()
-                .collect(Collectors.groupingBy(Order::getPaymentMethod, Collectors.counting()))
-                .entrySet().stream()
-                .max(Map.Entry.comparingByValue())
-                .map(e -> e.getKey().getDisplayName())
-                .orElse("Sin pedidos");
+                    .collect(Collectors.groupingBy(Order::getPaymentMethod, Collectors.counting()))
+                    .entrySet().stream()
+                    .max(Map.Entry.comparingByValue())
+                    .map(e -> e.getKey().getDisplayName())
+                    .orElse("Sin pedidos");
 
             stats.put("totalSpent", totalSpent);
             stats.put("orderCount", orderCount);
@@ -934,22 +959,22 @@ public class ReportPdfService {
         // Sort by total spent descending
         customerStats.sort((a, b) -> ((BigDecimal) b.get("totalSpent")).compareTo((BigDecimal) a.get("totalSpent")));
 
-        Table topTable = new Table(new float[]{0.4f, 2.5f, 1.2f, 1, 1.2f, 1.5f, 1.5f});
+        Table topTable = new Table(new float[] { 0.4f, 2.5f, 1.2f, 1, 1.2f, 1.5f, 1.5f });
         topTable.setWidth(UnitValue.createPercentValue(100));
-        addTableHeader(topTable, boldFont, "#", "Cliente", "Total Gastado", "Pedidos", "Ticket Prom.", "Tipo Preferido", "M\u00e9todo Pago");
+        addTableHeader(topTable, boldFont, "#", "Cliente", "Total Gastado", "Pedidos", "Ticket Prom.", "Tipo Preferido",
+                "M\u00e9todo Pago");
 
         int rank = 1;
         for (Map<String, Object> stats : customerStats) {
             Customer c = (Customer) stats.get("customer");
             addTableRow(topTable, regularFont,
-                String.valueOf(rank++),
-                c.getFullName(),
-                String.format("$%,.2f", stats.get("totalSpent")),
-                String.valueOf(stats.get("orderCount")),
-                String.format("$%,.2f", stats.get("avgTicket")),
-                (String) stats.get("preferredOrderType"),
-                (String) stats.get("preferredPayment")
-            );
+                    String.valueOf(rank++),
+                    c.getFullName(),
+                    String.format("$%,.2f", stats.get("totalSpent")),
+                    String.valueOf(stats.get("orderCount")),
+                    String.format("$%,.2f", stats.get("avgTicket")),
+                    (String) stats.get("preferredOrderType"),
+                    (String) stats.get("preferredPayment"));
         }
         document.add(topTable);
         document.add(new Paragraph("\n"));
@@ -958,15 +983,15 @@ public class ReportPdfService {
         addSectionTitle(document, boldFont, "\ud83d\udce6 Distribuci\u00f3n por Tipo de Orden");
 
         Map<OrderType, Long> ordersByType = customerOrders.stream()
-            .collect(Collectors.groupingBy(Order::getOrderType, Collectors.counting()));
+                .collect(Collectors.groupingBy(Order::getOrderType, Collectors.counting()));
 
         Map<OrderType, BigDecimal> revenueByType = customerOrders.stream()
-            .collect(Collectors.groupingBy(Order::getOrderType,
-                Collectors.reducing(BigDecimal.ZERO,
-                    o -> o.getTotal() != null ? o.getTotal() : BigDecimal.ZERO,
-                    BigDecimal::add)));
+                .collect(Collectors.groupingBy(Order::getOrderType,
+                        Collectors.reducing(BigDecimal.ZERO,
+                                o -> o.getTotal() != null ? o.getTotal() : BigDecimal.ZERO,
+                                BigDecimal::add)));
 
-        Table typeTable = new Table(new float[]{2, 1.5f, 2, 1.5f});
+        Table typeTable = new Table(new float[] { 2, 1.5f, 2, 1.5f });
         typeTable.setWidth(UnitValue.createPercentValue(100));
         addTableHeader(typeTable, boldFont, "Tipo de Orden", "Cantidad", "Ingresos", "% del Total");
 
@@ -974,15 +999,14 @@ public class ReportPdfService {
             long count = ordersByType.getOrDefault(type, 0L);
             BigDecimal revenue = revenueByType.getOrDefault(type, BigDecimal.ZERO);
             String percentage = totalCustomerOrdersCount > 0
-                ? String.format("%.1f%%", (double) count / totalCustomerOrdersCount * 100)
-                : "0.0%";
+                    ? String.format("%.1f%%", (double) count / totalCustomerOrdersCount * 100)
+                    : "0.0%";
 
             addTableRow(typeTable, regularFont,
-                type.getDisplayName(),
-                String.valueOf(count),
-                String.format("$%,.2f", revenue),
-                percentage
-            );
+                    type.getDisplayName(),
+                    String.valueOf(count),
+                    String.format("$%,.2f", revenue),
+                    percentage);
         }
         document.add(typeTable);
         document.add(new Paragraph("\n"));
@@ -991,15 +1015,15 @@ public class ReportPdfService {
         addSectionTitle(document, boldFont, "\ud83d\udcb3 M\u00e9todos de Pago Preferidos");
 
         Map<PaymentMethodType, Long> ordersByPayment = customerOrders.stream()
-            .collect(Collectors.groupingBy(Order::getPaymentMethod, Collectors.counting()));
+                .collect(Collectors.groupingBy(Order::getPaymentMethod, Collectors.counting()));
 
         Map<PaymentMethodType, BigDecimal> revenueByPayment = customerOrders.stream()
-            .collect(Collectors.groupingBy(Order::getPaymentMethod,
-                Collectors.reducing(BigDecimal.ZERO,
-                    o -> o.getTotal() != null ? o.getTotal() : BigDecimal.ZERO,
-                    BigDecimal::add)));
+                .collect(Collectors.groupingBy(Order::getPaymentMethod,
+                        Collectors.reducing(BigDecimal.ZERO,
+                                o -> o.getTotal() != null ? o.getTotal() : BigDecimal.ZERO,
+                                BigDecimal::add)));
 
-        Table paymentTable = new Table(new float[]{2, 1.5f, 2, 1.5f});
+        Table paymentTable = new Table(new float[] { 2, 1.5f, 2, 1.5f });
         paymentTable.setWidth(UnitValue.createPercentValue(100));
         addTableHeader(paymentTable, boldFont, "M\u00e9todo de Pago", "Cantidad", "Ingresos", "% del Total");
 
@@ -1007,15 +1031,14 @@ public class ReportPdfService {
             long count = ordersByPayment.getOrDefault(pmt, 0L);
             BigDecimal revenue = revenueByPayment.getOrDefault(pmt, BigDecimal.ZERO);
             String percentage = totalCustomerOrdersCount > 0
-                ? String.format("%.1f%%", (double) count / totalCustomerOrdersCount * 100)
-                : "0.0%";
+                    ? String.format("%.1f%%", (double) count / totalCustomerOrdersCount * 100)
+                    : "0.0%";
 
             addTableRow(paymentTable, regularFont,
-                pmt.getDisplayName(),
-                String.valueOf(count),
-                String.format("$%,.2f", revenue),
-                percentage
-            );
+                    pmt.getDisplayName(),
+                    String.valueOf(count),
+                    String.format("$%,.2f", revenue),
+                    percentage);
         }
         document.add(paymentTable);
         document.add(new Paragraph("\n"));
@@ -1023,41 +1046,48 @@ public class ReportPdfService {
         // ========== DIRECTORIO DE CLIENTES ==========
         // Sección comentada - no se muestra en el reporte
         /*
-        addSectionTitle(document, boldFont, "\ud83d\udccb Directorio de Clientes");
-
-        java.time.format.DateTimeFormatter dtf = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
-
-        Table directoryTable = new Table(new float[]{0.4f, 2f, 2f, 1.5f, 1.5f, 1f, 1.2f});
-        directoryTable.setWidth(UnitValue.createPercentValue(100));
-        addTableHeader(directoryTable, boldFont, "#", "Nombre", "Correo", "Tel\u00e9fono", "Registro", "Estado", "\u00daltimo Acceso");
-
-        int dirRank = 1;
-        // Sort by creation date descending (newest first)
-        java.util.List<Customer> sortedCustomers = new ArrayList<>(allCustomers);
-        sortedCustomers.sort((a, b) -> {
-            LocalDateTime dateA = a.getCreatedAt() != null ? a.getCreatedAt() : LocalDateTime.MIN;
-            LocalDateTime dateB = b.getCreatedAt() != null ? b.getCreatedAt() : LocalDateTime.MIN;
-            return dateB.compareTo(dateA);
-        });
-
-        for (Customer c : sortedCustomers) {
-            String registrationDate = c.getCreatedAt() != null ? c.getCreatedAt().format(dtf) : "N/A";
-            String lastAccessDate = c.getLastAccess() != null ? c.getLastAccess().format(dtf) : "Nunca";
-            String status = c.isActive() ? "Activo" : "Inactivo";
-
-            addTableRow(directoryTable, regularFont,
-                String.valueOf(dirRank++),
-                c.getFullName(),
-                c.getEmail(),
-                c.getPhone(),
-                registrationDate,
-                status,
-                lastAccessDate
-            );
-        }
-        document.add(directoryTable);
-        document.add(new Paragraph("\n"));
-        */
+         * addSectionTitle(document, boldFont, "\ud83d\udccb Directorio de Clientes");
+         * 
+         * java.time.format.DateTimeFormatter dtf =
+         * java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+         * 
+         * Table directoryTable = new Table(new float[]{0.4f, 2f, 2f, 1.5f, 1.5f, 1f,
+         * 1.2f});
+         * directoryTable.setWidth(UnitValue.createPercentValue(100));
+         * addTableHeader(directoryTable, boldFont, "#", "Nombre", "Correo",
+         * "Tel\u00e9fono", "Registro", "Estado", "\u00daltimo Acceso");
+         * 
+         * int dirRank = 1;
+         * // Sort by creation date descending (newest first)
+         * java.util.List<Customer> sortedCustomers = new ArrayList<>(allCustomers);
+         * sortedCustomers.sort((a, b) -> {
+         * LocalDateTime dateA = a.getCreatedAt() != null ? a.getCreatedAt() :
+         * LocalDateTime.MIN;
+         * LocalDateTime dateB = b.getCreatedAt() != null ? b.getCreatedAt() :
+         * LocalDateTime.MIN;
+         * return dateB.compareTo(dateA);
+         * });
+         * 
+         * for (Customer c : sortedCustomers) {
+         * String registrationDate = c.getCreatedAt() != null ?
+         * c.getCreatedAt().format(dtf) : "N/A";
+         * String lastAccessDate = c.getLastAccess() != null ?
+         * c.getLastAccess().format(dtf) : "Nunca";
+         * String status = c.isActive() ? "Activo" : "Inactivo";
+         * 
+         * addTableRow(directoryTable, regularFont,
+         * String.valueOf(dirRank++),
+         * c.getFullName(),
+         * c.getEmail(),
+         * c.getPhone(),
+         * registrationDate,
+         * status,
+         * lastAccessDate
+         * );
+         * }
+         * document.add(directoryTable);
+         * document.add(new Paragraph("\n"));
+         */
 
         // Footer
         addFooter(document, regularFont);
@@ -1071,11 +1101,11 @@ public class ReportPdfService {
      * summary, sales per payment method and every manual movement.
      */
     public byte[] generateCashRegisterReport(CashRegisterSession session,
-                                             CashRegisterSummary summary,
-                                             java.util.List<CashRegisterMovement> movements,
-                                             String cashierName,
-                                             String openedAtLabel,
-                                             String closedAtLabel) throws Exception {
+            CashRegisterSummary summary,
+            java.util.List<CashRegisterMovement> movements,
+            String cashierName,
+            String openedAtLabel,
+            String closedAtLabel) throws Exception {
 
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         PdfWriter writer = new PdfWriter(baos);
@@ -1090,7 +1120,7 @@ public class ReportPdfService {
 
         // ----- Session info -----
         addSectionTitle(document, boldFont, "Información de la caja");
-        Table infoTable = new Table(new float[]{1, 1});
+        Table infoTable = new Table(new float[] { 1, 1 });
         infoTable.setWidth(UnitValue.createPercentValue(100));
         addTableHeader(infoTable, boldFont, "Concepto", "Detalle");
         addTableRow(infoTable, regularFont, "Cajero", cashierName != null ? cashierName : "-");
@@ -1103,15 +1133,17 @@ public class ReportPdfService {
 
         // ----- Summary -----
         addSectionTitle(document, boldFont, "Resumen del día");
-        Table summaryTable = new Table(new float[]{1, 1, 1});
+        Table summaryTable = new Table(new float[] { 1, 1, 1 });
         summaryTable.setWidth(UnitValue.createPercentValue(100));
-        addSummaryCell(summaryTable, boldFont, regularFont, "Fondo inicial", cashRegisterMoney(summary.getInitialAmount()));
-        addSummaryCell(summaryTable, boldFont, regularFont, "Vendido (sin propina)", cashRegisterMoney(summary.getTotalSales()));
+        addSummaryCell(summaryTable, boldFont, regularFont, "Fondo inicial",
+                cashRegisterMoney(summary.getInitialAmount()));
+        addSummaryCell(summaryTable, boldFont, regularFont, "Vendido (sin propina)",
+                cashRegisterMoney(summary.getTotalSales()));
         addSummaryCell(summaryTable, boldFont, regularFont, "Propinas", cashRegisterMoney(summary.getTotalTips()));
         document.add(summaryTable);
         document.add(new Paragraph("\n"));
 
-        Table moneyTable = new Table(new float[]{1, 1, 1});
+        Table moneyTable = new Table(new float[] { 1, 1, 1 });
         moneyTable.setWidth(UnitValue.createPercentValue(100));
         addSummaryCell(moneyTable, boldFont, regularFont, "Pagos", cashRegisterMoney(summary.getTotalExpenses()));
         addSummaryCell(moneyTable, boldFont, regularFont, "Entradas", cashRegisterMoney(summary.getTotalIncomes()));
@@ -1119,10 +1151,12 @@ public class ReportPdfService {
         document.add(moneyTable);
         document.add(new Paragraph("\n"));
 
-        Table cashTable = new Table(new float[]{1, 1, 1});
+        Table cashTable = new Table(new float[] { 1, 1, 1 });
         cashTable.setWidth(UnitValue.createPercentValue(100));
-        addSummaryCell(cashTable, boldFont, regularFont, "Ventas en efectivo", cashRegisterMoney(summary.getCashSales()));
-        addSummaryCell(cashTable, boldFont, regularFont, "Esperado en caja", cashRegisterMoney(summary.getExpectedCash()));
+        addSummaryCell(cashTable, boldFont, regularFont, "Ventas en efectivo",
+                cashRegisterMoney(summary.getCashSales()));
+        addSummaryCell(cashTable, boldFont, regularFont, "Esperado en caja",
+                cashRegisterMoney(summary.getExpectedCash()));
         addSummaryCell(cashTable, boldFont, regularFont, "Contado",
                 summary.getCountedAmount() != null ? cashRegisterMoney(summary.getCountedAmount()) : "—");
         document.add(cashTable);
@@ -1142,7 +1176,7 @@ public class ReportPdfService {
 
         // ----- Sales by payment method -----
         addSectionTitle(document, boldFont, "Ventas por método de pago");
-        Table salesTable = new Table(new float[]{2, 1});
+        Table salesTable = new Table(new float[] { 2, 1 });
         salesTable.setWidth(UnitValue.createPercentValue(100));
         addTableHeader(salesTable, boldFont, "Método", "Total");
         boolean anySale = false;
@@ -1164,7 +1198,7 @@ public class ReportPdfService {
 
         // ----- Manual movements -----
         addSectionTitle(document, boldFont, "Pagos, entradas y retiros");
-        Table movementsTable = new Table(new float[]{1.4f, 1, 1, 1.4f});
+        Table movementsTable = new Table(new float[] { 1.4f, 1, 1, 1.4f });
         movementsTable.setWidth(UnitValue.createPercentValue(100));
         addTableHeader(movementsTable, boldFont, "Concepto", "Tipo", "Monto", "Notas");
         if (movements != null && !movements.isEmpty()) {
@@ -1199,50 +1233,50 @@ public class ReportPdfService {
      */
     private BigDecimal getEmployeeSales(java.util.List<Map<String, Object>> salesByEmployee, String employeeName) {
         return salesByEmployee.stream()
-            .filter(emp -> employeeName.equals(emp.get("name")))
-            .map(emp -> (BigDecimal) emp.get("total"))
-            .findFirst()
-            .orElse(BigDecimal.ZERO);
+                .filter(emp -> employeeName.equals(emp.get("name")))
+                .map(emp -> (BigDecimal) emp.get("total"))
+                .findFirst()
+                .orElse(BigDecimal.ZERO);
     }
 
     private void addHeader(Document document, PdfFont boldFont, PdfFont regularFont, String title) {
         SystemConfiguration config = systemConfigurationService.getConfiguration();
-        
+
         // Restaurant name with modern styling
         Paragraph restaurantName = new Paragraph(config.getRestaurantName())
-            .setFont(boldFont)
-            .setFontSize(24)
-            .setFontColor(PRIMARY_COLOR)
-            .setTextAlignment(TextAlignment.CENTER)
-            .setBold()
-            .setMarginBottom(2);
+                .setFont(boldFont)
+                .setFontSize(24)
+                .setFontColor(PRIMARY_COLOR)
+                .setTextAlignment(TextAlignment.CENTER)
+                .setBold()
+                .setMarginBottom(2);
         document.add(restaurantName);
 
         // Subtitle line
         Paragraph subtitle = new Paragraph("Sistema de Reportes")
-            .setFont(regularFont)
-            .setFontSize(9)
-            .setFontColor(GRAY_COLOR)
-            .setTextAlignment(TextAlignment.CENTER)
-            .setMarginBottom(15);
+                .setFont(regularFont)
+                .setFontSize(9)
+                .setFontColor(GRAY_COLOR)
+                .setTextAlignment(TextAlignment.CENTER)
+                .setMarginBottom(15);
         document.add(subtitle);
 
         // Report title with background
         Table titleTable = new Table(1);
         titleTable.setWidth(UnitValue.createPercentValue(100));
-        
+
         Cell titleCell = new Cell()
-            .add(new Paragraph(title)
-                .setFont(boldFont)
-                .setFontSize(16)
-                .setFontColor(WHITE)
-                .setBold()
-                .setTextAlignment(TextAlignment.CENTER))
-            .setBackgroundColor(PRIMARY_COLOR)
-            .setPadding(12)
-            .setBorder(Border.NO_BORDER)
-            .setMarginBottom(5);
-        
+                .add(new Paragraph(title)
+                        .setFont(boldFont)
+                        .setFontSize(16)
+                        .setFontColor(WHITE)
+                        .setBold()
+                        .setTextAlignment(TextAlignment.CENTER))
+                .setBackgroundColor(PRIMARY_COLOR)
+                .setPadding(12)
+                .setBorder(Border.NO_BORDER)
+                .setMarginBottom(5);
+
         titleTable.addCell(titleCell);
         document.add(titleTable);
     }
@@ -1250,96 +1284,97 @@ public class ReportPdfService {
     private void addDateRange(Document document, PdfFont font, String startDate, String endDate) {
         String dateRange;
         if (startDate != null && !startDate.isEmpty()) {
-            dateRange = "📅 Periodo: " + startDate + " al " + (endDate != null && !endDate.isEmpty() ? endDate : startDate);
+            dateRange = "📅 Periodo: " + startDate + " al "
+                    + (endDate != null && !endDate.isEmpty() ? endDate : startDate);
         } else {
             dateRange = "📅 Periodo: Todos los registros";
         }
-        
+
         // Date range in a subtle box
         Table dateTable = new Table(1);
         dateTable.setWidth(UnitValue.createPercentValue(100));
-        
+
         Cell dateCell = new Cell()
-            .add(new Paragraph(dateRange)
-                .setFont(font)
-                .setFontSize(10)
-                .setFontColor(GRAY_COLOR)
-                .setTextAlignment(TextAlignment.CENTER))
-            .setBackgroundColor(LIGHT_GRAY)
-            .setPadding(8)
-            .setBorder(Border.NO_BORDER)
-            .setMarginBottom(15);
-        
+                .add(new Paragraph(dateRange)
+                        .setFont(font)
+                        .setFontSize(10)
+                        .setFontColor(GRAY_COLOR)
+                        .setTextAlignment(TextAlignment.CENTER))
+                .setBackgroundColor(LIGHT_GRAY)
+                .setPadding(8)
+                .setBorder(Border.NO_BORDER)
+                .setMarginBottom(15);
+
         dateTable.addCell(dateCell);
         document.add(dateTable);
     }
 
     private void addSectionTitle(Document document, PdfFont boldFont, String title) {
         // Section title with left border accent
-        Table sectionTable = new Table(new float[]{0.05f, 0.95f});
+        Table sectionTable = new Table(new float[] { 0.05f, 0.95f });
         sectionTable.setWidth(UnitValue.createPercentValue(100));
-        
+
         // Accent bar
         Cell accentCell = new Cell()
-            .setBackgroundColor(PRIMARY_COLOR)
-            .setBorder(Border.NO_BORDER)
-            .setHeight(20);
-        
+                .setBackgroundColor(PRIMARY_COLOR)
+                .setBorder(Border.NO_BORDER)
+                .setHeight(20);
+
         // Title text
         Cell titleCell = new Cell()
-            .add(new Paragraph(title)
-                .setFont(boldFont)
-                .setFontSize(13)
-                .setFontColor(DARK_COLOR)
-                .setBold())
-            .setVerticalAlignment(VerticalAlignment.MIDDLE)
-            .setBorder(Border.NO_BORDER)
-            .setPaddingLeft(10);
-        
+                .add(new Paragraph(title)
+                        .setFont(boldFont)
+                        .setFontSize(13)
+                        .setFontColor(DARK_COLOR)
+                        .setBold())
+                .setVerticalAlignment(VerticalAlignment.MIDDLE)
+                .setBorder(Border.NO_BORDER)
+                .setPaddingLeft(10);
+
         sectionTable.addCell(accentCell);
         sectionTable.addCell(titleCell);
-        
+
         document.add(sectionTable.setMarginTop(10).setMarginBottom(10));
     }
 
     private void addSummaryCell(Table table, PdfFont boldFont, PdfFont regularFont, String label, String value) {
         Cell cell = new Cell()
-            .setBorder(Border.NO_BORDER)
-            .setBackgroundColor(LIGHT_GRAY)
-            .setPadding(15)
-            .setMarginRight(5);
-        
+                .setBorder(Border.NO_BORDER)
+                .setBackgroundColor(LIGHT_GRAY)
+                .setPadding(15)
+                .setMarginRight(5);
+
         // Label
         cell.add(new Paragraph(label)
-            .setFont(regularFont)
-            .setFontSize(9)
-            .setFontColor(GRAY_COLOR)
-            .setMarginBottom(8)
-            .setTextAlignment(TextAlignment.CENTER));
-        
+                .setFont(regularFont)
+                .setFontSize(9)
+                .setFontColor(GRAY_COLOR)
+                .setMarginBottom(8)
+                .setTextAlignment(TextAlignment.CENTER));
+
         // Value
         cell.add(new Paragraph(value)
-            .setFont(boldFont)
-            .setFontSize(18)
-            .setFontColor(PRIMARY_DARK)
-            .setBold()
-            .setTextAlignment(TextAlignment.CENTER));
-        
+                .setFont(boldFont)
+                .setFontSize(18)
+                .setFontColor(PRIMARY_DARK)
+                .setBold()
+                .setTextAlignment(TextAlignment.CENTER));
+
         table.addCell(cell);
     }
 
     private void addTableHeader(Table table, PdfFont boldFont, String... headers) {
         for (String header : headers) {
             Cell cell = new Cell()
-                .add(new Paragraph(header)
-                    .setFont(boldFont)
-                    .setFontSize(9)
-                    .setBold())
-                .setBackgroundColor(PRIMARY_COLOR)
-                .setFontColor(WHITE)
-                .setPadding(10)
-                .setTextAlignment(TextAlignment.CENTER)
-                .setBorder(Border.NO_BORDER);
+                    .add(new Paragraph(header)
+                            .setFont(boldFont)
+                            .setFontSize(9)
+                            .setBold())
+                    .setBackgroundColor(PRIMARY_COLOR)
+                    .setFontColor(WHITE)
+                    .setPadding(10)
+                    .setTextAlignment(TextAlignment.CENTER)
+                    .setBorder(Border.NO_BORDER);
             table.addHeaderCell(cell);
         }
     }
@@ -1347,13 +1382,13 @@ public class ReportPdfService {
     private void addTableRow(Table table, PdfFont font, String... values) {
         for (int i = 0; i < values.length; i++) {
             Cell cell = new Cell()
-                .add(new Paragraph(values[i])
-                    .setFont(font)
-                    .setFontSize(9))
-                .setPadding(8)
-                .setBackgroundColor(i % 2 == 0 ? WHITE : LIGHT_GRAY)
-                .setBorder(new SolidBorder(new DeviceRgb(229, 231, 235), 0.5f));
-            
+                    .add(new Paragraph(values[i])
+                            .setFont(font)
+                            .setFontSize(9))
+                    .setPadding(8)
+                    .setBackgroundColor(i % 2 == 0 ? WHITE : LIGHT_GRAY)
+                    .setBorder(new SolidBorder(new DeviceRgb(229, 231, 235), 0.5f));
+
             // Align numbers to the right
             if (values[i].contains("$") || values[i].contains("%") || values[i].matches("\\d+")) {
                 cell.setTextAlignment(TextAlignment.RIGHT);
@@ -1361,7 +1396,7 @@ public class ReportPdfService {
                 // Row number centered
                 cell.setTextAlignment(TextAlignment.CENTER);
             }
-            
+
             table.addCell(cell);
         }
     }
@@ -1369,22 +1404,22 @@ public class ReportPdfService {
     private void addFooter(Document document, PdfFont font) {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy 'a las' HH:mm:ss");
         String generatedDate = dateTimeService.nowLocal().format(formatter);
-        
+
         // Footer with modern design
         Table footerTable = new Table(1);
         footerTable.setWidth(UnitValue.createPercentValue(100));
-        
+
         Cell footerCell = new Cell()
-            .add(new Paragraph("📄 Reporte generado el " + generatedDate)
-                .setFont(font)
-                .setFontSize(8)
-                .setFontColor(GRAY_COLOR)
-                .setTextAlignment(TextAlignment.CENTER))
-            .setBackgroundColor(LIGHT_GRAY)
-            .setPadding(10)
-            .setBorder(Border.NO_BORDER)
-            .setMarginTop(20);
-        
+                .add(new Paragraph("📄 Reporte generado el " + generatedDate)
+                        .setFont(font)
+                        .setFontSize(8)
+                        .setFontColor(GRAY_COLOR)
+                        .setTextAlignment(TextAlignment.CENTER))
+                .setBackgroundColor(LIGHT_GRAY)
+                .setPadding(10)
+                .setBorder(Border.NO_BORDER)
+                .setMarginTop(20);
+
         footerTable.addCell(footerCell);
         document.add(footerTable);
     }
