@@ -27,14 +27,21 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 /**
- * Cash-register (caja) pages for the CASHIER role.
+ * Cash-register (caja) pages for the roles that collect money: CASHIER, ADMIN and
+ * MANAGER.
  *
  * One drawer per cashier: open with an initial amount, register manual
  * movements (pagos / entradas / retiros), close with the counted cash, browse
  * past closings by day and download a PDF of the day.
+ *
+ * The area is part of the URL, exactly like the rest of the app
+ * ({@code /cashier/...}, {@code /admin/...}, {@code /manager/...}): each user
+ * opens Caja under their own role prefix. A URL from another area (an old
+ * bookmark, the admin/manager shortcut in the sidebar...) is redirected to the
+ * user's own area, so the URL never says a role the user is not.
  */
 @Controller
-@RequestMapping("/cashier/cash-register")
+@RequestMapping("/{rolePrefix:cashier|admin|manager}/cash-register")
 @PreAuthorize("hasAnyRole('CASHIER', 'ADMIN', 'MANAGER')")
 @RequiredArgsConstructor
 @Slf4j
@@ -45,10 +52,24 @@ public class CashRegisterController {
     private final DateTimeService dateTimeService;
     private final ReportPdfService reportPdfService;
 
+    /**
+     * Exposes the area of the Caja page that was opened ("cashier", "admin" or
+     * "manager") so the templates build every link and form action inside that
+     * same area instead of hardcoding /cashier.
+     */
+    @ModelAttribute
+    public void addRolePrefix(@PathVariable String rolePrefix, Model model) {
+        model.addAttribute("rolePrefix", rolePrefix);
+    }
+
     // ---------- Day view ----------
 
     @GetMapping
-    public String view(Authentication authentication, Model model) {
+    public String view(@PathVariable String rolePrefix, Authentication authentication, Model model) {
+        String wrongArea = wrongAreaRedirect(rolePrefix, authentication);
+        if (wrongArea != null) {
+            return wrongArea;
+        }
         Employee cashier = currentCashier(authentication);
         Company company = CompanyContext.requireCurrentCompany();
 
@@ -95,7 +116,7 @@ public class CashRegisterController {
             log.error("Error opening cash register: {}", e.getMessage());
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
         }
-        return "redirect:/cashier/cash-register";
+        return "redirect:/" + expectedRolePrefix(authentication) + "/cash-register";
     }
 
     @PostMapping("/close")
@@ -118,7 +139,7 @@ public class CashRegisterController {
             log.error("Error closing cash register: {}", e.getMessage());
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
         }
-        return "redirect:/cashier/cash-register";
+        return "redirect:/" + expectedRolePrefix(authentication) + "/cash-register";
     }
 
     // ---------- Movements ----------
@@ -143,7 +164,7 @@ public class CashRegisterController {
             log.error("Error registering cash register movement: {}", e.getMessage());
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
         }
-        return "redirect:/cashier/cash-register";
+        return "redirect:/" + expectedRolePrefix(authentication) + "/cash-register";
     }
 
     @PostMapping("/movements/{id}/delete")
@@ -159,16 +180,21 @@ public class CashRegisterController {
             log.error("Error deleting cash register movement: {}", e.getMessage());
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
         }
-        return "redirect:/cashier/cash-register";
+        return "redirect:/" + expectedRolePrefix(authentication) + "/cash-register";
     }
 
     // ---------- History ----------
 
     @GetMapping("/history")
     public String history(
+            @PathVariable String rolePrefix,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
             Authentication authentication,
             Model model) {
+        String wrongArea = wrongAreaRedirect(rolePrefix, authentication);
+        if (wrongArea != null) {
+            return wrongArea;
+        }
         Employee cashier = currentCashier(authentication);
         Company company = CompanyContext.requireCurrentCompany();
 
@@ -186,15 +212,20 @@ public class CashRegisterController {
     }
 
     @GetMapping("/session/{id}")
-    public String sessionDetail(@PathVariable Long id, Authentication authentication,
+    public String sessionDetail(@PathVariable String rolePrefix, @PathVariable Long id,
+            Authentication authentication,
             Model model, RedirectAttributes redirectAttributes) {
+        String wrongArea = wrongAreaRedirect(rolePrefix, authentication);
+        if (wrongArea != null) {
+            return wrongArea;
+        }
         Employee cashier = currentCashier(authentication);
         Company company = CompanyContext.requireCurrentCompany();
 
         CashRegisterSession session = cashRegisterService.getSession(id, company);
         if (!owns(session, cashier)) {
             redirectAttributes.addFlashAttribute("errorMessage", "Esta caja no te pertenece.");
-            return "redirect:/cashier/cash-register";
+            return "redirect:/" + rolePrefix + "/cash-register";
         }
 
         model.addAttribute("cashSession", session);
@@ -210,7 +241,8 @@ public class CashRegisterController {
     // ---------- PDF ----------
 
     @GetMapping("/session/{id}/pdf")
-    public ResponseEntity<byte[]> downloadPdf(@PathVariable Long id, Authentication authentication,
+    public ResponseEntity<byte[]> downloadPdf(@PathVariable String rolePrefix, @PathVariable Long id,
+            Authentication authentication,
             RedirectAttributes redirectAttributes) {
         try {
             Employee cashier = currentCashier(authentication);
@@ -251,6 +283,44 @@ public class CashRegisterController {
     }
 
     // ---------- Helpers ----------
+
+    /**
+     * Area of the URL that belongs to the current user: an ADMIN opens Caja as
+     * /admin/cash-register, a MANAGER as /manager/cash-register and a CASHIER as
+     * /cashier/cash-register. The class-level @PreAuthorize already limits this
+     * controller to those three roles, so the fallback is the cashier area.
+     */
+    private String expectedRolePrefix(Authentication authentication) {
+        if (hasAuthority(authentication, "ROLE_ADMIN")) {
+            return "admin";
+        }
+        if (hasAuthority(authentication, "ROLE_MANAGER")) {
+            return "manager";
+        }
+        return "cashier";
+    }
+
+    private boolean hasAuthority(Authentication authentication, String authority) {
+        return authentication != null && authentication.getAuthorities() != null
+                && authentication.getAuthorities().stream()
+                        .anyMatch(granted -> authority.equals(granted.getAuthority()));
+    }
+
+    /**
+     * Redirect to the user's own Caja area when the URL prefix is not theirs (an
+     * old /cashier bookmark opened by an admin, the shared admin/manager shortcut
+     * of the sidebar opened by a manager...). Returns null when the URL is already
+     * the user's own area.
+     */
+    private String wrongAreaRedirect(String rolePrefix, Authentication authentication) {
+        String expected = expectedRolePrefix(authentication);
+        if (expected.equalsIgnoreCase(rolePrefix)) {
+            return null;
+        }
+        log.info("Caja opened as '{}' by {} → redirecting to their own area /{}",
+                rolePrefix, authentication.getName(), expected);
+        return "redirect:/" + expected + "/cash-register";
+    }
 
     private Employee currentCashier(Authentication authentication) {
         return employeeService.findByUsername(authentication.getName())

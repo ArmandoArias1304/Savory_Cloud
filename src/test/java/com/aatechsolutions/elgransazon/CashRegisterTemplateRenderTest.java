@@ -28,6 +28,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -104,6 +105,7 @@ class CashRegisterTemplateRenderTest {
     void dayViewRenders() {
         AbstractContext ctx = webContext();
         ctx.setVariable("globalSystemConfig", systemConfig());
+        ctx.setVariable("rolePrefix", "cashier");
         // NOTE: "session" is a reserved Thymeleaf expression object (the HTTP session),
         // so the controller exposes the entity as "cashSession".
         ctx.setVariable("cashSession", session(true));
@@ -142,6 +144,7 @@ class CashRegisterTemplateRenderTest {
     void dayViewRendersWithNoSessionYet() {
         AbstractContext ctx = webContext();
         ctx.setVariable("globalSystemConfig", systemConfig());
+        ctx.setVariable("rolePrefix", "cashier");
         ctx.setVariable("cashSession", null);
         ctx.setVariable("sessionOpen", false);
         ctx.setVariable("allowOpen", true);
@@ -160,6 +163,7 @@ class CashRegisterTemplateRenderTest {
     void historyRenders() {
         AbstractContext ctx = webContext();
         ctx.setVariable("globalSystemConfig", systemConfig());
+        ctx.setVariable("rolePrefix", "cashier");
         ctx.setVariable("rows", List.of(new CashRegisterHistoryRow(session(false), summary(true))));
         ctx.setVariable("filterDate", LocalDate.now());
         ctx.setVariable("today", LocalDate.now());
@@ -170,5 +174,47 @@ class CashRegisterTemplateRenderTest {
         assertTrue(html.contains("Hielo") || html.contains("Cerrada"), "history rows should be rendered");
         assertTrue(html.contains("/cashier/cash-register/session/1"),
                 "the history links must carry the real session id, not null");
+    }
+
+    /**
+     * Caja links and form actions follow the area the page was opened in: an admin opens
+     * /admin/cash-register and never /cashier/... (the URL must not say another role).
+     */
+    @Test
+    void dayViewLinksFollowTheAreaItWasOpenedIn() {
+        AbstractContext ctx = webContext();
+        ctx.setVariable("globalSystemConfig", systemConfig());
+        ctx.setVariable("rolePrefix", "admin");
+        ctx.setVariable("cashSession", session(true));
+        // Open drawer so the open / movements / close forms are all rendered
+        ctx.setVariable("sessionOpen", true);
+        ctx.setVariable("allowOpen", true);
+        ctx.setVariable("summary", summary(false));
+        ctx.setVariable("movements", List.of(CashRegisterMovement.builder()
+                .id(1L)
+                .type(CashRegisterMovementType.EXPENSE)
+                .concept("Hielo")
+                .amount(new BigDecimal("20.00"))
+                .occurredAt(LocalDateTime.now())
+                .build()));
+        ctx.setVariable("movementTypes", CashRegisterMovementType.values());
+        ctx.setVariable("username", "ana");
+
+        String html = templateEngine.process("cashier/cash-register/view", ctx);
+
+        assertTrue(html.contains("/admin/cash-register/session/1/pdf"),
+                "the PDF link must use the admin area");
+        assertTrue(html.contains("/admin/cash-register/history"),
+                "the history link must use the admin area");
+        assertTrue(html.contains("action=\"/admin/cash-register/open\""),
+                "the open form must post to the admin area");
+        assertTrue(html.contains("action=\"/admin/cash-register/movements\""),
+                "the movements form must post to the admin area");
+        assertTrue(html.contains("action=\"/admin/cash-register/movements/1/delete\""),
+                "the delete form must post to the admin area");
+        assertTrue(html.contains("action=\"/admin/cash-register/close\""),
+                "the close form must post to the admin area");
+        assertFalse(html.contains("/cashier/cash-register"),
+                "nothing may stay hardcoded to the cashier area");
     }
 }

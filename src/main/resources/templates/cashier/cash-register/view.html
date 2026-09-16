@@ -102,7 +102,7 @@
           </div>
           <div class="flex items-center gap-3">
             <a
-              href="/cashier/cash-register/history"
+              th:href="@{/{rolePrefix}/cash-register/history(rolePrefix=${rolePrefix})}"
               class="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/20 hover:bg-white/30 text-white font-semibold transition-all border border-white/30 text-sm sm:text-base"
             >
               <span class="material-symbols-outlined text-lg">history</span>
@@ -161,7 +161,7 @@
           <div class="flex flex-wrap items-center gap-3">
             <a
               th:if="${cashSession != null}"
-              th:href="@{/cashier/cash-register/session/{id}/pdf(id=${cashSession.id})}"
+              th:href="@{/{rolePrefix}/cash-register/session/{id}/pdf(rolePrefix=${rolePrefix}, id=${cashSession.id})}"
               class="flex items-center gap-2 rounded-xl bg-gray-900 dark:bg-gray-700 text-white px-4 py-2.5 text-sm font-bold hover:bg-gray-700 transition"
             >
               <span class="material-symbols-outlined text-lg"
@@ -233,7 +233,7 @@
           Captura el fondo con el que inicia el día.
         </p>
         <form
-          th:action="@{/cashier/cash-register/open}"
+          th:action="@{/{rolePrefix}/cash-register/open(rolePrefix=${rolePrefix})}"
           method="post"
           class="grid grid-cols-1 sm:grid-cols-3 gap-4"
         >
@@ -424,7 +424,7 @@
         >
           <form
             id="movementForm"
-            th:action="@{/cashier/cash-register/movements}"
+            th:action="@{/{rolePrefix}/cash-register/movements(rolePrefix=${rolePrefix})}"
             method="post"
             class="grid grid-cols-1 sm:grid-cols-4 gap-4"
           >
@@ -583,7 +583,7 @@
                 <td th:if="${sessionOpen}" class="px-6 py-3 text-right">
                   <form
                     class="js-delete-movement"
-                    th:action="@{'/cashier/cash-register/movements/' + ${m.id} + '/delete'}"
+                    th:action="@{'/' + ${rolePrefix} + '/cash-register/movements/' + ${m.id} + '/delete'}"
                     method="post"
                   >
                     <button
@@ -631,7 +631,7 @@
         </p>
         <form
           id="closeForm"
-          th:action="@{/cashier/cash-register/close}"
+          th:action="@{/{rolePrefix}/cash-register/close(rolePrefix=${rolePrefix})}"
           method="post"
           class="grid grid-cols-1 sm:grid-cols-3 gap-4"
         >

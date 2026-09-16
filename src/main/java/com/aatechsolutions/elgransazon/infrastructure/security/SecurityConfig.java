@@ -89,6 +89,10 @@ public class SecurityConfig {
                                                 .hasAnyRole("CHEF", "BARISTA", "PARRILLERO")
                                                 .requestMatchers("/cashier/**")
                                                 .hasAnyRole("CASHIER", "ADMIN", "MANAGER")
+                                                // Caja también se abre en el área del gerente:
+                                                // /manager/cash-register
+                                                .requestMatchers("/manager/**")
+                                                .hasAnyRole("ADMIN", "MANAGER")
                                                 .requestMatchers("/delivery/**").hasRole("DELIVERY")
                                                 .requestMatchers("/client/**").hasRole("CLIENT")
                                                 .anyRequest().authenticated())
