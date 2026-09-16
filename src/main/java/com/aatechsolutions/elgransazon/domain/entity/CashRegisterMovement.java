@@ -11,9 +11,9 @@ import java.time.LocalDateTime;
 /**
  * A manual cash-register movement inside a {@link CashRegisterSession}.
  *
- * Examples: "Hielo" ($20) as an EXPENSE, an extra cash injection as INCOME or a
- * safe drop as WITHDRAWAL. Amounts are always stored positive; the type decides
- * whether the money leaves or enters the drawer.
+ * Examples: "Hielo" ($20) as an EXPENSE, an extra cash injection as INCOME or the
+ * cash tips collected with the bill as TIPS. Amounts are always stored positive; the
+ * type decides whether the money leaves or enters the drawer.
  */
 @Entity
 @Table(name = "cash_register_movements",

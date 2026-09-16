@@ -326,17 +326,21 @@
           class="rounded-2xl bg-white dark:bg-gray-900 shadow-lg border border-gray-200 dark:border-gray-800 p-5"
         >
           <p class="text-xs font-semibold text-gray-500 dark:text-gray-400">
-            Pagos + retiros
+            Pagos
           </p>
           <p
             class="text-2xl font-black text-red-600 mt-1"
-            th:text="${#numbers.formatCurrency(summary.totalExpenses.add(summary.totalWithdrawals))}"
+            th:text="${#numbers.formatCurrency(summary.totalExpenses)}"
           >
             $0.00
           </p>
           <p class="text-xs text-gray-400 mt-1">
             entradas
             <span th:text="${#numbers.formatCurrency(summary.totalIncomes)}"
+              >$0.00</span
+            >
+            · propinas efectivo
+            <span th:text="${#numbers.formatCurrency(summary.totalCashTips)}"
               >$0.00</span
             >
           </p>
@@ -354,7 +358,7 @@
             $0.00
           </p>
           <p class="text-xs text-gray-400 mt-1">
-            efectivo
+            ventas en efectivo
             <span th:text="${#numbers.formatCurrency(summary.cashSales)}"
               >$0.00</span
             >

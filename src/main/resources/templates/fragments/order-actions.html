@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+  <body>
+    <!--
+      Actions cell of one order row of the cashier list. It is used in the two tables (own +
+      global) and, from the AJAX endpoint, to rebuild ONE row in place when a WebSocket
+      STATUS_CHANGE arrives: the available buttons depend on the order status (e.g. "Cobrar
+      pedido" only shows up once the order is ENTREGADO), so the row must be re-rendered by
+      the server instead of duplicating those rules in JavaScript.
+    -->
+    <th:block
+      th:fragment="actions(order, role, staffOrderStatusEnabled, staffChefEnabled, staffBaristaEnabled, staffParrilleroEnabled, staffDeliveryEnabled)"
+    >
+      <div class="flex items-center justify-center gap-2">
+        <!-- View -->
+        <a
+          th:href="@{/{role}/orders/view/{id}(role=${role},id=${order.idOrder})}"
+          class="p-2 rounded-lg bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-all"
+          title="Ver detalles"
+        >
+          <i class="fas fa-eye"></i>
+        </a>
+
+        <!-- WhatsApp (only for TAKEOUT/DELIVERY with phone) -->
+        <button
+          th:if="${(order.orderType.name() == 'TAKEOUT' || order.orderType.name() == 'DELIVERY') && order.customerPhone != null && !order.customerPhone.isEmpty()}"
+          type="button"
+          onclick="
+            openWhatsApp(
+              this.dataset.phone,
+              this.dataset.orderNumber,
+              this.dataset.customerName,
+            )
+          "
+          th:data-phone="${order.customerPhone}"
+          th:data-order-number="${order.orderNumber}"
+          th:data-customer-name="${order.customerName != null ? order.customerName : ''}"
+          class="p-2 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-all"
+          title="Contactar por WhatsApp"
+        >
+          <i class="fab fa-whatsapp"></i>
+        </button>
+
+        <!-- Download Ticket (whole order, only for PAID orders without split accounts) -->
+        <a
+          th:if="${order.status.name() == 'PAID' and (order.payments == null or order.payments.isEmpty())}"
+          th:href="@{/{role}/orders/{id}/download-ticket(role=${role},id=${order.idOrder})}"
+          class="p-2 rounded-lg bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/40 transition-all"
+          title="Descargar ticket"
+        >
+          <i class="fas fa-receipt"></i>
+        </a>
+
+        <!-- Add Items (only for orders that can accept new items) -->
+        <a
+          th:if="${order.canAcceptNewItems()}"
+          th:href="@{/{role}/orders/{id}/add-items(role=${role},id=${order.idOrder})}"
+          class="p-2 rounded-lg bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-900/40 transition-all"
+          title="Agregar items al pedido"
+        >
+          <i class="fas fa-plus-circle"></i>
+        </a>
+
+        <!-- Edit (disabled for PAID and CANCELLED) -->
+        <a
+          th:if="${order.status.name() != 'PAID' && order.status.name() != 'CANCELLED'}"
+          th:href="@{/{role}/orders/edit/{id}(role=${role},id=${order.idOrder})}"
+          class="p-2 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400 hover:bg-yellow-100 dark:hover:bg-yellow-900/40 transition-all"
+          title="Editar"
+        >
+          <i class="fas fa-edit"></i>
+        </a>
+
+        <!-- Change Status (only READY non-DELIVERY: cashier marks as DELIVERED) -->
+        <button
+          th:if="${order.status.name() == 'READY' && order.orderType.name() != 'DELIVERY'}"
+          class="btn-change-status p-2 rounded-lg bg-primary/10 dark:bg-primary/20 text-primary hover:bg-primary/20 dark:hover:bg-primary/30 transition-all"
+          th:data-order-id="${order.idOrder}"
+          th:data-order-number="${order.orderNumber}"
+          th:data-order-status="${order.status.name()}"
+          th:data-payment-method="${order.paymentMethod.name()}"
+          title="Cambiar estado"
+        >
+          <i class="fas fa-exchange-alt"></i>
+        </button>
+
+        <!-- Advance Preparation Items (Staff one-click flow; hidden for PAID/CANCELLED) -->
+        <button
+          th:if="${staffOrderStatusEnabled and order.status.name() != 'PAID' and order.status.name() != 'CANCELLED'}"
+          th:with="hasChefActionable=${staffChefEnabled and #lists.size(order.orderDetails.?[itemMenu != null and itemMenu.requiresPreparation == true and (itemStatus.name() == 'PENDING' or itemStatus.name() == 'IN_PREPARATION')]) > 0},
+                   hasBaristaActionable=${staffBaristaEnabled and #lists.size(order.orderDetails.?[itemMenu != null and itemMenu.requiresBaristaPreparation == true and (itemStatus.name() == 'PENDING' or itemStatus.name() == 'IN_PREPARATION')]) > 0},
+                   hasParrilleroActionable=${staffParrilleroEnabled and #lists.size(order.orderDetails.?[itemMenu != null and itemMenu.requiresParrilleroPreparation == true and (itemStatus.name() == 'PENDING' or itemStatus.name() == 'IN_PREPARATION')]) > 0},
+                   anyInPrep=${(staffChefEnabled and #lists.size(order.orderDetails.?[itemMenu != null and itemMenu.requiresPreparation == true and itemStatus.name() == 'IN_PREPARATION']) > 0) or (staffBaristaEnabled and #lists.size(order.orderDetails.?[itemMenu != null and itemMenu.requiresBaristaPreparation == true and itemStatus.name() == 'IN_PREPARATION']) > 0) or (staffParrilleroEnabled and #lists.size(order.orderDetails.?[itemMenu != null and itemMenu.requiresParrilleroPreparation == true and itemStatus.name() == 'IN_PREPARATION']) > 0)},
+                   hasPending=${(staffChefEnabled and #lists.size(order.orderDetails.?[itemMenu != null and itemMenu.requiresPreparation == true and itemStatus.name() == 'PENDING']) > 0) or (staffBaristaEnabled and #lists.size(order.orderDetails.?[itemMenu != null and itemMenu.requiresBaristaPreparation == true and itemStatus.name() == 'PENDING']) > 0) or (staffParrilleroEnabled and #lists.size(order.orderDetails.?[itemMenu != null and itemMenu.requiresParrilleroPreparation == true and itemStatus.name() == 'PENDING']) > 0)}"
+          th:style="${hasChefActionable or hasBaristaActionable or hasParrilleroActionable} ? '' : 'display: none;'"
+          th:class="|btn-advance-preparation p-2 rounded-lg transition-all ${anyInPrep ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/40' : 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/40'}|"
+          th:data-order-id="${order.idOrder}"
+          th:data-order-number="${order.orderNumber}"
+          th:data-next-status="${anyInPrep ? 'READY' : 'IN_PREPARATION'}"
+          th:data-has-pending="${hasPending}"
+          th:title="${anyInPrep ? 'Marcar items de preparación como LISTOS' : 'Avanzar items de preparación a EN PREPARACIÓN'}"
+        >
+          <i th:if="${anyInPrep}" class="fas fa-check-double"></i>
+          <i th:unless="${anyInPrep}" class="fas fa-play"></i>
+        </button>
+
+        <!-- Advance Delivery (repartidor) — one-click when the delivery sub-permission is
+             enabled: READY -> ON_THE_WAY, ON_THE_WAY -> DELIVERED -->
+        <button
+          th:if="${staffDeliveryEnabled and order.orderType.name() == 'DELIVERY' and (order.status.name() == 'READY' or order.status.name() == 'ON_THE_WAY')}"
+          type="button"
+          class="btn-advance-delivery p-2 rounded-lg bg-sky-50 dark:bg-sky-900/20 text-sky-600 dark:text-sky-400 hover:bg-sky-100 dark:hover:bg-sky-900/40 transition-all"
+          th:data-order-id="${order.idOrder}"
+          th:data-order-number="${order.orderNumber}"
+          th:data-next-status="${order.status.name() == 'READY' ? 'ON_THE_WAY' : 'DELIVERED'}"
+          th:title="${order.status.name() == 'READY' ? 'Marcar como EN CAMINO' : 'Marcar como ENTREGADO'}"
+        >
+          <i class="fas fa-shipping-fast"></i>
+        </button>
+
+        <!-- Collect Payment (full-order settlement: all items DELIVERED and no prior partial charges) -->
+        <a
+          th:if="${order.readyToCharge}"
+          th:href="@{/cashier/payments/form/{id}(id=${order.idOrder})}"
+          class="p-2 rounded-lg bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/40 transition-all"
+          title="Cobrar pedido"
+        >
+          <i class="fas fa-dollar-sign"></i>
+        </a>
+
+        <!-- Dividir cuenta por persona / cobrar a la persona que se va (solo ítems ENTREGADOS) -->
+        <a
+          th:if="${order.canCollectDeparture() || (order.orderType.name() == 'DELIVERY' && order.readyToCharge && !order.hasPartialCollections())}"
+          th:href="@{/cashier/payments/form/{id}(id=${order.idOrder}, split='items')}"
+          class="p-2 rounded-lg bg-teal-50 dark:bg-teal-900/20 text-teal-600 dark:text-teal-400 hover:bg-teal-100 dark:hover:bg-teal-900/40 transition-all"
+          title="Cobrar a la persona que se va (solo los ítems ya entregados)"
+        >
+          <i class="fas fa-users"></i>
+        </a>
+
+        <!-- Cancel (TO_ACCEPT, PENDING, IN_PREPARATION, READY) -->
+        <button
+          th:if="${order.status.name() == 'TO_ACCEPT' || order.status.name() == 'PENDING' || order.status.name() == 'IN_PREPARATION' || order.status.name() == 'READY'}"
+          class="btn-cancel-order p-2 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 transition-all"
+          th:data-order-id="${order.idOrder}"
+          th:data-order-number="${order.orderNumber}"
+          title="Cancelar pedido"
+        >
+          <i class="fas fa-times-circle"></i>
+        </button>
+      </div>
+    </th:block>
+
+    <!--
+      Same actions, with the values taken from the model. This is what the AJAX endpoint
+      renders to swap the actions cell of a row in place (see CashierController).
+    -->
+    <th:block th:fragment="actionsFromModel">
+      <div
+        th:replace="~{fragments/order-actions :: actions(${order}, ${currentRole}, ${staffOrderStatusEnabled}, ${staffChefEnabled}, ${staffBaristaEnabled}, ${staffParrilleroEnabled}, ${staffDeliveryEnabled})}"
+      ></div>
+    </th:block>
+  </body>
+</html>

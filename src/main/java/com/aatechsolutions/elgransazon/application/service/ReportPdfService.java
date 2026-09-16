@@ -1147,7 +1147,8 @@ public class ReportPdfService {
         moneyTable.setWidth(UnitValue.createPercentValue(100));
         addSummaryCell(moneyTable, boldFont, regularFont, "Pagos", cashRegisterMoney(summary.getTotalExpenses()));
         addSummaryCell(moneyTable, boldFont, regularFont, "Entradas", cashRegisterMoney(summary.getTotalIncomes()));
-        addSummaryCell(moneyTable, boldFont, regularFont, "Retiros", cashRegisterMoney(summary.getTotalWithdrawals()));
+        addSummaryCell(moneyTable, boldFont, regularFont, "Propinas en efectivo",
+                cashRegisterMoney(summary.getTotalCashTips()));
         document.add(moneyTable);
         document.add(new Paragraph("\n"));
 
@@ -1197,7 +1198,7 @@ public class ReportPdfService {
         document.add(new Paragraph("\n"));
 
         // ----- Manual movements -----
-        addSectionTitle(document, boldFont, "Pagos, entradas y retiros");
+        addSectionTitle(document, boldFont, "Pagos, entradas y propinas en efectivo");
         Table movementsTable = new Table(new float[] { 1.4f, 1, 1, 1.4f });
         movementsTable.setWidth(UnitValue.createPercentValue(100));
         addTableHeader(movementsTable, boldFont, "Concepto", "Tipo", "Monto", "Notas");

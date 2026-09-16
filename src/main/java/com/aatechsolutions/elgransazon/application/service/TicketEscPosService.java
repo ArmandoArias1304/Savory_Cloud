@@ -109,6 +109,14 @@ public class TicketEscPosService {
         out.write(NORMAL_SIZE);
         out.write(BOLD_OFF);
 
+        // ── Table number (only when the order sits on a table) ──
+        String tableLabel = tableLabel(order);
+        if (tableLabel != null) {
+            out.write(BOLD_ON);
+            printLine(out, tableLabel);
+            out.write(BOLD_OFF);
+        }
+
         // ── Separator + Items header ──
         printSeparator(out);
         out.write(BOLD_ON);
@@ -268,6 +276,12 @@ public class TicketEscPosService {
         // Served by
         String servedBy = order.getEmployee() != null ? order.getEmployee().getFullName() : config.getRestaurantName();
         printLine(out, "Atendido por: " + servedBy);
+
+        // Who collected this ticket's payment (cashier or waiter)
+        String chargedBy = chargedBy(order, null);
+        if (chargedBy != null) {
+            printLine(out, "Cobrado por: " + chargedBy);
+        }
         out.write(FONT_A);
 
         // ── Date separator + date ──
@@ -391,6 +405,14 @@ public class TicketEscPosService {
         printLine(out, "ORDEN: " + order.getOrderNumber());
         out.write(BOLD_OFF);
 
+        // ── Table number (only when the order sits on a table) ──
+        String tableLabel = tableLabel(order);
+        if (tableLabel != null) {
+            out.write(FONT_B);
+            printLine(out, tableLabel);
+            out.write(FONT_A);
+        }
+
         // ── Account folio (centered, bold, double height) e.g. ORD-20260906-001-02 ──
         out.write(BOLD_ON);
         out.write(DOUBLE_HEIGHT);
@@ -503,6 +525,12 @@ public class TicketEscPosService {
         // Served by
         String servedBy = order.getEmployee() != null ? order.getEmployee().getFullName() : config.getRestaurantName();
         printLine(out, "Atendido por: " + servedBy);
+
+        // Who collected THIS account's payment (each account may have its own collector)
+        String chargedBy = chargedBy(order, payment);
+        if (chargedBy != null) {
+            printLine(out, "Cobrado por: " + chargedBy);
+        }
         out.write(FONT_A);
 
         // ── Date separator + date ──
@@ -565,6 +593,31 @@ public class TicketEscPosService {
 
         log.info("ESC/POS ticket generated successfully for payment: {}", payment.getPaymentFolio());
         return out.toByteArray();
+    }
+
+    /**
+     * "Mesa: N" when the order sits at a table; null for takeout / delivery orders,
+     * which have no table to print.
+     */
+    private String tableLabel(Order order) {
+        RestaurantTable table = order.getTable();
+        if (table == null || table.getTableNumber() == null) {
+            return null;
+        }
+        return "Mesa: " + table.getTableNumber();
+    }
+
+    /**
+     * Full name of the employee who collected the payment being printed: the account's
+     * collector when the bill was split (each account may be charged by a different
+     * person), otherwise the order's collector. Null when nobody is recorded (for
+     * example an online order paid by the customer).
+     */
+    private String chargedBy(Order order, Payment payment) {
+        Employee employee = payment != null && payment.getPaidBy() != null
+                ? payment.getPaidBy()
+                : order.getPaidBy();
+        return employee != null ? employee.getFullName() : null;
     }
 
     /**

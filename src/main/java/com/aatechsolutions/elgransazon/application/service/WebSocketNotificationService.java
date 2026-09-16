@@ -342,6 +342,33 @@ public class WebSocketNotificationService {
     }
 
     /**
+     * Pushes a full order snapshot (order status + every item's own status) to the
+     * order detail views.
+     *
+     * <p>
+     * The detail views ({@code admin|cashier|waiter/orders/view}) refresh the order
+     * badge and each item badge from this payload, in place, without reloading the
+     * page.
+     *
+     * <p>
+     * This is the ONLY notification that also fires when an item changes status but
+     * the order's overall status does not (e.g. the second of three items entering
+     * preparation): {@link #notifyOrderStatusChange} deliberately stays silent in
+     * that case so the kitchen/list views are not re-rendered for a no-op.
+     *
+     * @param order   The order whose snapshot should be sent
+     * @param message Human readable reason, shown by clients in a toast
+     */
+    public void notifyOrderDetailUpdate(Order order, String message) {
+        if (order == null) {
+            return;
+        }
+        OrderNotificationDTO notification = buildOrderNotification(order, "ORDER_DETAIL", message);
+        messagingTemplate.convertAndSend(getCompanyTopic("/topic/orders/detail", order), notification);
+        log.debug("WebSocket: Order detail snapshot sent for {} - {}", order.getOrderNumber(), message);
+    }
+
+    /**
      * Notifies when items are added to an existing order
      * Implements smart notification routing based on existing assignments and item
      * types
@@ -1026,9 +1053,11 @@ public class WebSocketNotificationService {
                 .itemCount(order.getOrderDetails() != null ? order.getOrderDetails().size() : 0)
                 .items(order.getOrderDetails() != null ? order.getOrderDetails().stream()
                         .map(detail -> OrderNotificationDTO.OrderItemDTO.builder()
+                                .idOrderDetail(detail.getIdOrderDetail())
                                 .name(detail.getItemMenu().getName())
                                 .quantity(detail.getQuantity())
                                 .requiresPreparation(detail.getItemMenu().getRequiresPreparation())
+                                .itemStatus(detail.getItemStatus())
                                 .build())
                         .collect(Collectors.toList()) : null)
                 .notificationType(type)

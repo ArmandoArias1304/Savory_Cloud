@@ -93,7 +93,7 @@ public class CashRegisterController {
         model.addAttribute("allowOpen", !sessionOpen);
         model.addAttribute("summary", cashRegisterService.buildSummary(session));
         model.addAttribute("movements", cashRegisterService.getMovements(session));
-        model.addAttribute("movementTypes", CashRegisterMovementType.values());
+        model.addAttribute("movementTypes", CashRegisterMovementType.selectable());
         model.addAttribute("username", authentication.getName());
         return "cashier/cash-register/view";
     }
@@ -233,7 +233,7 @@ public class CashRegisterController {
         model.addAttribute("allowOpen", false);
         model.addAttribute("summary", cashRegisterService.buildSummary(session));
         model.addAttribute("movements", cashRegisterService.getMovements(session));
-        model.addAttribute("movementTypes", CashRegisterMovementType.values());
+        model.addAttribute("movementTypes", CashRegisterMovementType.selectable());
         model.addAttribute("username", authentication.getName());
         return "cashier/cash-register/view";
     }

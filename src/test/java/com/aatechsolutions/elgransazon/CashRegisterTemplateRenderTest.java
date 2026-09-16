@@ -92,7 +92,7 @@ class CashRegisterTemplateRenderTest {
                 .salesByMethod(salesByMethod())
                 .totalExpenses(new BigDecimal("20.00"))
                 .totalIncomes(BigDecimal.ZERO)
-                .totalWithdrawals(BigDecimal.ZERO)
+                .totalCashTips(new BigDecimal("35.00"))
                 .cashSales(new BigDecimal("100.00"))
                 .expectedCash(new BigDecimal("280.00"));
         if (closed) {
@@ -119,7 +119,7 @@ class CashRegisterTemplateRenderTest {
                 .amount(new BigDecimal("20.00"))
                 .occurredAt(LocalDateTime.now())
                 .build()));
-        ctx.setVariable("movementTypes", CashRegisterMovementType.values());
+        ctx.setVariable("movementTypes", CashRegisterMovementType.selectable());
         ctx.setVariable("username", "ana");
 
         String html = templateEngine.process("cashier/cash-register/view", ctx);
@@ -138,6 +138,14 @@ class CashRegisterTemplateRenderTest {
                 "the close-drawer button must open the modal");
         assertTrue(html.contains("closeCountedInput") && html.contains("CLOSE_EXPECTED_TEXT"),
                 "the modal must ask for the counted cash and show the expected one");
+        // Las propinas en efectivo son una entrada: el concepto se ofrece una sola vez
+        // (el valor legado WITHDRAWAL también se llama "Propinas efectivo" y ya no se ofrece)
+        assertTrue(html.contains("Propinas efectivo"),
+                "the cash-tip concept must be offered in the form");
+        assertTrue(!html.contains("WITHDRAWAL"),
+                "the legacy cash-tip value must not be offered again");
+        assertTrue(html.contains("propinas efectivo"),
+                "the day cards must show the cash tips registered in the drawer");
     }
 
     @Test
@@ -150,7 +158,7 @@ class CashRegisterTemplateRenderTest {
         ctx.setVariable("allowOpen", true);
         ctx.setVariable("summary", summary(false));
         ctx.setVariable("movements", List.of());
-        ctx.setVariable("movementTypes", CashRegisterMovementType.values());
+        ctx.setVariable("movementTypes", CashRegisterMovementType.selectable());
         ctx.setVariable("username", "ana");
 
         String html = templateEngine.process("cashier/cash-register/view", ctx);
@@ -197,7 +205,7 @@ class CashRegisterTemplateRenderTest {
                 .amount(new BigDecimal("20.00"))
                 .occurredAt(LocalDateTime.now())
                 .build()));
-        ctx.setVariable("movementTypes", CashRegisterMovementType.values());
+        ctx.setVariable("movementTypes", CashRegisterMovementType.selectable());
         ctx.setVariable("username", "ana");
 
         String html = templateEngine.process("cashier/cash-register/view", ctx);

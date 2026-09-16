@@ -141,6 +141,17 @@ public class TicketPdfService {
                 .setMarginBottom(5);
         document.add(orderNum);
 
+        // Table number (only when the order sits on a table)
+        String tableLabel = tableLabel(order);
+        if (tableLabel != null) {
+            Paragraph tableLine = new Paragraph(tableLabel)
+                    .setFont(boldFont)
+                    .setFontSize(9)
+                    .setTextAlignment(TextAlignment.CENTER)
+                    .setMarginBottom(3);
+            document.add(tableLine);
+        }
+
         // Items separator
         document.add(new Paragraph("━━━━━━━━━━━━━━━━━━━━━━━━━━")
                 .setTextAlignment(TextAlignment.CENTER)
@@ -477,6 +488,18 @@ public class TicketPdfService {
                 .setMarginBottom(5);
         document.add(employee);
 
+        // Who collected this ticket's payment (cashier or waiter)
+        String chargedBy = chargedBy(order, null);
+        if (chargedBy != null) {
+            Paragraph cashier = new Paragraph()
+                    .add(new Text("Cobrado por: ").setFont(boldFont))
+                    .add(new Text(chargedBy).setFont(normalFont))
+                    .setFontSize(8)
+                    .setTextAlignment(TextAlignment.CENTER)
+                    .setMarginBottom(5);
+            document.add(cashier);
+        }
+
         // Date and time separator
         document.add(new Paragraph("━━━━━━━━━━━━━━━━━━━━━━━━━━")
                 .setTextAlignment(TextAlignment.CENTER)
@@ -686,6 +709,17 @@ public class TicketPdfService {
                 .setMarginTop(3);
         document.add(orderNum);
 
+        // Table number (only when the order sits on a table)
+        String tableLabel = tableLabel(order);
+        if (tableLabel != null) {
+            Paragraph tableLine = new Paragraph(tableLabel)
+                    .setFont(normalFont)
+                    .setFontSize(8)
+                    .setTextAlignment(TextAlignment.CENTER)
+                    .setMarginTop(2);
+            document.add(tableLine);
+        }
+
         // Account folio (centered, bold, double emphasis) — e.g. ORD-20260906-001-02
         Paragraph accountNum = new Paragraph("CUENTA: " + payment.getPaymentFolio())
                 .setFont(boldFont)
@@ -893,6 +927,18 @@ public class TicketPdfService {
                 .setMarginBottom(5);
         document.add(employee);
 
+        // Who collected THIS account's payment (each account may have its own collector)
+        String chargedBy = chargedBy(order, payment);
+        if (chargedBy != null) {
+            Paragraph cashier = new Paragraph()
+                    .add(new Text("Cobrado por: ").setFont(boldFont))
+                    .add(new Text(chargedBy).setFont(normalFont))
+                    .setFontSize(8)
+                    .setTextAlignment(TextAlignment.CENTER)
+                    .setMarginBottom(5);
+            document.add(cashier);
+        }
+
         // Date and time separator
         document.add(new Paragraph("━━━━━━━━━━━━━━━━━━━━━━━━━━")
                 .setTextAlignment(TextAlignment.CENTER)
@@ -1020,8 +1066,34 @@ public class TicketPdfService {
     /**
      * Estimate page height for an account (Payment) ticket.
      */
+    /**
+     * "Mesa: N" when the order sits at a table; null for takeout / delivery orders,
+     * which have no table to print.
+     */
+    private String tableLabel(Order order) {
+        RestaurantTable table = order.getTable();
+        if (table == null || table.getTableNumber() == null) {
+            return null;
+        }
+        return "Mesa: " + table.getTableNumber();
+    }
+
+    /**
+     * Full name of the employee who collected the payment being printed: the account's
+     * collector when the bill was split (each account may be charged by a different
+     * person), otherwise the order's collector. Null when nobody is recorded (for
+     * example an online order paid by the customer).
+     */
+    private String chargedBy(Order order, Payment payment) {
+        Employee employee = payment != null && payment.getPaidBy() != null
+                ? payment.getPaidBy()
+                : order.getPaidBy();
+        return employee != null ? employee.getFullName() : null;
+    }
+
     private float calculateEstimatedHeight(Payment payment) {
-        float baseHeight = 470f; // header + account folio + totals + footer
+        // +30 for the table number and the "Cobrado por" line
+        float baseHeight = 500f; // header + account folio + totals + footer
         float itemHeight = 15f;
         float commentHeight = 10f;
         float complementHeight = 10f;
@@ -1156,7 +1228,8 @@ public class TicketPdfService {
      * Calculate estimated height for the PDF page
      */
     private float calculateEstimatedHeight(Order order) {
-        float baseHeight = 420f; // Base height for header, footer, etc. (increased for header row)
+        // +30 for the table number and the "Cobrado por" line
+        float baseHeight = 450f; // Base height for header, footer, etc. (increased for header row)
         float itemHeight = 15f; // Height per item
         float commentHeight = 10f; // Height for comments
         float complementHeight = 10f; // Height per complement

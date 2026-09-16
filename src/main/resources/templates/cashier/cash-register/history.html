@@ -150,7 +150,7 @@
                 <td class="px-5 py-3 text-right font-semibold text-gray-900 dark:text-white"
                     th:text="${#numbers.formatCurrency(row.summary.totalSales)}">$0.00</td>
                 <td class="px-5 py-3 text-right text-red-600"
-                    th:text="${#numbers.formatCurrency(row.summary.totalExpenses.add(row.summary.totalWithdrawals))}">$0.00</td>
+                    th:text="${#numbers.formatCurrency(row.summary.totalExpenses)}">$0.00</td>
                 <td class="px-5 py-3 text-right text-gray-700 dark:text-gray-300"
                     th:text="${#numbers.formatCurrency(row.summary.expectedCash)}">$0.00</td>
                 <td class="px-5 py-3 text-right text-gray-700 dark:text-gray-300"

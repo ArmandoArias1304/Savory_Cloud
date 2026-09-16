@@ -130,6 +130,10 @@ class CashierOrdersListSplitTicketsTest {
     }
 
     private String render(Order order) {
+        return render(order, false);
+    }
+
+    private String render(Order order, boolean staffDeliveryEnabled) {
         AbstractContext ctx = webContext();
         SystemConfiguration config = SystemConfiguration.builder()
                 .restaurantName("El Gran Sazon")
@@ -169,7 +173,7 @@ class CashierOrdersListSplitTicketsTest {
         ctx.setVariable("staffChefEnabled", false);
         ctx.setVariable("staffBaristaEnabled", false);
         ctx.setVariable("staffParrilleroEnabled", false);
-        ctx.setVariable("staffDeliveryEnabled", false);
+        ctx.setVariable("staffDeliveryEnabled", staffDeliveryEnabled);
         ctx.setVariable("waiterDeliveryCanCollect", true);
         ctx.setVariable("printTicketOrderId", null);
         ctx.setVariable("printTicketOrderIds", List.of());
@@ -210,6 +214,87 @@ class CashierOrdersListSplitTicketsTest {
                 "sin cuentas no hay acordeón de tickets por persona");
         assertTrue(html.contains("/cashier/orders/76/download-ticket\""),
                 "un cobro normal sí ofrece el ticket del pedido completo");
+    }
+
+    /**
+     * Both tables render the actions column from the shared fragment (fragments/order-actions),
+     * tagged with .order-actions-cell, and the page rebuilds ONE row in place: on a
+     * STATUS_CHANGE notification from the WebSocket and on the cashier's own delivery one-click,
+     * the column is re-rendered by the server instead of reloading the whole page.
+     */
+    @Test
+    void actionsColumnIsRefreshedInPlaceFromTheServer() {
+        String html = render(paidOrder(false));
+
+        // Una celda de acciones por tabla (Mis Pedidos + global), del mismo fragmento
+        assertEquals(2, count(html, "class=\"order-actions-cell"),
+                "las dos tablas deben marcar su columna de acciones para poder refrescarla");
+        // El refresco localiza esa columna en las filas del pedido...
+        assertTrue(html.contains("tr[data-order-id=\"${orderId}\"] .order-actions-cell"),
+                "el refresco debe buscar la columna de acciones de la fila");
+        // ...y pide al servidor la columna de ESA fila...
+        assertTrue(html.contains("/cashier/orders/${orderId}/actions"),
+                "el refresco debe pedir la columna ya renderizada por el servidor");
+        // ...vuelve a enlazar los botones nuevos (los recién creados no traen listeners)...
+        assertTrue(html.contains("function bindOrderActionButtons"),
+                "los botones re-renderizados deben volver a enlazarse");
+
+        // ...y se usa al llegar un aviso STATUS_CHANGE por WebSocket, no solo el semáforo
+        int statusChangeBranch = html.indexOf("if (type === \"STATUS_CHANGE\") {");
+        assertTrue(statusChangeBranch > 0, "el handler de WebSocket debe seguir tratando STATUS_CHANGE");
+        assertTrue(html.substring(statusChangeBranch, statusChangeBranch + 600)
+                        .contains("refreshOrderActions(orderId)"),
+                "un STATUS_CHANGE por WebSocket debe refrescar la columna de acciones de la fila");
+    }
+
+    /**
+     * El avance de reparto del cajero (En camino -> Entregado) ya no recarga la página: refresca
+     * el semáforo y la columna de acciones, y ahí es donde aparece el botón de cobrar.
+     */
+    @Test
+    void cashierDeliveryOneClickRefreshesTheRowWithoutReloading() {
+        String html = render(onTheWayDeliveryOrder(), true);
+
+        int advance = html.indexOf("function advanceDeliveryStatus");
+        assertTrue(advance > 0, "el flujo de reparto del cajero debe seguir ahí");
+        String flow = html.substring(advance, html.indexOf("function ", advance + 10));
+        assertTrue(flow.contains("refreshOrderActions(orderId)"),
+                "al marcar ENTREGADO debe refrescar la columna (ahí nace el botón de cobrar)");
+        assertTrue(flow.contains("updateRowStatusBadge(orderId, nextStatus)"),
+                "y también el semáforo de la fila");
+        assertFalse(flow.contains("window.location.reload"),
+                "el avance de reparto ya no debe recargar la página");
+    }
+
+    /**
+     * A DELIVERY order that is already on its way must keep its row (and therefore the
+     * "Entregado" button) in BOTH tables, so the staff permission can finish the delivery.
+     */
+    @Test
+    void onTheWayDeliveryOrderKeepsItsAdvanceButton() {
+        String html = render(onTheWayDeliveryOrder(), true);
+
+        assertTrue(html.contains("ORD-20260912-090"), "la fila del reparto debe seguir en la lista");
+        assertTrue(html.contains("En camino"), "el estado EN CAMINO debe verse en las dos tablas");
+        // Un botón por tabla + el listener JS del final de la página
+        assertEquals(3, count(html, "btn-advance-delivery"),
+                "cada tabla debe ofrecer el botón de avanzar el reparto");
+        assertEquals(2, count(html, "data-next-status=\"DELIVERED\""),
+                "desde EN CAMINO el siguiente paso ofrecido debe ser ENTREGADO");
+    }
+
+    private Order onTheWayDeliveryOrder() {
+        return Order.builder()
+                .idOrder(90L)
+                .orderNumber("ORD-20260912-090")
+                .orderType(OrderType.DELIVERY)
+                .status(OrderStatus.ON_THE_WAY)
+                .paymentMethod(PaymentMethodType.CASH)
+                .createdAt(LocalDateTime.of(2026, 9, 12, 15, 0))
+                .total(new BigDecimal("150.00"))
+                .customerName("Cliente domicilio")
+                .orderDetails(new ArrayList<>())
+                .build();
     }
 
     @Test

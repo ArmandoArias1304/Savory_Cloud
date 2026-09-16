@@ -72,7 +72,7 @@ class CashRegisterPdfTest {
                 .salesByMethod(byMethod)
                 .totalExpenses(new BigDecimal("180.00"))
                 .totalIncomes(BigDecimal.ZERO)
-                .totalWithdrawals(new BigDecimal("50.00"))
+                .totalCashTips(new BigDecimal("50.00"))
                 .cashSales(new BigDecimal("900.00"))
                 .expectedCash(new BigDecimal("1170.00"))
                 .countedAmount(new BigDecimal("1234.56"))
@@ -87,8 +87,8 @@ class CashRegisterPdfTest {
                         .amount(new BigDecimal("20.00")).occurredAt(LocalDateTime.of(2026, 9, 12, 11, 0))
                         .build(),
                 CashRegisterMovement.builder()
-                        .id(2L).type(CashRegisterMovementType.WITHDRAWAL).concept("Retiro a bóveda")
-                        .amount(new BigDecimal("50.00")).notes("Autorizado por gerencia")
+                        .id(2L).type(CashRegisterMovementType.TIPS).concept("Propinas en efectivo")
+                        .amount(new BigDecimal("50.00")).notes("Repartidas al final del turno")
                         .occurredAt(LocalDateTime.of(2026, 9, 12, 18, 0))
                         .build());
     }
@@ -113,7 +113,7 @@ class CashRegisterPdfTest {
                 .salesByMethod(Map.of())
                 .totalExpenses(BigDecimal.ZERO)
                 .totalIncomes(BigDecimal.ZERO)
-                .totalWithdrawals(BigDecimal.ZERO)
+                .totalCashTips(BigDecimal.ZERO)
                 .cashSales(BigDecimal.ZERO)
                 .expectedCash(new BigDecimal("200.00"))
                 .build();

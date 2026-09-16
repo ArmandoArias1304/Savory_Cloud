@@ -1196,6 +1196,21 @@ public class OrderServiceImpl implements OrderService {
                 log.error("Failed to send WebSocket notification for order status change: {}", 
                     savedOrder.getOrderNumber(), e);
             }
+        } else {
+            // The order's overall status did not move, but individual items did (e.g. the
+            // second of three items entering preparation). The kitchen/list views would
+            // ignore this as a no-op, but the order detail views must still refresh each
+            // item badge, so a snapshot is pushed to their dedicated topic.
+            try {
+                String detailMessage = String.format(
+                    "Estados de items del pedido #%s actualizados",
+                    savedOrder.getOrderNumber()
+                );
+                wsNotificationService.notifyOrderDetailUpdate(savedOrder, detailMessage);
+            } catch (Exception e) {
+                log.error("Failed to send WebSocket order detail update: {}",
+                    savedOrder.getOrderNumber(), e);
+            }
         }
 
         return savedOrder;

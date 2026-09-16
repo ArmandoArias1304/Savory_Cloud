@@ -156,6 +156,9 @@ public class CashierController {
 
         // ========== Global Orders (NOT created by current cashier) ==========
         // PAID is only shown if collected by current cashier.
+        // ON_THE_WAY belongs to this list too: a delivery order must stay on the board while
+        // it is on its way, otherwise the row (and with it the "Entregado" button of the
+        // staff permission) disappears the moment it leaves the restaurant.
         List<Order> unpaidOrders = adminOrderService.findAll().stream()
             .filter(o -> {
                 if (o.getCreatedBy() != null && o.getCreatedBy().equals(username)) {
@@ -165,6 +168,7 @@ public class CashierController {
                     o.getStatus() == OrderStatus.PENDING ||
                     o.getStatus() == OrderStatus.IN_PREPARATION ||
                     o.getStatus() == OrderStatus.READY ||
+                    o.getStatus() == OrderStatus.ON_THE_WAY ||
                     o.getStatus() == OrderStatus.DELIVERED) {
                     return true;
                 }
@@ -295,29 +299,36 @@ public class CashierController {
         model.addAttribute("selectedDate", date);
 
         model.addAttribute("currentRole", "cashier");
+        addStaffPermissionFlags(model);
 
-        // Staff one-click "Avanzar preparación" feature flags.
-        // Mirror of OrderController.listOrders so the btn-advance-preparation renders
-        // when SystemConfiguration.enableOrderStatusPermission is ON.
-        SystemConfiguration listCfg = systemConfigurationService.getConfiguration();
-        boolean staffOrderStatusEnabled = listCfg != null
-                && Boolean.TRUE.equals(listCfg.getEnableOrderStatusPermission());
+        return "cashier/orders/list";
+    }
+
+    /**
+     * Staff one-click feature flags used by the order rows (fragments/order-actions).
+     *
+     * Mirror of OrderController.listOrders: the "Avanzar preparación" and delivery buttons
+     * only render when SystemConfiguration.enableOrderStatusPermission is ON, and each area
+     * sub-permission is chained to it.
+     */
+    private void addStaffPermissionFlags(Model model) {
+        SystemConfiguration cfg = systemConfigurationService.getConfiguration();
+        boolean staffOrderStatusEnabled = cfg != null
+                && Boolean.TRUE.equals(cfg.getEnableOrderStatusPermission());
         boolean staffChefEnabled = staffOrderStatusEnabled
-                && Boolean.TRUE.equals(listCfg.getStaffCanManageChefItems());
+                && Boolean.TRUE.equals(cfg.getStaffCanManageChefItems());
         boolean staffBaristaEnabled = staffOrderStatusEnabled
-                && Boolean.TRUE.equals(listCfg.getStaffCanManageBaristaItems());
+                && Boolean.TRUE.equals(cfg.getStaffCanManageBaristaItems());
         boolean staffParrilleroEnabled = staffOrderStatusEnabled
-                && Boolean.TRUE.equals(listCfg.getStaffCanManageParrilleroItems());
+                && Boolean.TRUE.equals(cfg.getStaffCanManageParrilleroItems());
         // Delivery orders can be advanced by the cashier when the permission is enabled.
         boolean staffDeliveryEnabled = staffOrderStatusEnabled
-                && Boolean.TRUE.equals(listCfg.getStaffCanManageDeliveryOrders());
+                && Boolean.TRUE.equals(cfg.getStaffCanManageDeliveryOrders());
         model.addAttribute("staffOrderStatusEnabled", staffOrderStatusEnabled);
         model.addAttribute("staffChefEnabled", staffChefEnabled);
         model.addAttribute("staffBaristaEnabled", staffBaristaEnabled);
         model.addAttribute("staffParrilleroEnabled", staffParrilleroEnabled);
         model.addAttribute("staffDeliveryEnabled", staffDeliveryEnabled);
-
-        return "cashier/orders/list";
     }
 
     /**
@@ -943,6 +954,24 @@ public class CashierController {
                 "Error al actualizar el pedido: " + e.getMessage());
             return "redirect:/cashier/orders";
         }
+    }
+
+    /**
+     * Renders the actions cell of ONE order row (fragments/order-actions).
+     *
+     * The list uses it to refresh THAT CELL in place, without reloading the page, when the
+     * order status changes: locally (the cashier's own click) or remotely (a STATUS_CHANGE
+     * notification pushed over WebSocket by the kitchen, the repartidor or another cashier).
+     * The available buttons depend on the status (e.g. "Cobrar pedido" only shows up once the
+     * order is ENTREGADO), so the rules stay on the server instead of being duplicated in JS.
+     */
+    @GetMapping("/orders/{id}/actions")
+    public String orderRowActions(@PathVariable Long id, Model model) {
+        Order order = cashierOrderService.findByIdOrThrow(id);
+        model.addAttribute("order", order);
+        model.addAttribute("currentRole", "cashier");
+        addStaffPermissionFlags(model);
+        return "fragments/order-actions :: actionsFromModel";
     }
 
     /**

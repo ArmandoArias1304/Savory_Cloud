@@ -45,14 +45,32 @@ public class ComandaEscPosService {
     private static final byte[] ALIGN_LEFT    = {0x1B, 0x61, 0x00};
     private static final byte[] BOLD_ON       = {0x1B, 0x45, 0x01};
     private static final byte[] BOLD_OFF      = {0x1B, 0x45, 0x00};
-    private static final byte[] DOUBLE_HEIGHT = {0x1B, 0x21, 0x10};
-    private static final byte[] DOUBLE_WIDTH_HEIGHT = {0x1B, 0x21, 0x30};
-    private static final byte[] NORMAL_SIZE   = {0x1B, 0x21, 0x00};
     private static final byte[] FONT_B        = {0x1B, 0x4D, 0x01};
     private static final byte[] FONT_A        = {0x1B, 0x4D, 0x00};
     private static final byte[] FEED_CUT      = {0x1D, 0x56, 0x00};
     private static final byte[] SET_CP1252    = {0x1B, 0x74, 0x10};
     private static final byte   LF            = 0x0A;
+
+    // ── Character sizes, biggest first (GS ! n: width multiplier in bits 7-4, height in bits 3-0).
+    //    A comanda is read standing up, several steps away from the pass, so every tier was
+    //    raised one step keeping the same order on the paper. The paper is only 32 Font A
+    //    columns wide, so a line may only grow in WIDTH while its text still fits (headerSize);
+    //    growing in HEIGHT costs paper but never forces the printer to wrap mid-word. ──
+    private static final byte[] SIZE_TITLE  = textSize(2, 3);  // COMANDA — top of the hierarchy
+    private static final byte[] SIZE_HEADER = textSize(2, 2);  // station, NUEVO PEDIDO, PEDIDO
+    private static final byte[] SIZE_STRONG = textSize(1, 2);  // items and order info
+    private static final byte[] SIZE_NORMAL = textSize(1, 1);  // notes: comments, complements, restaurant name
+
+    /**
+     * GS ! n — character size: bits 7-4 hold the width multiplier minus one, bits 3-0 the
+     * height multiplier minus one (1x..8x). This is the ESC/POS command that can express
+     * sizes beyond double width/height, which {@code ESC !} cannot.
+     */
+    private static byte[] textSize(int widthMultiplier, int heightMultiplier) {
+        int width = Math.min(8, Math.max(1, widthMultiplier)) - 1;
+        int height = Math.min(8, Math.max(1, heightMultiplier)) - 1;
+        return new byte[]{0x1D, 0x21, (byte) ((width << 4) | height)};
+    }
 
     /**
      * Returns true when the given OrderDetail should appear in the comanda for printerType.
@@ -187,31 +205,38 @@ public class ComandaEscPosService {
         // ── Header: biggest elements first so the ticket reads by importance ──
         out.write(ALIGN_CENTER);
         out.write(BOLD_ON);
-        out.write(DOUBLE_WIDTH_HEIGHT);
+        out.write(SIZE_TITLE);
         printLine(out, "COMANDA");
-        out.write(DOUBLE_HEIGHT);
+        out.write(headerSize(printerType.getDisplayName().toUpperCase()));
         printLine(out, printerType.getDisplayName().toUpperCase());
         if (delta) {
             // Addition ticket: carries only the items added after the last printed comanda
+            out.write(headerSize("NUEVO PEDIDO"));
             printLine(out, "NUEVO PEDIDO");
         }
-        out.write(NORMAL_SIZE);
+        out.write(SIZE_NORMAL);
         out.write(BOLD_OFF);
         if (config != null && config.getRestaurantName() != null) {
             printWrapped(out, "", "", config.getRestaurantName());
         }
         printSeparator(out);
 
-        // ── Order number: the anchor of the ticket (double height, normal width) ──
+        // ── Order number: the anchor of the ticket (its own line, as big as the paper allows) ──
         out.write(BOLD_ON);
-        out.write(DOUBLE_HEIGHT);
-        printLine(out, "PEDIDO #" + order.getOrderNumber());
-        out.write(NORMAL_SIZE);
+        out.write(headerSize("PEDIDO"));
+        printLine(out, "PEDIDO");
+        // The number goes on its own line and without the "#": keeping both the prefix and the
+        // hash pushed the line over the 16 columns that fit at double width, and the number is
+        // what the station reads from a distance.
+        out.write(headerSize(order.getOrderNumber()));
+        printLine(out, order.getOrderNumber());
+        out.write(SIZE_NORMAL);
         out.write(BOLD_OFF);
         printSeparator(out);
 
         // ── Order info: values aligned in a column, service data first ──
         out.write(ALIGN_LEFT);
+        out.write(SIZE_STRONG);
         if (order.getTable() != null) {
             printWrapped(out, label("Mesa:"), LABEL_INDENT, "#" + order.getTable().getTableNumber());
         }
@@ -229,6 +254,7 @@ public class ComandaEscPosService {
         }
         String dateTime = dateTimeService.formatToCompanyTime(order.getCreatedAt(), "dd/MM/yyyy HH:mm");
         printWrapped(out, label("Hora:"), LABEL_INDENT, dateTime);
+        out.write(SIZE_NORMAL);
         printSeparator(out);
 
         // ── Items: full name and comments, wrapped so nothing gets cut ──
@@ -244,7 +270,7 @@ public class ComandaEscPosService {
 
             if (groupId == null || groupId.isBlank()) {
                 printComandaItem(out, detail);
-                printWrapped(out, "      -> ", "         ", detail.getDisplayComments());
+                printComment(out, detail.getDisplayComments());
                 index++;
                 continue;
             }
@@ -269,7 +295,7 @@ public class ComandaEscPosService {
                 }
             }
             for (String comboComment : comboComments) {
-                printWrapped(out, "      -> ", "         ", comboComment);
+                printComment(out, comboComment);
             }
         }
 
@@ -293,11 +319,12 @@ public class ComandaEscPosService {
         out.write(SET_CP1252);
         out.write(ALIGN_CENTER);
         out.write(BOLD_ON);
-        out.write(DOUBLE_HEIGHT);
+        out.write(SIZE_HEADER);
         printLine(out, "PRUEBA");
-        out.write(NORMAL_SIZE);
+        out.write(SIZE_STRONG);
         printLine(out, printerType.getDisplayName().toUpperCase());
         out.write(BOLD_OFF);
+        out.write(SIZE_NORMAL);
         if (config != null && config.getRestaurantName() != null) {
             out.write(FONT_B);
             printWrapped(out, "", "", config.getRestaurantName());
@@ -305,12 +332,14 @@ public class ComandaEscPosService {
         }
         printSeparator(out);
         out.write(ALIGN_LEFT);
+        out.write(SIZE_STRONG);
         out.write(FONT_B);
         String now = dateTimeService.nowLocal().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
         printLine(out, "Hora:   " + now);
         printLine(out, "Si lees esto, la impresora");
         printLine(out, "funciona correctamente.");
         out.write(FONT_A);
+        out.write(SIZE_NORMAL);
         out.write(new byte[]{LF, LF, LF});
         out.write(FEED_CUT);
         return out.toByteArray();
@@ -324,8 +353,10 @@ public class ComandaEscPosService {
      * and goes once at the bottom of its group (see generateComanda).
      */
     private void printComandaItem(ByteArrayOutputStream out, OrderDetail detail) throws IOException {
-        // Item name bold and in the normal font so it stands out from the notes below it
+        // Item name bold and double height so it can be read on the move at the pass; its
+        // complements keep the same size, exactly as before (both were plain size before).
         out.write(BOLD_ON);
+        out.write(SIZE_STRONG);
 
         boolean isComboChild = Boolean.FALSE.equals(detail.getIsComboParentSnapshot())
                 && detail.getComboGroupId() != null;
@@ -340,6 +371,30 @@ public class ComandaEscPosService {
                         odc.getComplementName() + " x" + odc.getQuantity());
             }
         }
+        out.write(SIZE_NORMAL);
+    }
+
+    /**
+     * Prints an item note (its own comment or the shared comment of a combo) at the same size
+     * as the item it belongs to, so the item/comment hierarchy on paper does not change.
+     */
+    private void printComment(ByteArrayOutputStream out, String comment) throws IOException {
+        if (comment == null || comment.isBlank()) {
+            return;
+        }
+        out.write(SIZE_STRONG);
+        printWrapped(out, "      -> ", "         ", comment);
+        out.write(SIZE_NORMAL);
+    }
+
+    /**
+     * Size for a centered header line: double width and height when the text still fits on
+     * the paper, otherwise double height only. A 32-column printer wraps text on its own and
+     * would cut the number in half, so width is only granted to lines that fit.
+     */
+    private byte[] headerSize(String text) {
+        boolean fitsDoubleWidth = text != null && text.length() * 2 <= LINE_WIDTH;
+        return fitsDoubleWidth ? SIZE_HEADER : SIZE_STRONG;
     }
 
     /**

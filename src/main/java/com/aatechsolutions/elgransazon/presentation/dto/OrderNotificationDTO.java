@@ -28,7 +28,7 @@ public class OrderNotificationDTO {
     private LocalDateTime createdAt;
     private Integer itemCount;
     private List<OrderItemDTO> items;
-    private String notificationType; // "NEW_ORDER", "STATUS_CHANGE", "CHEF_ASSIGNED"
+    private String notificationType; // "NEW_ORDER", "STATUS_CHANGE", "CHEF_ASSIGNED", "ORDER_DETAIL"
     private String message;
     private String chefName;
     
@@ -37,8 +37,16 @@ public class OrderNotificationDTO {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class OrderItemDTO {
+        /** OrderDetail id, so a client can map an item back to its own row. */
+        private Long idOrderDetail;
         private String name;
         private Integer quantity;
         private Boolean requiresPreparation;
+        /**
+         * Per-item status (PENDING, IN_PREPARATION, READY, DELIVERED, TO_ACCEPT,
+         * CANCELLED). The order detail views use it to refresh each item badge in
+         * place when a notification arrives, without reloading the page.
+         */
+        private OrderStatus itemStatus;
     }
 }

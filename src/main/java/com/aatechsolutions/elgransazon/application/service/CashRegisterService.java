@@ -180,6 +180,9 @@ public class CashRegisterService {
      * Builds the day summary of a session: starting cash, sales collected by the
      * cashier during the session window, manual movements and the expected cash
      * (plus the counted cash/difference once the drawer was closed).
+     *
+     * Pagos leave the drawer; entradas and cash tips add to it (the tip is never part of
+     * the order total, so the money physically enters with the sale).
      */
     @Transactional(readOnly = true)
     public CashRegisterSummary buildSummary(CashRegisterSession session) {
@@ -191,7 +194,7 @@ public class CashRegisterService {
                     .salesByMethod(emptyByMethod())
                     .totalExpenses(BigDecimal.ZERO)
                     .totalIncomes(BigDecimal.ZERO)
-                    .totalWithdrawals(BigDecimal.ZERO)
+                    .totalCashTips(BigDecimal.ZERO)
                     .cashSales(BigDecimal.ZERO)
                     .expectedCash(BigDecimal.ZERO)
                     .build();
@@ -239,13 +242,16 @@ public class CashRegisterService {
 
         BigDecimal totalExpenses = BigDecimal.ZERO;
         BigDecimal totalIncomes = BigDecimal.ZERO;
-        BigDecimal totalWithdrawals = BigDecimal.ZERO;
+        BigDecimal totalCashTips = BigDecimal.ZERO;
         for (CashRegisterMovement movement : getMovements(session)) {
             BigDecimal value = movement.getAmount() != null ? movement.getAmount() : BigDecimal.ZERO;
             switch (movement.getType()) {
                 case EXPENSE -> totalExpenses = totalExpenses.add(value);
                 case INCOME -> totalIncomes = totalIncomes.add(value);
-                case WITHDRAWAL -> totalWithdrawals = totalWithdrawals.add(value);
+                // Cash tips stay in the drawer: order totals are stored without the tip, so
+                // this money arrives on top of the sale. The legacy value (used before the
+                // fix) is read the same way so old sessions still make sense.
+                case TIPS, WITHDRAWAL -> totalCashTips = totalCashTips.add(value);
             }
         }
 
@@ -253,8 +259,8 @@ public class CashRegisterService {
         BigDecimal expectedCash = initial
                 .add(cashSales)
                 .add(totalIncomes)
+                .add(totalCashTips)
                 .subtract(totalExpenses)
-                .subtract(totalWithdrawals)
                 .setScale(2, RoundingMode.HALF_UP);
 
         BigDecimal counted = session.getCountedAmount();
@@ -270,7 +276,7 @@ public class CashRegisterService {
                 .salesByMethod(byMethod)
                 .totalExpenses(totalExpenses.setScale(2, RoundingMode.HALF_UP))
                 .totalIncomes(totalIncomes.setScale(2, RoundingMode.HALF_UP))
-                .totalWithdrawals(totalWithdrawals.setScale(2, RoundingMode.HALF_UP))
+                .totalCashTips(totalCashTips.setScale(2, RoundingMode.HALF_UP))
                 .cashSales(cashSales.setScale(2, RoundingMode.HALF_UP))
                 .expectedCash(expectedCash)
                 .countedAmount(counted)

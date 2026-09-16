@@ -109,6 +109,7 @@
           </div>
           <div>
             <span
+              id="order-status-badge"
               class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-xl"
               th:classappend="${order.status.name() == 'TO_ACCEPT'} ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 ring-2 ring-amber-400/40' :
                                          (${order.status.name() == 'PENDING'} ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' : 
@@ -409,7 +410,11 @@
                           </p>
                         </div>
                       </td>
-                      <td class="py-4 px-3 text-center">
+                      <td
+                        class="py-4 px-3 text-center"
+                        th:id="'item-status-cell-' + ${detail.idOrderDetail}"
+                        th:data-combo-parent="${detail.comboParent}"
+                      >
                         <!-- Item Status Badge (hidden for combo parents) -->
                         <span
                           th:if="${detail.itemStatus != null && detail.itemStatus.name() == 'TO_ACCEPT' && !detail.comboParent}"
@@ -1954,6 +1959,19 @@
       });
       /*]]>*/
     </script>
+
+    <!-- Actualización en vivo del detalle (estado del pedido y de cada item) por WebSocket -->
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+    <script th:inline="javascript">
+      /*<![CDATA[*/
+      var ORDER_VIEW_ID = /*[[${order.idOrder}]]*/ 0;
+      var ORDER_VIEW_COMPANY_ID = /*[[${order.company != null ? order.company.idCompany : 0}]]*/ 0;
+      var ORDER_VIEW_SHOW_TO_ACCEPT = true;
+      var ORDER_VIEW_TO_ACCEPT_ICON = "hourglass_top";
+      /*]]>*/
+    </script>
+    <script th:src="@{/js/order-detail-live.js}"></script>
 
     <!-- Script del Sistema de Temas -->
     <div th:replace="~{fragments/theme :: themeScript}"></div>

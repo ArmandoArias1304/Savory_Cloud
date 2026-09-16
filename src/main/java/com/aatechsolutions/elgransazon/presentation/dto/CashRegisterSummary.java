@@ -37,13 +37,13 @@ public class CashRegisterSummary {
     /** Total cash injected (Entrada). */
     private BigDecimal totalIncomes;
 
-    /** Total withdrawn from the drawer (Retiro). */
-    private BigDecimal totalWithdrawals;
+    /** Cash tips collected with the bill and registered in the drawer (they add to it). */
+    private BigDecimal totalCashTips;
 
     /** Sales paid in cash (the only ones that end up in the drawer). */
     private BigDecimal cashSales;
 
-    /** initial + cash sales + entradas − pagos − retiros. */
+    /** initial + cash sales + entradas + propinas en efectivo − pagos. */
     private BigDecimal expectedCash;
 
     /** Physical cash counted at close (null while the drawer is open). */

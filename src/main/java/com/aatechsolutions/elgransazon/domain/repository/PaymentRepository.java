@@ -47,9 +47,15 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
 
     /**
      * Load a payment with its details and parent order (for ticket generation).
+     * The collector of the account and the table/waiter of the parent order are fetched
+     * as well: the ticket prints "Mesa" and "Cobrado por".
      */
     @Query("SELECT p FROM Payment p " +
-           "LEFT JOIN FETCH p.order " +
+           "LEFT JOIN FETCH p.order o " +
+           "LEFT JOIN FETCH o.table " +
+           "LEFT JOIN FETCH o.employee " +
+           "LEFT JOIN FETCH o.paidBy " +
+           "LEFT JOIN FETCH p.paidBy " +
            "LEFT JOIN FETCH p.paymentDetails pd " +
            "LEFT JOIN FETCH pd.orderDetail " +
            "WHERE p.idPayment = :id")
