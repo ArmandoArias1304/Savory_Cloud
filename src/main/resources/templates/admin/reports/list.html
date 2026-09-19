@@ -702,40 +702,14 @@
 
     <!-- JAVASCRIPT -->
     <script>
-      const menuToggle = document.getElementById("menuToggle");
-      const sidebar = document.getElementById("sidebar");
-      const menuOverlay = document.getElementById("menuOverlay");
-
-      menuToggle.addEventListener("click", () => {
-        sidebar.classList.toggle("open");
-        menuOverlay.classList.toggle("show");
-      });
-
-      menuOverlay.addEventListener("click", () => {
-        sidebar.classList.remove("open");
-        menuOverlay.classList.remove("show");
-      });
-
-      const navItems = document.querySelectorAll(".nav-item");
-      navItems.forEach((item) => {
-        item.addEventListener("click", () => {
-          if (window.innerWidth < 1024) {
-            sidebar.classList.remove("open");
-            menuOverlay.classList.remove("show");
-          }
-        });
-      });
-
       function clearFilters() {
         window.location.href = "/admin/reports";
       }
 
       function downloadPdf(reportType) {
-        // Get PDF-specific date values
         const startDate = document.getElementById("pdfStartDate").value;
         const endDate = document.getElementById("pdfEndDate").value;
 
-        // Build URL with query parameters
         let url = `/admin/reports/download/${reportType}`;
         const params = new URLSearchParams();
 
@@ -750,12 +724,11 @@
           url += "?" + params.toString();
         }
 
-        // Open in new tab to download
         window.open(url, "_blank");
       }
     </script>
 
-    <!-- Script del Sistema de Temas -->
+    <div th:replace="~{fragments/sidebar :: sidebarScripts}"></div>
     <div th:replace="~{fragments/theme :: themeScript}"></div>
   </body>
 </html>

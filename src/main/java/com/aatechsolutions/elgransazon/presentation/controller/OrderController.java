@@ -170,6 +170,13 @@ public class OrderController {
         }
     }
 
+    private static final String WAITER_NON_DINE_IN_MESSAGE =
+            "Los meseros solo pueden crear pedidos para comer aquí. Para pasar a recoger y entrega a domicilio deben hacerlo un administrador, gerente o cajero.";
+
+    private boolean waiterBlockedFromOrderType(String role, OrderType type) {
+        return "waiter".equalsIgnoreCase(role) && type != null && type != OrderType.DINE_IN;
+    }
+
     /**
      * Exposes whether the current admin/manager/cashier has an open cash drawer
      * so the orders list can warn on the frontend. Does not block collection.
@@ -612,6 +619,11 @@ public class OrderController {
             return "redirect:/" + role + "/orders/select-table";
         }
 
+        if (waiterBlockedFromOrderType(role, type)) {
+            redirectAttributes.addFlashAttribute("errorMessage", WAITER_NON_DINE_IN_MESSAGE);
+            return "redirect:/waiter/orders/select-table";
+        }
+
         // If DINE_IN, validate table
         RestaurantTable selectedTable = null;
         Reservation linkedReservation = null;
@@ -685,6 +697,11 @@ public class OrderController {
         } catch (IllegalArgumentException e) {
             redirectAttributes.addFlashAttribute("errorMessage", "Tipo de pedido inválido");
             return "redirect:/" + role + "/orders/select-table";
+        }
+
+        if (waiterBlockedFromOrderType(role, type)) {
+            redirectAttributes.addFlashAttribute("errorMessage", WAITER_NON_DINE_IN_MESSAGE);
+            return "redirect:/waiter/orders/select-table";
         }
 
         // Get table info if DINE_IN
@@ -1137,6 +1154,11 @@ public class OrderController {
             order.setOrderType(OrderType.DINE_IN);
         }
 
+        if (waiterBlockedFromOrderType(role, order.getOrderType())) {
+            redirectAttributes.addFlashAttribute("errorMessage", WAITER_NON_DINE_IN_MESSAGE);
+            return "redirect:/waiter/orders/select-table";
+        }
+
         // Get system configuration for tax rate and payment methods
         SystemConfiguration config = systemConfigurationService.getConfiguration();
         
@@ -1253,6 +1275,9 @@ public class OrderController {
             Object deliveryCostRaw = requestData.get("deliveryCost");
 
             OrderType orderType = orderTypeStr != null ? OrderType.valueOf(orderTypeStr) : OrderType.DINE_IN;
+            if (waiterBlockedFromOrderType(role, orderType)) {
+                throw new IllegalArgumentException(WAITER_NON_DINE_IN_MESSAGE);
+            }
             PaymentMethodType paymentMethod = paymentMethodStr != null ? PaymentMethodType.valueOf(paymentMethodStr) : PaymentMethodType.CASH;
 
             // Validate payment method based on order type
@@ -1424,6 +1449,11 @@ public class OrderController {
         // No validamos bindingResult porque Order se completa programáticamente
 
         try {
+            OrderType createdType = order.getOrderType() != null ? order.getOrderType() : OrderType.DINE_IN;
+            if (waiterBlockedFromOrderType(role, createdType)) {
+                throw new IllegalArgumentException(WAITER_NON_DINE_IN_MESSAGE);
+            }
+
             // Validate payment method is enabled based on order type (DELIVERY uses different payment methods)
             SystemConfiguration config = systemConfigurationService.getConfiguration();
             if (!config.isPaymentMethodEnabledForOrderType(order.getPaymentMethod(), order.getOrderType())) {

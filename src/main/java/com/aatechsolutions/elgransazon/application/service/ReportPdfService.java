@@ -680,12 +680,9 @@ public class ReportPdfService {
                 // same as list.html
                 BigDecimal totalDelivered = getEmployeeSales(salesByEmployee, emp.getFullName());
 
-                // Propinas: only from orders this person actually collected payment for
-                // (paidBy)
-                BigDecimal tips = paidOrders.stream()
-                        .filter(o -> o.getPaidBy() != null && o.getPaidBy().getIdEmpleado().equals(emp.getIdEmpleado()))
-                        .map(o -> o.getTip() != null ? o.getTip() : BigDecimal.ZERO)
-                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+                // Propinas: DELIVERY tips belong to the rider (deliveredBy), not
+                // whoever collected (paidBy).
+                BigDecimal tips = tipsEarnedBy(paidOrders, emp);
 
                 addTableRow(deliveryTable, regularFont,
                         String.valueOf(rank++),
@@ -734,11 +731,9 @@ public class ReportPdfService {
                         ? sales.divide(BigDecimal.valueOf(ordersCobradas), 2, java.math.RoundingMode.HALF_UP)
                         : BigDecimal.ZERO;
 
-                // Tips from orders collected by this employee
-                BigDecimal tips = paidOrders.stream()
-                        .filter(o -> o.getPaidBy() != null && o.getPaidBy().getIdEmpleado().equals(emp.getIdEmpleado()))
-                        .map(o -> o.getTip() != null ? o.getTip() : BigDecimal.ZERO)
-                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+                // Dine-in / takeout tips belong to the waiter who created the order,
+                // even when a cashier collected.
+                BigDecimal tips = tipsEarnedBy(paidOrders, emp);
 
                 addTableRow(waitersTable, regularFont,
                         String.valueOf(rank++),
@@ -784,11 +779,9 @@ public class ReportPdfService {
                                 && o.getEmployee().getIdEmpleado().equals(emp.getIdEmpleado()))
                         .count();
 
-                // Tips from orders collected by this cashier
-                BigDecimal tips = paidOrders.stream()
-                        .filter(o -> o.getPaidBy() != null && o.getPaidBy().getIdEmpleado().equals(emp.getIdEmpleado()))
-                        .map(o -> o.getTip() != null ? o.getTip() : BigDecimal.ZERO)
-                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+                // Cashier tips only for orders they actually earn (created takeout /
+                // dine-in). Collecting a waiter's table does not assign that tip here.
+                BigDecimal tips = tipsEarnedBy(paidOrders, emp);
 
                 addTableRow(cashiersTable, regularFont,
                         String.valueOf(rank++),
@@ -1242,6 +1235,17 @@ public class ReportPdfService {
     }
 
     // ========== Helper Methods ==========
+
+    /**
+     * Recorded tips that belong to {@code emp} (creator for dine-in/takeout,
+     * rider for delivery). Distinct from {@code paidBy} sales.
+     */
+    private BigDecimal tipsEarnedBy(java.util.List<Order> paidOrders, Employee emp) {
+        return paidOrders.stream()
+                .filter(o -> o.tipBelongsTo(emp))
+                .map(o -> o.getTip() != null ? o.getTip() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
 
     /**
      * Get employee sales from salesByEmployee list by name

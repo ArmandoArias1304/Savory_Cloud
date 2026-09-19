@@ -293,8 +293,10 @@ public class DeliveryController {
                     model.addAttribute("enabledPaymentMethodNames", enabledPaymentMethodNames);
                     // Delivery orders are always charged complete at the door (no partial departures)
                     model.addAttribute("splitDeparture", false);
-                    // Delivery allows a cash tip per account (zeroCashTips=false).
-                    model.addAttribute("splitZeroCashTips", false);
+                    // Delivery cash-only collections do not capture a tip: the extra
+                    // cash is handed to caja as a TIPS movement. Card/transfer may
+                    // still record a tip for the rider (deliveredBy).
+                    model.addAttribute("splitZeroCashTips", true);
                     // Parts-equal was removed (SAT): a product cannot be divided,
                     // so the split editor is per-person (whole items) only.
                     model.addAttribute("splitAllowEqual", false);
@@ -385,6 +387,12 @@ public class DeliveryController {
                     order.getTotal());
             PaymentTenderSupport.validateAmounts(mix, null);
             PaymentTenderSupport.assertMethodsAllowed(mix, config::isDeliveryPaymentMethodEnabled, null);
+
+            // Cash-only: the extra cash is handed to caja as a TIPS movement.
+            // Mixed collections that include a card/transfer may still record a tip.
+            if (PaymentTenderSupport.isCashOnly(mix)) {
+                tip = BigDecimal.ZERO;
+            }
 
             // Set tip, payment mix and paidBy before changing status to PAID
             order.setTip(tip);
@@ -484,9 +492,10 @@ public class DeliveryController {
         String baseUrl = req.getScheme() + "://" + req.getServerName()
                 + (req.getServerPort() == 80 || req.getServerPort() == 443 ? "" : ":" + req.getServerPort());
 
-        // Create the per-person payments. Delivery keeps tips as entered (no CASH zeroing).
+        // Create the per-person payments. Cash-only accounts get tip = 0
+        // (extra cash is registered later in caja as a TIPS movement).
         List<com.aatechsolutions.elgransazon.domain.entity.Payment> payments =
-                splitPaymentService.createSplitPayments(order, mode, accounts, currentEmployee, username, false, baseUrl);
+                splitPaymentService.createSplitPayments(order, mode, accounts, currentEmployee, username, true, baseUrl);
 
         // Order-level metadata for backward compatibility: tip = sum of ALL
         // account tips of this order (earlier charges included), so tip
@@ -543,17 +552,12 @@ public class DeliveryController {
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
             
             // Get today's paid orders
-            java.time.LocalDateTime startOfDay = dateTimeService.todayLocal().atStartOfDay();
-            java.time.LocalDateTime endOfDay = dateTimeService.todayLocal().atTime(java.time.LocalTime.MAX);
+            java.time.LocalDate today = dateTimeService.todayLocal();
+            java.time.LocalDateTime startOfDay = dateTimeService.startOfDayUtc(today);
+            java.time.LocalDateTime endOfDay = dateTimeService.endOfDayUtc(today);
             
             List<Order> todaysPaidOrders = allPaidOrders.stream()
-                    .filter(order -> {
-                        java.time.LocalDateTime paidAt = order.getPaidAt() != null ? order.getPaidAt()
-                                : (order.getUpdatedAt() != null ? order.getUpdatedAt() : order.getCreatedAt());
-                        return paidAt != null && 
-                               !paidAt.isBefore(startOfDay) && 
-                               !paidAt.isAfter(endOfDay);
-                    })
+                    .filter(order -> inUtcRange(paymentTime(order), startOfDay, endOfDay))
                     .collect(Collectors.toList());
             
             // Calculate today's tips
@@ -648,17 +652,12 @@ public class DeliveryController {
             
             // Get today's date
             java.time.LocalDate today = dateTimeService.todayLocal();
-            java.time.LocalDateTime startOfDay = today.atStartOfDay();
-            java.time.LocalDateTime endOfDay = today.atTime(java.time.LocalTime.MAX);
+            java.time.LocalDateTime startOfDay = dateTimeService.startOfDayUtc(today);
+            java.time.LocalDateTime endOfDay = dateTimeService.endOfDayUtc(today);
             
             // Today's orders (filter by deliveredAt: when this delivery actually completed it)
             List<Order> todaysOrders = allOrders.stream()
-                    .filter(order -> {
-                        java.time.LocalDateTime deliveredAt = order.getDeliveredAt();
-                        return deliveredAt != null &&
-                               !deliveredAt.isBefore(startOfDay) &&
-                               !deliveredAt.isAfter(endOfDay);
-                    })
+                    .filter(order -> inUtcRange(order.getDeliveredAt(), startOfDay, endOfDay))
                     .collect(Collectors.toList());
             
             // Calculate statistics
@@ -676,11 +675,7 @@ public class DeliveryController {
             long todayReady = todaysOrders.stream().filter(o -> o.getStatus() == OrderStatus.READY).count();
             long todayDelivered = todaysOrders.stream().filter(o -> o.getStatus() == OrderStatus.DELIVERED).count();
             long todayPaid = paidOrders.stream()
-                    .filter(order -> {
-                        java.time.LocalDateTime paidAt = order.getPaidAt() != null ? order.getPaidAt()
-                                : (order.getUpdatedAt() != null ? order.getUpdatedAt() : order.getCreatedAt());
-                        return paidAt != null && !paidAt.isBefore(startOfDay) && !paidAt.isAfter(endOfDay);
-                    })
+                    .filter(order -> inUtcRange(paymentTime(order), startOfDay, endOfDay))
                     .count();
             long todayCancelled = todaysOrders.stream().filter(o -> o.getStatus() == OrderStatus.CANCELLED).count();
             
@@ -694,20 +689,12 @@ public class DeliveryController {
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
             
             BigDecimal todayRevenue = paidOrders.stream()
-                    .filter(order -> {
-                        java.time.LocalDateTime paidAt = order.getPaidAt() != null ? order.getPaidAt()
-                                : (order.getUpdatedAt() != null ? order.getUpdatedAt() : order.getCreatedAt());
-                        return paidAt != null && !paidAt.isBefore(startOfDay) && !paidAt.isAfter(endOfDay);
-                    })
+                    .filter(order -> inUtcRange(paymentTime(order), startOfDay, endOfDay))
                     .map(order -> order.getTotal() != null ? order.getTotal() : BigDecimal.ZERO)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
             
             BigDecimal todayTips = paidOrders.stream()
-                    .filter(order -> {
-                        java.time.LocalDateTime paidAt = order.getPaidAt() != null ? order.getPaidAt()
-                                : (order.getUpdatedAt() != null ? order.getUpdatedAt() : order.getCreatedAt());
-                        return paidAt != null && !paidAt.isBefore(startOfDay) && !paidAt.isAfter(endOfDay);
-                    })
+                    .filter(order -> inUtcRange(paymentTime(order), startOfDay, endOfDay))
                     .map(order -> order.getTip() != null ? order.getTip() : BigDecimal.ZERO)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
             
@@ -722,37 +709,24 @@ public class DeliveryController {
             
             for (int i = 6; i >= 0; i--) {
                 java.time.LocalDate date = today.minusDays(i);
-                java.time.LocalDateTime dayStart = date.atStartOfDay();
-                java.time.LocalDateTime dayEnd = date.atTime(java.time.LocalTime.MAX);
+                java.time.LocalDateTime dayStart = dateTimeService.startOfDayUtc(date);
+                java.time.LocalDateTime dayEnd = dateTimeService.endOfDayUtc(date);
                 
                 String dateKey = date.format(formatter);
                 
                 List<Order> dayOrders = allOrders.stream()
-                        .filter(order -> {
-                            java.time.LocalDateTime deliveredAt = order.getDeliveredAt();
-                            return deliveredAt != null &&
-                                   !deliveredAt.isBefore(dayStart) &&
-                                   !deliveredAt.isAfter(dayEnd);
-                        })
+                        .filter(order -> inUtcRange(order.getDeliveredAt(), dayStart, dayEnd))
                         .collect(Collectors.toList());
                 
                 long dayOrderCount = dayOrders.size();
                 
                 BigDecimal dayRevenue = paidOrders.stream()
-                        .filter(order -> {
-                            java.time.LocalDateTime paidAt = order.getPaidAt() != null ? order.getPaidAt()
-                                    : (order.getUpdatedAt() != null ? order.getUpdatedAt() : order.getCreatedAt());
-                            return paidAt != null && !paidAt.isBefore(dayStart) && !paidAt.isAfter(dayEnd);
-                        })
+                        .filter(order -> inUtcRange(paymentTime(order), dayStart, dayEnd))
                         .map(order -> order.getTotal() != null ? order.getTotal() : BigDecimal.ZERO)
                         .reduce(BigDecimal.ZERO, BigDecimal::add);
                 
                 BigDecimal dayTips = paidOrders.stream()
-                        .filter(order -> {
-                            java.time.LocalDateTime paidAt = order.getPaidAt() != null ? order.getPaidAt()
-                                    : (order.getUpdatedAt() != null ? order.getUpdatedAt() : order.getCreatedAt());
-                            return paidAt != null && !paidAt.isBefore(dayStart) && !paidAt.isAfter(dayEnd);
-                        })
+                        .filter(order -> inUtcRange(paymentTime(order), dayStart, dayEnd))
                         .map(order -> order.getTip() != null ? order.getTip() : BigDecimal.ZERO)
                         .reduce(BigDecimal.ZERO, BigDecimal::add);
                 
@@ -839,5 +813,21 @@ public class DeliveryController {
             redirectAttributes.addFlashAttribute("errorMessage", "Error al cargar el menú");
             return "redirect:/delivery/dashboard";
         }
+    }
+
+    private static java.time.LocalDateTime paymentTime(Order order) {
+        if (order.getPaidAt() != null) {
+            return order.getPaidAt();
+        }
+        if (order.getUpdatedAt() != null) {
+            return order.getUpdatedAt();
+        }
+        return order.getCreatedAt();
+    }
+
+    private static boolean inUtcRange(java.time.LocalDateTime timestamp,
+                                      java.time.LocalDateTime start,
+                                      java.time.LocalDateTime end) {
+        return timestamp != null && !timestamp.isBefore(start) && !timestamp.isAfter(end);
     }
 }

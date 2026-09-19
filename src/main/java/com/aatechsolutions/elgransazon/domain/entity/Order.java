@@ -29,7 +29,7 @@ import java.util.Map;
 @AllArgsConstructor
 @Builder
 @EqualsAndHashCode(of = {"idOrder"})
-@ToString(exclude = {"company", "table", "employee", "preparedBy", "paidBy", "orderDetails", "payments", "paymentTenders"})
+@ToString(exclude = {"company", "table", "employee", "preparedBy", "paidBy", "deliveredBy", "orderDetails", "payments", "paymentTenders"})
 public class Order implements Serializable {
 
     @Id
@@ -1004,6 +1004,33 @@ public class Order implements Serializable {
      */
     public String getFormattedTotalWithTip() {
         return String.format("$%.2f", getTotalWithTip());
+    }
+
+    /**
+     * Employee who earns the recorded (non-cash) tip.
+     * Delivery goes to the rider ({@code deliveredBy}); dine-in and takeout go
+     * to whoever created/took the order ({@code employee}). {@code paidBy} is
+     * only a last fallback when those fields are missing.
+     */
+    public Employee getTipBeneficiary() {
+        if (orderType == OrderType.DELIVERY && deliveredBy != null) {
+            return deliveredBy;
+        }
+        if (employee != null) {
+            return employee;
+        }
+        return paidBy;
+    }
+
+    /**
+     * True when {@code emp} is the person this order's recorded tip belongs to.
+     */
+    public boolean tipBelongsTo(Employee emp) {
+        if (emp == null || emp.getIdEmpleado() == null) {
+            return false;
+        }
+        Employee beneficiary = getTipBeneficiary();
+        return beneficiary != null && emp.getIdEmpleado().equals(beneficiary.getIdEmpleado());
     }
 
     /**

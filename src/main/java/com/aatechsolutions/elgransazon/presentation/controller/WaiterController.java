@@ -123,10 +123,11 @@ public class WaiterController {
             Employee employee = employeeService.findByUsername(username)
                     .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
             
-            // Get all PAID orders for this employee
+            // Tips belong to the waiter who created dine-in/takeout, not whoever collected.
             List<Order> allPaidOrders = orderRepository.findByEmployeeId(employee.getIdEmpleado())
                     .stream()
                     .filter(order -> order.getStatus() == OrderStatus.PAID)
+                    .filter(order -> order.tipBelongsTo(employee))
                     .toList();
             
             // Calculate total tips (all time)
@@ -239,10 +240,12 @@ public class WaiterController {
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
 
             BigDecimal totalTips = createdOrders.stream()
+                    .filter(order -> order.tipBelongsTo(employee))
                     .map(order -> order.getTip() != null ? order.getTip() : BigDecimal.ZERO)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
 
             BigDecimal todayTips = todaysCreatedOrders.stream()
+                    .filter(order -> order.tipBelongsTo(employee))
                     .map(order -> order.getTip() != null ? order.getTip() : BigDecimal.ZERO)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
 
@@ -274,6 +277,7 @@ public class WaiterController {
                         .reduce(BigDecimal.ZERO, BigDecimal::add);
 
                 BigDecimal dayTips = dayOrders.stream()
+                        .filter(order -> order.tipBelongsTo(employee))
                         .map(order -> order.getTip() != null ? order.getTip() : BigDecimal.ZERO)
                         .reduce(BigDecimal.ZERO, BigDecimal::add);
 
@@ -287,8 +291,9 @@ public class WaiterController {
                     ? totalRevenue.divide(BigDecimal.valueOf(createdOrders.size()), 2, java.math.RoundingMode.HALF_UP)
                     : BigDecimal.ZERO;
 
-            BigDecimal averageTip = !createdOrders.isEmpty()
-                    ? totalTips.divide(BigDecimal.valueOf(createdOrders.size()), 2, java.math.RoundingMode.HALF_UP)
+            long tipOrderCount = createdOrders.stream().filter(order -> order.tipBelongsTo(employee)).count();
+            BigDecimal averageTip = tipOrderCount > 0
+                    ? totalTips.divide(BigDecimal.valueOf(tipOrderCount), 2, java.math.RoundingMode.HALF_UP)
                     : BigDecimal.ZERO;
 
             // Counts

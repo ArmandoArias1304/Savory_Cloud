@@ -392,13 +392,13 @@
               </div>
               <form
                 id="logoutForm"
-                action="/logout"
+                th:action="@{/logout}"
                 method="post"
                 style="display: inline; width: 100%"
               >
                 <button
                   id="logoutBtn"
-                  type="button"
+                  type="submit"
                   class="w-full flex items-center justify-center gap-2 px-3 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium text-xs sm:text-sm transition-colors shadow-md hover:shadow-lg"
                 >
                   <span class="material-symbols-outlined text-lg">logout</span>
@@ -413,6 +413,7 @@
 
     <!-- SIDEBAR JAVASCRIPT Fragment -->
     <th:block th:fragment="sidebarScripts">
+      <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
       <script>
         // Sidebar toggle (guarded: pages that include this fragment without the
         // sidebar markup, e.g. fullscreen order-menu, must not throw).
@@ -441,53 +442,53 @@
             });
           });
         }
-        // Modal de confirmación para cerrar sesión
+        // Confirmación al cerrar sesión. El botón es type=submit: si este
+        // script no carga, el POST /logout igual funciona.
         document.addEventListener("DOMContentLoaded", function () {
-          const logoutBtn = document.getElementById("logoutBtn");
           const logoutForm = document.getElementById("logoutForm");
-          if (logoutBtn && logoutForm) {
-            logoutBtn.addEventListener("click", function (e) {
-              e.preventDefault();
-              const isDark =
-                document.documentElement.classList.contains("dark");
-
-              // Respaldo: si la vista no cargó SweetAlert2, cerrar sesión con el
-              // confirm() nativo en lugar de dejar el botón sin respuesta.
-              if (typeof window.Swal === "undefined" || !window.Swal.fire) {
-                if (
-                  window.confirm("¿Estás seguro de que deseas cerrar sesión?")
-                ) {
-                  logoutForm.submit();
-                }
-                return;
-              }
-
-              Swal.fire({
-                title: "¿Cerrar sesión?",
-                text: "¿Estás seguro de que deseas cerrar sesión?",
-                icon: "warning",
-                showCancelButton: true,
-                confirmButtonText: "Sí, cerrar sesión",
-                cancelButtonText: "Cancelar",
-                focusCancel: true,
-                background: isDark ? "#1f2937" : "#fff",
-                color: isDark ? "#f3f4f6" : "#1f2937",
-                confirmButtonColor: "#e53e3e",
-                cancelButtonColor: isDark ? "#374151" : "#e5e7eb",
-                customClass: {
-                  popup: "rounded-2xl",
-                  confirmButton: "rounded-lg px-6 py-2 font-bold",
-                  cancelButton: "rounded-lg px-6 py-2 font-bold",
-                },
-                reverseButtons: true,
-                backdrop: "rgba(0,0,0,0.6)",
-              }).then((result) => {
-                if (result.isConfirmed) {
-                  logoutForm.submit();
-                }
-              });
-            });
+          if (!logoutForm || logoutForm.dataset.logoutBound === "true") {
+            return;
           }
+          logoutForm.dataset.logoutBound = "true";
+          logoutForm.addEventListener("submit", function (e) {
+            e.preventDefault();
+            const isDark =
+              document.documentElement.classList.contains("dark");
+
+            if (typeof window.Swal === "undefined" || !window.Swal.fire) {
+              if (
+                window.confirm("¿Estás seguro de que deseas cerrar sesión?")
+              ) {
+                logoutForm.submit();
+              }
+              return;
+            }
+
+            Swal.fire({
+              title: "¿Cerrar sesión?",
+              text: "¿Estás seguro de que deseas cerrar sesión?",
+              icon: "warning",
+              showCancelButton: true,
+              confirmButtonText: "Sí, cerrar sesión",
+              cancelButtonText: "Cancelar",
+              focusCancel: true,
+              background: isDark ? "#1f2937" : "#fff",
+              color: isDark ? "#f3f4f6" : "#1f2937",
+              confirmButtonColor: "#e53e3e",
+              cancelButtonColor: isDark ? "#374151" : "#e5e7eb",
+              customClass: {
+                popup: "rounded-2xl",
+                confirmButton: "rounded-lg px-6 py-2 font-bold",
+                cancelButton: "rounded-lg px-6 py-2 font-bold",
+              },
+              reverseButtons: true,
+              backdrop: "rgba(0,0,0,0.6)",
+            }).then((result) => {
+              if (result.isConfirmed) {
+                logoutForm.submit();
+              }
+            });
+          });
         });
       </script>
 

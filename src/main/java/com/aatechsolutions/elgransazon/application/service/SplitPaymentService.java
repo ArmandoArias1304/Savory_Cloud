@@ -63,7 +63,7 @@ public class SplitPaymentService {
      * @param accounts     per-person data (method, tip, items)
      * @param paidBy       employee collecting the payments
      * @param username     audit user
-     * @param zeroCashTips force tip = 0 for CASH accounts (restaurant rule; not for delivery)
+     * @param zeroCashTips force tip = 0 for CASH-only accounts (restaurant and delivery)
      * @param baseUrl      request base URL for autofactura self-invoice links
      * @return the created payments (with IDs), ordered by account number
      */

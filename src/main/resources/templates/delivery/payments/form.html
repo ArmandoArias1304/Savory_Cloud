@@ -520,6 +520,7 @@
                       <button
                         type="button"
                         onclick="setTipPercentage(event, 0)"
+                        data-percent="0"
                         class="tip-btn active rounded-xl bg-gray-100 dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600 py-3 font-bold text-gray-700 dark:text-gray-300 text-sm"
                       >
                         0%
@@ -527,6 +528,7 @@
                       <button
                         type="button"
                         onclick="setTipPercentage(event, 10)"
+                        data-percent="10"
                         class="tip-btn rounded-xl bg-gray-100 dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600 py-3 font-bold text-gray-700 dark:text-gray-300 text-sm"
                       >
                         10%
@@ -534,6 +536,7 @@
                       <button
                         type="button"
                         onclick="setTipPercentage(event, 15)"
+                        data-percent="15"
                         class="tip-btn rounded-xl bg-gray-100 dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600 py-3 font-bold text-gray-700 dark:text-gray-300 text-sm"
                       >
                         15%
@@ -541,6 +544,7 @@
                       <button
                         type="button"
                         onclick="setTipPercentage(event, 20)"
+                        data-percent="20"
                         class="tip-btn rounded-xl bg-gray-100 dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600 py-3 font-bold text-gray-700 dark:text-gray-300 text-sm"
                       >
                         20%
@@ -585,6 +589,21 @@
                           >$0.00</span
                         >
                       </div>
+                    </div>
+                  </div>
+
+                  <div
+                    id="tipCashNote"
+                    style="display: none"
+                    class="rounded-xl bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 px-4 py-3"
+                  >
+                    <div class="flex items-center gap-2">
+                      <span class="material-symbols-outlined">payments</span>
+                      <p class="font-medium text-sm">
+                        Si el cliente deja propina en efectivo, entrégala a caja
+                        (admin, gerente o cajero) para que la registren como
+                        movimiento del día de tipo Propina. No se captura aquí.
+                      </p>
                     </div>
                   </div>
 
@@ -925,8 +944,8 @@
         // comps = complementos efectivos: para un combo padre incluye los complementos de sus hijos
         items: /*[[${order.splitBillItems}]]*/ [],
         departure: false,
-        // Delivery allows a cash tip captured per account
-        zeroCashTips: /*[[${splitZeroCashTips}]]*/ false,
+        // Cash-only accounts do not capture a tip (handed to caja as a TIPS movement)
+        zeroCashTips: /*[[${splitZeroCashTips}]]*/ true,
         // Parts-equal removed (SAT): the split editor is per-person only; this
         // flag keeps any cached JS in per-person mode.
         allowEqual: false,
@@ -975,7 +994,6 @@
         const tipAmount = (orderTotal * percentage) / 100;
         document.getElementById("tip").value = tipAmount.toFixed(2);
 
-        // Update button states
         document.querySelectorAll(".tip-btn").forEach((btn) => {
           btn.classList.remove("active");
         });
@@ -989,6 +1007,40 @@
         const element = document.getElementById(id);
         if (element) {
           element.textContent = text;
+        }
+      }
+
+      function syncTipSection() {
+        if (window.SPLIT_BILL && window.SPLIT_BILL.enabled()) {
+          const tipSection = document.getElementById("tipSection");
+          const tipCashNote = document.getElementById("tipCashNote");
+          const tipLine = document.getElementById("tip-line");
+          if (tipSection) tipSection.style.display = "none";
+          if (tipCashNote) tipCashNote.style.display = "none";
+          if (tipLine) tipLine.style.display = "none";
+          return;
+        }
+        const isCash = window.MIXED_PAYMENT
+          ? MIXED_PAYMENT.isCashOnly() && MIXED_PAYMENT.zeroCashTips()
+          : document.getElementById("paymentMethodInput").value === "CASH";
+
+        const tipSection = document.getElementById("tipSection");
+        const tipCashNote = document.getElementById("tipCashNote");
+        const tipLine = document.getElementById("tip-line");
+
+        if (tipSection) tipSection.style.display = isCash ? "none" : "";
+        if (tipCashNote) tipCashNote.style.display = isCash ? "" : "none";
+        if (tipLine) tipLine.style.display = isCash ? "none" : "";
+
+        if (isCash) {
+          const tipInput = document.getElementById("tip");
+          if (tipInput) tipInput.value = "0.00";
+          document.querySelectorAll(".tip-btn").forEach((btn) => {
+            btn.classList.remove("active");
+          });
+          const zeroBtn = document.querySelector('.tip-btn[data-percent="0"]');
+          if (zeroBtn) zeroBtn.classList.add("active");
+          calculateTotalWithTip();
         }
       }
 
@@ -1212,6 +1264,7 @@
       document.addEventListener("DOMContentLoaded", function () {
         calculateTotalWithTip();
         if (window.MIXED_PAYMENT) MIXED_PAYMENT.init();
+        syncTipSection();
       });
     </script>
 

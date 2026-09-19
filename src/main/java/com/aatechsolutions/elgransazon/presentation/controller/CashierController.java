@@ -1379,10 +1379,19 @@ public class CashierController {
             // MULTI-TENANT: Filter orders by company
             Company company = CompanyContext.requireCurrentCompany();
             
-            // Get all orders collected by this cashier (PAID orders where paidBy = current cashier)
-            List<Order> collectedOrders = orderRepository.findByCompany(company).stream()
+            List<Order> paidOrders = orderRepository.findByCompany(company).stream()
                     .filter(order -> order.getStatus() == OrderStatus.PAID)
+                    .toList();
+
+            // Revenue: orders this cashier actually collected (paidBy).
+            List<Order> collectedOrders = paidOrders.stream()
                     .filter(order -> order.getPaidBy() != null && order.getPaidBy().getIdEmpleado().equals(employee.getIdEmpleado()))
+                    .toList();
+
+            // Tips: dine-in/takeout they created, or delivery they rode. Collecting
+            // someone else's table must not credit their tip here.
+            List<Order> tipOrders = paidOrders.stream()
+                    .filter(order -> order.tipBelongsTo(employee))
                     .toList();
             
             // Get today's date
@@ -1410,14 +1419,21 @@ public class CashierController {
             BigDecimal todayRevenue = todaysCollectedOrders.stream()
                     .map(Order::getTotal)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
-            
-            // Total tips collected
-            BigDecimal totalTips = collectedOrders.stream()
+
+            List<Order> todaysTipOrders = tipOrders.stream()
+                    .filter(order -> {
+                        java.time.LocalDateTime paidAt = order.getPaidAt() != null
+                                ? order.getPaidAt()
+                                : (order.getUpdatedAt() != null ? order.getUpdatedAt() : order.getCreatedAt());
+                        return paidAt.isAfter(startOfDay) && paidAt.isBefore(endOfDay);
+                    })
+                    .toList();
+
+            BigDecimal totalTips = tipOrders.stream()
                     .map(order -> order.getTip() != null ? order.getTip() : BigDecimal.ZERO)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
-            
-            // Today's tips
-            BigDecimal todayTips = todaysCollectedOrders.stream()
+
+            BigDecimal todayTips = todaysTipOrders.stream()
                     .map(order -> order.getTip() != null ? order.getTip() : BigDecimal.ZERO)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
             
@@ -1429,13 +1445,13 @@ public class CashierController {
             BigDecimal todayAverageOrderValue = todaysCollectedOrders.size() > 0
                     ? todayRevenue.divide(BigDecimal.valueOf(todaysCollectedOrders.size()), 2, java.math.RoundingMode.HALF_UP)
                     : BigDecimal.ZERO;
-            
-            BigDecimal averageTip = collectedOrders.size() > 0
-                    ? totalTips.divide(BigDecimal.valueOf(collectedOrders.size()), 2, java.math.RoundingMode.HALF_UP)
+
+            BigDecimal averageTip = !tipOrders.isEmpty()
+                    ? totalTips.divide(BigDecimal.valueOf(tipOrders.size()), 2, java.math.RoundingMode.HALF_UP)
                     : BigDecimal.ZERO;
-            
-            BigDecimal todayAverageTip = todaysCollectedOrders.size() > 0
-                    ? todayTips.divide(BigDecimal.valueOf(todaysCollectedOrders.size()), 2, java.math.RoundingMode.HALF_UP)
+
+            BigDecimal todayAverageTip = !todaysTipOrders.isEmpty()
+                    ? todayTips.divide(BigDecimal.valueOf(todaysTipOrders.size()), 2, java.math.RoundingMode.HALF_UP)
                     : BigDecimal.ZERO;
             
             // Order counts
@@ -1472,7 +1488,13 @@ public class CashierController {
                         .reduce(BigDecimal.ZERO, BigDecimal::add);
                 last7DaysRevenueData.add(dayRevenue);
                 
-                BigDecimal dayTips = dayOrders.stream()
+                BigDecimal dayTips = tipOrders.stream()
+                        .filter(order -> {
+                            java.time.LocalDateTime paidAt = order.getPaidAt() != null
+                                    ? order.getPaidAt()
+                                    : (order.getUpdatedAt() != null ? order.getUpdatedAt() : order.getCreatedAt());
+                            return paidAt.isAfter(dayStart) && paidAt.isBefore(dayEnd);
+                        })
                         .map(order -> order.getTip() != null ? order.getTip() : BigDecimal.ZERO)
                         .reduce(BigDecimal.ZERO, BigDecimal::add);
                 last7DaysTipsData.add(dayTips);
