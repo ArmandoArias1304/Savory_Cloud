@@ -1261,12 +1261,13 @@
                       const notInvoicedTotal =
                         Number(data.notInvoicedTotal) || 0;
 
+                      const ticketCount = invoicedCount + notInvoicedCount;
                       const invoicedPct =
-                        paidCount > 0
-                          ? Math.round((invoicedCount / paidCount) * 100)
+                        ticketCount > 0
+                          ? Math.round((invoicedCount / ticketCount) * 100)
                           : 0;
                       const notInvoicedPct =
-                        paidCount > 0 ? 100 - invoicedPct : 0;
+                        ticketCount > 0 ? 100 - invoicedPct : 0;
 
                       document.getElementById("paidCount").textContent =
                         paidCount;

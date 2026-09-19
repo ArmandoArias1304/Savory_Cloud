@@ -276,7 +276,7 @@
               class="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-4"
             >
               <div
-                class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 flex-1"
+                class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 flex-1"
               >
                 <!-- Table Filter -->
                 <div>
@@ -351,6 +351,26 @@
                     class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
                   />
                 </div>
+
+                <!-- Payment Method Filter -->
+                <div>
+                  <label
+                    class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                    >Método de Pago</label
+                  >
+                  <select
+                    id="filterPaymentMethod"
+                    class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                  >
+                    <option value="">Todos los métodos</option>
+                    <option
+                      th:each="method : ${paymentMethods}"
+                      th:value="${method}"
+                      th:text="${method.displayName}"
+                      th:selected="${selectedPaymentMethod != null && selectedPaymentMethod == method}"
+                    ></option>
+                  </select>
+                </div>
               </div>
 
               <!-- Filter Actions -->
@@ -402,6 +422,7 @@
                     <th class="px-6 py-4 font-semibold">Tipo</th>
                     <th class="px-6 py-4 font-semibold">Cliente</th>
                     <th class="px-6 py-4 font-semibold">Total</th>
+                    <th class="px-6 py-4 font-semibold">Pago</th>
                     <th class="px-6 py-4 font-semibold">Estado</th>
                     <th class="px-6 py-4 font-semibold text-center">
                       Acciones
@@ -413,7 +434,7 @@
                 <tbody>
                   <tr th:if="${orders.empty}">
                     <td
-                      colspan="10"
+                      colspan="11"
                       class="px-6 py-12 text-center text-gray-500 dark:text-gray-400"
                     >
                       <span
@@ -433,10 +454,12 @@
                     <!-- Order Number -->
                     <td class="px-6 py-4 whitespace-nowrap">
                       <div class="flex items-center gap-2">
-                        <span
-                          class="text-sm font-mono font-semibold text-primary"
+                        <a
+                          th:href="@{/admin/orders/view/{id}(id=${order.idOrder})}"
+                          class="text-sm font-mono font-semibold text-primary hover:underline"
+                          title="Ver pedido"
                           th:text="${order.orderNumber}"
-                        ></span>
+                        ></a>
                         <!-- New Items Indicator -->
                         <span
                           th:if="${order.hasNewItems()}"
@@ -506,6 +529,16 @@
                           th:text="${#numbers.formatDecimal(order.total, 1, 2)}"
                         ></span
                       ></span>
+                    </td>
+
+                    <!-- Payment Method -->
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <span
+                        class="px-3 py-1 text-xs rounded-full font-medium"
+                        th:classappend="${order.hasMixedPaymentMethods()} ? 'bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-300' : (${order.paymentMethod != null and order.paymentMethod.name() == 'CASH'} ? 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400' : 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400')"
+                        th:text="${order.paymentMethodsDisplay}"
+                      >
+                      </span>
                     </td>
 
                     <!-- Status -->
@@ -748,7 +781,7 @@
                           ></span>
                           <span
                             class="text-xs text-gray-500 dark:text-gray-400"
-                            th:text="${payment.paymentMethod.displayName}"
+                            th:text="${payment.paymentMethodsDisplay}"
                           ></span>
                           <span
                             class="text-xs font-semibold text-gray-900 dark:text-white"
@@ -899,12 +932,16 @@
         const status = document.getElementById("filterStatus").value;
         const orderType = document.getElementById("filterOrderType").value;
         const date = document.getElementById("filterDate").value;
+        const paymentMethod = document.getElementById("filterPaymentMethod")
+          ? document.getElementById("filterPaymentMethod").value
+          : "";
 
         let url = "/admin/orders?";
         if (tableId) url += `tableId=${tableId}&`;
         if (status) url += `status=${status}&`;
         if (orderType) url += `orderType=${orderType}&`;
         if (date) url += `date=${date}&`;
+        if (paymentMethod) url += `paymentMethod=${paymentMethod}&`;
 
         window.location.href = url;
       }
@@ -2117,5 +2154,38 @@
 
     <!-- Script del Sistema de Temas -->
     <div th:replace="~{fragments/theme :: themeScript}"></div>
+    <script th:inline="javascript">
+      /*<![CDATA[*/
+      (function () {
+        var cashOpen = /*[[${cashRegisterOpen}]]*/ true;
+        if (cashOpen) return;
+        var cashUrl = /*[[${cashRegisterUrl}]]*/ "/admin/cash-register";
+        document.addEventListener("DOMContentLoaded", function () {
+          if (typeof Swal === "undefined") return;
+          var isDark = document.documentElement.classList.contains("dark");
+          Swal.fire({
+            icon: "warning",
+            title: "Caja cerrada",
+            html:
+              "<p>Debes abrir tu caja antes de cobrar un pedido.</p>" +
+              "<p class='text-sm mt-2'>Este aviso no impide continuar, pero los cobros en efectivo no se registrarán en caja hasta que la abras.</p>",
+            confirmButtonText: "Ir a caja",
+            showCancelButton: true,
+            cancelButtonText: "Entendido",
+            confirmButtonColor: "#38e07b",
+            cancelButtonColor: "#6b7280",
+            reverseButtons: true,
+            background: isDark ? "#1f2937" : "#ffffff",
+            color: isDark ? "#f3f4f6" : "#1f2937",
+            customClass: typeof getSwalDarkModeClasses === "function" ? getSwalDarkModeClasses() : { popup: "rounded-2xl" },
+          }).then(function (result) {
+            if (result.isConfirmed && cashUrl) {
+              window.location.href = cashUrl;
+            }
+          });
+        });
+      })();
+      /*]]>*/
+    </script>
   </body>
 </html>

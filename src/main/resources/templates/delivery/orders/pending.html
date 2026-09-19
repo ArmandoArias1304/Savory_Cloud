@@ -548,7 +548,7 @@
                   <span class="text-xs text-gray-600 dark:text-gray-400">
                     Pago:
                     <span
-                      th:text="${order.paymentMethod.displayName}"
+                      th:text="${order.paymentMethodsDisplay}"
                       class="font-semibold"
                     ></span>
                   </span>
@@ -585,7 +585,7 @@
               <!-- Collect Payment Button (DELIVERED -> Payment Form) -->
               <!-- Método de pago habilitado para delivery - Botón habilitado -->
               <a
-                th:if="${order.status.name() == 'DELIVERED' and config.waiterDeliveryCanCollect and config.isDeliveryPaymentMethodEnabled(order.paymentMethod)}"
+                th:if="${order.status.name() == 'DELIVERED' and config.waiterDeliveryCanCollect and config.hasAnyDeliveryPaymentMethodEnabled()}"
                 th:href="@{/delivery/payments/form/{id}(id=${order.idOrder})}"
                 class="flex-1 py-3.5 px-6 text-base font-bold text-center text-white bg-gradient-to-r from-yellow-500 to-yellow-600 rounded-xl transition-all duration-300 flex items-center justify-center gap-2 border-0 cursor-pointer shadow-lg shadow-yellow-500/30 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-yellow-500/40 active:translate-y-0 relative z-[2] no-underline"
               >
@@ -593,23 +593,19 @@
                 Cobrar Pedido
               </a>
 
-              <!-- Método de pago NO habilitado para delivery - Mensaje informativo -->
               <div
-                th:if="${order.status.name() == 'DELIVERED' and config.waiterDeliveryCanCollect and !config.isDeliveryPaymentMethodEnabled(order.paymentMethod)}"
+                th:if="${order.status.name() == 'DELIVERED' and config.waiterDeliveryCanCollect and !config.hasAnyDeliveryPaymentMethodEnabled()}"
                 class="flex-1 py-3.5 px-6 text-sm font-semibold text-center text-gray-700 dark:text-gray-300 bg-gradient-to-r from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 rounded-xl flex items-center justify-center gap-2 border-2 border-gray-300 dark:border-gray-600 relative z-[2]"
-                title="Este método de pago está deshabilitado para entregas a domicilio"
+                title="No hay métodos de pago habilitados para entregas a domicilio"
               >
                 <span
                   class="material-symbols-outlined text-gray-500 dark:text-gray-400"
                   >block</span
                 >
                 <span>
-                  Método no habilitado
+                  Cobro no disponible
                   <br />
-                  <small
-                    class="text-xs"
-                    th:text="'Pago: ' + ${order.paymentMethod.displayName}"
-                  ></small>
+                  <small class="text-xs">Sin métodos habilitados para delivery</small>
                 </span>
               </div>
             </div>

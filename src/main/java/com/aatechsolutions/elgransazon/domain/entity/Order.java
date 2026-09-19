@@ -1,8 +1,10 @@
 package com.aatechsolutions.elgransazon.domain.entity;
 
+import com.aatechsolutions.elgransazon.util.PaymentTenderSupport;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import lombok.*;
+import org.hibernate.annotations.SQLRestriction;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
@@ -27,7 +29,7 @@ import java.util.Map;
 @AllArgsConstructor
 @Builder
 @EqualsAndHashCode(of = {"idOrder"})
-@ToString(exclude = {"company", "table", "employee", "preparedBy", "paidBy", "orderDetails"})
+@ToString(exclude = {"company", "table", "employee", "preparedBy", "paidBy", "orderDetails", "payments", "paymentTenders"})
 public class Order implements Serializable {
 
     @Id
@@ -144,6 +146,16 @@ public class Order implements Serializable {
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @Builder.Default
     private List<Payment> payments = new ArrayList<>();
+
+    /**
+     * Portions of a whole-order (non-split) collection paid with each method.
+     * Split-account tenders live on {@link Payment#getPaymentTenders()} and are
+     * excluded here so orphan-removal of a regular collection cannot delete them.
+     */
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @SQLRestriction("id_payment IS NULL")
+    @Builder.Default
+    private List<PaymentTender> paymentTenders = new ArrayList<>();
 
     /**
      * True when this order was paid through split accounts (1..N Payment rows).
@@ -933,6 +945,39 @@ public class Order implements Serializable {
             return "$0.00";
         }
         return String.format("$%.2f", total);
+    }
+
+    /**
+     * Methods that actually collected this order (or the customer's declared
+     * method before collection). Mixed collections are joined with " + ".
+     */
+    public String getPaymentMethodsDisplay() {
+        return PaymentTenderSupport.displayNames(PaymentTenderSupport.collected(this));
+    }
+
+    /**
+     * Same as {@link #getPaymentMethodsDisplay()} but including the amount of
+     * each method, for tickets and the order detail view.
+     */
+    public String getPaymentMethodsDisplayWithAmounts() {
+        return PaymentTenderSupport.displayWithAmounts(PaymentTenderSupport.collected(this));
+    }
+
+    /**
+     * True when this order was collected with more than one payment method
+     * (whole-order mix or several split accounts with different methods).
+     */
+    public boolean hasMixedPaymentMethods() {
+        return PaymentTenderSupport.isMixed(PaymentTenderSupport.collected(this));
+    }
+
+    /**
+     * True when this order was collected (or declared) with {@code method}.
+     * A mixed collection that used cash in part matches CASH, so the list
+     * filters keep showing it.
+     */
+    public boolean usesPaymentMethod(PaymentMethodType method) {
+        return PaymentTenderSupport.uses(this, method);
     }
 
     /**

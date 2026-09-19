@@ -6,6 +6,7 @@ import com.aatechsolutions.elgransazon.domain.repository.OrderRepository;
 import com.aatechsolutions.elgransazon.presentation.dto.SplitAccountDTO;
 import com.aatechsolutions.elgransazon.presentation.dto.SplitItemDTO;
 import com.aatechsolutions.elgransazon.util.OrderDiscountSupport;
+import com.aatechsolutions.elgransazon.util.PaymentTenderSupport;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
@@ -190,7 +191,8 @@ public class PaymentController {
     @PostMapping("/process/{orderId}")
     public String processPayment(
             @PathVariable Long orderId,
-            @RequestParam PaymentMethodType paymentMethod,
+            @RequestParam(required = false) PaymentMethodType paymentMethod,
+            @RequestParam(required = false) String paymentTenders,
             @RequestParam(required = false, defaultValue = "0") BigDecimal tip,
             @RequestParam(required = false, defaultValue = "0") BigDecimal orderDiscount,
             @RequestParam(required = false) String discountType,
@@ -276,56 +278,8 @@ public class PaymentController {
                 // The remaining bill can still be charged globally: one account
                 // takes every unit still owed and the order closes as PAID.
                 // Per-person splitting stays available via "Dividir cuenta".
-                return processGlobalRemainingPayment(order, isWaiter, username, paymentMethod, tip,
+                return processGlobalRemainingPayment(order, isWaiter, username, paymentMethod, paymentTenders, tip,
                         discountType, orderDiscount, orderDiscountPercent, config, redirectAttributes);
-            }
-
-            // Validate payment method based on order type
-            boolean isPaymentMethodEnabled = order.getOrderType() == OrderType.DELIVERY 
-                ? config.isDeliveryPaymentMethodEnabled(paymentMethod)
-                : config.isPaymentMethodEnabled(paymentMethod);
-            
-            if (!isPaymentMethodEnabled) {
-                // Stay on the same page showing the error message
-                log.warn("Payment method {} is disabled for order type {}", paymentMethod.getDisplayName(), order.getOrderType());
-                
-                // Get enabled payment methods based on order type
-                Map<PaymentMethodType, Boolean> paymentMethodsMap = order.getOrderType() == OrderType.DELIVERY 
-                    ? config.getDeliveryPaymentMethods() 
-                    : config.getPaymentMethods();
-                List<PaymentMethodType> enabledPaymentMethods = paymentMethodsMap.entrySet().stream()
-                    .filter(Map.Entry::getValue)
-                    .map(Map.Entry::getKey)
-                    .filter(method -> {
-                        // Filter specifically for waiters - they cannot see CASH or TRANSFER options
-                        if (isWaiter) {
-                            return method != PaymentMethodType.CASH && method != PaymentMethodType.TRANSFER;
-                        }
-                        return true;
-                    })
-                    .collect(Collectors.toList());
-                
-                // Convert to strings for Thymeleaf
-                List<String> enabledPaymentMethodNames = enabledPaymentMethods.stream()
-                        .map(PaymentMethodType::name)
-                        .collect(Collectors.toList());
-                
-                String orderTypeLabel = order.getOrderType() == OrderType.DELIVERY ? "entregas a domicilio" : "el restaurante";
-                
-                model.addAttribute("order", order);
-                model.addAttribute("enabledPaymentMethods", enabledPaymentMethods);
-                model.addAttribute("enabledPaymentMethodNames", enabledPaymentMethodNames);
-                model.addAttribute("splitZeroCashTips", true);
-                model.addAttribute("errorMessage", 
-                    "El método de pago '" + paymentMethod.getDisplayName() + 
-                    "' está deshabilitado para " + orderTypeLabel + ". Por favor seleccione otro método de pago.");
-                
-                return "admin/payments/form";
-            }
-
-            // Check restriction for waiters
-            if (isWaiter && (paymentMethod == PaymentMethodType.CASH || paymentMethod == PaymentMethodType.TRANSFER)) {
-                throw new IllegalStateException("Los meseros no pueden procesar pagos en " + paymentMethod.getDisplayName());
             }
 
             // Validate tip
@@ -342,24 +296,30 @@ public class PaymentController {
                 throw new IllegalArgumentException("La propina solo permite hasta 2 decimales");
             }
 
-            // Cash payments: the tip is given directly to the waiter in cash,
-            // so no tip can be registered in the system for CASH payments.
-            if (paymentMethod == PaymentMethodType.CASH) {
-                tip = BigDecimal.ZERO;
-            }
-
             // Validate + resolve the order discount (monto fijo o porcentaje) and
-            // recompute totals BEFORE setting tip/payment metadata.
+            // recompute totals BEFORE setting tip/payment metadata so the mix
+            // covers the post-discount total exactly.
             applyOrderDiscount(order, username, discountType, orderDiscount,
                     orderDiscountPercent, allowDiscount, false);
+
+            List<PaymentTenderSupport.TenderLine> mix = PaymentTenderSupport.resolveSubmitted(
+                    paymentTenders, paymentMethod, order.getTotal());
+            validateCollectedMix(mix, order, config, isWaiter, null);
+
+            // Cash-only collections: the tip is given directly to the waiter,
+            // so no tip is registered. A mixed collection that includes cash
+            // still allows a tip (typically charged to the card portion).
+            if (PaymentTenderSupport.isCashOnly(mix)) {
+                tip = BigDecimal.ZERO;
+            }
 
             // Get current employee who is collecting the payment
             Employee currentEmployee = employeeService.findByUsername(username)
                     .orElseThrow(() -> new IllegalStateException("Empleado no encontrado"));
 
-            // Set tip, payment method, and paidBy
+            // Set tip, payment mix, and paidBy
             order.setTip(tip);
-            order.setPaymentMethod(paymentMethod);
+            PaymentTenderSupport.applyToOrder(order, mix);
             order.setPaidBy(currentEmployee);
             order.setUpdatedBy(username);
             order.setUpdatedAt(java.time.LocalDateTime.now()); // Explicitly set updatedAt
@@ -452,7 +412,8 @@ public class PaymentController {
      * available by enabling "Dividir cuenta" in the form.
      */
     private String processGlobalRemainingPayment(Order order, boolean isWaiter, String username,
-                                                 PaymentMethodType paymentMethod, BigDecimal tip,
+                                                 PaymentMethodType paymentMethod, String paymentTenders,
+                                                 BigDecimal tip,
                                                  String discountType, BigDecimal orderDiscount,
                                                  BigDecimal orderDiscountPercent,
                                                  SystemConfiguration config,
@@ -479,10 +440,17 @@ public class PaymentController {
         if (items.isEmpty()) {
             throw new IllegalStateException("No queda saldo pendiente por cobrar en este pedido");
         }
+        List<PaymentTenderSupport.TenderLine> mix = PaymentTenderSupport.resolveSubmitted(
+                paymentTenders, paymentMethod, order.getRemainingTotal());
+        validateCollectedMix(mix, order, config, isWaiter, null);
+        if (PaymentTenderSupport.isCashOnly(mix)) {
+            tip = BigDecimal.ZERO;
+        }
         SplitAccountDTO account = new SplitAccountDTO();
         account.setIndex(1);
         account.setPersonLabel("Cuenta");
-        account.setPaymentMethod(paymentMethod.name());
+        account.setPaymentMethod(PaymentTenderSupport.primary(mix).name());
+        account.setPaymentTenders(toDtos(mix));
         account.setTip(tip != null ? tip : BigDecimal.ZERO);
         account.setItems(items);
         try {
@@ -519,25 +487,7 @@ public class PaymentController {
 
         // Validate per-account payment methods (role rules + enabled config)
         for (SplitAccountDTO acc : accounts) {
-            if (acc.getPaymentMethod() == null || acc.getPaymentMethod().isBlank()) {
-                throw new IllegalArgumentException(acc.getDisplayLabel() + ": debe seleccionar un método de pago");
-            }
-            PaymentMethodType method;
-            try {
-                method = PaymentMethodType.valueOf(acc.getPaymentMethod());
-            } catch (Exception e) {
-                throw new IllegalArgumentException(acc.getDisplayLabel() + ": método de pago no válido");
-            }
-            boolean enabled = order.getOrderType() == OrderType.DELIVERY
-                    ? config.isDeliveryPaymentMethodEnabled(method)
-                    : config.isPaymentMethodEnabled(method);
-            if (!enabled) {
-                throw new IllegalArgumentException("El método de pago '" + method.getDisplayName()
-                        + "' de " + acc.getDisplayLabel() + " está deshabilitado. Por favor seleccione otro método de pago.");
-            }
-            if (isWaiter && (method == PaymentMethodType.CASH || method == PaymentMethodType.TRANSFER)) {
-                throw new IllegalStateException("Los meseros no pueden procesar pagos en " + method.getDisplayName());
-            }
+            validateAccountMix(acc, order, config, isWaiter);
         }
 
         // Get current employee who is collecting the payments
@@ -610,23 +560,7 @@ public class PaymentController {
 
         // Validate per-account payment methods (role rules + enabled config)
         for (SplitAccountDTO acc : accounts) {
-            if (acc.getPaymentMethod() == null || acc.getPaymentMethod().isBlank()) {
-                throw new IllegalArgumentException(acc.getDisplayLabel() + ": debe seleccionar un método de pago");
-            }
-            PaymentMethodType method;
-            try {
-                method = PaymentMethodType.valueOf(acc.getPaymentMethod());
-            } catch (Exception e) {
-                throw new IllegalArgumentException(acc.getDisplayLabel() + ": método de pago no válido");
-            }
-            // Departing-guest collections are dine-in/takeout (never delivery)
-            if (!config.isPaymentMethodEnabled(method)) {
-                throw new IllegalArgumentException("El método de pago '" + method.getDisplayName()
-                        + "' de " + acc.getDisplayLabel() + " está deshabilitado. Por favor seleccione otro método de pago.");
-            }
-            if (isWaiter && (method == PaymentMethodType.CASH || method == PaymentMethodType.TRANSFER)) {
-                throw new IllegalStateException("Los meseros no pueden procesar pagos en " + method.getDisplayName());
-            }
+            validateAccountMix(acc, order, config, isWaiter);
         }
 
         // Get current employee who is collecting the payments
@@ -684,6 +618,49 @@ public class PaymentController {
         notifyAccountTickets(order, payments, username);
 
         return "redirect:/admin/orders";
+    }
+
+    private void validateCollectedMix(List<PaymentTenderSupport.TenderLine> mix, Order order,
+                                      SystemConfiguration config, boolean isWaiter, String label) {
+        PaymentTenderSupport.validateAmounts(mix, label);
+        PaymentTenderSupport.assertMethodsAllowed(mix, method -> isMethodAllowed(method, order, config, isWaiter), label);
+    }
+
+    private void validateAccountMix(SplitAccountDTO acc, Order order,
+                                    SystemConfiguration config, boolean isWaiter) {
+        for (PaymentMethodType method : PaymentTenderSupport.methodsOf(acc)) {
+            if (!isMethodAllowed(method, order, config, isWaiter)) {
+                if (isWaiter && (method == PaymentMethodType.CASH || method == PaymentMethodType.TRANSFER)) {
+                    throw new IllegalStateException("Los meseros no pueden procesar pagos en " + method.getDisplayName());
+                }
+                throw new IllegalArgumentException("El método de pago '" + method.getDisplayName()
+                        + "' de " + acc.getDisplayLabel() + " está deshabilitado. Por favor seleccione otro método de pago.");
+            }
+        }
+    }
+
+    private boolean isMethodAllowed(PaymentMethodType method, Order order,
+                                    SystemConfiguration config, boolean isWaiter) {
+        boolean enabled = order.getOrderType() == OrderType.DELIVERY
+                ? config.isDeliveryPaymentMethodEnabled(method)
+                : config.isPaymentMethodEnabled(method);
+        if (!enabled) {
+            return false;
+        }
+        return !(isWaiter && (method == PaymentMethodType.CASH || method == PaymentMethodType.TRANSFER));
+    }
+
+    private List<com.aatechsolutions.elgransazon.presentation.dto.PaymentTenderDTO> toDtos(
+            List<PaymentTenderSupport.TenderLine> mix) {
+        List<com.aatechsolutions.elgransazon.presentation.dto.PaymentTenderDTO> dtos = new ArrayList<>();
+        for (PaymentTenderSupport.TenderLine line : mix) {
+            com.aatechsolutions.elgransazon.presentation.dto.PaymentTenderDTO dto =
+                    new com.aatechsolutions.elgransazon.presentation.dto.PaymentTenderDTO();
+            dto.setMethod(line.getMethod().name());
+            dto.setAmount(line.getAmount());
+            dtos.add(dto);
+        }
+        return dtos;
     }
 
     /**

@@ -265,7 +265,7 @@ public class TicketEscPosService {
         // ── Order info (centered) ──
         out.write(ALIGN_CENTER);
         out.write(FONT_B);
-        String paymentMethodStr = order.getPaymentMethod() != null ? order.getPaymentMethod().getDisplayName() : "N/A";
+        String paymentMethodStr = order.getPaymentMethodsDisplayWithAmounts();
         printLine(out, "Tipo: " + order.getOrderType().getDisplayName() + " | Pago: " + paymentMethodStr);
 
         // Customer
@@ -405,14 +405,6 @@ public class TicketEscPosService {
         printLine(out, "ORDEN: " + order.getOrderNumber());
         out.write(BOLD_OFF);
 
-        // ── Table number (only when the order sits on a table) ──
-        String tableLabel = tableLabel(order);
-        if (tableLabel != null) {
-            out.write(FONT_B);
-            printLine(out, tableLabel);
-            out.write(FONT_A);
-        }
-
         // ── Account folio (centered, bold, double height) e.g. ORD-20260906-001-02 ──
         out.write(BOLD_ON);
         out.write(DOUBLE_HEIGHT);
@@ -424,6 +416,14 @@ public class TicketEscPosService {
         if (payment.getPersonLabel() != null && !payment.getPersonLabel().isBlank()) {
             out.write(FONT_B);
             printLine(out, payment.getPersonLabel());
+            out.write(FONT_A);
+        }
+
+        // ── Table number directly under the person (only when the order sits on a table) ──
+        String tableLabel = tableLabel(order);
+        if (tableLabel != null) {
+            out.write(FONT_B);
+            printLine(out, tableLabel);
             out.write(FONT_A);
         }
 
@@ -514,7 +514,7 @@ public class TicketEscPosService {
         // ── Order info (centered) ──
         out.write(ALIGN_CENTER);
         out.write(FONT_B);
-        String paymentMethodStr = payment.getPaymentMethod() != null ? payment.getPaymentMethod().getDisplayName() : "N/A";
+        String paymentMethodStr = payment.getPaymentMethodsDisplayWithAmounts();
         printLine(out, "Tipo: " + order.getOrderType().getDisplayName() + " | Pago: " + paymentMethodStr);
 
         // Customer

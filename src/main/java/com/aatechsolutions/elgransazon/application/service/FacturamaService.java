@@ -3,6 +3,7 @@ package com.aatechsolutions.elgransazon.application.service;
 import com.aatechsolutions.elgransazon.domain.entity.*;
 import com.aatechsolutions.elgransazon.domain.repository.FacturamaConfigRepository;
 import com.aatechsolutions.elgransazon.infrastructure.context.CompanyContext;
+import com.aatechsolutions.elgransazon.util.PaymentTenderSupport;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -184,7 +185,8 @@ public class FacturamaService {
         try {
             ObjectNode body = objectMapper.createObjectNode();
             body.put("CfdiType", "I"); // Ingreso
-            body.put("PaymentForm", mapPaymentForm(order.getPaymentMethod()));
+            body.put("PaymentForm", mapPaymentForm(
+                    PaymentTenderSupport.satPaymentFormMethod(PaymentTenderSupport.collected(order))));
             body.put("PaymentMethod", "PUE"); // Pago en Una sola Exhibición
             body.put("Currency", "MXN");
             body.put("ExpeditionPlace", config.getExpeditionPlace());
@@ -599,7 +601,8 @@ public class FacturamaService {
         try {
             ObjectNode body = objectMapper.createObjectNode();
             body.put("CfdiType", "I"); // Ingreso
-            body.put("PaymentForm", mapPaymentForm(payment.getPaymentMethod()));
+            body.put("PaymentForm", mapPaymentForm(
+                    PaymentTenderSupport.satPaymentFormMethod(PaymentTenderSupport.collected(payment))));
             body.put("PaymentMethod", "PUE"); // Pago en Una sola Exhibición
             body.put("Currency", "MXN");
             body.put("ExpeditionPlace", config.getExpeditionPlace());
@@ -705,12 +708,50 @@ public class FacturamaService {
      * folio, per regla 2.7.1.21 de la RMF (the folio of each operation must be
      * stated).
      *
-     * @param description   CFDI concept description (includes the ticket folio)
-     * @param totalConIva   Total of the operation incl. IVA (exactly the ticket
-     *                      amount)
-     * @param paymentMethod Payment method used to settle the operation
+     * @param description      CFDI concept description (includes the ticket folio)
+     * @param totalConIva      Total of the operation incl. IVA (exactly the ticket
+     *                         amount)
+     * @param paymentMethod    SAT method of this ticket (largest tender when mixed)
+     * @param amountsByMethod  Collected amounts per method (mixed tickets split
+     *                         their total so the global invoice picks the true
+     *                         dominant form across every included operation)
      */
-    public record GlobalCfdiTicket(String description, BigDecimal totalConIva, PaymentMethodType paymentMethod) {
+    public record GlobalCfdiTicket(String description, BigDecimal totalConIva,
+            PaymentMethodType paymentMethod,
+            Map<PaymentMethodType, BigDecimal> amountsByMethod) {
+
+        public GlobalCfdiTicket(String description, BigDecimal totalConIva, PaymentMethodType paymentMethod) {
+            this(description, totalConIva, paymentMethod, amountsOf(paymentMethod, totalConIva));
+        }
+
+        public static GlobalCfdiTicket ofCollected(String description, BigDecimal totalConIva, Order order) {
+            return ofTenders(description, totalConIva, PaymentTenderSupport.collected(order));
+        }
+
+        public static GlobalCfdiTicket ofCollected(String description, BigDecimal totalConIva, Payment payment) {
+            return ofTenders(description, totalConIva, PaymentTenderSupport.collected(payment));
+        }
+
+        public static GlobalCfdiTicket ofTenders(String description, BigDecimal totalConIva,
+                List<PaymentTenderSupport.TenderLine> tenders) {
+            Map<PaymentMethodType, BigDecimal> amounts = new LinkedHashMap<>();
+            if (tenders != null) {
+                for (PaymentTenderSupport.TenderLine line : tenders) {
+                    if (line.getAmount() != null && line.getAmount().compareTo(BigDecimal.ZERO) > 0) {
+                        amounts.merge(line.getMethod(), line.getAmount(), BigDecimal::add);
+                    }
+                }
+            }
+            return new GlobalCfdiTicket(description, totalConIva,
+                    PaymentTenderSupport.satPaymentFormMethod(tenders), amounts);
+        }
+
+        private static Map<PaymentMethodType, BigDecimal> amountsOf(PaymentMethodType method, BigDecimal total) {
+            if (method == null) {
+                return Map.of();
+            }
+            return Map.of(method, total != null ? total : BigDecimal.ZERO);
+        }
     }
 
     /**
@@ -834,6 +875,17 @@ public class FacturamaService {
     public String dominantPaymentForm(List<GlobalCfdiTicket> tickets) {
         Map<PaymentMethodType, BigDecimal> totalsByMethod = new LinkedHashMap<>();
         for (GlobalCfdiTicket ticket : tickets) {
+            Map<PaymentMethodType, BigDecimal> amounts = ticket.amountsByMethod();
+            if (amounts != null && !amounts.isEmpty()) {
+                for (Map.Entry<PaymentMethodType, BigDecimal> entry : amounts.entrySet()) {
+                    if (entry.getKey() == null) {
+                        continue;
+                    }
+                    BigDecimal value = entry.getValue() != null ? entry.getValue() : BigDecimal.ZERO;
+                    totalsByMethod.merge(entry.getKey(), value, BigDecimal::add);
+                }
+                continue;
+            }
             if (ticket.paymentMethod() == null) {
                 continue;
             }

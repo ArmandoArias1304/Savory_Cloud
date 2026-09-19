@@ -211,3 +211,40 @@ html.dark .img-skeleton {
   transition: background-image 0.3s ease-in;
 }
 
+/* SweetAlert2 follows html.dark so payment/split dialogs match the theme */
+html.dark .swal2-popup {
+  background: #1f2937 !important;
+  color: #f3f4f6 !important;
+}
+html.dark .swal2-title,
+html.dark .swal2-html-container,
+html.dark .swal2-content {
+  color: #e5e7eb !important;
+}
+html.dark .swal2-html-container {
+  color: #d1d5db !important;
+}
+html.dark .swal2-icon.swal2-question {
+  border-color: #60a5fa !important;
+  color: #93c5fd !important;
+}
+html.dark .swal2-icon.swal2-question .swal2-icon-content {
+  color: #93c5fd !important;
+}
+html.dark .swal2-icon.swal2-warning {
+  border-color: #fbbf24 !important;
+  color: #fbbf24 !important;
+}
+html.dark .swal2-icon.swal2-error {
+  border-color: #f87171 !important;
+  color: #f87171 !important;
+}
+html.dark .swal2-icon.swal2-success {
+  border-color: #34d399 !important;
+  color: #34d399 !important;
+}
+html.dark .swal2-validation-message {
+  background: #7f1d1d !important;
+  color: #fecaca !important;
+}
+

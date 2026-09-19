@@ -5,6 +5,7 @@ import com.aatechsolutions.elgransazon.domain.repository.CashRegisterMovementRep
 import com.aatechsolutions.elgransazon.domain.repository.CashRegisterSessionRepository;
 import com.aatechsolutions.elgransazon.domain.repository.OrderRepository;
 import com.aatechsolutions.elgransazon.presentation.dto.CashRegisterSummary;
+import com.aatechsolutions.elgransazon.util.PaymentTenderSupport;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -219,23 +220,13 @@ public class CashRegisterService {
             totalSales = totalSales.add(orderTotal);
             totalTips = totalTips.add(order.getTip() != null ? order.getTip() : BigDecimal.ZERO);
 
-            // A split bill carries one Payment per account, each with its own method.
-            if (order.getPayments() != null && !order.getPayments().isEmpty()) {
-                for (Payment payment : order.getPayments()) {
-                    PaymentMethodType method = payment.getPaymentMethod();
-                    BigDecimal value = payment.getTotal() != null ? payment.getTotal() : BigDecimal.ZERO;
-                    addToMethod(byMethod, method, value);
-                    if (method == PaymentMethodType.CASH) {
-                        cashSales = cashSales.add(value);
-                    }
-                }
-            } else {
-                PaymentMethodType method = order.getPaymentMethod();
-                if (method != null) {
-                    addToMethod(byMethod, method, orderTotal);
-                    if (method == PaymentMethodType.CASH) {
-                        cashSales = cashSales.add(orderTotal);
-                    }
+            // Split accounts and mixed collections contribute only the amount
+            // actually paid with each method, so cash-in-drawer equals cash
+            // tenders (never the whole ticket of a mixed payment).
+            for (PaymentTenderSupport.TenderLine line : PaymentTenderSupport.collected(order)) {
+                addToMethod(byMethod, line.getMethod(), line.getAmount());
+                if (line.getMethod() == PaymentMethodType.CASH) {
+                    cashSales = cashSales.add(line.getAmount());
                 }
             }
         }

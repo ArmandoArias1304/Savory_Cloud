@@ -353,6 +353,29 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
             @Param("endDate") LocalDateTime endDate);
 
     /**
+     * Count PAID orders (each order once, including split bills) for a company
+     * within a date range (UTC).
+     *
+     * Returns a single row: [paidCount, invoicedCount]. An order counts as invoiced
+     * when it has a CFDI on the order itself or on any of its split-account Payments.
+     */
+    @Query("SELECT " +
+           "  COUNT(o), " +
+           "  COALESCE(SUM(CASE WHEN o.facturamaCfdiId IS NOT NULL OR o.facturaGlobalCfdiId IS NOT NULL " +
+           "    OR EXISTS (SELECT p FROM Payment p WHERE p.order = o " +
+           "      AND (p.facturamaCfdiId IS NOT NULL OR p.facturaGlobalCfdiId IS NOT NULL)) " +
+           "    THEN 1 ELSE 0 END), 0) " +
+           "FROM Order o " +
+           "WHERE o.company = :company " +
+           "  AND o.status = com.aatechsolutions.elgransazon.domain.entity.OrderStatus.PAID " +
+           "  AND o.paidAt >= :startDate " +
+           "  AND o.paidAt < :endDate")
+    List<Object[]> countPaidOrdersByCompanyAndDateRange(
+            @Param("company") Company company,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate);
+
+    /**
      * PAID tickets (orders WITHOUT split accounts) still pending the global invoice
      * for a company within a paid date range (UTC): no individual CFDI and not yet
      * included in a previous global invoice.

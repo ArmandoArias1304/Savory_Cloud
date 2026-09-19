@@ -44,6 +44,7 @@ public class CashierController {
     private final WebSocketNotificationService wsNotificationService;
     private final DateTimeService dateTimeService;
     private final ReservationService reservationService;
+    private final CashRegisterService cashRegisterService;
 
     public CashierController(
             @Qualifier("cashierOrderService") CashierOrderServiceImpl cashierOrderService,
@@ -58,7 +59,8 @@ public class CashierController {
             BusinessHoursService businessHoursService,
             WebSocketNotificationService wsNotificationService,
             DateTimeService dateTimeService,
-            ReservationService reservationService) {
+            ReservationService reservationService,
+            CashRegisterService cashRegisterService) {
         this.cashierOrderService = cashierOrderService;
         this.adminOrderService = adminOrderService;
         this.restaurantTableService = restaurantTableService;
@@ -72,6 +74,7 @@ public class CashierController {
         this.wsNotificationService = wsNotificationService;
         this.dateTimeService = dateTimeService;
         this.reservationService = reservationService;
+        this.cashRegisterService = cashRegisterService;
     }
 
     /**
@@ -107,6 +110,7 @@ public class CashierController {
             @RequestParam(required = false) OrderStatus status,
             @RequestParam(required = false) OrderType orderType,
             @RequestParam(required = false) String date,
+            @RequestParam(required = false) PaymentMethodType paymentMethod,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "1") int globalPage,
             Authentication authentication,
@@ -148,6 +152,11 @@ public class CashierController {
         if (orderType != null) {
             myOrders = myOrders.stream()
                 .filter(o -> o.getOrderType() == orderType)
+                .collect(Collectors.toList());
+        }
+        if (paymentMethod != null) {
+            myOrders = myOrders.stream()
+                .filter(o -> o.usesPaymentMethod(paymentMethod))
                 .collect(Collectors.toList());
         }
         myOrders = myOrders.stream()
@@ -202,6 +211,11 @@ public class CashierController {
                 .filter(o -> o.getOrderType() == orderType)
                 .collect(Collectors.toList());
         }
+        if (paymentMethod != null) {
+            unpaidOrders = unpaidOrders.stream()
+                .filter(o -> o.usesPaymentMethod(paymentMethod))
+                .collect(Collectors.toList());
+        }
 
         // ========== Stats date range (always applies; defaults to today) ==========
         LocalDateTime statsStartDate;
@@ -252,6 +266,7 @@ public class CashierController {
         List<RestaurantTable> tables = restaurantTableService.findAllOrderByTableNumber();
         OrderStatus[] statuses = OrderStatus.values();
         OrderType[] orderTypes = OrderType.values();
+        PaymentMethodType[] paymentMethods = PaymentMethodType.values();
 
         // ========== Pagination ==========
         int pageSize = 15;
@@ -286,6 +301,7 @@ public class CashierController {
         model.addAttribute("tables", tables);
         model.addAttribute("statuses", statuses);
         model.addAttribute("orderTypes", orderTypes);
+        model.addAttribute("paymentMethods", paymentMethods);
         model.addAttribute("paidCount", paidCount);
         model.addAttribute("todayRevenue", myTodayRevenue);
         model.addAttribute("myPendingCount", myPendingCount);
@@ -296,12 +312,32 @@ public class CashierController {
         model.addAttribute("selectedTableId", tableId);
         model.addAttribute("selectedStatus", status);
         model.addAttribute("selectedOrderType", orderType);
+        model.addAttribute("selectedPaymentMethod", paymentMethod);
         model.addAttribute("selectedDate", date);
 
         model.addAttribute("currentRole", "cashier");
         addStaffPermissionFlags(model);
+        addCashRegisterOpenFlag(authentication, model);
 
         return "cashier/orders/list";
+    }
+
+    /**
+     * Frontend-only warning flag: whether this cashier currently has an open drawer.
+     */
+    private void addCashRegisterOpenFlag(Authentication authentication, Model model) {
+        boolean open = false;
+        try {
+            Employee employee = employeeService.findByUsername(authentication.getName()).orElse(null);
+            Company company = CompanyContext.requireCurrentCompany();
+            if (employee != null) {
+                open = cashRegisterService.findOpenSession(company, employee) != null;
+            }
+        } catch (Exception e) {
+            log.debug("Could not resolve cash register session: {}", e.getMessage());
+        }
+        model.addAttribute("cashRegisterOpen", open);
+        model.addAttribute("cashRegisterUrl", "/cashier/cash-register");
     }
 
     /**

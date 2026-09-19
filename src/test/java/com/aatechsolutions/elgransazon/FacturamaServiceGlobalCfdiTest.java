@@ -4,6 +4,7 @@ import com.aatechsolutions.elgransazon.application.service.FacturamaService;
 import com.aatechsolutions.elgransazon.domain.entity.FacturamaConfig;
 import com.aatechsolutions.elgransazon.domain.entity.PaymentMethodType;
 import com.aatechsolutions.elgransazon.domain.repository.FacturamaConfigRepository;
+import com.aatechsolutions.elgransazon.util.PaymentTenderSupport;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -178,5 +179,63 @@ class FacturamaServiceGlobalCfdiTest {
                 assertTrue(status.restaurantCsdRegistered());
                 assertTrue(status.restaurantCsdValid());
                 assertNull(status.errorMessage());
+        }
+
+        @Test
+        void mixedTicketSplitsAmountsAndDoesNotInflateTheGlobalDominantForm() throws Exception {
+                FacturamaConfig config = FacturamaConfig.builder()
+                                .enabled(true)
+                                .csdUploaded(true)
+                                .legalDataConfigured(true)
+                                .rfc("AAA010101AAA")
+                                .legalName("RESTAURANTE PRUEBA SA DE CV")
+                                .fiscalRegime("601")
+                                .expeditionPlace("45000")
+                                .build();
+
+                FacturamaService.GlobalCfdiTicket mixed = FacturamaService.GlobalCfdiTicket.ofTenders(
+                                "Venta de alimentos y bebidas - ORD-MIX",
+                                new BigDecimal("130.00"),
+                                List.of(
+                                                new PaymentTenderSupport.TenderLine(PaymentMethodType.CASH,
+                                                                new BigDecimal("50.00")),
+                                                new PaymentTenderSupport.TenderLine(PaymentMethodType.DEBIT_CARD,
+                                                                new BigDecimal("80.00"))));
+                assertEquals(PaymentMethodType.DEBIT_CARD, mixed.paymentMethod(),
+                                "SAT mixed ticket uses the method of the largest amount");
+                assertEquals(0, new BigDecimal("50.00").compareTo(mixed.amountsByMethod().get(PaymentMethodType.CASH)));
+                assertEquals(0, new BigDecimal("80.00")
+                                .compareTo(mixed.amountsByMethod().get(PaymentMethodType.DEBIT_CARD)));
+
+                List<FacturamaService.GlobalCfdiTicket> tickets = List.of(
+                                mixed,
+                                new FacturamaService.GlobalCfdiTicket(
+                                                "Venta de alimentos y bebidas - ORD-CASH",
+                                                new BigDecimal("10.00"), PaymentMethodType.CASH));
+
+                // Cash 50+10=60, debit 80 → the global invoice must pick debit (28),
+                // not treat the mixed ticket as a single 130 cash/debit blob.
+                assertEquals("28", service.dominantPaymentForm(tickets));
+
+                JsonNode responseBody = objectMapper.readTree(
+                                "{\"Id\":\"cfdi-global-mix\",\"Complement\":{\"TaxStamp\":{\"Uuid\":\"uuid-mix\"}}}");
+                ResponseEntity<JsonNode> response = mock(ResponseEntity.class);
+                when(response.getBody()).thenReturn(responseBody);
+
+                @SuppressWarnings("unchecked")
+                ArgumentCaptor<HttpEntity<String>> captor = ArgumentCaptor.forClass(HttpEntity.class);
+                when(restTemplate.exchange(
+                                eq("https://apisandbox.facturama.mx/api-lite/3/cfdis"),
+                                eq(HttpMethod.POST),
+                                captor.capture(),
+                                eq(JsonNode.class))).thenReturn(response);
+
+                service.createGlobalCfdi(config, tickets, "01", 9, 2026, "GLOBAL-MIX");
+
+                JsonNode payload = objectMapper.readTree(captor.getValue().getBody());
+                assertEquals("28", payload.path("PaymentForm").asText());
+                assertEquals(2, payload.path("Items").size());
+                assertEquals(0, new BigDecimal("130.00")
+                                .compareTo(new BigDecimal(payload.path("Items").get(0).path("Total").asText())));
         }
 }

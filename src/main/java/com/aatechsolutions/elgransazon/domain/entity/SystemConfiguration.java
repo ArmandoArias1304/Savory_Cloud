@@ -302,6 +302,13 @@ public class SystemConfiguration implements Serializable {
         return deliveryPaymentMethods.getOrDefault(type, false);
     }
 
+    public boolean hasAnyDeliveryPaymentMethodEnabled() {
+        if (deliveryPaymentMethods == null || deliveryPaymentMethods.isEmpty()) {
+            return false;
+        }
+        return deliveryPaymentMethods.values().stream().anyMatch(Boolean.TRUE::equals);
+    }
+
     /**
      * Check if a payment method is enabled based on order type
      * For DELIVERY orders, uses deliveryPaymentMethods

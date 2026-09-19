@@ -6,6 +6,7 @@ import com.aatechsolutions.elgransazon.domain.repository.PaymentRepository;
 import com.aatechsolutions.elgransazon.infrastructure.context.CompanyContext;
 import com.aatechsolutions.elgransazon.presentation.dto.SplitAccountDTO;
 import com.aatechsolutions.elgransazon.presentation.dto.SplitItemDTO;
+import com.aatechsolutions.elgransazon.util.PaymentTenderSupport;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -100,15 +101,8 @@ public class SplitPaymentService {
                 acc.setTip(BigDecimal.ZERO);
             }
             validateTip(acc);
-            if (acc.getPaymentMethod() == null || acc.getPaymentMethod().isBlank()) {
-                // Delivery flow does not choose a method per person: use the order's.
-                if (order.getPaymentMethod() != null) {
-                    acc.setPaymentMethod(order.getPaymentMethod().name());
-                } else {
-                    throw new IllegalArgumentException(acc.getDisplayLabel() + ": debe seleccionar un método de pago");
-                }
-            }
-            if (zeroCashTips && PaymentMethodType.valueOf(acc.getPaymentMethod()) == PaymentMethodType.CASH) {
+            resolveAccountPaymentMethod(acc, order);
+            if (zeroCashTips && isAccountCashOnly(acc)) {
                 acc.setTip(BigDecimal.ZERO);
             }
         }
@@ -383,6 +377,11 @@ public class SplitPaymentService {
                     .updatedBy(username)
                     .build();
 
+            if (accountTotal[ai].compareTo(BigDecimal.ZERO) > 0) {
+                PaymentTenderSupport.applyToPayment(payment,
+                        PaymentTenderSupport.resolveAccount(acc, accountTotal[ai]));
+            }
+
             // PaymentDetail rows
             for (int li = 0; li < lines.size(); li++) {
                 BigDecimal q = qty[ai][li];
@@ -494,20 +493,14 @@ public class SplitPaymentService {
                 acc.setTip(BigDecimal.ZERO);
             }
             validateTip(acc);
-            if (acc.getPaymentMethod() == null || acc.getPaymentMethod().isBlank()) {
-                if (order.getPaymentMethod() != null) {
-                    acc.setPaymentMethod(order.getPaymentMethod().name());
-                } else {
-                    throw new IllegalArgumentException(acc.getDisplayLabel() + ": debe seleccionar un método de pago");
-                }
-            }
+            resolveAccountPaymentMethod(acc, order);
             PaymentMethodType method;
             try {
                 method = PaymentMethodType.valueOf(acc.getPaymentMethod());
             } catch (Exception e) {
                 throw new IllegalArgumentException(acc.getDisplayLabel() + ": método de pago no válido");
             }
-            if (zeroCashTips && method == PaymentMethodType.CASH) {
+            if (zeroCashTips && isAccountCashOnly(acc)) {
                 acc.setTip(BigDecimal.ZERO);
             }
         }
@@ -662,6 +655,11 @@ public class SplitPaymentService {
                     .updatedBy(username)
                     .build();
 
+            if (accountTotal[ai].compareTo(BigDecimal.ZERO) > 0) {
+                PaymentTenderSupport.applyToPayment(payment,
+                        PaymentTenderSupport.resolveAccount(acc, accountTotal[ai]));
+            }
+
             for (int li = 0; li < lines.size(); li++) {
                 BigDecimal q = qty[ai][li];
                 if (q == null || q.compareTo(BigDecimal.ZERO) == 0) {
@@ -784,6 +782,45 @@ public class SplitPaymentService {
         }
         if (tip.scale() > 2) {
             throw new IllegalArgumentException(acc.getDisplayLabel() + ": la propina solo permite hasta 2 decimales");
+        }
+    }
+
+    /**
+     * Fill {@code paymentMethod} from the account mix (or the parent order) so
+     * downstream code that still reads the single field stays consistent.
+     */
+    private void resolveAccountPaymentMethod(SplitAccountDTO acc, Order order) {
+        List<PaymentTenderSupport.TenderLine> mix = PaymentTenderSupport.fromDtos(acc.getPaymentTenders());
+        if (!mix.isEmpty()) {
+            acc.setPaymentMethod(PaymentTenderSupport.primary(mix).name());
+            return;
+        }
+        if (acc.getPaymentMethod() == null || acc.getPaymentMethod().isBlank()) {
+            if (order.getPaymentMethod() != null) {
+                acc.setPaymentMethod(order.getPaymentMethod().name());
+            } else {
+                throw new IllegalArgumentException(acc.getDisplayLabel() + ": debe seleccionar un método de pago");
+            }
+        }
+    }
+
+    /**
+     * Restaurant rule: a cash-only account never registers a tip. A mixed
+     * collection that includes cash still allows a tip (typically charged to
+     * the card portion).
+     */
+    private boolean isAccountCashOnly(SplitAccountDTO acc) {
+        List<PaymentTenderSupport.TenderLine> mix = PaymentTenderSupport.fromDtos(acc.getPaymentTenders());
+        if (!mix.isEmpty()) {
+            return PaymentTenderSupport.isCashOnly(mix);
+        }
+        if (acc.getPaymentMethod() == null || acc.getPaymentMethod().isBlank()) {
+            return false;
+        }
+        try {
+            return PaymentMethodType.valueOf(acc.getPaymentMethod()) == PaymentMethodType.CASH;
+        } catch (Exception e) {
+            return false;
         }
     }
 }

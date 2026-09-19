@@ -9,6 +9,7 @@ import com.aatechsolutions.elgransazon.domain.entity.Employee;
 import com.aatechsolutions.elgransazon.domain.entity.Order;
 import com.aatechsolutions.elgransazon.domain.entity.OrderStatus;
 import com.aatechsolutions.elgransazon.domain.entity.PaymentMethodType;
+import com.aatechsolutions.elgransazon.domain.entity.PaymentTender;
 import com.aatechsolutions.elgransazon.domain.repository.CashRegisterMovementRepository;
 import com.aatechsolutions.elgransazon.domain.repository.CashRegisterSessionRepository;
 import com.aatechsolutions.elgransazon.domain.repository.OrderRepository;
@@ -149,5 +150,44 @@ class CashRegisterTipsMovementTest {
         assertThat(CashRegisterMovementType.INCOME.getDisplayName()).isEqualTo("Entrada");
         assertThat(CashRegisterMovementType.TIPS.isCashOut()).isFalse();
         assertThat(CashRegisterMovementType.TIPS.getDisplayName()).isEqualTo("Propinas efectivo");
+    }
+
+    @Test
+    @DisplayName("Una venta mixta solo mete a caja el monto en efectivo, no el ticket completo")
+    void mixedSaleContributesOnlyTheCashTenderToTheDrawer() {
+        Order mixed = Order.builder()
+                .idOrder(8L)
+                .orderNumber("ORD-20260912-MIX")
+                .status(OrderStatus.PAID)
+                .paymentMethod(PaymentMethodType.DEBIT_CARD)
+                .total(new BigDecimal("130.00"))
+                .tip(new BigDecimal("10.00"))
+                .paidAt(LocalDateTime.of(2026, 9, 12, 11, 0))
+                .paymentTenders(new java.util.ArrayList<>())
+                .payments(new java.util.ArrayList<>())
+                .build();
+        mixed.getPaymentTenders().add(PaymentTender.builder()
+                .order(mixed)
+                .paymentMethod(PaymentMethodType.CASH)
+                .amount(new BigDecimal("50.00"))
+                .build());
+        mixed.getPaymentTenders().add(PaymentTender.builder()
+                .order(mixed)
+                .paymentMethod(PaymentMethodType.DEBIT_CARD)
+                .amount(new BigDecimal("80.00"))
+                .build());
+        when(orderRepository.findPaidByCollectorAndPaidAtRangeAndCompany(
+                eq(CASHIER), any(), any(), eq(company))).thenReturn(List.of(mixed));
+        movements();
+
+        CashRegisterSummary summary = service.buildSummary(session);
+
+        assertThat(summary.getTotalSales()).isEqualByComparingTo("130.00");
+        assertThat(summary.getCashSales()).isEqualByComparingTo("50.00");
+        assertThat(summary.getSalesByMethod().get(PaymentMethodType.CASH)).isEqualByComparingTo("50.00");
+        assertThat(summary.getSalesByMethod().get(PaymentMethodType.DEBIT_CARD)).isEqualByComparingTo("80.00");
+        // 500 fondo + 50 efectivo (nunca los 130 del ticket)
+        assertThat(summary.getExpectedCash()).isEqualByComparingTo("550.00");
+        assertThat(summary.getTotalTips()).isEqualByComparingTo("10.00");
     }
 }

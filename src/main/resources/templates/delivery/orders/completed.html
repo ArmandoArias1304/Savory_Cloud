@@ -177,7 +177,7 @@
                 <div class="flex flex-col gap-1.5 items-end flex-shrink-0">
                   <!-- Payment Badge (only for PAID orders) -->
                   <span
-                    th:if="${order.status.name() == 'PAID' && order.paymentMethod.name() == 'CASH'}"
+                    th:if="${order.status.name() == 'PAID' && order.usesPaymentMethod(T(com.aatechsolutions.elgransazon.domain.entity.PaymentMethodType).CASH)}"
                     class="px-2.5 py-1 rounded-md text-[0.625rem] font-semibold inline-flex items-center gap-1 leading-none bg-gradient-to-r from-green-500 to-green-600 text-white"
                     title="Efectivo"
                   >
@@ -189,7 +189,7 @@
                     Efectivo
                   </span>
                   <span
-                    th:if="${order.status.name() == 'PAID' && order.paymentMethod.name() == 'CREDIT_CARD'}"
+                    th:if="${order.status.name() == 'PAID' && order.usesPaymentMethod(T(com.aatechsolutions.elgransazon.domain.entity.PaymentMethodType).CREDIT_CARD)}"
                     class="px-2.5 py-1 rounded-md text-[0.625rem] font-semibold inline-flex items-center gap-1 leading-none bg-gradient-to-r from-blue-500 to-blue-600 text-white"
                     title="Tarjeta de Crédito"
                   >
@@ -201,7 +201,7 @@
                     Crédito
                   </span>
                   <span
-                    th:if="${order.status.name() == 'PAID' && order.paymentMethod.name() == 'DEBIT_CARD'}"
+                    th:if="${order.status.name() == 'PAID' && order.usesPaymentMethod(T(com.aatechsolutions.elgransazon.domain.entity.PaymentMethodType).DEBIT_CARD)}"
                     class="px-2.5 py-1 rounded-md text-[0.625rem] font-semibold inline-flex items-center gap-1 leading-none bg-gradient-to-r from-blue-500 to-blue-600 text-white"
                     title="Tarjeta de Débito"
                   >
@@ -213,7 +213,7 @@
                     Débito
                   </span>
                   <span
-                    th:if="${order.status.name() == 'PAID' && order.paymentMethod.name() == 'TRANSFER'}"
+                    th:if="${order.status.name() == 'PAID' && order.usesPaymentMethod(T(com.aatechsolutions.elgransazon.domain.entity.PaymentMethodType).TRANSFER)}"
                     class="px-2.5 py-1 rounded-md text-[0.625rem] font-semibold inline-flex items-center gap-1 leading-none bg-gradient-to-r from-purple-500 to-purple-600 text-white"
                     title="Transferencia Bancaria"
                   >

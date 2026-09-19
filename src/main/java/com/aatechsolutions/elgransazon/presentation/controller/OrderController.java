@@ -2,6 +2,7 @@ package com.aatechsolutions.elgransazon.presentation.controller;
 
 import com.aatechsolutions.elgransazon.application.service.*;
 import com.aatechsolutions.elgransazon.domain.entity.*;
+import com.aatechsolutions.elgransazon.infrastructure.context.CompanyContext;
 import com.aatechsolutions.elgransazon.util.DeliveryStatusSupport;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -64,6 +65,7 @@ public class OrderController {
     private final ObjectMapper objectMapper;
     private final ReservationService reservationService;
     private final DateTimeService dateTimeService;
+    private final CashRegisterService cashRegisterService;
 
     /**
      * Constructor with dependency injection
@@ -96,7 +98,8 @@ public class OrderController {
             com.aatechsolutions.elgransazon.domain.repository.ItemMenuComboItemRepository itemMenuComboItemRepository,
             ObjectMapper objectMapper,
             ReservationService reservationService,
-            DateTimeService dateTimeService) {
+            DateTimeService dateTimeService,
+            CashRegisterService cashRegisterService) {
         
         this.chefOrderService = chefOrderService; // Store direct reference
         this.parrilleroOrderService = parrilleroOrderService; // Store direct reference
@@ -128,6 +131,7 @@ public class OrderController {
         this.objectMapper = objectMapper;
         this.reservationService = reservationService;
         this.dateTimeService = dateTimeService;
+        this.cashRegisterService = cashRegisterService;
     }
 
     /**
@@ -167,6 +171,37 @@ public class OrderController {
     }
 
     /**
+     * Exposes whether the current admin/manager/cashier has an open cash drawer
+     * so the orders list can warn on the frontend. Does not block collection.
+     */
+    private void addCashRegisterOpenFlag(Authentication authentication, Model model) {
+        String prefix = "cashier";
+        if (authentication != null && authentication.getAuthorities() != null) {
+            boolean admin = authentication.getAuthorities().stream()
+                    .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
+            boolean manager = authentication.getAuthorities().stream()
+                    .anyMatch(a -> "ROLE_MANAGER".equals(a.getAuthority()));
+            if (admin) {
+                prefix = "admin";
+            } else if (manager) {
+                prefix = "manager";
+            }
+        }
+        boolean open = false;
+        try {
+            Employee employee = employeeService.findByUsername(authentication.getName()).orElse(null);
+            Company company = CompanyContext.getCurrentCompany();
+            if (employee != null && company != null) {
+                open = cashRegisterService.findOpenSession(company, employee) != null;
+            }
+        } catch (Exception e) {
+            log.debug("Could not resolve cash register session: {}", e.getMessage());
+        }
+        model.addAttribute("cashRegisterOpen", open);
+        model.addAttribute("cashRegisterUrl", "/" + prefix + "/cash-register");
+    }
+
+    /**
      * Show list of all orders with filters
      */
     @GetMapping
@@ -176,12 +211,13 @@ public class OrderController {
             @RequestParam(required = false) OrderStatus status,
             @RequestParam(required = false) OrderType orderType,
             @RequestParam(required = false) String date,
+            @RequestParam(required = false) PaymentMethodType paymentMethod,
             @RequestParam(defaultValue = "1") int page,
             Authentication authentication,
             Model model) {
         
-        log.debug("Displaying orders list with filters - role: {}, table: {}, status: {}, type: {}, date: {}", 
-                  role, tableId, status, orderType, date);
+        log.debug("Displaying orders list with filters - role: {}, table: {}, status: {}, type: {}, date: {}, paymentMethod: {}", 
+                  role, tableId, status, orderType, date, paymentMethod);
 
         // Validate role
         validateRole(role, authentication);
@@ -218,6 +254,13 @@ public class OrderController {
         if (orderType != null) {
             orders = orders.stream()
                 .filter(order -> order.getOrderType() == orderType)
+                .collect(Collectors.toList());
+        }
+
+        // Filter by payment method: a mixed collection matches if any portion used it
+        if (paymentMethod != null) {
+            orders = orders.stream()
+                .filter(order -> order.usesPaymentMethod(paymentMethod))
                 .collect(Collectors.toList());
         }
 
@@ -300,6 +343,7 @@ public class OrderController {
         List<RestaurantTable> tables = restaurantTableService.findAllOrderByTableNumber();
         OrderStatus[] statuses = OrderStatus.values();
         OrderType[] orderTypes = OrderType.values();
+        PaymentMethodType[] paymentMethods = PaymentMethodType.values();
 
         // Server-side pagination
         int pageSize = 15;
@@ -319,6 +363,7 @@ public class OrderController {
         model.addAttribute("tables", tables);
         model.addAttribute("statuses", statuses);
         model.addAttribute("orderTypes", orderTypes);
+        model.addAttribute("paymentMethods", paymentMethods);
         model.addAttribute("paidCount", paidCount);
         model.addAttribute("todayRevenue", todayRevenue);
         model.addAttribute("pendingCount", pendingCount);
@@ -329,6 +374,7 @@ public class OrderController {
         model.addAttribute("selectedTableId", tableId);
         model.addAttribute("selectedStatus", status);
         model.addAttribute("selectedOrderType", orderType);
+        model.addAttribute("selectedPaymentMethod", paymentMethod);
         model.addAttribute("selectedDate", date);
         model.addAttribute("currentRole", role);
         
@@ -363,6 +409,10 @@ public class OrderController {
         boolean waiterDeliveryCanCollect = listCfg != null
             && Boolean.TRUE.equals(listCfg.getWaiterDeliveryCanCollect());
         model.addAttribute("waiterDeliveryCanCollect", waiterDeliveryCanCollect);
+
+        if ("admin".equalsIgnoreCase(role) || "manager".equalsIgnoreCase(role)) {
+            addCashRegisterOpenFlag(authentication, model);
+        }
 
         return role + "/orders/list";
     }

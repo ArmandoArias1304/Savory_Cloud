@@ -462,7 +462,7 @@ public class TicketPdfService {
                 .add(new Text(order.getOrderType().getDisplayName()).setFont(normalFont))
                 .add(new Text(" | ").setFont(normalFont))
                 .add(new Text("Pago: ").setFont(boldFont))
-                .add(new Text(order.getPaymentMethod() != null ? order.getPaymentMethod().getDisplayName() : "N/A").setFont(normalFont))
+                .add(new Text(order.getPaymentMethodsDisplayWithAmounts()).setFont(normalFont))
                 .setFontSize(8)
                 .setTextAlignment(TextAlignment.CENTER)
                 .setMarginTop(5);
@@ -709,17 +709,6 @@ public class TicketPdfService {
                 .setMarginTop(3);
         document.add(orderNum);
 
-        // Table number (only when the order sits on a table)
-        String tableLabel = tableLabel(order);
-        if (tableLabel != null) {
-            Paragraph tableLine = new Paragraph(tableLabel)
-                    .setFont(normalFont)
-                    .setFontSize(8)
-                    .setTextAlignment(TextAlignment.CENTER)
-                    .setMarginTop(2);
-            document.add(tableLine);
-        }
-
         // Account folio (centered, bold, double emphasis) — e.g. ORD-20260906-001-02
         Paragraph accountNum = new Paragraph("CUENTA: " + payment.getPaymentFolio())
                 .setFont(boldFont)
@@ -736,6 +725,17 @@ public class TicketPdfService {
                     .setTextAlignment(TextAlignment.CENTER)
                     .setMarginTop(2);
             document.add(person);
+        }
+
+        // Table number directly under the person (only when the order sits on a table)
+        String tableLabel = tableLabel(order);
+        if (tableLabel != null) {
+            Paragraph tableLine = new Paragraph(tableLabel)
+                    .setFont(normalFont)
+                    .setFontSize(8)
+                    .setTextAlignment(TextAlignment.CENTER)
+                    .setMarginTop(2);
+            document.add(tableLine);
         }
 
         // Separator + Items header
@@ -901,7 +901,7 @@ public class TicketPdfService {
                 .add(new Text(order.getOrderType().getDisplayName()).setFont(normalFont))
                 .add(new Text(" | ").setFont(normalFont))
                 .add(new Text("Pago: ").setFont(boldFont))
-                .add(new Text(payment.getPaymentMethod() != null ? payment.getPaymentMethod().getDisplayName() : "N/A").setFont(normalFont))
+                .add(new Text(payment.getPaymentMethodsDisplayWithAmounts()).setFont(normalFont))
                 .setFontSize(8)
                 .setTextAlignment(TextAlignment.CENTER)
                 .setMarginTop(5);

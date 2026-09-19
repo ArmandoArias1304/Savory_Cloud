@@ -6,8 +6,10 @@ import com.aatechsolutions.elgransazon.domain.entity.*;
 import com.aatechsolutions.elgransazon.domain.repository.OrderRepository;
 import com.aatechsolutions.elgransazon.domain.repository.PaymentRepository;
 import com.aatechsolutions.elgransazon.infrastructure.context.CompanyContext;
+import com.aatechsolutions.elgransazon.presentation.dto.PaymentTenderDTO;
 import com.aatechsolutions.elgransazon.presentation.dto.SplitAccountDTO;
 import com.aatechsolutions.elgransazon.presentation.dto.SplitItemDTO;
+import com.aatechsolutions.elgransazon.util.PaymentTenderSupport;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -850,6 +852,85 @@ class SplitPaymentServiceTest {
         assertEquals(new BigDecimal("0.00"), order.getRemainingTotal().setScale(2, RoundingMode.HALF_UP));
         settlement.forEach(p -> assertEquals("10.00",
                 p.getOrderDiscountPercent().setScale(2, RoundingMode.HALF_UP).toPlainString()));
+    }
+
+    @Test
+    void mixedTendersOnSplitAccountsSumToEachAccountAndTheOrder() {
+        Order probe = buildOrder();
+        SplitAccountDTO probe1 = new SplitAccountDTO();
+        probe1.setIndex(1);
+        probe1.setPaymentMethod("CREDIT_CARD");
+        probe1.setItems(List.of(item(1L, "1"), item(2L, "1"), item(3L, "1")));
+        SplitAccountDTO probe2 = new SplitAccountDTO();
+        probe2.setIndex(2);
+        probe2.setPaymentMethod("DEBIT_CARD");
+        probe2.setItems(List.of(item(1L, "1")));
+        List<Payment> probePayments = service.createSplitPayments(
+                probe, SplitMode.ITEMS, List.of(probe1, probe2), null, "tester", true, "https://x");
+        BigDecimal account1Total = probePayments.get(0).getTotal().setScale(2, RoundingMode.HALF_UP);
+        BigDecimal account2Total = probePayments.get(1).getTotal().setScale(2, RoundingMode.HALF_UP);
+
+        Order order = buildOrder();
+        BigDecimal cashShare = account1Total.divide(new BigDecimal("2"), 2, RoundingMode.DOWN);
+        BigDecimal cardShare = account1Total.subtract(cashShare);
+
+        SplitAccountDTO p1 = new SplitAccountDTO();
+        p1.setIndex(1);
+        p1.setPersonLabel("Persona 1");
+        p1.setPaymentMethod("CREDIT_CARD");
+        p1.setTip(new BigDecimal("5.00"));
+        p1.setPaymentTenders(List.of(
+                new PaymentTenderDTO("CASH", cashShare),
+                new PaymentTenderDTO("CREDIT_CARD", cardShare)));
+        p1.setItems(List.of(item(1L, "1"), item(2L, "1"), item(3L, "1")));
+
+        SplitAccountDTO p2 = new SplitAccountDTO();
+        p2.setIndex(2);
+        p2.setPersonLabel("Persona 2");
+        p2.setPaymentMethod("DEBIT_CARD");
+        p2.setTip(BigDecimal.ZERO);
+        p2.setItems(List.of(item(1L, "1")));
+
+        List<Payment> payments = service.createSplitPayments(
+                order, SplitMode.ITEMS, List.of(p1, p2), null, "tester", true, "https://x");
+
+        assertEquals(2, payments.size());
+        assertEquals(0, account1Total.compareTo(payments.get(0).getTotal().setScale(2, RoundingMode.HALF_UP)));
+        assertEquals(0, account2Total.compareTo(payments.get(1).getTotal().setScale(2, RoundingMode.HALF_UP)));
+        assertEquals(0, new BigDecimal("5.00").compareTo(payments.get(0).getTip()),
+                "a mix that includes cash still keeps the tip");
+        assertEquals(2, payments.get(0).getPaymentTenders().size());
+        assertEquals(0, account1Total.compareTo(PaymentTenderSupport.sum(
+                PaymentTenderSupport.collected(payments.get(0)))));
+
+        BigDecimal tenderSum = PaymentTenderSupport.totalsByMethod(List.of(order)).values().stream()
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        assertEquals(0, order.getTotal().setScale(2, RoundingMode.HALF_UP).compareTo(tenderSum.setScale(2, RoundingMode.HALF_UP)));
+        assertTrue(order.usesPaymentMethod(PaymentMethodType.CASH));
+        assertTrue(order.usesPaymentMethod(PaymentMethodType.CREDIT_CARD));
+        assertTrue(order.usesPaymentMethod(PaymentMethodType.DEBIT_CARD));
+        assertTrue(order.hasMixedPaymentMethods());
+    }
+
+    @Test
+    void mixedAccountThatDoesNotCoverTheTotalIsRejected() {
+        Order order = buildOrder();
+        SplitAccountDTO p1 = new SplitAccountDTO();
+        p1.setIndex(1);
+        p1.setPaymentMethod("CASH");
+        p1.setPaymentTenders(List.of(
+                new PaymentTenderDTO("CASH", new BigDecimal("10.00")),
+                new PaymentTenderDTO("CREDIT_CARD", new BigDecimal("10.00"))));
+        p1.setItems(List.of(item(1L, "1"), item(2L, "1"), item(3L, "1")));
+        SplitAccountDTO p2 = new SplitAccountDTO();
+        p2.setIndex(2);
+        p2.setPaymentMethod("DEBIT_CARD");
+        p2.setItems(List.of(item(1L, "1")));
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
+                service.createSplitPayments(order, SplitMode.ITEMS, List.of(p1, p2), null, "tester", true, "https://x"));
+        assertTrue(ex.getMessage().contains("debe ser exactamente el total"), ex.getMessage());
+        assertTrue(order.getPayments().isEmpty(), "no payments may be created for a rejected mix");
     }
 
     private SplitItemDTO item(long detailId, String qty) {

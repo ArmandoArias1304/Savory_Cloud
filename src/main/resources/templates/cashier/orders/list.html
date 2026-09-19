@@ -250,7 +250,7 @@
               class="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-4"
             >
               <div
-                class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 flex-1"
+                class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 flex-1"
               >
                 <!-- Table Filter -->
                 <div>
@@ -325,6 +325,26 @@
                     th:value="${selectedDate}"
                     class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
                   />
+                </div>
+
+                <!-- Payment Method Filter -->
+                <div>
+                  <label
+                    class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                    >Método de Pago</label
+                  >
+                  <select
+                    id="filterPaymentMethod"
+                    class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                  >
+                    <option value="">Todos los métodos</option>
+                    <option
+                      th:each="method : ${paymentMethods}"
+                      th:value="${method}"
+                      th:text="${method.displayName}"
+                      th:selected="${selectedPaymentMethod != null && selectedPaymentMethod == method}"
+                    ></option>
+                  </select>
                 </div>
               </div>
 
@@ -407,10 +427,12 @@
                   >
                     <!-- Order Number -->
                     <td class="px-6 py-4 whitespace-nowrap">
-                      <span
-                        class="text-sm font-mono font-semibold text-primary"
+                      <a
+                        th:href="@{/cashier/orders/view/{id}(id=${order.idOrder})}"
+                        class="text-sm font-mono font-semibold text-primary hover:underline"
+                        title="Ver pedido"
                         th:text="${order.orderNumber}"
-                      ></span>
+                      ></a>
                     </td>
 
                     <!-- Date/Time -->
@@ -474,8 +496,8 @@
                     <td class="px-6 py-4 whitespace-nowrap">
                       <span
                         class="px-3 py-1 text-xs rounded-full font-medium"
-                        th:classappend="${order.paymentMethod.name() == 'CASH'} ? 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400' : 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'"
-                        th:text="${order.paymentMethod.displayName}"
+                        th:classappend="${order.hasMixedPaymentMethods()} ? 'bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-300' : (${order.paymentMethod != null and order.paymentMethod.name() == 'CASH'} ? 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400' : 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400')"
+                        th:text="${order.paymentMethodsDisplay}"
                       >
                       </span>
                     </td>
@@ -661,10 +683,12 @@
                   >
                     <!-- Order Number -->
                     <td class="px-6 py-4 whitespace-nowrap">
-                      <span
-                        class="text-sm font-mono font-semibold text-orange-600 dark:text-orange-400"
+                      <a
+                        th:href="@{/cashier/orders/view/{id}(id=${order.idOrder})}"
+                        class="text-sm font-mono font-semibold text-orange-600 dark:text-orange-400 hover:underline"
+                        title="Ver pedido"
                         th:text="${order.orderNumber}"
-                      ></span>
+                      ></a>
                     </td>
 
                     <!-- Date/Time -->
@@ -728,8 +752,8 @@
                     <td class="px-6 py-4 whitespace-nowrap">
                       <span
                         class="px-3 py-1 text-xs rounded-full font-medium"
-                        th:classappend="${order.paymentMethod.name() == 'CASH'} ? 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400' : 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'"
-                        th:text="${order.paymentMethod.displayName}"
+                        th:classappend="${order.hasMixedPaymentMethods()} ? 'bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-300' : (${order.paymentMethod != null and order.paymentMethod.name() == 'CASH'} ? 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400' : 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400')"
+                        th:text="${order.paymentMethodsDisplay}"
                       >
                       </span>
                     </td>
@@ -934,6 +958,11 @@
         else params.delete("orderType");
         if (date) params.set("date", date);
         else params.delete("date");
+        const paymentMethod = document.getElementById("filterPaymentMethod")
+          ? document.getElementById("filterPaymentMethod").value
+          : "";
+        if (paymentMethod) params.set("paymentMethod", paymentMethod);
+        else params.delete("paymentMethod");
 
         window.location.href = `/${currentRole}/orders?${params.toString()}#mainFiltersSection`;
       }
@@ -944,6 +973,7 @@
         params.delete("status");
         params.delete("orderType");
         params.delete("date");
+        params.delete("paymentMethod");
         window.location.href = `/${currentRole}/orders?${params.toString()}#mainFiltersSection`;
       }
 
@@ -1741,5 +1771,38 @@
 
     <!-- Script del Sistema de Temas -->
     <div th:replace="~{fragments/theme :: themeScript}"></div>
+    <script th:inline="javascript">
+      /*<![CDATA[*/
+      (function () {
+        var cashOpen = /*[[${cashRegisterOpen}]]*/ true;
+        if (cashOpen) return;
+        var cashUrl = /*[[${cashRegisterUrl}]]*/ "/cashier/cash-register";
+        document.addEventListener("DOMContentLoaded", function () {
+          if (typeof Swal === "undefined") return;
+          var isDark = document.documentElement.classList.contains("dark");
+          Swal.fire({
+            icon: "warning",
+            title: "Caja cerrada",
+            html:
+              "<p>Debes abrir tu caja antes de cobrar un pedido.</p>" +
+              "<p class='text-sm mt-2'>Este aviso no impide continuar, pero los cobros en efectivo no se registrarán en caja hasta que la abras.</p>",
+            confirmButtonText: "Ir a caja",
+            showCancelButton: true,
+            cancelButtonText: "Entendido",
+            confirmButtonColor: "#38e07b",
+            cancelButtonColor: "#6b7280",
+            reverseButtons: true,
+            background: isDark ? "#1f2937" : "#ffffff",
+            color: isDark ? "#f3f4f6" : "#1f2937",
+            customClass: typeof getSwalDarkModeClasses === "function" ? getSwalDarkModeClasses() : { popup: "rounded-2xl" },
+          }).then(function (result) {
+            if (result.isConfirmed && cashUrl) {
+              window.location.href = cashUrl;
+            }
+          });
+        });
+      })();
+      /*]]>*/
+    </script>
   </body>
 </html>

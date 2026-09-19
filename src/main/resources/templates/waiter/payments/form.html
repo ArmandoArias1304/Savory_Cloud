@@ -253,6 +253,7 @@
               th:action="@{/waiter/payments/process/{id}(id=${order.idOrder})}"
               method="post"
               id="paymentForm"
+              novalidate
             >
               <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <!-- Left Column -->
@@ -287,20 +288,28 @@
                     <h3
                       class="text-lg font-bold text-gray-900 dark:text-white dark:text-white"
                     >
-                      Método de Pago <span class="text-red-500">*</span>
+                      Métodos de Pago <span class="text-red-500">*</span>
                     </h3>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">
+                      Puede combinar tarjeta de crédito y débito. La suma debe ser exactamente el total a cobrar (sin propina).
+                    </p>
                     <div class="grid grid-cols-3 gap-3">
                       <button
                         type="button"
                         th:each="method, iterStat : ${enabledPaymentMethods}"
                         th:data-method="${method.name()}"
                         th:class="${order.paymentMethod != null && order.paymentMethod == method} ? 'payment-method-btn active flex flex-col items-center justify-center gap-2 rounded-xl p-4' : 'payment-method-btn flex flex-col items-center justify-center gap-2 rounded-xl p-4 text-gray-600 dark:text-gray-400'"
-                        onclick="selectPaymentMethod(this)"
+                        onclick="togglePaymentMethod(this)"
                       >
                         <span class="material-symbols-outlined text-3xl">
                           <th:block th:switch="${method.name()}">
                             <th:block th:case="'CASH'">payments</th:block>
-                            <th:block th:case="'CARD'">credit_card</th:block>
+                            <th:block th:case="'CREDIT_CARD'"
+                              >credit_card</th:block
+                            >
+                            <th:block th:case="'DEBIT_CARD'"
+                              >credit_card</th:block
+                            >
                             <th:block th:case="'TRANSFER'"
                               >account_balance</th:block
                             >
@@ -319,6 +328,14 @@
                       id="paymentMethodInput"
                       th:value="${currentPaymentMethod}"
                     />
+                    <input type="hidden" name="paymentTenders" id="paymentTendersInput" value="" />
+                    <div id="paymentTenderPanel" class="space-y-2" style="display: none">
+                      <p class="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                        Montos por método <span class="text-red-500">*</span>
+                      </p>
+                      <div id="paymentTenderAmounts" class="space-y-2"></div>
+                      <p id="paymentTenderBalance" class="text-xs font-semibold"></p>
+                    </div>
 
                     <!-- Info about enabled payment methods -->
                     <p
@@ -890,6 +907,7 @@
       };
       /*]]>*/
     </script>
+    <script th:src="@{/js/mixed-payment.js}"></script>
     <script th:src="@{/js/split-bill.js}"></script>
 
     <!-- Application JavaScript -->
@@ -903,21 +921,9 @@
         orderSubtotal = parseFloat(window.ORDER_DATA.subtotal) || 0;
       }
 
-      // Payment method selection
+      // Payment method selection (toggle: several methods can stay active)
       function selectPaymentMethod(button) {
-        // Remove active class from all buttons
-        document.querySelectorAll(".payment-method-btn").forEach((btn) => {
-          btn.classList.remove("active");
-          btn.classList.add("text-gray-600", "dark:text-gray-400");
-        });
-
-        // Add active class to clicked button
-        button.classList.add("active");
-        button.classList.remove("text-gray-600", "dark:text-gray-400");
-
-        // Update hidden input
-        const method = button.getAttribute("data-method");
-        document.getElementById("paymentMethodInput").value = method;
+        togglePaymentMethod(button);
       }
 
       // Set tip percentage
@@ -964,6 +970,8 @@
         updateElementText("tipDisplay", tipText);
         updateElementText("tip-summary", tipText);
 
+        if (window.MIXED_PAYMENT) window.MIXED_PAYMENT.sync();
+
         // Refresh split-bill preview (if enabled)
         if (window.SPLIT_BILL) window.SPLIT_BILL.refresh();
       }
@@ -983,6 +991,7 @@
                 : "¿Confirmar división de cuenta?",
               html: window.SPLIT_BILL.summaryHtml(plan),
               icon: "question",
+              width: "32rem",
               showCancelButton: true,
               confirmButtonColor: "#38e07b",
               cancelButtonColor: "#6b7280",
@@ -1011,6 +1020,25 @@
             return false;
           }
 
+          const mix = window.MIXED_PAYMENT ? MIXED_PAYMENT.validate() : { ok: true };
+          if (!mix.ok) {
+            e.preventDefault();
+            Swal.fire({
+              icon: "error",
+              title: "Error",
+              text: mix.message,
+              confirmButtonColor: "#38e07b",
+              background: document.documentElement.classList.contains("dark")
+                ? "#1f2937"
+                : "#ffffff",
+              color: document.documentElement.classList.contains("dark")
+                ? "#f3f4f6"
+                : "#1f2937",
+            });
+            return false;
+          }
+          if (window.MIXED_PAYMENT) MIXED_PAYMENT.syncHidden();
+
           const paymentMethod =
             document.getElementById("paymentMethodInput").value;
 
@@ -1036,18 +1064,9 @@
           const tip = parseFloat(document.getElementById("tip").value) || 0;
           const totalWithTip = orderTotal + tip;
 
-          // Get payment method name (extract only text, ignore icon)
-          const paymentMethodBtn = document.querySelector(
-            ".payment-method-btn.active",
-          );
-          let paymentMethodName = "No seleccionado";
-          if (paymentMethodBtn) {
-            const textSpan =
-              paymentMethodBtn.querySelector("span.font-semibold");
-            paymentMethodName = textSpan
-              ? textSpan.textContent.trim()
-              : paymentMethodBtn.textContent.trim();
-          }
+          const paymentMethodName = window.MIXED_PAYMENT
+            ? MIXED_PAYMENT.label()
+            : "No seleccionado";
 
           Swal.fire({
             title: "¿Confirmar pago?",
@@ -1135,20 +1154,7 @@
       // Initialize on page load
       document.addEventListener("DOMContentLoaded", function () {
         calculateTotalWithTip();
-
-        // Initialize payment method button states based on hidden input value
-        const selectedMethod =
-          document.getElementById("paymentMethodInput").value;
-        document.querySelectorAll(".payment-method-btn").forEach((btn) => {
-          const btnMethod = btn.getAttribute("data-method");
-          if (btnMethod === selectedMethod) {
-            btn.classList.add("active");
-            btn.classList.remove("text-gray-600", "dark:text-gray-400");
-          } else {
-            btn.classList.remove("active");
-            btn.classList.add("text-gray-600", "dark:text-gray-400");
-          }
-        });
+        if (window.MIXED_PAYMENT) MIXED_PAYMENT.init();
       });
     </script>
 

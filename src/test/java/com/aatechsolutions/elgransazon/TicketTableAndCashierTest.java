@@ -98,6 +98,8 @@ class TicketTableAndCashierTest {
         String ticket = escPosPrint(payment);
 
         assertTrue(ticket.contains("Mesa: 7"), ticket);
+        assertTrue(ticket.contains("Persona 2"), ticket);
+        assertTrue(ticket.indexOf("Persona 2") < ticket.indexOf("Mesa: 7"), ticket);
         assertTrue(ticket.contains("Cobrado por: Carlos Cajero"), ticket);
         assertFalse(ticket.contains("Ana Cobradora"), ticket);
     }
@@ -128,6 +130,8 @@ class TicketTableAndCashierTest {
         String ticket = pdfPrint(account(employee("Carlos", "Cajero")));
 
         assertTrue(ticket.contains("Mesa: 7"), ticket);
+        assertTrue(ticket.contains("Persona 2"), ticket);
+        assertTrue(ticket.indexOf("Persona 2") < ticket.indexOf("Mesa: 7"), ticket);
         assertTrue(ticket.contains("Cobrado por: Carlos Cajero"), ticket);
     }
 

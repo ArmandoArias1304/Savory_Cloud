@@ -83,7 +83,7 @@
     // persona" when several leave and each wants their own ticket); a full
     // settlement into per-person accounts starts with 2 people.
     count: departureMode ? 1 : 2,
-    accounts: [], // [{ method, tip, tipPct, items: {detailId: qty} }]
+    accounts: [], // [{ methods: [..], tenders: {METHOD: amount}, method, tip, tipPct, items }]
   };
 
   // ---------- helpers ----------
@@ -137,9 +137,74 @@
     return METHOD_NAMES[m] || m;
   }
 
-  /** Whether a person paying with this method can register a tip here. */
+  /** Whether a person paying with this mix can register a tip here. */
   function tipsAllowedForMethod(method) {
     return !(zeroCashTips && method === "CASH");
+  }
+
+  function accountMethods(acc) {
+    if (acc && acc.methods && acc.methods.length) return acc.methods.slice();
+    if (acc && acc.method) return [acc.method];
+    return [];
+  }
+
+  function tipsAllowedForAccount(acc) {
+    var ms = accountMethods(acc);
+    if (!ms.length) return true;
+    return !zeroCashTips || !ms.every(function (m) {
+      return m === "CASH";
+    });
+  }
+
+  function round2(n) {
+    return Math.round((Number(n) || 0) * 100) / 100;
+  }
+
+  function emptyAccount() {
+    var method = defaultMethod();
+    return {
+      method: method,
+      methods: method ? [method] : [],
+      tenders: {},
+      tip: 0,
+      tipPct: null,
+      items: {},
+    };
+  }
+
+  function methodMixLabel(acc) {
+    var ms = accountMethods(acc);
+    if (!ms.length) return "Sin método";
+    var total = accountDiscountedTotal(acc);
+    if (ms.length === 1) return methodDisplay(ms[0]);
+    return ms
+      .map(function (m) {
+        var amt = acc.tenders && acc.tenders[m] != null ? round2(acc.tenders[m]) : 0;
+        return methodDisplay(m) + " " + fmt(amt);
+      })
+      .join(" + ");
+  }
+
+  function accountTendersPayload(acc) {
+    var ms = accountMethods(acc);
+    var total = round2(accountDiscountedTotal(acc));
+    if (!ms.length) return [];
+    if (ms.length === 1) {
+      return [{ method: ms[0], amount: total }];
+    }
+    var list = [];
+    for (var i = 0; i < ms.length; i++) {
+      var amt = round2(acc.tenders && acc.tenders[ms[i]]);
+      if (amt > 0) list.push({ method: ms[i], amount: amt });
+    }
+    return list;
+  }
+
+  function accountTendersSum(acc) {
+    var payload = accountTendersPayload(acc);
+    var s = 0;
+    for (var i = 0; i < payload.length; i++) s += Number(payload[i].amount) || 0;
+    return round2(s);
   }
 
   function defaultMethod() {
@@ -290,7 +355,7 @@
     var n = state.count;
     var accs = [];
     for (var i = 0; i < n; i++) {
-      accs.push({ method: defaultMethod(), tip: 0, tipPct: null, items: {} });
+      accs.push(emptyAccount());
     }
     state.accounts = accs;
   }
@@ -298,7 +363,7 @@
   function addAccount() {
     if (state.count >= MAX_ACCOUNTS) return;
     state.count++;
-    state.accounts.push({ method: defaultMethod(), tip: 0, tipPct: null, items: {} });
+    state.accounts.push(emptyAccount());
     render();
   }
 
@@ -311,7 +376,7 @@
 
   // ---------- rendering ----------
 
-  function methodSelectHtml(acc) {
+  function methodSelectHtml(acc, idx) {
     if (fixedMethod) {
       return (
         '<span class="text-sm font-semibold text-gray-600 dark:text-gray-400">' +
@@ -319,16 +384,77 @@
         "</span>"
       );
     }
-    var opts = "";
+    var selected = accountMethods(acc);
+    var chips = "";
     for (var i = 0; i < methods.length; i++) {
       var m = methods[i];
-      opts +=
-        '<option value="' + esc(m) + '"' + (acc.method === m ? " selected" : "") + ">" + esc(methodDisplay(m)) + "</option>";
+      var on = selected.indexOf(m) >= 0;
+      chips +=
+        '<button type="button" class="split-method-chip rounded-lg border-2 px-2.5 py-1.5 text-xs font-bold transition ' +
+        (on
+          ? "bg-primary/10 text-primary border-primary"
+          : "bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-gray-300 dark:border-gray-600") +
+        '" data-account="' +
+        idx +
+        '" data-method="' +
+        esc(m) +
+        '" aria-pressed="' +
+        (on ? "true" : "false") +
+        '">' +
+        esc(methodDisplay(m)) +
+        "</button>";
     }
+    return '<div class="flex flex-wrap gap-1.5">' + chips + "</div>";
+  }
+
+  function methodAmountsHtml(acc, idx) {
+    var selected = accountMethods(acc);
+    if (selected.length < 2) return "";
+    var rows = "";
+    var total = round2(accountDiscountedTotal(acc));
+    var sum = 0;
+    for (var j = 0; j < selected.length; j++) {
+      var sm = selected[j];
+      var amt = acc.tenders && acc.tenders[sm] != null ? round2(acc.tenders[sm]) : 0;
+      sum += amt;
+      rows +=
+        '<div class="flex items-center gap-3 mt-2">' +
+        '<label class="w-40 shrink-0 text-sm font-semibold text-gray-700 dark:text-gray-300">' +
+        esc(methodDisplay(sm)) +
+        "</label>" +
+        '<div class="relative min-w-0 flex-1">' +
+        '<span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400 font-bold">$</span>' +
+        '<input type="number" min="0" step="0.01" max="999999.99" inputmode="decimal" value="' +
+        amt.toFixed(2) +
+        '" class="split-tender-amount input-field w-full min-w-[10rem] rounded-xl border-2 border-gray-300 bg-white dark:bg-gray-700 dark:text-white p-3 pl-8 text-lg font-bold focus:outline-none focus:border-primary" data-account="' +
+        idx +
+        '" data-method="' +
+        esc(sm) +
+        '" />' +
+        "</div></div>";
+    }
+    var remaining = round2(total - sum);
+    var balClass =
+      Math.abs(remaining) < 0.005
+        ? "text-primary"
+        : remaining > 0
+          ? "text-amber-600 dark:text-amber-400"
+          : "text-red-600 dark:text-red-400";
+    var balText =
+      Math.abs(remaining) < 0.005
+        ? "Cubierto " + fmt(total)
+        : remaining > 0
+          ? "Falta " + fmt(remaining)
+          : "Sobra " + fmt(Math.abs(remaining));
     return (
-      '<select class="split-method w-full rounded-lg border-2 border-gray-300 bg-white dark:bg-gray-700 dark:text-white px-3 py-1.5 text-sm font-semibold focus:outline-none focus:border-primary">' +
-      opts +
-      "</select>"
+      '<div class="mt-3">' +
+      '<p class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Montos por método</p>' +
+      rows +
+      '<p class="split-tender-balance text-xs font-semibold mt-2 ' +
+      balClass +
+      '">' +
+      balText +
+      "</p></div>"
     );
   }
 
@@ -378,7 +504,7 @@
     for (var i = 0; i < state.accounts.length; i++) {
       var acc = state.accounts[i];
       // Cash accounts always carry a $0 tip (restaurant rule).
-      if (!tipsAllowedForMethod(acc.method)) {
+      if (!tipsAllowedForAccount(acc)) {
         acc.tip = 0;
         acc.tipPct = null;
         continue;
@@ -392,20 +518,21 @@
   function personMetaHtml(acc, idx) {
     // CASH accounts never register a tip (it is handed to the waiter directly),
     // so the picker is replaced by a short note — same as the normal charge form.
-    var tipHtml = tipsAllowedForMethod(acc.method)
+    var tipHtml = tipsAllowedForAccount(acc)
       ? tipPickerHtml(acc, idx)
       : '<p class="text-[11px] text-gray-400 dark:text-gray-500 italic leading-snug">En efectivo la propina se entrega directamente al mesero y no se registra en el sistema.</p>';
     return (
       '<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">' +
       "<div>" +
-      '<label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Método de pago</label>' +
-      methodSelectHtml(acc) +
+      '<label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Métodos de pago</label>' +
+      methodSelectHtml(acc, idx) +
       "</div>" +
       "<div>" +
       '<label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Propina</label>' +
       tipHtml +
       "</div>" +
-      "</div>"
+      "</div>" +
+      methodAmountsHtml(acc, idx)
     );
   }
 
@@ -664,6 +791,30 @@
           accPct.tip = round4((accountDiscountedTotal(accPct) * pct) / 100);
           render();
         }
+        if (t.classList.contains("split-method-chip") || t.closest(".split-method-chip")) {
+          var chip = t.classList.contains("split-method-chip") ? t : t.closest(".split-method-chip");
+          var chipIdx = parseInt(chip.getAttribute("data-account"), 10);
+          var chipMethod = chip.getAttribute("data-method");
+          var chipAcc = state.accounts[chipIdx];
+          if (!chipAcc || !chipMethod) return;
+          if (!chipAcc.methods) chipAcc.methods = chipAcc.method ? [chipAcc.method] : [];
+          if (!chipAcc.tenders) chipAcc.tenders = {};
+          var at = chipAcc.methods.indexOf(chipMethod);
+          if (at >= 0) {
+            if (chipAcc.methods.length === 1) return;
+            chipAcc.methods.splice(at, 1);
+            delete chipAcc.tenders[chipMethod];
+          } else {
+            chipAcc.methods.push(chipMethod);
+            chipAcc.tenders[chipMethod] = 0;
+          }
+          chipAcc.method = chipAcc.methods[0];
+          if (!tipsAllowedForAccount(chipAcc)) {
+            chipAcc.tip = 0;
+            chipAcc.tipPct = null;
+          }
+          render();
+        }
       });
 
       list.addEventListener("change", function (e) {
@@ -687,8 +838,9 @@
           var idx = Array.prototype.indexOf.call(list.children, card);
           if (idx >= 0) {
             state.accounts[idx].method = t.value;
-            // Switching to CASH drops any captured tip and hides the picker.
-            if (!tipsAllowedForMethod(t.value)) {
+            state.accounts[idx].methods = t.value ? [t.value] : [];
+            state.accounts[idx].tenders = {};
+            if (!tipsAllowedForAccount(state.accounts[idx])) {
               state.accounts[idx].tip = 0;
               state.accounts[idx].tipPct = null;
             }
@@ -702,6 +854,34 @@
           state.accounts[idx2].tip = isNaN(v) || v < 0 ? 0 : v;
           state.accounts[idx2].tipPct = null;
           render();
+        }
+      });
+
+      list.addEventListener("input", function (e) {
+        var t = e.target;
+        if (!t.classList.contains("split-tender-amount")) return;
+        var tenderIdx = parseInt(t.getAttribute("data-account"), 10);
+        var tenderMethod = t.getAttribute("data-method");
+        var tenderAcc = state.accounts[tenderIdx];
+        if (!tenderAcc || !tenderMethod) return;
+        if (!tenderAcc.tenders) tenderAcc.tenders = {};
+        var tv = parseFloat(t.value);
+        tenderAcc.tenders[tenderMethod] = isNaN(tv) || tv < 0 ? 0 : round2(tv);
+        var card = t.closest(".split-person");
+        var bal = card ? card.querySelector(".split-tender-balance") : null;
+        if (bal) {
+          var total = round2(accountDiscountedTotal(tenderAcc));
+          var remaining = round2(total - accountTendersSum(tenderAcc));
+          if (Math.abs(remaining) < 0.005) {
+            bal.textContent = "Cubierto " + fmt(total);
+            bal.className = "split-tender-balance text-[11px] font-semibold mt-1 text-primary";
+          } else if (remaining > 0) {
+            bal.textContent = "Falta " + fmt(remaining);
+            bal.className = "split-tender-balance text-[11px] font-semibold mt-1 text-amber-600 dark:text-amber-400";
+          } else {
+            bal.textContent = "Sobra " + fmt(Math.abs(remaining));
+            bal.className = "split-tender-balance text-[11px] font-semibold mt-1 text-red-600 dark:text-red-400";
+          }
         }
       });
     }
@@ -734,10 +914,40 @@
     var plan = [];
     for (var i = 0; i < state.accounts.length; i++) {
       var acc = state.accounts[i];
-      var method = acc.method || defaultMethod();
-      if (!fixedMethod && methods.length && methods.indexOf(method) < 0) {
-        Swal.fire({ icon: "error", title: "División de cuenta", text: "Persona " + (startPerson + i) + ": seleccione un método de pago válido.", confirmButtonColor: "#38e07b" });
+      var mix = accountMethods(acc);
+      var method = mix.length ? mix[0] : defaultMethod();
+      if (!fixedMethod && methods.length) {
+        for (var mi = 0; mi < mix.length; mi++) {
+          if (methods.indexOf(mix[mi]) < 0) {
+            Swal.fire({ icon: "error", title: "División de cuenta", text: "Persona " + (startPerson + i) + ": seleccione un método de pago válido.", confirmButtonColor: "#38e07b" });
+            return null;
+          }
+        }
+      }
+      if (!mix.length) {
+        Swal.fire({ icon: "error", title: "División de cuenta", text: "Persona " + (startPerson + i) + ": seleccione un método de pago.", confirmButtonColor: "#38e07b" });
         return null;
+      }
+      var personTotal = round2(accountDiscountedTotal(acc));
+      var tenders = accountTendersPayload(acc);
+      if (mix.length > 1) {
+        var tenderSum = accountTendersSum(acc);
+        if (Math.abs(round2(tenderSum - personTotal)) > 0.01) {
+          Swal.fire({
+            icon: "error",
+            title: "División de cuenta",
+            text:
+              "Persona " +
+              (startPerson + i) +
+              ": la suma de los métodos de pago (" +
+              fmt(tenderSum) +
+              ") debe ser exactamente el total (" +
+              fmt(personTotal) +
+              ").",
+            confirmButtonColor: "#38e07b",
+          });
+          return null;
+        }
       }
       var itemsArr = [];
       var hasItems = false;
@@ -774,8 +984,9 @@
         index: startPerson + i,
         personLabel: "Persona " + (startPerson + i),
         paymentMethod: method,
-        // Cash accounts never register a tip (restaurant rule).
-        tip: tipsAllowedForMethod(method)
+        paymentTenders: tenders,
+        // Cash-only accounts never register a tip (restaurant rule).
+        tip: tipsAllowedForAccount(acc)
           ? Math.round((acc.tip || 0) * 100) / 100
           : 0,
         items: itemsArr,
@@ -818,59 +1029,106 @@
     return labels.join(" · ");
   }
 
+  function moneyRow(label, value, opts) {
+    opts = opts || {};
+    var color = opts.color || "inherit";
+    var weight = opts.bold ? "700" : opts.muted ? "500" : "600";
+    var size = opts.small ? "13px" : "14px";
+    var pad = opts.padTop ? "padding-top:8px;margin-top:8px;border-top:1px solid #e5e7eb;" : "";
+    return (
+      "<div style='display:flex;justify-content:space-between;align-items:baseline;gap:12px;line-height:1.45;font-size:" +
+      size +
+      ";" +
+      pad +
+      "'>" +
+      "<span style='color:" +
+      (opts.muted ? "#6b7280" : "inherit") +
+      ";font-weight:" +
+      (opts.bold ? "700" : "500") +
+      ";text-align:left'>" +
+      esc(label) +
+      "</span>" +
+      "<span style='font-weight:" +
+      weight +
+      ";white-space:nowrap;font-variant-numeric:tabular-nums;color:" +
+      color +
+      "'>" +
+      esc(value) +
+      "</span></div>"
+    );
+  }
+
   function summaryHtml(plan) {
-    var rows = "";
+    var cards = "";
+    var tips = 0;
+    var consumptionSum = 0;
     for (var i = 0; i < plan.length; i++) {
       var p = plan[i];
-      var total = accountDiscountedTotal(state.accounts[i]);
+      var acc = state.accounts[i];
+      var consumption = round2(accountDiscountedTotal(acc));
+      var tip = round2(p.tip || 0);
+      var toCollect = round2(consumption + tip);
+      consumptionSum += consumption;
+      tips += tip;
       var consumed = personItemsText(p);
-      rows +=
-        "<div class='py-1.5 border-b border-gray-100 dark:border-gray-700 last:border-0'>" +
-        "<div class='flex justify-between text-sm'>" +
-        "<span><strong>" +
+      var tenders = accountTendersPayload(acc);
+      var tenderRows = "";
+      for (var t = 0; t < tenders.length; t++) {
+        tenderRows += moneyRow(methodDisplay(tenders[t].method), fmt(tenders[t].amount), {
+          muted: true,
+        });
+      }
+      if (!tenderRows) {
+        tenderRows = moneyRow(methodMixLabel(acc), fmt(consumption), { muted: true });
+      }
+      cards +=
+        "<div style='text-align:left;border:1px solid #e5e7eb;border-radius:12px;padding:12px 14px;margin-bottom:10px'>" +
+        "<div style='display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:4px'>" +
+        "<span style='font-weight:800'>" +
         esc(p.personLabel) +
-        "</strong> · " +
-        esc(methodDisplay(p.paymentMethod)) +
         "</span>" +
-        "<span>" +
-        fmt(total + p.tip) +
-        (p.tip > 0 ? " <span class='text-gray-400 text-xs'>(+ " + fmt(p.tip) + " propina)</span>" : "") +
-        "</span>" +
-        "</div>" +
+        "<span style='font-weight:800;white-space:nowrap;color:#16a34a'>" +
+        esc(fmt(toCollect)) +
+        "</span></div>" +
         (consumed
-          ? "<div class='text-xs text-gray-500 dark:text-gray-400 mt-0.5'>" + esc(consumed) + "</div>"
+          ? "<p style='margin:0 0 8px;font-size:12px;color:#6b7280;line-height:1.4'>" +
+            esc(consumed) +
+            "</p>"
           : "") +
+        tenderRows +
+        moneyRow("Consumo", fmt(consumption), { padTop: true, muted: true }) +
+        moneyRow("Propina", tip > 0 ? fmt(tip) : "$0.00", { muted: true }) +
+        moneyRow("A cobrar", fmt(toCollect), { bold: true }) +
         "</div>";
     }
-    var tips = plan.reduce(function (s, p) { return s + p.tip; }, 0);
-    var collected = 0;
-    for (var k = 0; k < plan.length; k++) {
-      collected += accountDiscountedTotal(state.accounts[k]) + (plan[k].tip || 0);
-    }
+    var orderTotalLabel = departureMode
+      ? "Consumo a cobrar ahora"
+      : hasPartials
+        ? "Consumo restante"
+        : "Consumo de la orden";
+    var orderTotalValue = departureMode
+      ? consumptionSum
+      : Math.max(0, splitBaseTotal() - orderDiscount());
     return (
-      "<div class='text-left'>" +
-      rows +
+      "<div style='text-align:left;max-width:28rem;margin:0 auto'>" +
+      cards +
       (departureMode
-        ? "<div class='text-xs text-gray-500 dark:text-gray-400 pt-1'>Solo se cobran los ítems ya ENTREGADOS de la(s) persona(s); el resto de la cuenta sigue abierta.</div>"
+        ? "<p style='font-size:12px;color:#6b7280;margin:0 0 8px'>Solo se cobran los ítems ya ENTREGADOS de esta(s) persona(s). El resto de la cuenta sigue abierta.</p>"
         : "") +
       (orderDiscount() > 0
-        ? "<div class='flex justify-between text-xs text-orange-600 pt-1'><span>Descuento global" +
-          (discountPercent() > 0 ? " (" + discountPercent() + "%)" : "") +
-          "</span><span>-" + fmt(orderDiscount()) + "</span></div>"
+        ? moneyRow(
+            "Descuento" + (discountPercent() > 0 ? " (" + discountPercent() + "%)" : ""),
+            "-" + fmt(orderDiscount()),
+            { color: "#ea580c", small: true }
+          )
         : "") +
-      "<div class='flex justify-between text-sm font-bold pt-2'>" +
-      "<span>" +
-      (departureMode
-        ? "Total a cobrar ahora"
-        : hasPartials
-          ? "Total restante a cobrar"
-          : "Total de la orden") +
-      "</span><span>" +
-      fmt(departureMode ? collected : Math.max(0, splitBaseTotal() - orderDiscount())) +
-      "</span></div>" +
-      (tips > 0
-        ? "<div class='flex justify-between text-sm text-gray-500'><span>Propinas</span><span>" + fmt(tips) + "</span></div>"
-        : "") +
+      moneyRow(orderTotalLabel, fmt(orderTotalValue), { muted: true }) +
+      moneyRow("Propinas", fmt(tips), { muted: true }) +
+      moneyRow("Total a cobrar", fmt(round2(orderTotalValue + tips)), {
+        bold: true,
+        padTop: true,
+        color: "#16a34a",
+      }) +
       "</div>"
     );
   }

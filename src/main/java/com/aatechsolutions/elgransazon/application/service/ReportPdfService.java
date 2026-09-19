@@ -4,6 +4,7 @@ import com.aatechsolutions.elgransazon.domain.entity.*;
 import com.aatechsolutions.elgransazon.domain.repository.EmployeeRepository;
 import com.aatechsolutions.elgransazon.infrastructure.context.CompanyContext;
 import com.aatechsolutions.elgransazon.presentation.dto.CashRegisterSummary;
+import com.aatechsolutions.elgransazon.util.PaymentTenderSupport;
 import com.itextpdf.io.font.constants.StandardFonts;
 import com.itextpdf.kernel.colors.DeviceRgb;
 import com.itextpdf.kernel.font.PdfFont;
@@ -203,22 +204,22 @@ public class ReportPdfService {
         paymentTable.setWidth(UnitValue.createPercentValue(100));
         addTableHeader(paymentTable, boldFont, "Método", "Órdenes", "Total", "% Part.");
 
-        // Calculate total sales per payment method
-        Map<String, BigDecimal> totalByPaymentMethod = paidOrders.stream()
-                .filter(o -> o.getPaymentMethod() != null)
-                .collect(Collectors.groupingBy(
-                        o -> o.getPaymentMethod().getDisplayName(),
-                        Collectors.reducing(BigDecimal.ZERO,
-                                o -> o.getTotal() != null ? o.getTotal() : BigDecimal.ZERO,
-                                BigDecimal::add)));
+        // Calculate total sales per payment method from the actual tenders so
+        // a mixed collection contributes only the amount paid with each method
+        // and the four columns still sum to total sales.
+        Map<String, BigDecimal> totalByPaymentMethod = PaymentTenderSupport.totalsByMethodDisplayName(paidOrders);
+        BigDecimal paymentMethodsGrandTotal = totalByPaymentMethod.values().stream()
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         ordersByPaymentMethod.entrySet().stream()
                 .sorted(Map.Entry.<String, Long>comparingByValue().reversed())
                 .forEach(entry -> {
-                    double percentage = totalOrders > 0
-                            ? (entry.getValue() * 100.0 / totalOrders)
-                            : 0.0;
                     BigDecimal methodTotal = totalByPaymentMethod.getOrDefault(entry.getKey(), BigDecimal.ZERO);
+                    double percentage = paymentMethodsGrandTotal.compareTo(BigDecimal.ZERO) > 0
+                            ? methodTotal.multiply(BigDecimal.valueOf(100))
+                                    .divide(paymentMethodsGrandTotal, 2, java.math.RoundingMode.HALF_UP)
+                                    .doubleValue()
+                            : 0.0;
                     addTableRow(paymentTable, regularFont,
                             entry.getKey(),
                             String.valueOf(entry.getValue()),
@@ -226,6 +227,13 @@ public class ReportPdfService {
                             String.format("%.2f%%", percentage));
                 });
         document.add(paymentTable);
+        Paragraph paymentNote = new Paragraph(
+                "Una orden cobrada con varios metodos aparece en cada metodo que uso. El total y el % son por monto cobrado, no por recuento de ordenes.")
+                .setFont(regularFont)
+                .setFontSize(8)
+                .setFontColor(GRAY_COLOR)
+                .setMarginTop(4);
+        document.add(paymentNote);
         document.add(new Paragraph("\n"));
 
         // Web Orders Section (Orders created by customers)
@@ -1195,6 +1203,12 @@ public class ReportPdfService {
             addTableRow(salesTable, regularFont, "Sin ventas", cashRegisterMoney(BigDecimal.ZERO));
         }
         document.add(salesTable);
+        document.add(new Paragraph(
+                "Una venta cobrada con varios metodos aporta solo el monto de cada metodo. El efectivo en caja es la suma de los montos en efectivo, no el ticket completo.")
+                .setFont(regularFont)
+                .setFontSize(8)
+                .setFontColor(GRAY_COLOR)
+                .setMarginTop(4));
         document.add(new Paragraph("\n"));
 
         // ----- Manual movements -----

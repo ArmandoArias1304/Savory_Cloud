@@ -9,6 +9,7 @@ import com.aatechsolutions.elgransazon.application.service.CategoryService;
 import com.aatechsolutions.elgransazon.application.service.DateTimeService;
 import com.aatechsolutions.elgransazon.domain.repository.CustomerRepository;
 import com.aatechsolutions.elgransazon.domain.entity.*;
+import com.aatechsolutions.elgransazon.util.PaymentTenderSupport;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpHeaders;
@@ -103,6 +104,7 @@ public class ReportsController {
         
         // Calculate sales by payment method
         Map<String, Long> ordersByPaymentMethod = calculateOrdersByPaymentMethod(paidOrders);
+        Map<String, BigDecimal> salesByPaymentMethod = PaymentTenderSupport.totalsByMethodDisplayName(paidOrders);
         
         // Top 10 best selling items
         List<Map<String, Object>> topSellingItems = calculateTopSellingItems(paidOrders, 10);
@@ -143,6 +145,7 @@ public class ReportsController {
         model.addAttribute("salesByCategory", salesByCategory);
         model.addAttribute("salesByEmployee", salesByEmployee);
         model.addAttribute("ordersByPaymentMethod", ordersByPaymentMethod);
+        model.addAttribute("salesByPaymentMethod", salesByPaymentMethod);
         model.addAttribute("topSellingItems", topSellingItems);
         model.addAttribute("topSellingComplements", topSellingComplements);
         model.addAttribute("totalComplementsSales", totalComplementsSales);
@@ -283,15 +286,11 @@ public class ReportsController {
     }
 
     /**
-     * Calculate orders by payment method
+     * Orders that used each payment method. A mixed collection is counted in
+     * every method it used (the same contract as the sales/order filters).
      */
     private Map<String, Long> calculateOrdersByPaymentMethod(List<Order> orders) {
-        return orders.stream()
-            .filter(order -> order.getPaymentMethod() != null)
-            .collect(Collectors.groupingBy(
-                order -> order.getPaymentMethod().getDisplayName(),
-                Collectors.counting()
-            ));
+        return PaymentTenderSupport.orderCountsByMethod(orders);
     }
 
     /**

@@ -28,6 +28,12 @@ public class SplitAccountDTO {
     /** PaymentMethodType name (CASH, CREDIT_CARD, DEBIT_CARD, TRANSFER). */
     private String paymentMethod;
 
+    /**
+     * Optional mix of methods that collected this account. When empty, the
+     * whole account total is stored under {@link #paymentMethod}.
+     */
+    private List<PaymentTenderDTO> paymentTenders = new ArrayList<>();
+
     /** Tip for this account (amount, not percentage). */
     private BigDecimal tip = BigDecimal.ZERO;
 

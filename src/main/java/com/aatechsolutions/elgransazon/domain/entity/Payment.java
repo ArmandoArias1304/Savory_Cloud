@@ -35,7 +35,7 @@ import java.time.YearMonth;
 @AllArgsConstructor
 @Builder
 @EqualsAndHashCode(of = {"idPayment"})
-@ToString(exclude = {"company", "order", "paidBy", "paymentDetails"})
+@ToString(exclude = {"company", "order", "paidBy", "paymentDetails", "paymentTenders"})
 public class Payment implements Serializable {
 
     @Id
@@ -231,6 +231,14 @@ public class Payment implements Serializable {
     @Builder.Default
     private java.util.List<PaymentDetail> paymentDetails = new java.util.ArrayList<>();
 
+    /**
+     * Portions of this account paid with each method. Empty on legacy rows,
+     * which are treated as a single tender of {@link #paymentMethod}.
+     */
+    @OneToMany(mappedBy = "payment", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @Builder.Default
+    private java.util.List<PaymentTender> paymentTenders = new java.util.ArrayList<>();
+
     // ========== Lifecycle Callbacks ==========
 
     @PrePersist
@@ -250,6 +258,32 @@ public class Payment implements Serializable {
     public void addPaymentDetail(PaymentDetail paymentDetail) {
         this.paymentDetails.add(paymentDetail);
         paymentDetail.setPayment(this);
+    }
+
+    /**
+     * Methods that collected this account, joined with " + " (legacy rows
+     * fall back to {@link #paymentMethod}).
+     */
+    public String getPaymentMethodsDisplay() {
+        return com.aatechsolutions.elgransazon.util.PaymentTenderSupport.displayNames(
+                com.aatechsolutions.elgransazon.util.PaymentTenderSupport.collected(this));
+    }
+
+    /**
+     * Methods with amounts, for tickets and the order detail view.
+     */
+    public String getPaymentMethodsDisplayWithAmounts() {
+        return com.aatechsolutions.elgransazon.util.PaymentTenderSupport.displayWithAmounts(
+                com.aatechsolutions.elgransazon.util.PaymentTenderSupport.collected(this));
+    }
+
+    public boolean hasMixedPaymentMethods() {
+        return com.aatechsolutions.elgransazon.util.PaymentTenderSupport.isMixed(
+                com.aatechsolutions.elgransazon.util.PaymentTenderSupport.collected(this));
+    }
+
+    public boolean usesPaymentMethod(PaymentMethodType method) {
+        return com.aatechsolutions.elgransazon.util.PaymentTenderSupport.uses(this, method);
     }
 
     /**

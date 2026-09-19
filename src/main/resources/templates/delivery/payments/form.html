@@ -235,6 +235,7 @@
               th:action="@{/delivery/payments/process/{id}(id=${order.idOrder})}"
               method="post"
               id="paymentForm"
+              novalidate
             >
               <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <!-- Left Column -->
@@ -262,20 +263,24 @@
                     </p>
                   </div>
 
-                  <!-- Payment Method (Fixed - from order) -->
+                  <!-- Payment Methods (enabled for delivery; mix allowed) -->
                   <div class="space-y-4">
                     <h3 class="text-lg font-bold text-gray-900 dark:text-white">
-                      Método de Pago
+                      Métodos de Pago <span class="text-red-500">*</span>
                     </h3>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">
+                      Puede combinar varios. La suma debe ser exactamente el total a cobrar (sin propina).
+                    </p>
                     <div class="grid grid-cols-3 gap-3">
                       <button
                         type="button"
-                        th:data-method="${order.paymentMethod.name()}"
-                        class="payment-method-btn active flex flex-col items-center justify-center gap-2 rounded-xl p-4"
-                        disabled
+                        th:each="method : ${enabledPaymentMethods}"
+                        th:data-method="${method.name()}"
+                        th:class="${order.paymentMethod != null && order.paymentMethod == method} ? 'payment-method-btn active flex flex-col items-center justify-center gap-2 rounded-xl p-4' : 'payment-method-btn flex flex-col items-center justify-center gap-2 rounded-xl p-4 text-gray-600 dark:text-gray-400'"
+                        onclick="togglePaymentMethod(this)"
                       >
                         <span class="material-symbols-outlined text-3xl">
-                          <th:block th:switch="${order.paymentMethod.name()}">
+                          <th:block th:switch="${method.name()}">
                             <th:block th:case="'CASH'">payments</th:block>
                             <th:block th:case="'CREDIT_CARD'"
                               >credit_card</th:block
@@ -291,43 +296,38 @@
                         </span>
                         <span
                           class="font-semibold text-sm"
-                          th:text="${order.paymentMethod.displayName}"
+                          th:text="${method.displayName}"
                         ></span>
                       </button>
                     </div>
 
-                    <!-- Hidden input with order's payment method -->
                     <input
                       type="hidden"
                       name="paymentMethod"
                       id="paymentMethodInput"
-                      th:value="${order.paymentMethod.name()}"
+                      th:value="${order.paymentMethod != null and #lists.contains(enabledPaymentMethodNames, order.paymentMethod.name())} ? ${order.paymentMethod.name()} : (${enabledPaymentMethods.size() > 0} ? ${enabledPaymentMethods[0].name()} : '')"
                     />
+                    <input type="hidden" name="paymentTenders" id="paymentTendersInput" value="" />
+                    <div id="paymentTenderPanel" class="space-y-2" style="display: none">
+                      <p class="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                        Montos por método <span class="text-red-500">*</span>
+                      </p>
+                      <div id="paymentTenderAmounts" class="space-y-2"></div>
+                      <p id="paymentTenderBalance" class="text-xs font-semibold"></p>
+                    </div>
 
-                    <!-- Info message -->
                     <p
-                      th:if="${#lists.contains(enabledPaymentMethodNames, order.paymentMethod.name())}"
                       class="text-sm text-gray-500 dark:text-gray-400 font-medium flex items-center gap-1"
                     >
                       <span class="material-symbols-outlined text-sm"
                         >info</span
                       >
-                      Este es el método de pago seleccionado al crear el pedido
-                    </p>
-                    <p
-                      th:unless="${#lists.contains(enabledPaymentMethodNames, order.paymentMethod.name())}"
-                      class="text-sm text-red-600 font-medium flex items-center gap-1"
-                    >
-                      <span class="material-symbols-outlined text-sm"
-                        >warning</span
-                      >
-                      Este método de pago fue deshabilitado. Contacte al
-                      administrador.
+                      Métodos de pago habilitados para entregas a domicilio
                     </p>
                   </div>
 
                   <!-- Change Calculator -->
-                  <div class="space-y-4">
+                  <div class="space-y-4" id="changeCalculatorSection">
                     <h3 class="text-lg font-bold text-gray-900 dark:text-white">
                       Calculadora de Cambio
                     </h3>
@@ -664,9 +664,8 @@
 
               <!-- Confirm Button -->
               <div class="mt-8 pt-6">
-                <!-- Show disabled button when payment method is disabled for delivery -->
                 <div
-                  th:unless="${#lists.contains(enabledPaymentMethodNames, order.paymentMethod.name())}"
+                  th:if="${enabledPaymentMethods == null or enabledPaymentMethods.isEmpty()}"
                   class="text-center"
                 >
                   <button
@@ -680,15 +679,11 @@
                     </div>
                   </button>
                   <p class="mt-3 text-sm text-red-500 font-medium">
-                    El método de pago "<span
-                      th:text="${order.paymentMethod.displayName}"
-                    ></span
-                    >" está deshabilitado para delivery
+                    No hay métodos de pago habilitados para entregas a domicilio
                   </p>
                 </div>
-                <!-- Show normal button when payment method is enabled -->
                 <button
-                  th:if="${#lists.contains(enabledPaymentMethodNames, order.paymentMethod.name())}"
+                  th:unless="${enabledPaymentMethods == null or enabledPaymentMethods.isEmpty()}"
                   type="submit"
                   class="primary-button w-full rounded-xl py-4 text-xl font-bold text-white"
                 >
@@ -923,10 +918,9 @@
       window.SPLIT_CONFIG = {
         total: /*[[${order.total}]]*/ 0,
         role: "delivery",
-        methods: /*[[${ {order.paymentMethod.name()} }]]*/ ["CASH"],
-        // Etiqueta en español del enum PaymentMethodType, alineada con "methods"
-        methodLabels: /*[[${ {order.paymentMethod.displayName} }]]*/ ["Efectivo"],
-        fixedMethod: /*[[${order.paymentMethod.name()}]]*/ "CASH",
+        methods: /*[[${enabledPaymentMethodNames}]]*/ [],
+        methodLabels: /*[[${enabledPaymentMethods.![displayName]}]]*/ [],
+        fixedMethod: null,
         // qty = unidades aún no cobradas; delivered = ítem ya ENTREGADO
         // comps = complementos efectivos: para un combo padre incluye los complementos de sus hijos
         items: /*[[${order.splitBillItems}]]*/ [],
@@ -942,6 +936,7 @@
       };
       /*]]>*/
     </script>
+    <script th:src="@{/js/mixed-payment.js}"></script>
     <script th:src="@{/js/split-bill.js}"></script>
 
     <!-- Application JavaScript -->
@@ -955,14 +950,24 @@
         orderSubtotal = parseFloat(window.ORDER_DATA.subtotal) || 0;
       }
 
-      // Calculate change
+      function getEffectiveOrderTotal() {
+        return orderTotal;
+      }
+
+      // Calculate change. The calculator stays visible even without cash.
       function calculateChange() {
+        const changeEl = document.getElementById("change-due");
+        if (!changeEl) return;
         const tip = parseFloat(document.getElementById("tip").value) || 0;
-        const totalWithTip = orderTotal + tip;
+        const usesCash = window.MIXED_PAYMENT ? MIXED_PAYMENT.usesCash() : true;
+        const cashOnly = window.MIXED_PAYMENT ? MIXED_PAYMENT.isCashOnly() : true;
+        const due = !usesCash || cashOnly
+          ? orderTotal + tip
+          : MIXED_PAYMENT.cashAmount();
         const received =
           parseFloat(document.getElementById("amount-received").value) || 0;
-        const change = Math.max(0, received - totalWithTip);
-        document.getElementById("change-due").value = change.toFixed(2);
+        const change = Math.max(0, received - due);
+        changeEl.value = change.toFixed(2);
       }
 
       // Set tip percentage
@@ -1012,6 +1017,8 @@
         // Recalculate change
         calculateChange();
 
+        if (window.MIXED_PAYMENT) window.MIXED_PAYMENT.sync();
+
         // Refresh split-bill preview (if enabled)
         if (window.SPLIT_BILL) window.SPLIT_BILL.refresh();
       }
@@ -1024,18 +1031,9 @@
         TRANSFER: "Transferencia",
       };
 
-      // Select payment method (visual only - the order already has its payment method)
-      function selectPaymentMethod(method) {
-        // Update button states
-        document.querySelectorAll(".payment-method-btn").forEach((btn) => {
-          btn.classList.remove("active");
-        });
-        const selectedBtn = document.querySelector(`[data-method="${method}"]`);
-        if (selectedBtn) {
-          selectedBtn.classList.add("active");
-        }
-        // Note: We don't change the hidden input because the payment method
-        // is fixed to what was selected when the order was created
+      // Select payment method (toggle mix)
+      function selectPaymentMethod(button) {
+        togglePaymentMethod(button);
       }
 
       // Form validation
@@ -1053,6 +1051,7 @@
                 : "¿Confirmar división de cuenta?",
               html: window.SPLIT_BILL.summaryHtml(plan),
               icon: "question",
+              width: "32rem",
               showCancelButton: true,
               confirmButtonColor: "#38e07b",
               cancelButtonColor: "#6b7280",
@@ -1079,6 +1078,25 @@
             return false;
           }
 
+          const mix = window.MIXED_PAYMENT ? MIXED_PAYMENT.validate() : { ok: true };
+          if (!mix.ok) {
+            e.preventDefault();
+            Swal.fire({
+              icon: "error",
+              title: "Error",
+              text: mix.message,
+              confirmButtonColor: "#38e07b",
+              background: document.documentElement.classList.contains("dark")
+                ? "#1f2937"
+                : "#ffffff",
+              color: document.documentElement.classList.contains("dark")
+                ? "#f3f4f6"
+                : "#1f2937",
+            });
+            return false;
+          }
+          if (window.MIXED_PAYMENT) MIXED_PAYMENT.syncHidden();
+
           const paymentMethod =
             document.getElementById("paymentMethodInput").value;
 
@@ -1103,8 +1121,9 @@
           e.preventDefault();
           const tip = parseFloat(document.getElementById("tip").value) || 0;
           const totalWithTip = orderTotal + tip;
-          const paymentMethodName =
-            paymentMethodNames[paymentMethod] || paymentMethod;
+          const paymentMethodName = window.MIXED_PAYMENT
+            ? MIXED_PAYMENT.label()
+            : paymentMethodNames[paymentMethod] || paymentMethod;
 
           Swal.fire({
             title: "¿Confirmar cobro?",
@@ -1192,6 +1211,7 @@
       // Initialize on page load
       document.addEventListener("DOMContentLoaded", function () {
         calculateTotalWithTip();
+        if (window.MIXED_PAYMENT) MIXED_PAYMENT.init();
       });
     </script>
 

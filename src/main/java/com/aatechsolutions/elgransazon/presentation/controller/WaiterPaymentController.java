@@ -6,6 +6,7 @@ import com.aatechsolutions.elgransazon.domain.repository.OrderRepository;
 import com.aatechsolutions.elgransazon.presentation.dto.SplitAccountDTO;
 import com.aatechsolutions.elgransazon.presentation.dto.SplitItemDTO;
 import com.aatechsolutions.elgransazon.util.OrderDiscountSupport;
+import com.aatechsolutions.elgransazon.util.PaymentTenderSupport;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
@@ -172,7 +173,8 @@ public class WaiterPaymentController {
     @PostMapping("/process/{orderId}")
     public String processPayment(
             @PathVariable Long orderId,
-            @RequestParam PaymentMethodType paymentMethod,
+            @RequestParam(required = false) PaymentMethodType paymentMethod,
+            @RequestParam(required = false) String paymentTenders,
             @RequestParam(required = false, defaultValue = "0") BigDecimal tip,
             @RequestParam(required = false) String splitEnabled,
             @RequestParam(required = false) String splitMode,
@@ -187,12 +189,6 @@ public class WaiterPaymentController {
         log.info("Payment method: {}, Tip: {}", paymentMethod, tip);
 
         try {
-            // Validate that payment method is allowed for waiters (only CREDIT_CARD and DEBIT_CARD)
-            if (paymentMethod != PaymentMethodType.CREDIT_CARD && 
-                paymentMethod != PaymentMethodType.DEBIT_CARD) {
-                throw new IllegalStateException("Los meseros solo pueden cobrar pagos con tarjeta de crédito o débito. Por favor, dirija al cliente a caja.");
-            }
-
             // Validate that waiter collection is enabled in system configuration
             if (!Boolean.TRUE.equals(systemConfigurationService.getConfiguration().getWaiterDeliveryCanCollect())) {
                 throw new IllegalStateException("El cobro por meseros está deshabilitado. Por favor, dirija al cliente a caja.");
@@ -221,9 +217,6 @@ public class WaiterPaymentController {
 
             // Get system configuration to validate payment method
             SystemConfiguration config = systemConfigurationService.getConfiguration();
-            if (!config.isPaymentMethodEnabled(paymentMethod)) {
-                throw new IllegalStateException("El método de pago seleccionado no está habilitado: " + paymentMethod.getDisplayName());
-            }
 
             // ========== DEPARTING-GUEST / SPLIT BILL FLOW ==========
             if ("true".equalsIgnoreCase(splitEnabled)) {
@@ -253,7 +246,7 @@ public class WaiterPaymentController {
                 // The remaining bill can still be charged globally: one account
                 // takes every unit still owed and the order closes as PAID.
                 // Per-person splitting stays available via "Dividir cuenta".
-                return processGlobalRemainingPayment(order, username, paymentMethod, tip,
+                return processGlobalRemainingPayment(order, username, paymentMethod, paymentTenders, tip,
                         config, redirectAttributes);
             }
 
@@ -274,13 +267,17 @@ public class WaiterPaymentController {
             // Waiters never capture a discount; a locked order keeps its fixed %.
             applyOrderDiscount(order, username, false);
 
+            List<PaymentTenderSupport.TenderLine> mix = PaymentTenderSupport.resolveSubmitted(
+                    paymentTenders, paymentMethod, order.getTotal());
+            validateWaiterMix(mix, config, null);
+
             // Get current waiter employee
             Employee waiter = employeeService.findByUsername(username)
                     .orElseThrow(() -> new IllegalStateException("Mesero no encontrado"));
 
-            // Set tip, payment method, and paidBy
+            // Set tip, payment mix, and paidBy
             order.setTip(tip);
-            order.setPaymentMethod(paymentMethod);
+            PaymentTenderSupport.applyToOrder(order, mix);
             order.setPaidBy(waiter);
             order.setUpdatedBy(username);
             order.setUpdatedAt(java.time.LocalDateTime.now());
@@ -368,7 +365,8 @@ public class WaiterPaymentController {
      * available by enabling "Dividir cuenta" in the form.
      */
     private String processGlobalRemainingPayment(Order order, String username,
-                                                 PaymentMethodType paymentMethod, BigDecimal tip,
+                                                 PaymentMethodType paymentMethod, String paymentTenders,
+                                                 BigDecimal tip,
                                                  SystemConfiguration config,
                                                  RedirectAttributes redirectAttributes) {
         applyOrderDiscount(order, username, false);
@@ -390,10 +388,14 @@ public class WaiterPaymentController {
         if (items.isEmpty()) {
             throw new IllegalStateException("No queda saldo pendiente por cobrar en este pedido");
         }
+        List<PaymentTenderSupport.TenderLine> mix = PaymentTenderSupport.resolveSubmitted(
+                paymentTenders, paymentMethod, order.getRemainingTotal());
+        validateWaiterMix(mix, config, null);
         SplitAccountDTO account = new SplitAccountDTO();
         account.setIndex(1);
         account.setPersonLabel("Cuenta");
-        account.setPaymentMethod(paymentMethod.name());
+        account.setPaymentMethod(PaymentTenderSupport.primary(mix).name());
+        account.setPaymentTenders(toDtos(mix));
         account.setTip(tip != null ? tip : BigDecimal.ZERO);
         account.setItems(items);
         try {
@@ -429,21 +431,7 @@ public class WaiterPaymentController {
 
         // Validate per-account payment methods (cards only for waiters)
         for (SplitAccountDTO acc : accounts) {
-            if (acc.getPaymentMethod() == null || acc.getPaymentMethod().isBlank()) {
-                throw new IllegalArgumentException(acc.getDisplayLabel() + ": debe seleccionar un método de pago");
-            }
-            PaymentMethodType method;
-            try {
-                method = PaymentMethodType.valueOf(acc.getPaymentMethod());
-            } catch (Exception e) {
-                throw new IllegalArgumentException(acc.getDisplayLabel() + ": método de pago no válido");
-            }
-            if (method != PaymentMethodType.CREDIT_CARD && method != PaymentMethodType.DEBIT_CARD) {
-                throw new IllegalStateException("Los meseros solo pueden cobrar pagos con tarjeta de crédito o débito. Por favor, dirija al cliente a caja.");
-            }
-            if (!config.isPaymentMethodEnabled(method)) {
-                throw new IllegalStateException("El método de pago seleccionado para " + acc.getDisplayLabel() + " no está habilitado: " + method.getDisplayName());
-            }
+            validateWaiterAccountMix(acc, config);
         }
 
         // Get current waiter employee
@@ -512,21 +500,7 @@ public class WaiterPaymentController {
 
         // Waiters can only collect card payments (CREDIT_CARD / DEBIT_CARD)
         for (SplitAccountDTO acc : accounts) {
-            if (acc.getPaymentMethod() == null || acc.getPaymentMethod().isBlank()) {
-                throw new IllegalArgumentException(acc.getDisplayLabel() + ": debe seleccionar un método de pago");
-            }
-            PaymentMethodType method;
-            try {
-                method = PaymentMethodType.valueOf(acc.getPaymentMethod());
-            } catch (Exception e) {
-                throw new IllegalArgumentException(acc.getDisplayLabel() + ": método de pago no válido");
-            }
-            if (method != PaymentMethodType.CREDIT_CARD && method != PaymentMethodType.DEBIT_CARD) {
-                throw new IllegalStateException("Los meseros solo pueden cobrar pagos con tarjeta de crédito o débito. Por favor, dirija al cliente a caja.");
-            }
-            if (!config.isPaymentMethodEnabled(method)) {
-                throw new IllegalStateException("El método de pago seleccionado para " + acc.getDisplayLabel() + " no está habilitado: " + method.getDisplayName());
-            }
+            validateWaiterAccountMix(acc, config);
         }
 
         Employee waiter = employeeService.findByUsername(username)
@@ -583,6 +557,48 @@ public class WaiterPaymentController {
         notifyAccountTickets(order, payments, username);
 
         return "redirect:/waiter/orders";
+    }
+
+    private void validateWaiterMix(List<PaymentTenderSupport.TenderLine> mix,
+                                   SystemConfiguration config, String label) {
+        PaymentTenderSupport.validateAmounts(mix, label);
+        PaymentTenderSupport.assertMethodsAllowed(mix, method -> isWaiterMethodAllowed(method, config), label);
+        for (PaymentTenderSupport.TenderLine line : mix) {
+            if (line.getMethod() != PaymentMethodType.CREDIT_CARD
+                    && line.getMethod() != PaymentMethodType.DEBIT_CARD) {
+                throw new IllegalStateException("Los meseros solo pueden cobrar pagos con tarjeta de crédito o débito. Por favor, dirija al cliente a caja.");
+            }
+        }
+    }
+
+    private void validateWaiterAccountMix(SplitAccountDTO acc, SystemConfiguration config) {
+        for (PaymentMethodType method : PaymentTenderSupport.methodsOf(acc)) {
+            if (method != PaymentMethodType.CREDIT_CARD && method != PaymentMethodType.DEBIT_CARD) {
+                throw new IllegalStateException("Los meseros solo pueden cobrar pagos con tarjeta de crédito o débito. Por favor, dirija al cliente a caja.");
+            }
+            if (!config.isPaymentMethodEnabled(method)) {
+                throw new IllegalStateException("El método de pago seleccionado para " + acc.getDisplayLabel()
+                        + " no está habilitado: " + method.getDisplayName());
+            }
+        }
+    }
+
+    private boolean isWaiterMethodAllowed(PaymentMethodType method, SystemConfiguration config) {
+        return (method == PaymentMethodType.CREDIT_CARD || method == PaymentMethodType.DEBIT_CARD)
+                && config.isPaymentMethodEnabled(method);
+    }
+
+    private List<com.aatechsolutions.elgransazon.presentation.dto.PaymentTenderDTO> toDtos(
+            List<PaymentTenderSupport.TenderLine> mix) {
+        List<com.aatechsolutions.elgransazon.presentation.dto.PaymentTenderDTO> dtos = new ArrayList<>();
+        for (PaymentTenderSupport.TenderLine line : mix) {
+            com.aatechsolutions.elgransazon.presentation.dto.PaymentTenderDTO dto =
+                    new com.aatechsolutions.elgransazon.presentation.dto.PaymentTenderDTO();
+            dto.setMethod(line.getMethod().name());
+            dto.setAmount(line.getAmount());
+            dtos.add(dto);
+        }
+        return dtos;
     }
 
     /**

@@ -86,7 +86,8 @@ class CashierOrdersDeliveryBoardTest {
                 mock(BusinessHoursService.class),
                 mock(WebSocketNotificationService.class),
                 dateTimeService,
-                mock(ReservationService.class));
+                mock(ReservationService.class),
+                mock(com.aatechsolutions.elgransazon.application.service.CashRegisterService.class));
 
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 // The assertions read the model, so HTML is never rendered.

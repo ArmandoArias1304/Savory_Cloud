@@ -11,6 +11,7 @@ import com.aatechsolutions.elgransazon.application.service.SplitPaymentService;
 import com.aatechsolutions.elgransazon.application.service.SystemConfigurationService;
 import com.aatechsolutions.elgransazon.domain.repository.OrderRepository;
 import com.aatechsolutions.elgransazon.presentation.dto.SplitAccountDTO;
+import com.aatechsolutions.elgransazon.util.PaymentTenderSupport;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.aatechsolutions.elgransazon.domain.entity.Category;
@@ -273,6 +274,12 @@ public class DeliveryController {
                     List<PaymentMethodType> enabledDeliveryPaymentMethods = java.util.Arrays.stream(PaymentMethodType.values())
                             .filter(config::isDeliveryPaymentMethodEnabled)
                             .collect(Collectors.toList());
+
+                    if (enabledDeliveryPaymentMethods.isEmpty()) {
+                        redirectAttributes.addFlashAttribute("errorMessage",
+                            "No hay métodos de pago habilitados para entregas a domicilio. Por favor, dirija el pedido a caja.");
+                        return "redirect:/delivery/orders/pending";
+                    }
                     
                     // Convert to strings for Thymeleaf (to avoid static class access issues)
                     List<String> enabledPaymentMethodNames = enabledDeliveryPaymentMethods.stream()
@@ -309,6 +316,8 @@ public class DeliveryController {
     @PostMapping("/payments/process/{orderId}")
     public String processPayment(
             @PathVariable Long orderId,
+            @RequestParam(required = false) PaymentMethodType paymentMethod,
+            @RequestParam(required = false) String paymentTenders,
             @RequestParam(required = false, defaultValue = "0") BigDecimal tip,
             @RequestParam(required = false) String splitEnabled,
             @RequestParam(required = false) String splitMode,
@@ -352,41 +361,11 @@ public class DeliveryController {
             }
 
             // ========== SPLIT BILL FLOW (dividir cuenta) ==========
-            // For delivery the payment method is fixed per order, so every account
-            // uses the order's method; per-account tips are allowed as entered.
             if ("true".equalsIgnoreCase(splitEnabled)) {
-                return processSplitPayment(order, currentEmployee, username, splitMode, splitAccounts, redirectAttributes);
+                return processSplitPayment(order, currentEmployee, username, splitMode, splitAccounts,
+                        config, redirectAttributes);
             }
 
-            PaymentMethodType paymentMethod = order.getPaymentMethod();
-            if (!config.isDeliveryPaymentMethodEnabled(paymentMethod)) {
-                // Stay on the same page showing the error message
-                log.warn("Payment method {} is disabled for delivery", paymentMethod.getDisplayName());
-                
-                // Get enabled delivery payment methods for the view
-                List<PaymentMethodType> enabledDeliveryPaymentMethods = java.util.Arrays.stream(PaymentMethodType.values())
-                        .filter(config::isDeliveryPaymentMethodEnabled)
-                        .collect(Collectors.toList());
-                
-                // Convert to strings for Thymeleaf
-                List<String> enabledPaymentMethodNames = enabledDeliveryPaymentMethods.stream()
-                        .map(PaymentMethodType::name)
-                        .collect(Collectors.toList());
-                
-                model.addAttribute("order", order);
-                model.addAttribute("config", config);
-                model.addAttribute("currentEmployee", currentEmployee);
-                model.addAttribute("enabledPaymentMethods", enabledDeliveryPaymentMethods);
-                model.addAttribute("enabledPaymentMethodNames", enabledPaymentMethodNames);
-                model.addAttribute("splitZeroCashTips", false);
-                model.addAttribute("errorMessage", 
-                    "El método de pago '" + paymentMethod.getDisplayName() + 
-                    "' está deshabilitado para entregas a domicilio. Por favor contacte al administrador.");
-                
-                return "delivery/payments/form";
-            }
-            
-            // Validate tip
             if (tip == null) {
                 tip = BigDecimal.ZERO;
             }
@@ -399,12 +378,21 @@ public class DeliveryController {
             if (tip.scale() > 2) {
                 throw new IllegalArgumentException("La propina solo permite hasta 2 decimales");
             }
-            
-            // Set tip and paidBy before changing status to PAID
+
+            List<PaymentTenderSupport.TenderLine> mix = PaymentTenderSupport.resolveSubmitted(
+                    paymentTenders,
+                    paymentMethod != null ? paymentMethod : order.getPaymentMethod(),
+                    order.getTotal());
+            PaymentTenderSupport.validateAmounts(mix, null);
+            PaymentTenderSupport.assertMethodsAllowed(mix, config::isDeliveryPaymentMethodEnabled, null);
+
+            // Set tip, payment mix and paidBy before changing status to PAID
             order.setTip(tip);
+            PaymentTenderSupport.applyToOrder(order, mix);
             order.setPaidBy(currentEmployee); // Set who collected the payment
             order.setUpdatedBy(username);
             order.setUpdatedAt(java.time.LocalDateTime.now());
+            orderRepository.save(order);
             
             // Change status to PAID
             deliveryOrderService.changeStatus(orderId, OrderStatus.PAID, username);
@@ -455,11 +443,12 @@ public class DeliveryController {
 
     /**
      * Split-bill flow for delivery: divide the DELIVERED order into N per-person
-     * accounts. All accounts use the order's payment method; each account keeps
-     * its own tip, items and autofactura key.
+     * accounts. Each account may mix the delivery-enabled payment methods; each
+     * account keeps its own tip, items and autofactura key.
      */
     private String processSplitPayment(Order order, Employee currentEmployee, String username,
                                        String splitMode, String splitAccounts,
+                                       SystemConfiguration config,
                                        RedirectAttributes redirectAttributes) {
         // Parse the per-account plan
         List<SplitAccountDTO> accounts;
@@ -476,10 +465,15 @@ public class DeliveryController {
         }
         SplitMode mode = SplitMode.ITEMS;
 
-        // Delivery: the payment method is fixed per order — clear any per-account
-        // method so the service falls back to the order's method.
+        // Delivery: every method in the mix must be enabled for deliveries.
         for (SplitAccountDTO acc : accounts) {
-            acc.setPaymentMethod(null);
+            for (PaymentMethodType method : PaymentTenderSupport.methodsOf(acc)) {
+                if (!config.isDeliveryPaymentMethodEnabled(method)) {
+                    throw new IllegalArgumentException("El método de pago '" + method.getDisplayName()
+                            + "' de " + acc.getDisplayLabel()
+                            + " está deshabilitado para entregas a domicilio.");
+                }
+            }
         }
 
         // Build request base URL for autofactura self-invoice links

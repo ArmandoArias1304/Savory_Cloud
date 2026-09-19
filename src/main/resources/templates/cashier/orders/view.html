@@ -691,7 +691,7 @@
                 >
                 <p
                   class="font-semibold text-gray-900 dark:text-white"
-                  th:text="${order.paymentMethod.displayName}"
+                  th:text="${order.paymentMethodsDisplayWithAmounts}"
                 ></p>
               </div>
             </div>
@@ -732,7 +732,7 @@
                 <div
                   class="flex items-center justify-between gap-2 text-sm text-gray-600 dark:text-gray-400"
                 >
-                  <span th:text="${payment.paymentMethod.displayName}"></span>
+                  <span th:text="${payment.paymentMethodsDisplayWithAmounts}"></span>
                   <span
                     class="font-semibold text-gray-900 dark:text-white"
                     th:text="${'$' + #numbers.formatDecimal(payment.total, 1, 2)}"

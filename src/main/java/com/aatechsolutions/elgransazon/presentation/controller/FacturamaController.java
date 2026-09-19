@@ -274,9 +274,12 @@ public class FacturamaController {
             LocalDateTime startUtc = fromDate.atStartOfDay(zone).withZoneSameInstant(ZoneId.of("UTC")).toLocalDateTime();
             LocalDateTime endUtc = toDate.plusDays(1).atStartOfDay(zone).withZoneSameInstant(ZoneId.of("UTC")).toLocalDateTime();
 
-            // Ticket-level aggregation: normal orders (no Payment rows) count as one
-            // ticket each; split bills count account-by-account (each person = 1 ticket),
-            // because per-person invoices are saved on the Payment, not on the Order.
+            // "Total pedidos pagados" is order-level (a split bill is 1 pedido).
+            // "Facturados (CFDI)" stays ticket-level: each split account can be
+            // invoiced on its own, so subcuentas still count there.
+            java.util.List<Object[]> countRows = orderRepository.countPaidOrdersByCompanyAndDateRange(company, startUtc, endUtc);
+            Object[] countRow = (countRows != null && !countRows.isEmpty()) ? countRows.get(0) : null;
+
             java.util.List<Object[]> orderRows = orderRepository.sumPaidOrdersByCompanyAndDateRange(company, startUtc, endUtc);
             Object[] orderRow = (orderRows != null && !orderRows.isEmpty()) ? orderRows.get(0) : null;
 
@@ -284,12 +287,17 @@ public class FacturamaController {
             Object[] payRow = (payRows != null && !payRows.isEmpty()) ? payRows.get(0) : null;
 
             long paidCount = 0L;
-            java.math.BigDecimal paidTotal = java.math.BigDecimal.ZERO;
+            if (countRow != null) {
+                paidCount = countRow[0] != null ? ((Number) countRow[0]).longValue() : 0L;
+            }
+
+            long ticketCount = 0L;
             long invoicedCount = 0L;
+            java.math.BigDecimal paidTotal = java.math.BigDecimal.ZERO;
             java.math.BigDecimal invoicedTotal = java.math.BigDecimal.ZERO;
 
             if (orderRow != null) {
-                paidCount += orderRow[0] != null ? ((Number) orderRow[0]).longValue() : 0L;
+                ticketCount += orderRow[0] != null ? ((Number) orderRow[0]).longValue() : 0L;
                 paidTotal = paidTotal.add(orderRow[1] != null
                         ? new java.math.BigDecimal(orderRow[1].toString())
                         : java.math.BigDecimal.ZERO);
@@ -299,7 +307,7 @@ public class FacturamaController {
                         : java.math.BigDecimal.ZERO);
             }
             if (payRow != null) {
-                paidCount += payRow[0] != null ? ((Number) payRow[0]).longValue() : 0L;
+                ticketCount += payRow[0] != null ? ((Number) payRow[0]).longValue() : 0L;
                 paidTotal = paidTotal.add(payRow[1] != null
                         ? new java.math.BigDecimal(payRow[1].toString())
                         : java.math.BigDecimal.ZERO);
@@ -309,7 +317,7 @@ public class FacturamaController {
                         : java.math.BigDecimal.ZERO);
             }
 
-            long notInvoicedCount = paidCount - invoicedCount;
+            long notInvoicedCount = ticketCount - invoicedCount;
             java.math.BigDecimal notInvoicedTotal = paidTotal.subtract(invoicedTotal);
 
             Map<String, Object> result = new java.util.LinkedHashMap<>();
@@ -432,16 +440,16 @@ public class FacturamaController {
             // One concept per ticket: the description carries the ticket folio
             List<FacturamaService.GlobalCfdiTicket> tickets = new ArrayList<>();
             for (Order o : orders) {
-                tickets.add(new FacturamaService.GlobalCfdiTicket(
+                tickets.add(FacturamaService.GlobalCfdiTicket.ofCollected(
                         "Venta de alimentos y bebidas - " + o.getOrderNumber(),
                         o.getTotal() != null ? o.getTotal() : BigDecimal.ZERO,
-                        o.getPaymentMethod()));
+                        o));
             }
             for (Payment p : payments) {
-                tickets.add(new FacturamaService.GlobalCfdiTicket(
+                tickets.add(FacturamaService.GlobalCfdiTicket.ofCollected(
                         "Venta de alimentos y bebidas - " + p.getPaymentFolio(),
                         p.getTotal() != null ? p.getTotal() : BigDecimal.ZERO,
-                        p.getPaymentMethod()));
+                        p));
             }
 
             // Unique folio for the period (re-running the same period appends a suffix)
@@ -598,7 +606,7 @@ public class FacturamaController {
                     ? o.getPaidAt().atZone(ZoneId.of("UTC")).withZoneSameInstant(zone).toLocalDate().toString()
                     : "");
             t.put("total", o.getTotal() != null ? o.getTotal() : BigDecimal.ZERO);
-            t.put("paymentMethod", o.getPaymentMethod() != null ? o.getPaymentMethod().getDisplayName() : "");
+            t.put("paymentMethod", o.getPaymentMethodsDisplay());
             tickets.add(t);
         }
         for (Payment p : paymentRepository.findPaidPendingGlobalInvoiceByDateRange(company, startUtc, endUtc)) {
@@ -608,7 +616,7 @@ public class FacturamaController {
                     ? p.getPaidAt().atZone(ZoneId.of("UTC")).withZoneSameInstant(zone).toLocalDate().toString()
                     : "");
             t.put("total", p.getTotal() != null ? p.getTotal() : BigDecimal.ZERO);
-            t.put("paymentMethod", p.getPaymentMethod() != null ? p.getPaymentMethod().getDisplayName() : "");
+            t.put("paymentMethod", p.getPaymentMethodsDisplay());
             tickets.add(t);
         }
         return tickets;

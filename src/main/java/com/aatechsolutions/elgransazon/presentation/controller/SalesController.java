@@ -77,7 +77,7 @@ public class SalesController {
         // Filter by payment method
         if (paymentMethod != null) {
             paidOrders = paidOrders.stream()
-                .filter(order -> order.getPaymentMethod() == paymentMethod)
+                .filter(order -> order.usesPaymentMethod(paymentMethod))
                 .collect(Collectors.toList());
         }
 
