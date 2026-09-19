@@ -483,10 +483,10 @@ public class CompanyServiceImpl implements CompanyService {
         paymentMethods.put(PaymentMethodType.DEBIT_CARD, true);
 
         Map<PaymentMethodType, Boolean> deliveryPaymentMethods = new HashMap<>();
-        deliveryPaymentMethods.put(PaymentMethodType.CASH, true);
-        deliveryPaymentMethods.put(PaymentMethodType.CREDIT_CARD, false);
-        deliveryPaymentMethods.put(PaymentMethodType.DEBIT_CARD, false);
-        deliveryPaymentMethods.put(PaymentMethodType.TRANSFER, false);
+            deliveryPaymentMethods.put(PaymentMethodType.CASH, false);
+            deliveryPaymentMethods.put(PaymentMethodType.CREDIT_CARD, false);
+            deliveryPaymentMethods.put(PaymentMethodType.DEBIT_CARD, false);
+            deliveryPaymentMethods.put(PaymentMethodType.TRANSFER, false);
 
         // Note: System branding (systemName, systemSlogan, systemLogoUrl) is now GLOBAL
         // and managed by GlobalSystemConfigService, not per-company

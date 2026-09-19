@@ -602,11 +602,8 @@
         );
         if (!paymentMethodSelect) return;
 
-        // Get the appropriate payment methods list
-        const methodsList =
-          orderType === "DELIVERY"
-            ? deliveryPaymentMethods
-            : regularPaymentMethods;
+        // Get the restaurant payment methods (same list for dine-in, takeout and delivery)
+        const methodsList = regularPaymentMethods;
 
         // Save current selection
         const currentValue = paymentMethodSelect.value;

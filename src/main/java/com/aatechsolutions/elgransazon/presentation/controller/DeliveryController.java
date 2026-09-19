@@ -63,6 +63,9 @@ public class DeliveryController {
     private final SplitPaymentService splitPaymentService;
     private final ObjectMapper objectMapper;
 
+    private static final String CASH_TO_CAJA_MESSAGE =
+            "El efectivo debe entregarse a caja (admin, gerente o cajero) para que ellos cobren la orden. El repartidor no puede cobrar en efectivo.";
+
     /**
      * Display delivery dashboard
      * 
@@ -222,8 +225,8 @@ public class DeliveryController {
     }
 
     /**
-     * Show payment form for a DELIVERED order
-     * Shows payment methods enabled for delivery
+     * Show payment form for a DELIVERED order.
+     * Rider collection uses delivery payment methods (card/transfer); cash goes to caja.
      */
     @GetMapping("/payments/form/{orderId}")
     public String showPaymentForm(
@@ -270,14 +273,19 @@ public class DeliveryController {
                         return "redirect:/delivery/orders/pending";
                     }
 
-                    // Get enabled delivery payment methods for the view
+                    if (order.getPaymentMethod() == PaymentMethodType.CASH) {
+                        redirectAttributes.addFlashAttribute("errorMessage", CASH_TO_CAJA_MESSAGE);
+                        return "redirect:/delivery/orders/pending";
+                    }
+
+                    // Get enabled delivery payment methods for the view (never cash)
                     List<PaymentMethodType> enabledDeliveryPaymentMethods = java.util.Arrays.stream(PaymentMethodType.values())
                             .filter(config::isDeliveryPaymentMethodEnabled)
                             .collect(Collectors.toList());
 
                     if (enabledDeliveryPaymentMethods.isEmpty()) {
                         redirectAttributes.addFlashAttribute("errorMessage",
-                            "No hay métodos de pago habilitados para entregas a domicilio. Por favor, dirija el pedido a caja.");
+                            "No hay métodos de pago habilitados para que el repartidor cobre. Por favor, dirija el pedido a caja.");
                         return "redirect:/delivery/orders/pending";
                     }
                     
@@ -312,8 +320,8 @@ public class DeliveryController {
     }
 
     /**
-     * Process payment for a DELIVERED order
-     * Validates that the payment method is enabled for delivery
+     * Process payment for a DELIVERED order.
+     * Cash is never allowed: it must be collected by caja (admin/manager/cashier).
      */
     @PostMapping("/payments/process/{orderId}")
     public String processPayment(
@@ -362,6 +370,10 @@ public class DeliveryController {
                 throw new IllegalStateException("El cobro por repartidores está deshabilitado. Por favor, dirija el pedido a caja.");
             }
 
+            if (order.getPaymentMethod() == PaymentMethodType.CASH) {
+                throw new IllegalStateException(CASH_TO_CAJA_MESSAGE);
+            }
+
             // ========== SPLIT BILL FLOW (dividir cuenta) ==========
             if ("true".equalsIgnoreCase(splitEnabled)) {
                 return processSplitPayment(order, currentEmployee, username, splitMode, splitAccounts,
@@ -386,6 +398,9 @@ public class DeliveryController {
                     paymentMethod != null ? paymentMethod : order.getPaymentMethod(),
                     order.getTotal());
             PaymentTenderSupport.validateAmounts(mix, null);
+            if (PaymentTenderSupport.uses(mix, PaymentMethodType.CASH)) {
+                throw new IllegalStateException(CASH_TO_CAJA_MESSAGE);
+            }
             PaymentTenderSupport.assertMethodsAllowed(mix, config::isDeliveryPaymentMethodEnabled, null);
 
             // Cash-only: the extra cash is handed to caja as a TIPS movement.
@@ -473,13 +488,16 @@ public class DeliveryController {
         }
         SplitMode mode = SplitMode.ITEMS;
 
-        // Delivery: every method in the mix must be enabled for deliveries.
+        // Delivery: every method in the mix must be enabled for rider collection (never cash).
         for (SplitAccountDTO acc : accounts) {
             for (PaymentMethodType method : PaymentTenderSupport.methodsOf(acc)) {
+                if (method == PaymentMethodType.CASH) {
+                    throw new IllegalArgumentException(CASH_TO_CAJA_MESSAGE);
+                }
                 if (!config.isDeliveryPaymentMethodEnabled(method)) {
                     throw new IllegalArgumentException("El método de pago '" + method.getDisplayName()
                             + "' de " + acc.getDisplayLabel()
-                            + " está deshabilitado para entregas a domicilio.");
+                            + " no está habilitado para el cobro del repartidor.");
                 }
             }
         }

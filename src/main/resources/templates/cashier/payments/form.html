@@ -305,8 +305,10 @@
                         >
                         <p class="font-medium text-sm">
                           Este es un pedido de
-                          <strong>Entrega a Domicilio</strong>. Se muestran los
-                          métodos de pago habilitados para Delivery.
+                          <strong>Entrega a Domicilio</strong>. Caja cobra con
+                          los métodos normales del restaurante (incluye
+                          efectivo). Los métodos de Delivery solo aplican al
+                          repartidor.
                         </p>
                       </div>
                     </div>
@@ -322,14 +324,8 @@
                           El método de pago original (<span
                             th:text="${order.paymentMethod.displayName}"
                           ></span
-                          >) fue deshabilitado
-                          <span th:if="${order.orderType.name() == 'DELIVERY'}"
-                            >para entregas a domicilio</span
-                          >
-                          <span
-                            th:unless="${order.orderType.name() == 'DELIVERY'}"
-                            >en el restaurante</span
-                          >. Por favor seleccione un método de pago habilitado.
+                          >) fue deshabilitado en el restaurante. Por favor
+                          seleccione un método de pago habilitado.
                         </p>
                       </div>
                     </div>
@@ -800,7 +796,6 @@
                     </div>
                   </div>
 
-                  <!-- Note shown when the selected payment method is CASH -->
                   <div
                     id="tipCashNote"
                     style="display: none"
@@ -809,8 +804,8 @@
                     <div class="flex items-center gap-2">
                       <span class="material-symbols-outlined">payments</span>
                       <p class="font-medium text-sm">
-                        La propina en efectivo se entrega directamente al
-                        mesero, por lo que no se registra en el sistema.
+                        La propina en efectivo se registra en movimientos de
+                        caja.
                       </p>
                     </div>
                   </div>

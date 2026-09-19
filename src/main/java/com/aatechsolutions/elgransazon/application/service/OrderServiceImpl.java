@@ -2477,9 +2477,8 @@ public class OrderServiceImpl implements OrderService {
     }
 
     /**
-     * Validate payment method is enabled based on order type
-     * For DELIVERY orders, uses deliveryPaymentMethods configuration
-     * For other orders (DINE_IN, TAKEOUT), uses paymentMethods configuration
+     * Validate payment method is enabled (restaurant methods for any order type).
+     * Delivery-person collection is restricted separately via deliveryPaymentMethods.
      * MULTI-TENANT: Uses SystemConfigurationService which filters by company
      */
     private void validatePaymentMethod(PaymentMethodType paymentMethod, OrderType orderType) {
@@ -2491,10 +2490,9 @@ public class OrderServiceImpl implements OrderService {
         boolean isEnabled = config.isPaymentMethodEnabledForOrderType(paymentMethod, orderType);
         
         if (!isEnabled) {
-            String orderTypeText = orderType == OrderType.DELIVERY ? "entregas a domicilio" : "el restaurante";
             throw new IllegalStateException(
-                String.format("El método de pago '%s' no está habilitado para %s", 
-                              paymentMethod.getDisplayName(), orderTypeText)
+                String.format("El método de pago '%s' no está habilitado en el restaurante", 
+                              paymentMethod.getDisplayName())
             );
         }
     }

@@ -121,12 +121,8 @@ public class PaymentController {
                         return "redirect:/admin/orders";
                     }
 
-                    // Get enabled payment methods based on order type
-                    // For DELIVERY orders, use delivery payment methods
-                    // For other orders (DINE_IN, TAKEOUT), use restaurant payment methods
-                    Map<PaymentMethodType, Boolean> paymentMethodsMap = order.getOrderType() == OrderType.DELIVERY 
-                        ? config.getDeliveryPaymentMethods() 
-                        : config.getPaymentMethods();
+                    // Restaurant payment methods for any order type (caja can collect cash on delivery)
+                    Map<PaymentMethodType, Boolean> paymentMethodsMap = config.getPaymentMethods();
                     List<PaymentMethodType> enabledPaymentMethods = paymentMethodsMap.entrySet().stream()
                         .filter(Map.Entry::getValue)
                         .map(Map.Entry::getKey)
@@ -641,9 +637,7 @@ public class PaymentController {
 
     private boolean isMethodAllowed(PaymentMethodType method, Order order,
                                     SystemConfiguration config, boolean isWaiter) {
-        boolean enabled = order.getOrderType() == OrderType.DELIVERY
-                ? config.isDeliveryPaymentMethodEnabled(method)
-                : config.isPaymentMethodEnabled(method);
+        boolean enabled = config.isPaymentMethodEnabled(method);
         if (!enabled) {
             return false;
         }

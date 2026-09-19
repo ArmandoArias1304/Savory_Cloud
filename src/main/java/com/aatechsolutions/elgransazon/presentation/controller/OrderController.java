@@ -754,11 +754,8 @@ public class OrderController {
         // Get system configuration
         SystemConfiguration config = systemConfigurationService.getConfiguration();
         
-        // Get enabled payment methods based on order type
-        // For DELIVERY orders, use deliveryPaymentMethods; for others use regular paymentMethods
-        Map<PaymentMethodType, Boolean> paymentMethodsMap = type == OrderType.DELIVERY 
-                ? config.getDeliveryPaymentMethods() 
-                : config.getPaymentMethods();
+        // Restaurant payment methods for any order type (dine-in, takeout, delivery)
+        Map<PaymentMethodType, Boolean> paymentMethodsMap = config.getPaymentMethods();
         
         List<PaymentMethodType> enabledPaymentMethods = paymentMethodsMap.entrySet().stream()
                 .filter(Map.Entry::getValue)
@@ -768,7 +765,7 @@ public class OrderController {
         
         // Validate at least one payment method is enabled
         if (enabledPaymentMethods.isEmpty()) {
-            String orderTypeText = type == OrderType.DELIVERY ? "entregas a domicilio" : "el restaurante";
+            String orderTypeText = "el restaurante";
             log.warn("No payment methods enabled for {} in system configuration", orderTypeText);
             redirectAttributes.addFlashAttribute("errorMessage", 
                 "No hay métodos de pago habilitados para " + orderTypeText + ". Por favor contacte al administrador.");
@@ -895,11 +892,8 @@ public class OrderController {
         // Get system configuration
         SystemConfiguration config = systemConfigurationService.getConfiguration();
         
-        // Get enabled payment methods based on order type
-        // For DELIVERY orders, use deliveryPaymentMethods; for others use regular paymentMethods
-        Map<PaymentMethodType, Boolean> paymentMethodsMap = order.getOrderType() == OrderType.DELIVERY 
-                ? config.getDeliveryPaymentMethods() 
-                : config.getPaymentMethods();
+        // Restaurant payment methods for any order type (dine-in, takeout, delivery)
+        Map<PaymentMethodType, Boolean> paymentMethodsMap = config.getPaymentMethods();
         
         List<PaymentMethodType> enabledPaymentMethods = paymentMethodsMap.entrySet().stream()
                 .filter(Map.Entry::getValue)
@@ -1181,11 +1175,7 @@ public class OrderController {
             })
             .collect(Collectors.toList());
 
-        // Get enabled payment methods based on current order type
-        // For DELIVERY orders, use deliveryPaymentMethods; for others use regular paymentMethods
-        Map<PaymentMethodType, Boolean> paymentMethodsMap = (order.getOrderType() == OrderType.DELIVERY) 
-            ? config.getDeliveryPaymentMethods() 
-            : config.getPaymentMethods();
+        Map<PaymentMethodType, Boolean> paymentMethodsMap = config.getPaymentMethods();
         List<PaymentMethodType> enabledPaymentMethods = paymentMethodsMap.entrySet().stream()
             .filter(Map.Entry::getValue)
             .map(Map.Entry::getKey)
@@ -1280,11 +1270,10 @@ public class OrderController {
             }
             PaymentMethodType paymentMethod = paymentMethodStr != null ? PaymentMethodType.valueOf(paymentMethodStr) : PaymentMethodType.CASH;
 
-            // Validate payment method based on order type
+            // Validate payment method against restaurant methods (any order type)
             SystemConfiguration config = systemConfigurationService.getConfiguration();
             if (!config.isPaymentMethodEnabledForOrderType(paymentMethod, orderType)) {
-                String context = orderType == OrderType.DELIVERY ? " para entregas a domicilio" : "";
-                throw new IllegalArgumentException("El método de pago seleccionado (" + paymentMethod.getDisplayName() + ") no está habilitado" + context);
+                throw new IllegalArgumentException("El método de pago seleccionado (" + paymentMethod.getDisplayName() + ") no está habilitado");
             }
 
             // Build Order entity
@@ -1454,13 +1443,12 @@ public class OrderController {
                 throw new IllegalArgumentException(WAITER_NON_DINE_IN_MESSAGE);
             }
 
-            // Validate payment method is enabled based on order type (DELIVERY uses different payment methods)
+            // Validate payment method against restaurant methods (any order type)
             SystemConfiguration config = systemConfigurationService.getConfiguration();
             if (!config.isPaymentMethodEnabledForOrderType(order.getPaymentMethod(), order.getOrderType())) {
-                String context = order.getOrderType() == OrderType.DELIVERY ? " para entregas a domicilio" : "";
                 log.warn("Payment method not enabled for order type {}: {}", order.getOrderType(), order.getPaymentMethod());
                 redirectAttributes.addFlashAttribute("errorMessage", 
-                    "El método de pago seleccionado (" + order.getPaymentMethod().getDisplayName() + ") no está habilitado" + context);
+                    "El método de pago seleccionado (" + order.getPaymentMethod().getDisplayName() + ") no está habilitado");
                 return "redirect:/" + role + "/orders/menu?orderType=" + order.getOrderType().name() +
                     (tableId != null ? "&tableId=" + tableId : "") +
                     (order.getCustomerName() != null ? "&customerName=" + order.getCustomerName() : "") +
@@ -1591,9 +1579,7 @@ public class OrderController {
                         })
                         .collect(Collectors.toList());
                     
-                    Map<PaymentMethodType, Boolean> paymentMethods = order.getOrderType() == OrderType.DELIVERY 
-                        ? config.getDeliveryPaymentMethods() 
-                        : config.getPaymentMethods();
+                    Map<PaymentMethodType, Boolean> paymentMethods = config.getPaymentMethods();
                     List<PaymentMethodType> enabledPaymentMethods = paymentMethods.entrySet().stream()
                         .filter(Map.Entry::getValue)
                         .map(Map.Entry::getKey)
@@ -1736,12 +1722,10 @@ public class OrderController {
             if (order.getPaymentMethod() != null) {
                 SystemConfigurationService configService = systemConfigurationService; // Accessed via field
                 SystemConfiguration config = configService.getConfiguration();
-                // Validate based on order type - DELIVERY orders use deliveryPaymentMethods
                 if (!config.isPaymentMethodEnabledForOrderType(order.getPaymentMethod(), order.getOrderType())) {
                     // Use redirect to preserve the order data on reload
-                    String context = order.getOrderType() == OrderType.DELIVERY ? " para entregas a domicilio" : "";
                     redirectAttributes.addFlashAttribute("errorMessage", 
-                        "El método de pago seleccionado (" + order.getPaymentMethod().getDisplayName() + ") está deshabilitado" + context);
+                        "El método de pago seleccionado (" + order.getPaymentMethod().getDisplayName() + ") está deshabilitado");
                     return "redirect:/" + role + "/orders/edit/" + id;
                 }
             }
@@ -3461,9 +3445,7 @@ public class OrderController {
             })
             .collect(Collectors.toList());
         
-        Map<PaymentMethodType, Boolean> paymentMethodsMap = (order.getOrderType() == OrderType.DELIVERY) 
-            ? config.getDeliveryPaymentMethods() 
-            : config.getPaymentMethods();
+        Map<PaymentMethodType, Boolean> paymentMethodsMap = config.getPaymentMethods();
         List<PaymentMethodType> enabledPaymentMethods = paymentMethodsMap.entrySet().stream()
             .filter(Map.Entry::getValue)
             .map(Map.Entry::getKey)

@@ -263,8 +263,8 @@
                     </p>
                   </div>
 
-                  <!-- Payment Methods (enabled for delivery; mix allowed) -->
-                  <div class="space-y-4">
+                    <!-- Payment Methods (enabled for rider collection; never cash) -->
+                    <div class="space-y-4">
                     <h3 class="text-lg font-bold text-gray-900 dark:text-white">
                       Métodos de Pago <span class="text-red-500">*</span>
                     </h3>
@@ -275,6 +275,7 @@
                       <button
                         type="button"
                         th:each="method : ${enabledPaymentMethods}"
+                        th:unless="${method.name() == 'CASH'}"
                         th:data-method="${method.name()}"
                         th:class="${order.paymentMethod != null && order.paymentMethod == method} ? 'payment-method-btn active flex flex-col items-center justify-center gap-2 rounded-xl p-4' : 'payment-method-btn flex flex-col items-center justify-center gap-2 rounded-xl p-4 text-gray-600 dark:text-gray-400'"
                         onclick="togglePaymentMethod(this)"
@@ -322,12 +323,16 @@
                       <span class="material-symbols-outlined text-sm"
                         >info</span
                       >
-                      Métodos de pago habilitados para entregas a domicilio
+                      Métodos con los que el repartidor puede cobrar (tarjeta o transferencia). El efectivo se entrega a caja (admin, gerente o cajero).
                     </p>
                   </div>
 
-                  <!-- Change Calculator -->
-                  <div class="space-y-4" id="changeCalculatorSection">
+                  <!-- Change Calculator (only if cash were collectable — it is not for delivery) -->
+                  <div
+                    class="space-y-4"
+                    id="changeCalculatorSection"
+                    th:if="${#lists.contains(enabledPaymentMethodNames, 'CASH')}"
+                  >
                     <h3 class="text-lg font-bold text-gray-900 dark:text-white">
                       Calculadora de Cambio
                     </h3>
@@ -600,9 +605,8 @@
                     <div class="flex items-center gap-2">
                       <span class="material-symbols-outlined">payments</span>
                       <p class="font-medium text-sm">
-                        Si el cliente deja propina en efectivo, entrégala a caja
-                        (admin, gerente o cajero) para que la registren como
-                        movimiento del día de tipo Propina. No se captura aquí.
+                        La propina en efectivo se registra en movimientos de
+                        caja.
                       </p>
                     </div>
                   </div>
@@ -698,7 +702,7 @@
                     </div>
                   </button>
                   <p class="mt-3 text-sm text-red-500 font-medium">
-                    No hay métodos de pago habilitados para entregas a domicilio
+                    No hay métodos de pago habilitados para el cobro del repartidor. El efectivo se cobra en caja.
                   </p>
                 </div>
                 <button

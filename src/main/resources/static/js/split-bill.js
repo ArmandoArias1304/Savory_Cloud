@@ -516,11 +516,11 @@
   }
 
   function personMetaHtml(acc, idx) {
-    // CASH accounts never register a tip (it is handed to the waiter directly),
-    // so the picker is replaced by a short note — same as the normal charge form.
+    // CASH accounts never register a tip on the order; it is recorded later
+    // as a cash-register (caja) movement.
     var tipHtml = tipsAllowedForAccount(acc)
       ? tipPickerHtml(acc, idx)
-      : '<p class="text-[11px] text-gray-400 dark:text-gray-500 italic leading-snug">En efectivo la propina se entrega directamente al mesero y no se registra en el sistema.</p>';
+      : '<p class="text-[11px] text-gray-400 dark:text-gray-500 italic leading-snug">La propina en efectivo se registra en movimientos de caja.</p>';
     return (
       '<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">' +
       "<div>" +

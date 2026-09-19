@@ -1226,9 +1226,8 @@
       const taxRate = /*[[${config.taxRate}]]*/ 0.0; // Tax rate as percentage (e.g., 19.0 for 19%)
       const taxMultiplier = taxRate / 100; // Convert to decimal (e.g., 0.19)
 
-      // Payment methods for different order types
+      // Restaurant payment methods (same list for dine-in, takeout and delivery)
       const restaurantPaymentMethods = /*[[${enabledPaymentMethods}]]*/ [];
-      const deliveryPaymentMethods = /*[[${deliveryPaymentMethods}]]*/ [];
 
       // Active promotions - loaded via AJAX
       let activePromotions = [];
@@ -2666,7 +2665,7 @@
           document.getElementById("deliveryReferences").value = "";
         }
 
-        // Update payment methods based on order type
+        // Keep the restaurant payment methods (same list for every order type)
         updatePaymentMethodsForOrderType(newType);
 
         // Filter dine-in-only items based on new order type
@@ -2678,16 +2677,13 @@
         }
       }
 
-      // Update payment methods dropdown based on order type
+      // Rebuild the payment methods dropdown. The customer always sees the
+      // restaurant methods, regardless of dine-in / takeout / delivery.
       function updatePaymentMethodsForOrderType(orderType) {
         const paymentMethodSelect = document.getElementById("paymentMethod");
         if (!paymentMethodSelect) return;
 
-        // Choose the correct payment methods list
-        const methods =
-          orderType === "DELIVERY"
-            ? deliveryPaymentMethods
-            : restaurantPaymentMethods;
+        const methods = restaurantPaymentMethods;
 
         // Save current selection if possible
         const currentSelection = paymentMethodSelect.value;

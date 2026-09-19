@@ -104,10 +104,8 @@ public class CashierPaymentController {
                     // Get system configuration
                     SystemConfiguration config = systemConfigurationService.getConfiguration();
                     
-                    // Get enabled payment methods based on order type
-                    Map<PaymentMethodType, Boolean> paymentMethods = order.getOrderType() == OrderType.DELIVERY 
-                        ? config.getDeliveryPaymentMethods() 
-                        : config.getPaymentMethods();
+                    // Restaurant payment methods for any order type (caja can collect cash on delivery)
+                    Map<PaymentMethodType, Boolean> paymentMethods = config.getPaymentMethods();
                     List<PaymentMethodType> enabledPaymentMethods = paymentMethods.entrySet().stream()
                         .filter(Map.Entry::getValue)
                         .map(Map.Entry::getKey)
@@ -589,9 +587,7 @@ public class CashierPaymentController {
     }
 
     private boolean isMethodAllowed(PaymentMethodType method, Order order, SystemConfiguration config) {
-        return order.getOrderType() == OrderType.DELIVERY
-                ? config.isDeliveryPaymentMethodEnabled(method)
-                : config.isPaymentMethodEnabled(method);
+        return config.isPaymentMethodEnabled(method);
     }
 
     private List<com.aatechsolutions.elgransazon.presentation.dto.PaymentTenderDTO> toDtos(

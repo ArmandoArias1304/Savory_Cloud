@@ -240,20 +240,10 @@ public class ClientController {
             // Get customer info
             Customer customer = getAuthenticatedCustomer(authentication);
             
-            // Get enabled payment methods - for client we need both restaurant and delivery
-            // Default is TAKEOUT (uses restaurant methods), DELIVERY uses delivery methods
-            // We'll pass both sets to allow JavaScript to switch based on selected order type
+            // Customer always sees restaurant payment methods (dine-in, takeout and delivery).
             Map<PaymentMethodType, Boolean> restaurantPayments = config.getPaymentMethods();
-            Map<PaymentMethodType, Boolean> deliveryPayments = config.getDeliveryPaymentMethods();
             
-            // Default to restaurant methods (TAKEOUT is the default)
             List<PaymentMethodType> enabledPaymentMethods = restaurantPayments.entrySet().stream()
-                    .filter(Map.Entry::getValue)
-                    .map(Map.Entry::getKey)
-                    .collect(Collectors.toList());
-            
-            // Get delivery enabled methods for when user switches to DELIVERY
-            List<PaymentMethodType> deliveryPaymentMethods = deliveryPayments.entrySet().stream()
                     .filter(Map.Entry::getValue)
                     .map(Map.Entry::getKey)
                     .collect(Collectors.toList());
@@ -279,7 +269,6 @@ public class ClientController {
             model.addAttribute("orderTypes", Arrays.asList(OrderType.TAKEOUT, OrderType.DELIVERY));
             model.addAttribute("orderType", OrderType.DELIVERY); // Default order type
             model.addAttribute("enabledPaymentMethods", enabledPaymentMethods);
-            model.addAttribute("deliveryPaymentMethods", deliveryPaymentMethods);
             model.addAttribute("customerAddresses", customerAddresses);
             model.addAttribute("defaultAddress", defaultAddress);
             model.addAttribute("hasAddresses", !customerAddresses.isEmpty());
@@ -957,11 +946,8 @@ public class ClientController {
             // Get system configuration
             SystemConfiguration config = systemConfigurationService.getConfiguration();
             
-            // Get enabled payment methods based on order type
-            // For DELIVERY orders, use deliveryPaymentMethods; for others use regular paymentMethods
-            Map<PaymentMethodType, Boolean> paymentMethodsMap = order.getOrderType() == OrderType.DELIVERY 
-                    ? config.getDeliveryPaymentMethods() 
-                    : config.getPaymentMethods();
+            // Customer always sees restaurant payment methods (dine-in, takeout and delivery).
+            Map<PaymentMethodType, Boolean> paymentMethodsMap = config.getPaymentMethods();
             List<PaymentMethodType> enabledPaymentMethods = paymentMethodsMap.entrySet().stream()
                     .filter(Map.Entry::getValue)
                     .map(Map.Entry::getKey)

@@ -582,10 +582,9 @@
                 Marcar como Entregado
               </button>
 
-              <!-- Collect Payment Button (DELIVERED -> Payment Form) -->
-              <!-- Método de pago habilitado para delivery - Botón habilitado -->
+              <!-- Collect Payment Button (DELIVERED -> Payment Form). Cash goes to caja. -->
               <a
-                th:if="${order.status.name() == 'DELIVERED' and config.waiterDeliveryCanCollect and config.hasAnyDeliveryPaymentMethodEnabled()}"
+                th:if="${order.status.name() == 'DELIVERED' and config.waiterDeliveryCanCollect and order.paymentMethod != null and order.paymentMethod.name() != 'CASH' and config.hasAnyDeliveryPaymentMethodEnabled()}"
                 th:href="@{/delivery/payments/form/{id}(id=${order.idOrder})}"
                 class="flex-1 py-3.5 px-6 text-base font-bold text-center text-white bg-gradient-to-r from-yellow-500 to-yellow-600 rounded-xl transition-all duration-300 flex items-center justify-center gap-2 border-0 cursor-pointer shadow-lg shadow-yellow-500/30 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-yellow-500/40 active:translate-y-0 relative z-[2] no-underline"
               >
@@ -594,9 +593,25 @@
               </a>
 
               <div
-                th:if="${order.status.name() == 'DELIVERED' and config.waiterDeliveryCanCollect and !config.hasAnyDeliveryPaymentMethodEnabled()}"
+                th:if="${order.status.name() == 'DELIVERED' and config.waiterDeliveryCanCollect and order.paymentMethod != null and order.paymentMethod.name() == 'CASH'}"
                 class="flex-1 py-3.5 px-6 text-sm font-semibold text-center text-gray-700 dark:text-gray-300 bg-gradient-to-r from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 rounded-xl flex items-center justify-center gap-2 border-2 border-gray-300 dark:border-gray-600 relative z-[2]"
-                title="No hay métodos de pago habilitados para entregas a domicilio"
+                title="El efectivo debe cobrarse en caja (admin, gerente o cajero)"
+              >
+                <span
+                  class="material-symbols-outlined text-gray-500 dark:text-gray-400"
+                  >storefront</span
+                >
+                <span>
+                  Entregar efectivo a caja
+                  <br />
+                  <small class="text-xs">Admin, gerente o cajero cobran el efectivo</small>
+                </span>
+              </div>
+
+              <div
+                th:if="${order.status.name() == 'DELIVERED' and config.waiterDeliveryCanCollect and (order.paymentMethod == null or order.paymentMethod.name() != 'CASH') and !config.hasAnyDeliveryPaymentMethodEnabled()}"
+                class="flex-1 py-3.5 px-6 text-sm font-semibold text-center text-gray-700 dark:text-gray-300 bg-gradient-to-r from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 rounded-xl flex items-center justify-center gap-2 border-2 border-gray-300 dark:border-gray-600 relative z-[2]"
+                title="No hay métodos de pago habilitados para que el repartidor cobre"
               >
                 <span
                   class="material-symbols-outlined text-gray-500 dark:text-gray-400"
@@ -605,7 +620,7 @@
                 <span>
                   Cobro no disponible
                   <br />
-                  <small class="text-xs">Sin métodos habilitados para delivery</small>
+                  <small class="text-xs">Sin métodos habilitados para delivery. Dirija el pedido a caja.</small>
                 </span>
               </div>
             </div>

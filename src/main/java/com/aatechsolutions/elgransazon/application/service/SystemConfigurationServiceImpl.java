@@ -139,8 +139,9 @@ public class SystemConfigurationServiceImpl implements SystemConfigurationServic
             existingConfig.setPaymentMethods(configuration.getPaymentMethods());
         }
         
-        // Update delivery payment methods if provided
+        // Update delivery payment methods if provided (cash is never collectable by the rider)
         if (configuration.getDeliveryPaymentMethods() != null) {
+            configuration.getDeliveryPaymentMethods().put(PaymentMethodType.CASH, false);
             existingConfig.setDeliveryPaymentMethods(configuration.getDeliveryPaymentMethods());
         }
 
@@ -190,11 +191,13 @@ public class SystemConfigurationServiceImpl implements SystemConfigurationServic
         // Initialize delivery payment methods if not set
         if (configuration.getDeliveryPaymentMethods() == null || configuration.getDeliveryPaymentMethods().isEmpty()) {
             Map<PaymentMethodType, Boolean> deliveryPaymentMethods = new HashMap<>();
-            deliveryPaymentMethods.put(PaymentMethodType.CASH, true); // Cash enabled by default for delivery
+            deliveryPaymentMethods.put(PaymentMethodType.CASH, false);
             deliveryPaymentMethods.put(PaymentMethodType.CREDIT_CARD, false);
             deliveryPaymentMethods.put(PaymentMethodType.DEBIT_CARD, false);
             deliveryPaymentMethods.put(PaymentMethodType.TRANSFER, false);
             configuration.setDeliveryPaymentMethods(deliveryPaymentMethods);
+        } else {
+            configuration.getDeliveryPaymentMethods().put(PaymentMethodType.CASH, false);
         }
         
         SystemConfiguration saved = configurationRepository.save(configuration);

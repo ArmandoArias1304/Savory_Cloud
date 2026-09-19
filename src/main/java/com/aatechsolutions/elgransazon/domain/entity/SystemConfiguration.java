@@ -170,7 +170,8 @@ public class SystemConfiguration implements Serializable {
 
     // ========== Waiter/Delivery Collection Permission ==========
     // When TRUE (default), waiters and delivery staff CAN collect payments
-    // (waiters: credit/debit cards only; delivery: per the delivery payment methods).
+    // (waiters: credit/debit cards only; delivery: card/transfer from delivery
+    // payment methods — never cash).
     // When FALSE, waiters and delivery staff can only advance orders up to DELIVERED
     // status — the charge button is hidden and payment endpoints are blocked;
     // only cashier/admin/manager can collect. Backward compatible (default TRUE).
@@ -189,7 +190,9 @@ public class SystemConfiguration implements Serializable {
     @Builder.Default
     private Integer ticketLogoOpacity = 50; // Default: 50% (original threshold ~128)
 
-    // Payment methods with enable/disable status (for restaurant/in-house orders)
+    // Declared payment methods when creating an order (customer and staff).
+    // Same list for dine-in, takeout and delivery. Rider collection uses
+    // deliveryPaymentMethods instead (never cash).
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "system_payment_methods", joinColumns = @JoinColumn(name = "system_configuration_id"))
     @MapKeyEnumerated(EnumType.STRING)
@@ -197,8 +200,8 @@ public class SystemConfiguration implements Serializable {
     @Builder.Default
     private Map<PaymentMethodType, Boolean> paymentMethods = new HashMap<>();
 
-    // Delivery payment methods with enable/disable status (separate from restaurant)
-    // This allows disabling payment methods ONLY for delivery without affecting restaurant payments
+    // What the delivery person may collect at the door (never cash: cash goes to caja).
+    // Distinct from restaurant paymentMethods, which the customer sees when ordering.
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "system_delivery_payment_methods", joinColumns = @JoinColumn(name = "system_configuration_id"))
     @MapKeyEnumerated(EnumType.STRING)
@@ -227,6 +230,9 @@ public class SystemConfiguration implements Serializable {
     @PreUpdate
     protected void onUpdate() {
         this.updatedAt = LocalDateTime.now();
+        if (this.deliveryPaymentMethods != null) {
+            this.deliveryPaymentMethods.put(PaymentMethodType.CASH, false);
+        }
     }
 
     @PrePersist
@@ -242,14 +248,14 @@ public class SystemConfiguration implements Serializable {
             this.paymentMethods.put(PaymentMethodType.DEBIT_CARD, true);
             this.paymentMethods.put(PaymentMethodType.TRANSFER, false); // Disabled by default
         }
-        // Initialize delivery payment methods if not set
-        // By default, only CASH is enabled for delivery
         if (this.deliveryPaymentMethods == null || this.deliveryPaymentMethods.isEmpty()) {
             this.deliveryPaymentMethods = new HashMap<>();
-            this.deliveryPaymentMethods.put(PaymentMethodType.CASH, true); // Cash enabled by default for delivery
-            this.deliveryPaymentMethods.put(PaymentMethodType.CREDIT_CARD, false); // Disabled by default
-            this.deliveryPaymentMethods.put(PaymentMethodType.DEBIT_CARD, false); // Disabled by default
-            this.deliveryPaymentMethods.put(PaymentMethodType.TRANSFER, false); // Disabled by default
+            this.deliveryPaymentMethods.put(PaymentMethodType.CASH, false);
+            this.deliveryPaymentMethods.put(PaymentMethodType.CREDIT_CARD, false);
+            this.deliveryPaymentMethods.put(PaymentMethodType.DEBIT_CARD, false);
+            this.deliveryPaymentMethods.put(PaymentMethodType.TRANSFER, false);
+        } else {
+            this.deliveryPaymentMethods.put(PaymentMethodType.CASH, false);
         }
     }
 
@@ -297,27 +303,32 @@ public class SystemConfiguration implements Serializable {
         return paymentMethods.getOrDefault(type, false);
     }
 
-    // Helper method to check if a delivery payment method is enabled
+    /**
+     * Whether the delivery person may collect with {@code type}. Cash is always
+     * false: physical cash is handed to caja (admin/manager/cashier).
+     */
     public boolean isDeliveryPaymentMethodEnabled(PaymentMethodType type) {
-        return deliveryPaymentMethods.getOrDefault(type, false);
+        if (type == null || type == PaymentMethodType.CASH) {
+            return false;
+        }
+        return deliveryPaymentMethods != null
+                && Boolean.TRUE.equals(deliveryPaymentMethods.getOrDefault(type, false));
     }
 
     public boolean hasAnyDeliveryPaymentMethodEnabled() {
         if (deliveryPaymentMethods == null || deliveryPaymentMethods.isEmpty()) {
             return false;
         }
-        return deliveryPaymentMethods.values().stream().anyMatch(Boolean.TRUE::equals);
+        return deliveryPaymentMethods.entrySet().stream()
+                .anyMatch(e -> e.getKey() != PaymentMethodType.CASH && Boolean.TRUE.equals(e.getValue()));
     }
 
     /**
-     * Check if a payment method is enabled based on order type
-     * For DELIVERY orders, uses deliveryPaymentMethods
-     * For other orders (DINE_IN, TAKEOUT), uses paymentMethods
+     * Declared method when creating an order (customer or staff). Always the
+     * restaurant methods, for dine-in, takeout and delivery. Delivery-person
+     * collection uses {@link #isDeliveryPaymentMethodEnabled}.
      */
     public boolean isPaymentMethodEnabledForOrderType(PaymentMethodType type, OrderType orderType) {
-        if (orderType == OrderType.DELIVERY) {
-            return isDeliveryPaymentMethodEnabled(type);
-        }
         return isPaymentMethodEnabled(type);
     }
 

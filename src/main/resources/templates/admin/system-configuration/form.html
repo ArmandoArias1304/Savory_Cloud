@@ -1488,8 +1488,10 @@
                     </label>
                   </div>
                   <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                    Estos métodos de pago aplican para pedidos en restaurante
-                    (para comer aquí y para llevar).
+                    Estos métodos los ve el cliente y el personal al crear
+                    cualquier pedido (comer aquí, para recoger o domicilio). El
+                    efectivo de una entrega a domicilio lo cobra caja, no el
+                    repartidor.
                   </p>
                 </div>
 
@@ -1506,29 +1508,8 @@
                     </span>
                   </label>
                   <div
-                    class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"
+                    class="grid grid-cols-1 md:grid-cols-3 gap-4"
                   >
-                    <label
-                      class="flex items-center gap-3 p-4 rounded-xl border-2 border-orange-200 dark:border-orange-900 hover:border-orange-400 cursor-pointer transition-colors bg-orange-50/50 dark:bg-orange-900/10"
-                    >
-                      <input
-                        type="checkbox"
-                        id="deliveryPaymentCash"
-                        name="deliveryPaymentCash"
-                        th:checked="${configuration.deliveryPaymentMethods?.get(T(com.aatechsolutions.elgransazon.domain.entity.PaymentMethodType).CASH) ?: true}"
-                        class="w-5 h-5 text-orange-500 border-gray-300 rounded focus:ring-orange-500"
-                      />
-                      <div class="flex items-center gap-2">
-                        <span class="material-symbols-outlined text-orange-500"
-                          >payments</span
-                        >
-                        <span
-                          class="text-sm font-medium text-gray-700 dark:text-gray-300"
-                          >Efectivo</span
-                        >
-                      </div>
-                    </label>
-
                     <label
                       class="flex items-center gap-3 p-4 rounded-xl border-2 border-orange-200 dark:border-orange-900 hover:border-orange-400 cursor-pointer transition-colors bg-orange-50/50 dark:bg-orange-900/10"
                     >
@@ -1593,9 +1574,10 @@
                     </label>
                   </div>
                   <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                    Estos métodos de pago aplican exclusivamente para pedidos de
-                    entrega a domicilio (delivery). Puedes desactivar métodos
-                    aquí sin afectar los pagos del restaurante.
+                    Solo controlan con qué puede cobrar el repartidor (tarjeta o
+                    transferencia). El efectivo nunca lo cobra el delivery: lo
+                    entrega a admin, gerente o cajero. Si desactivas todos, el
+                    repartidor no podrá cobrar y el cobro queda en caja.
                   </p>
                 </div>
 
@@ -2263,14 +2245,14 @@
           target: "#paymentMethodsSection",
           title: "💳 Métodos de Pago",
           description:
-            "Selecciona los métodos de pago que aceptas en tu restaurante para pedidos en local: Efectivo, Tarjeta de Crédito, Tarjeta de Débito y/o Transferencia. Puedes elegir varios.",
+            "Selecciona los métodos de pago que ve el cliente y el personal al crear un pedido (comer aquí, para recoger o domicilio): Efectivo, Tarjeta de Crédito, Tarjeta de Débito y/o Transferencia.",
           position: "bottom",
         },
         {
           target: "#deliveryPaymentMethodsSection",
           title: "🚚 Métodos de Pago para Delivery",
           description:
-            "Configura los métodos de pago exclusivos para pedidos a domicilio. Puedes activar o desactivar métodos aquí sin afectar los pagos del restaurante.",
+            "Métodos con los que el repartidor puede cobrar en la puerta (tarjeta o transferencia). El efectivo lo cobra caja. Si no activas ninguno, el delivery no cobra.",
           position: "bottom",
         },
         {

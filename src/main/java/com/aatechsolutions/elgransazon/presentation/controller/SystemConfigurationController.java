@@ -101,7 +101,6 @@ public class SystemConfigurationController {
             @RequestParam(value = "paymentCreditCard", required = false) Boolean paymentCreditCard,
             @RequestParam(value = "paymentDebitCard", required = false) Boolean paymentDebitCard,
             @RequestParam(value = "paymentTransfer", required = false) Boolean paymentTransfer,
-            @RequestParam(value = "deliveryPaymentCash", required = false) Boolean deliveryPaymentCash,
             @RequestParam(value = "deliveryPaymentCreditCard", required = false) Boolean deliveryPaymentCreditCard,
             @RequestParam(value = "deliveryPaymentDebitCard", required = false) Boolean deliveryPaymentDebitCard,
             @RequestParam(value = "deliveryPaymentTransfer", required = false) Boolean deliveryPaymentTransfer,
@@ -152,7 +151,7 @@ public class SystemConfigurationController {
 
             // Update delivery payment methods (separate from restaurant)
             Map<PaymentMethodType, Boolean> deliveryPaymentMethods = new HashMap<>();
-            deliveryPaymentMethods.put(PaymentMethodType.CASH, deliveryPaymentCash != null && deliveryPaymentCash);
+            deliveryPaymentMethods.put(PaymentMethodType.CASH, false);
             deliveryPaymentMethods.put(PaymentMethodType.CREDIT_CARD, deliveryPaymentCreditCard != null && deliveryPaymentCreditCard);
             deliveryPaymentMethods.put(PaymentMethodType.DEBIT_CARD, deliveryPaymentDebitCard != null && deliveryPaymentDebitCard);
             deliveryPaymentMethods.put(PaymentMethodType.TRANSFER, deliveryPaymentTransfer != null && deliveryPaymentTransfer);
