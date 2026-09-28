@@ -3,7 +3,9 @@ package com.aatechsolutions.elgransazon.presentation.controller;
 import com.aatechsolutions.elgransazon.application.service.*;
 import com.aatechsolutions.elgransazon.domain.entity.*;
 import com.aatechsolutions.elgransazon.infrastructure.context.CompanyContext;
+import com.aatechsolutions.elgransazon.util.CashRegisterAlertSupport;
 import com.aatechsolutions.elgransazon.util.DeliveryStatusSupport;
+import jakarta.servlet.http.HttpSession;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.ResponseEntity;
@@ -178,10 +180,11 @@ public class OrderController {
     }
 
     /**
-     * Exposes whether the current admin/manager/cashier has an open cash drawer
-     * so the orders list can warn on the frontend. Does not block collection.
+     * Exposes whether the orders list must warn that the cash drawer is still closed.
+     * Does not block collection. The warning is shown once per login session (see
+     * {@link CashRegisterAlertSupport}), not on every load or refresh.
      */
-    private void addCashRegisterOpenFlag(Authentication authentication, Model model) {
+    private void addCashRegisterOpenFlag(Authentication authentication, HttpSession session, Model model) {
         String prefix = "cashier";
         if (authentication != null && authentication.getAuthorities() != null) {
             boolean admin = authentication.getAuthorities().stream()
@@ -204,7 +207,8 @@ public class OrderController {
         } catch (Exception e) {
             log.debug("Could not resolve cash register session: {}", e.getMessage());
         }
-        model.addAttribute("cashRegisterOpen", open);
+        model.addAttribute("showCashRegisterClosedAlert",
+                CashRegisterAlertSupport.showOnce(session, open));
         model.addAttribute("cashRegisterUrl", "/" + prefix + "/cash-register");
     }
 
@@ -221,6 +225,7 @@ public class OrderController {
             @RequestParam(required = false) PaymentMethodType paymentMethod,
             @RequestParam(defaultValue = "1") int page,
             Authentication authentication,
+            HttpSession session,
             Model model) {
         
         log.debug("Displaying orders list with filters - role: {}, table: {}, status: {}, type: {}, date: {}, paymentMethod: {}", 
@@ -418,7 +423,7 @@ public class OrderController {
         model.addAttribute("waiterDeliveryCanCollect", waiterDeliveryCanCollect);
 
         if ("admin".equalsIgnoreCase(role) || "manager".equalsIgnoreCase(role)) {
-            addCashRegisterOpenFlag(authentication, model);
+            addCashRegisterOpenFlag(authentication, session, model);
         }
 
         return role + "/orders/list";

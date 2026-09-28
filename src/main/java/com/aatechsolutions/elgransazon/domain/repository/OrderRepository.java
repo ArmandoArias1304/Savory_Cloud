@@ -8,12 +8,14 @@ import com.aatechsolutions.elgransazon.domain.entity.RestaurantTable;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -377,8 +379,8 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
 
     /**
      * PAID tickets (orders WITHOUT split accounts) still pending the global invoice
-     * for a company within a paid date range (UTC): no individual CFDI and not yet
-     * included in a previous global invoice.
+     * for a company within a paid date range (UTC): no individual CFDI, not yet
+     * included in a previous global invoice and NOT manually excluded.
      *
      * These are the operations that become one concept each of the factura global
      * (público en general), per regla 2.7.1.21 RMF.
@@ -390,10 +392,59 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
            "  AND o.paidAt < :endDate " +
            "  AND o.facturamaCfdiId IS NULL " +
            "  AND o.facturaGlobalCfdiId IS NULL " +
+           "  AND (o.facturaGlobalExcluida IS NULL OR o.facturaGlobalExcluida = false) " +
            "  AND NOT EXISTS (SELECT p2 FROM Payment p2 WHERE p2.order = o) " +
            "ORDER BY o.paidAt ASC")
     List<Order> findPaidOrdersPendingGlobalInvoiceByDateRange(
             @Param("company") Company company,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate);
+
+    /**
+     * PAID tickets (orders WITHOUT split accounts) EXCLUDED from the global invoice
+     * (flag {@code factura_global_excluida = true}) within a paid date range (UTC).
+     *
+     * These are listed in the programmer panel so a wrongly excluded ticket can be
+     * re-included; already invoiced tickets are never listed.
+     */
+    @Query("SELECT o FROM Order o " +
+           "WHERE o.company = :company " +
+           "  AND o.status = com.aatechsolutions.elgransazon.domain.entity.OrderStatus.PAID " +
+           "  AND o.paidAt >= :startDate " +
+           "  AND o.paidAt < :endDate " +
+           "  AND o.facturamaCfdiId IS NULL " +
+           "  AND o.facturaGlobalCfdiId IS NULL " +
+           "  AND o.facturaGlobalExcluida = true " +
+           "  AND NOT EXISTS (SELECT p2 FROM Payment p2 WHERE p2.order = o) " +
+           "ORDER BY o.paidAt ASC")
+    List<Order> findPaidOrdersExcludedFromGlobalInvoiceByDateRange(
+            @Param("company") Company company,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate);
+
+    /**
+     * Flags (or unflags) orders as excluded from the factura global.
+     *
+     * Only tickets that are still pending can be flagged: PAID, inside the paid date
+     * range (UTC), without an individual CFDI and not amparado by a global invoice yet.
+     * Returns the number of orders actually updated.
+     */
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE Order o " +
+           "SET o.facturaGlobalExcluida = :excluded, o.updatedBy = :updatedBy " +
+           "WHERE o.idOrder IN :ids " +
+           "  AND o.company = :company " +
+           "  AND o.status = com.aatechsolutions.elgransazon.domain.entity.OrderStatus.PAID " +
+           "  AND o.paidAt >= :startDate " +
+           "  AND o.paidAt < :endDate " +
+           "  AND o.facturamaCfdiId IS NULL " +
+           "  AND o.facturaGlobalCfdiId IS NULL " +
+           "  AND NOT EXISTS (SELECT p2 FROM Payment p2 WHERE p2.order = o)")
+    int updateGlobalInvoiceExclusion(
+            @Param("company") Company company,
+            @Param("ids") Collection<Long> ids,
+            @Param("excluded") boolean excluded,
+            @Param("updatedBy") String updatedBy,
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate);
 

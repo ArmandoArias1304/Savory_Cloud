@@ -1,6 +1,7 @@
 package com.aatechsolutions.elgransazon.presentation.controller;
 
 import com.aatechsolutions.elgransazon.application.service.FacturamaService;
+import com.aatechsolutions.elgransazon.application.service.GlobalInvoiceService;
 import com.aatechsolutions.elgransazon.domain.entity.Company;
 import com.aatechsolutions.elgransazon.domain.entity.FacturamaConfig;
 import com.aatechsolutions.elgransazon.domain.entity.GlobalInvoice;
@@ -58,6 +59,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class FacturamaController {
 
     private final FacturamaService facturamaService;
+    private final GlobalInvoiceService globalInvoiceService;
     private final OrderRepository orderRepository;
     private final PaymentRepository paymentRepository;
     private final GlobalInvoiceRepository globalInvoiceRepository;
@@ -353,17 +355,14 @@ public class FacturamaController {
                 return ResponseEntity.badRequest().body(Map.of("error", "Sin contexto de empresa"));
             }
 
-            ZoneId zone = resolveZone(company);
-
             LocalDate fromDate = LocalDate.parse(from);
             LocalDate toDate = LocalDate.parse(to);
 
             String periodicity = validateGlobalPeriod(fromDate, toDate);
 
-            LocalDateTime startUtc = fromDate.atStartOfDay(zone).withZoneSameInstant(ZoneId.of("UTC")).toLocalDateTime();
-            LocalDateTime endUtc = toDate.plusDays(1).atStartOfDay(zone).withZoneSameInstant(ZoneId.of("UTC")).toLocalDateTime();
-
-            List<Map<String, Object>> tickets = buildGlobalTicketList(company, zone, startUtc, endUtc);
+            // Pending tickets: paid, without individual CFDI, not amparado by a previous
+            // global invoice and not manually excluded (factura_global_excluida = true).
+            List<Map<String, Object>> tickets = globalInvoiceService.findPendingTickets(company, fromDate, toDate);
 
             BigDecimal total = tickets.stream()
                     .map(t -> (BigDecimal) t.get("total"))
@@ -590,36 +589,6 @@ public class FacturamaController {
             return "04"; // Mensual
         }
         throw new IllegalArgumentException("El periodo debe ser un solo día o un mes completo");
-    }
-
-    /**
-     * Build the preview ticket list (folio, local date, total, payment method label)
-     * for the paid tickets pending global invoicing in the UTC range.
-     */
-    private List<Map<String, Object>> buildGlobalTicketList(Company company, ZoneId zone,
-                                                            LocalDateTime startUtc, LocalDateTime endUtc) {
-        List<Map<String, Object>> tickets = new ArrayList<>();
-        for (Order o : orderRepository.findPaidOrdersPendingGlobalInvoiceByDateRange(company, startUtc, endUtc)) {
-            Map<String, Object> t = new LinkedHashMap<>();
-            t.put("folio", o.getOrderNumber());
-            t.put("date", o.getPaidAt() != null
-                    ? o.getPaidAt().atZone(ZoneId.of("UTC")).withZoneSameInstant(zone).toLocalDate().toString()
-                    : "");
-            t.put("total", o.getTotal() != null ? o.getTotal() : BigDecimal.ZERO);
-            t.put("paymentMethod", o.getPaymentMethodsDisplay());
-            tickets.add(t);
-        }
-        for (Payment p : paymentRepository.findPaidPendingGlobalInvoiceByDateRange(company, startUtc, endUtc)) {
-            Map<String, Object> t = new LinkedHashMap<>();
-            t.put("folio", p.getPaymentFolio());
-            t.put("date", p.getPaidAt() != null
-                    ? p.getPaidAt().atZone(ZoneId.of("UTC")).withZoneSameInstant(zone).toLocalDate().toString()
-                    : "");
-            t.put("total", p.getTotal() != null ? p.getTotal() : BigDecimal.ZERO);
-            t.put("paymentMethod", p.getPaymentMethodsDisplay());
-            tickets.add(t);
-        }
-        return tickets;
     }
 
     private String currentUsername() {

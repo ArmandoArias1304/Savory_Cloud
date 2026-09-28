@@ -200,6 +200,27 @@
                     ></option>
                   </select>
                 </div>
+
+                <!-- Invoice Status Filter (facturada / no facturada) -->
+                <div>
+                  <label
+                    class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                    for="filterInvoiceStatus"
+                    >Facturación</label
+                  >
+                  <select
+                    class="w-full rounded-xl text-gray-900 dark:text-white focus:outline-0 focus:ring-2 focus:ring-primary border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 h-11 text-sm"
+                    id="filterInvoiceStatus"
+                  >
+                    <option value="">Todas</option>
+                    <option
+                      th:each="status : ${invoiceStatuses}"
+                      th:value="${status}"
+                      th:text="${status.displayName}"
+                      th:selected="${selectedInvoiceStatus != null && selectedInvoiceStatus == status}"
+                    ></option>
+                  </select>
+                </div>
               </div>
 
               <!-- Filter Actions -->
@@ -373,6 +394,11 @@
                     <th
                       class="px-6 py-4 font-semibold text-gray-700 dark:text-gray-300 text-center"
                     >
+                      Facturación
+                    </th>
+                    <th
+                      class="px-6 py-4 font-semibold text-gray-700 dark:text-gray-300 text-center"
+                    >
                       Acciones
                     </th>
                   </tr>
@@ -453,21 +479,68 @@
                       >
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-center">
-                      <a
-                        th:href="@{/admin/orders/view/{id}(id=${sale.idOrder})}"
-                        class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors"
-                        title="Ver detalles"
+                      <span
+                        th:if="${sale.isFullyInvoiced()}"
+                        class="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400"
+                        title="La venta ya tiene comprobante fiscal: factura individual, factura global o facturada fuera del sistema"
                       >
-                        <span class="material-symbols-outlined text-lg"
-                          >visibility</span
+                        <span class="material-symbols-outlined text-sm"
+                          >task_alt</span
                         >
-                      </a>
+                        Facturada
+                      </span>
+                      <span
+                        th:unless="${sale.isFullyInvoiced()}"
+                        class="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400"
+                        title="La venta todavía no tiene comprobante fiscal"
+                      >
+                        <span class="material-symbols-outlined text-sm"
+                          >pending</span
+                        >
+                        No facturada
+                      </span>
+                      <div
+                        th:if="${sale.isPartiallyInvoiced()}"
+                        class="text-[10px] text-gray-500 dark:text-gray-400 mt-1"
+                        th:text="${sale.invoicedUnitCount + ' de ' + sale.invoiceableUnitCount + ' cuentas'}"
+                      ></div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-center">
+                      <div class="flex items-center justify-center gap-2">
+                        <a
+                          th:href="@{/admin/orders/view/{id}(id=${sale.idOrder})}"
+                          class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors"
+                          title="Ver detalles"
+                        >
+                          <span class="material-symbols-outlined text-lg"
+                            >visibility</span
+                          >
+                        </a>
+
+                        <!-- Generate self-invoice link: only while the sale has no link yet
+                             and nothing forbids invoicing it (already invoiced, amparada by
+                             the factura global or excluded from it). -->
+                        <button
+                          th:if="${billingEnabled and sale.hasInvoiceLinkPending()}"
+                          sec:authorize="hasAnyRole('ROLE_ADMIN', 'ROLE_MANAGER')"
+                          type="button"
+                          class="btn-generate-invoice-link inline-flex items-center justify-center w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-200 dark:hover:bg-emerald-900/50 transition-colors"
+                          th:data-order-id="${sale.idOrder}"
+                          th:data-order-number="${sale.orderNumber}"
+                          th:data-expired="${sale.isAutofacturaExpired(companyZone)}"
+                          th:title="${sale.isAutofacturaExpired(companyZone) ? 'Generar link de facturación (el plazo de autofactura de esta venta ya venció)' : 'Generar link de facturación'}"
+                        >
+                          <span class="material-symbols-outlined text-lg"
+                            >qr_code_2</span
+                          >
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 </tbody>
                 <tbody th:if="${sales.empty}">
                   <tr>
-                    <td colspan="10" class="px-6 py-12 text-center">
+                    <td colspan="11" class="px-6 py-12 text-center">
                       <div class="flex flex-col items-center gap-3">
                         <span
                           class="material-symbols-outlined text-6xl text-gray-300 dark:text-gray-700"
@@ -535,11 +608,181 @@
     </div>
 
     <script th:inline="javascript">
+      // ============================================
+      // GENERAR LINK DE FACTURACIÓN (admin / gerente)
+      // ============================================
+      // El link (y su QR en el ticket) se genera al cobrar, pero solo si el
+      // establecimiento ya tenía facturación activa. Aquí se genera después, para las
+      // ventas cobradas antes de contratar el servicio de facturación.
+      function escapeInvoiceHtml(value) {
+        return String(value == null ? "" : value)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;");
+      }
+
+      function invoiceLinkFieldHtml(link) {
+        const label =
+          link.type === "PAYMENT" ? "Cuenta " + link.folio : "Ticket " + link.folio;
+        return (
+          '<div class="text-left mb-2">' +
+          '<div class="text-xs text-gray-500 dark:text-gray-400 mb-1">' +
+          escapeInvoiceHtml(label) +
+          "</div>" +
+          '<input readonly value="' +
+          escapeInvoiceHtml(link.url) +
+          '" class="w-full px-2 py-1 text-xs rounded border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300" />' +
+          "</div>"
+        );
+      }
+
+      function copyInvoiceLinks(links) {
+        const text = links
+          .map(function (link) {
+            return link.url;
+          })
+          .join("\n");
+        const toast = function (icon, title) {
+          Swal.fire({
+            toast: true,
+            position: "top-end",
+            icon: icon,
+            title: title,
+            showConfirmButton: false,
+            timer: 2500,
+            timerProgressBar: true,
+          });
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(
+            function () {
+              toast("success", "Link copiado");
+            },
+            function () {
+              toast("info", "Copia el link manualmente");
+            },
+          );
+        } else {
+          toast("info", "Copia el link manualmente");
+        }
+      }
+
+      function invoiceLinkError(message) {
+        Swal.fire({
+          icon: "error",
+          title: "No se pudo generar el link",
+          text: message,
+        });
+      }
+
+      function generateInvoiceLink(button) {
+        const orderId = button.dataset.orderId;
+        const orderNumber = button.dataset.orderNumber;
+        const expired = button.dataset.expired === "true";
+
+        let html =
+          "<p class='text-sm'>Se creará el link de autofactura de la venta <b>" +
+          escapeInvoiceHtml(orderNumber) +
+          "</b>. Al reimprimir el ticket aparecerá el código QR para que el cliente facture.</p>";
+        if (expired) {
+          html +=
+            "<p class='text-xs text-amber-600 dark:text-amber-400 mt-3'>El plazo de autofactura de esta venta ya venció, así que el cliente podría no poder usar el link.</p>";
+        }
+
+        Swal.fire({
+          title: "¿Generar link de facturación?",
+          html: html,
+          icon: "question",
+          showCancelButton: true,
+          confirmButtonColor: "#16a34a",
+          cancelButtonColor: "#6b7280",
+          confirmButtonText: "Sí, generar",
+          cancelButtonText: "Cancelar",
+        }).then(function (result) {
+          if (!result.isConfirmed) return;
+
+          button.disabled = true;
+          fetch(
+            "/admin/sales/" +
+              encodeURIComponent(orderId) +
+              "/generate-invoice-link",
+            { method: "POST" },
+          )
+            .then(function (response) {
+              return response.json();
+            })
+            .then(function (data) {
+              if (data.error) {
+                invoiceLinkError(data.error);
+                return;
+              }
+
+              const links = data.links || [];
+              if (!links.length) {
+                Swal.fire({
+                  icon: "info",
+                  title: "La venta ya no necesita link",
+                  text: "Sus operaciones ya tienen link o ya fueron facturadas.",
+                });
+                button.remove();
+                return;
+              }
+
+              // La venta quedó con su link: el botón de esta fila ya no hace falta.
+              button.remove();
+
+              let linksHtml =
+                "<p class='text-sm mb-2'>Al reimprimir el ticket ya aparece el código QR:</p>";
+              links.forEach(function (link) {
+                linksHtml += invoiceLinkFieldHtml(link);
+              });
+              linksHtml +=
+                "<p class='text-xs text-gray-500 dark:text-gray-400 mt-2'>Puedes enviar el link al cliente por WhatsApp o correo.</p>";
+
+              Swal.fire({
+                icon: "success",
+                title:
+                  links.length === 1
+                    ? "Link generado"
+                    : links.length + " links generados",
+                html: linksHtml,
+                showCancelButton: true,
+                confirmButtonColor: "#16a34a",
+                cancelButtonColor: "#6b7280",
+                confirmButtonText: "Copiar link",
+                cancelButtonText: "Cerrar",
+              }).then(function (copyResult) {
+                if (copyResult.isConfirmed) {
+                  copyInvoiceLinks(links);
+                }
+              });
+            })
+            .catch(function (error) {
+              console.error("Error al generar el link de facturación", error);
+              invoiceLinkError("Error de conexión al generar el link");
+            })
+            .finally(function () {
+              button.disabled = false;
+            });
+        });
+      }
+
+      document.addEventListener("click", function (event) {
+        const button = event.target.closest(".btn-generate-invoice-link");
+        if (!button) return;
+        event.preventDefault();
+        generateInvoiceLink(button);
+      });
+
       // Filter functions
       function applyFilters() {
         const employeeId = document.getElementById("filterEmployee").value;
         const paymentMethod = document.getElementById(
           "filterPaymentMethod",
+        ).value;
+        const invoiceStatus = document.getElementById(
+          "filterInvoiceStatus",
         ).value;
         const startDate = document.getElementById("startDate").value;
         const endDate = document.getElementById("endDate").value;
@@ -549,6 +792,7 @@
         if (endDate) url += `endDate=${endDate}&`;
         if (employeeId) url += `employeeId=${employeeId}&`;
         if (paymentMethod) url += `paymentMethod=${paymentMethod}&`;
+        if (invoiceStatus) url += `invoiceStatus=${invoiceStatus}&`;
 
         window.location.href = url;
       }

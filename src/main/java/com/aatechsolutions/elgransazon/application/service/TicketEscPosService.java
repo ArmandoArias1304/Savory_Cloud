@@ -299,10 +299,10 @@ public class TicketEscPosService {
 
         // ── Thank you ──
         out.write(BOLD_ON);
-        printLine(out, "\u00A1Gracias por su preferencia!");
+        printLine(out, config.getTicketFooterLine1());
         out.write(BOLD_OFF);
         out.write(FONT_B);
-        printLine(out, "Esperamos volver a atenderle pronto");
+        printLine(out, config.getTicketFooterLine2());
         out.write(FONT_A);
 
         // ── Fiscal disclaimer / Autofactura billing info ──
@@ -548,10 +548,10 @@ public class TicketEscPosService {
 
         // ── Thank you ──
         out.write(BOLD_ON);
-        printLine(out, "\u00A1Gracias por su preferencia!");
+        printLine(out, config.getTicketFooterLine1());
         out.write(BOLD_OFF);
         out.write(FONT_B);
-        printLine(out, "Esperamos volver a atenderle pronto");
+        printLine(out, config.getTicketFooterLine2());
         out.write(FONT_A);
 
         // ── Fiscal disclaimer / Autofactura billing info ──

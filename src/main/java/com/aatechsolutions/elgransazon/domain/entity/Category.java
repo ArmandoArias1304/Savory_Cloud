@@ -53,6 +53,19 @@ public class Category implements Serializable {
     @Column(name = "icon", length = 50)
     private String icon;
 
+    /**
+     * Position of the category inside the printed menu ("carta").
+     *
+     * <p>Null means "not positioned yet": the category falls to the end of the
+     * menu, ordered alphabetically, which is exactly how categories were listed
+     * before this column existed. The categories table in the admin view lets the
+     * user drag rows (or use the up/down arrows) and then stores 1..N here, so the
+     * PDF carta follows the order the restaurant wants (Entradas, Fuertes,
+     * Postres, Bebidas) instead of the alphabet.</p>
+     */
+    @Column(name = "display_order")
+    private Integer displayOrder;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     @Builder.Default
     private LocalDateTime createdAt = LocalDateTime.now();

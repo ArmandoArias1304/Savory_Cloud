@@ -190,6 +190,196 @@ public class SystemConfiguration implements Serializable {
     @Builder.Default
     private Integer ticketLogoOpacity = 50; // Default: 50% (original threshold ~128)
 
+    /**
+     * Legends printed at the bottom of the ticket, right below the totals
+     * (first line bold, second line small). Blank/null falls back to the text the
+     * ticket has always printed, so rows created before these columns existed —
+     * and any ticket printed without configuring them — keep working unchanged.
+     * Both the thermal ticket (TicketEscPosService) and the PDF ticket
+     * (TicketPdfService) read them, so what the preview shows is what prints.
+     */
+    public static final String DEFAULT_TICKET_FOOTER_LINE_1 = "\u00A1Gracias por su preferencia!";
+    public static final String DEFAULT_TICKET_FOOTER_LINE_2 = "Esperamos volver a atenderle pronto";
+
+    @Size(max = 40, message = "La primera leyenda del ticket no puede exceder los 40 caracteres")
+    @Column(name = "ticket_footer_line1", length = 40)
+    private String ticketFooterLine1;
+
+    @Size(max = 40, message = "La segunda leyenda del ticket no puede exceder los 40 caracteres")
+    @Column(name = "ticket_footer_line2", length = 40)
+    private String ticketFooterLine2;
+
+    /**
+     * First ticket legend. Never blank: falls back to the built-in text.
+     */
+    public String getTicketFooterLine1() {
+        return (ticketFooterLine1 == null || ticketFooterLine1.isBlank())
+                ? DEFAULT_TICKET_FOOTER_LINE_1
+                : ticketFooterLine1.trim();
+    }
+
+    /**
+     * Second ticket legend. Never blank: falls back to the built-in text.
+     */
+    public String getTicketFooterLine2() {
+        return (ticketFooterLine2 == null || ticketFooterLine2.isBlank())
+                ? DEFAULT_TICKET_FOOTER_LINE_2
+                : ticketFooterLine2.trim();
+    }
+
+    // ======================================================================
+    // Printed menu ("carta") style
+    // ======================================================================
+    // Style used by MenuPdfService to print the menu card the restaurant hands to
+    // its guests: typography, size, colors, paper and what to include. Every column
+    // is nullable and every getter resolves null/blank to the built-in default, so
+    // rows created before these columns existed print the same design as always and
+    // no migration is needed. Managed from the menu view (Personalizar carta).
+
+    public static final String DEFAULT_MENU_FONT_FAMILY = "MODERNA";
+    public static final int DEFAULT_MENU_FONT_SIZE = 11;
+    public static final String DEFAULT_MENU_PRIMARY_COLOR = "#1F2937";
+    public static final String DEFAULT_MENU_ACCENT_COLOR = "#6B7280";
+    public static final String DEFAULT_MENU_PAGE_COLOR = "#ffffff";
+    public static final String DEFAULT_MENU_PAPER_SIZE = "LETTER";
+    public static final int DEFAULT_MENU_COLUMNS = 1;
+
+    /** Typography of the carta: MODERNA, CLASICA, REDONDA, ELEGANTE or ESTANDAR. */
+    @Size(max = 20, message = "La tipografía de la carta no es válida")
+    @Column(name = "menu_font_family", length = 20)
+    private String menuFontFamily;
+
+    /** Base body size in points (8-16); headings scale relative to it. */
+    @Min(value = 8, message = "El tamaño de letra mínimo es 8")
+    @Max(value = 16, message = "El tamaño de letra máximo es 16")
+    @Column(name = "menu_font_size")
+    private Integer menuFontSize;
+
+    /** Hex color (#RRGGBB) for titles, category headers and the header rule. */
+    @Size(max = 9, message = "El color principal de la carta no es válido")
+    @Column(name = "menu_primary_color", length = 9)
+    private String menuPrimaryColor;
+
+    /** Hex color (#RRGGBB) for prices, descriptions and separators. */
+    @Size(max = 9, message = "El color de acento de la carta no es válido")
+    @Column(name = "menu_accent_color", length = 9)
+    private String menuAccentColor;
+
+    /**
+     * Background color painted on the whole sheet (the "paper" of the carta), #RRGGBB.
+     * White means plain paper and nothing is painted behind the text.
+     */
+    @Size(max = 9, message = "El color de la hoja de la carta no es válido")
+    @Column(name = "menu_page_color", length = 9)
+    private String menuPageColor;
+
+    /** Sheet size of the carta: LETTER, A4, HALF_LETTER or A5. */
+    @Size(max = 20, message = "El formato de hoja de la carta no es válido")
+    @Column(name = "menu_paper_size", length = 20)
+    private String menuPaperSize;
+
+    /** Columns of the carta body: 1 or 2. */
+    @Min(value = 1, message = "La carta debe tener al menos una columna")
+    @Max(value = 2, message = "La carta admite como máximo dos columnas")
+    @Column(name = "menu_columns")
+    private Integer menuColumns;
+
+    /** Print the short description under each dish name. */
+    @Column(name = "menu_show_descriptions")
+    private Boolean menuShowDescriptions;
+
+    /** Print the dish photo (downloaded from its Cloudflare image URL) next to the name. */
+    @Column(name = "menu_show_images")
+    private Boolean menuShowImages;
+
+    /** Print prices. Turn it off for a table carta with no prices. */
+    @Column(name = "menu_show_prices")
+    private Boolean menuShowPrices;
+
+    /** Include dishes flagged as "agotado" (available = false). */
+    @Column(name = "menu_include_unavailable")
+    private Boolean menuIncludeUnavailable;
+
+    /** Print a QR code (in the header) that opens the digital menu. */
+    @Column(name = "menu_show_qr")
+    private Boolean menuShowQr;
+
+    /** Carta typography. Never blank: falls back to the built-in one. */
+    public String getMenuFontFamily() {
+        return (menuFontFamily == null || menuFontFamily.isBlank())
+                ? DEFAULT_MENU_FONT_FAMILY
+                : menuFontFamily.trim().toUpperCase(Locale.ROOT);
+    }
+
+    /** Carta base font size, clamped to the range the generator supports. */
+    public int getMenuFontSize() {
+        if (menuFontSize == null) {
+            return DEFAULT_MENU_FONT_SIZE;
+        }
+        return Math.max(8, Math.min(16, menuFontSize));
+    }
+
+    /** Carta primary color. Never blank: falls back to the built-in one. */
+    public String getMenuPrimaryColor() {
+        return (menuPrimaryColor == null || menuPrimaryColor.isBlank())
+                ? DEFAULT_MENU_PRIMARY_COLOR
+                : menuPrimaryColor.trim();
+    }
+
+    /** Carta accent color. Never blank: falls back to the built-in one. */
+    public String getMenuAccentColor() {
+        return (menuAccentColor == null || menuAccentColor.isBlank())
+                ? DEFAULT_MENU_ACCENT_COLOR
+                : menuAccentColor.trim();
+    }
+
+    /** Background color of the carta sheet. Never blank: falls back to plain white. */
+    public String getMenuPageColor() {
+        return (menuPageColor == null || menuPageColor.isBlank())
+                ? DEFAULT_MENU_PAGE_COLOR
+                : menuPageColor.trim();
+    }
+
+    /** Carta paper size. Never blank: falls back to the built-in one. */
+    public String getMenuPaperSize() {
+        return (menuPaperSize == null || menuPaperSize.isBlank())
+                ? DEFAULT_MENU_PAPER_SIZE
+                : menuPaperSize.trim().toUpperCase(Locale.ROOT);
+    }
+
+    /** Carta column count, clamped to 1-2. */
+    public int getMenuColumns() {
+        if (menuColumns == null) {
+            return DEFAULT_MENU_COLUMNS;
+        }
+        return Math.max(1, Math.min(2, menuColumns));
+    }
+
+    /**
+     * Whether descriptions print. Declared as getXxx (not isXxx) on purpose: Lombok
+     * only skips generating a getter when the name matches, so a matching getter
+     * keeps a single, always-defaulted accessor for Thymeleaf and Jackson.
+     */
+    public boolean getMenuShowDescriptions() {
+        return menuShowDescriptions == null || menuShowDescriptions;
+    }
+
+    public boolean getMenuShowImages() {
+        return menuShowImages != null && menuShowImages;
+    }
+
+    public boolean getMenuShowPrices() {
+        return menuShowPrices == null || menuShowPrices;
+    }
+
+    public boolean getMenuIncludeUnavailable() {
+        return menuIncludeUnavailable != null && menuIncludeUnavailable;
+    }
+
+    public boolean getMenuShowQr() {
+        return menuShowQr != null && menuShowQr;
+    }
+
     // Declared payment methods when creating an order (customer and staff).
     // Same list for dine-in, takeout and delivery. Rider collection uses
     // deliveryPaymentMethods instead (never cash).

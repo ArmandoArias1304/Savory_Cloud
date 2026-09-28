@@ -1,12 +1,18 @@
 package com.aatechsolutions.elgransazon.presentation.controller;
 
+import com.aatechsolutions.elgransazon.application.dto.MenuStyle;
 import com.aatechsolutions.elgransazon.application.service.BusinessHoursService;
 import com.aatechsolutions.elgransazon.application.service.CategoryService;
 import com.aatechsolutions.elgransazon.application.service.ComplementService;
+import com.aatechsolutions.elgransazon.application.service.DateTimeService;
 import com.aatechsolutions.elgransazon.application.service.ImageStorageService;
 import com.aatechsolutions.elgransazon.application.service.IngredientService;
 import com.aatechsolutions.elgransazon.application.service.ItemMenuService;
+import com.aatechsolutions.elgransazon.application.service.MenuPdfService;
+import com.aatechsolutions.elgransazon.application.service.SystemConfigurationService;
 import com.aatechsolutions.elgransazon.domain.entity.*;
+import com.aatechsolutions.elgransazon.infrastructure.context.CompanyContext;
+import jakarta.servlet.http.HttpServletRequest;
 import com.aatechsolutions.elgransazon.domain.repository.ItemMenuComplementRepository;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -22,12 +28,17 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -51,6 +62,9 @@ public class ItemMenuController {
     private final ComplementService complementService;
     private final ItemMenuComplementRepository itemMenuComplementRepository;
     private final BusinessHoursService businessHoursService;
+    private final SystemConfigurationService systemConfigurationService;
+    private final MenuPdfService menuPdfService;
+    private final DateTimeService dateTimeService;
 
     /**
      * Show list of menu items with server-side pagination (20 per page) and filters.
@@ -134,7 +148,127 @@ public class ItemMenuController {
                 nameFilter != null || categoryFilter != null || (price != null && !price.isBlank())
                         || availabilityFilter != null || statusFilter != null);
 
+        // Printed menu ("carta"): current style for the customization dialog plus the
+        // option catalogs, so the select boxes render from the same enum the PDF uses.
+        SystemConfiguration menuConfiguration = systemConfigurationService.getConfiguration();
+        model.addAttribute("menuStyle", MenuStyle.from(menuConfiguration));
+        model.addAttribute("menuFontOptions", MenuStyle.FontFamily.values());
+        model.addAttribute("menuPaperOptions", MenuStyle.PaperSize.values());
+        model.addAttribute("menuPageColorPresets", MenuStyle.pageColorPresets());
+        // El pie es fijo: se muestra el que va a imprimirse, que lo arma el generador con el
+        // nombre del restaurante.
+        model.addAttribute("menuFooterText", MenuStyle.footerFor(
+                menuConfiguration == null ? null : menuConfiguration.getRestaurantName()));
+
         return "admin/menu-items/list";
+    }
+
+    // ==================== Printed menu (carta) ====================
+
+    /**
+     * Builds the printable menu (carta) as a PDF.
+     *
+     * <p>With no query parameters it prints the style saved for the establishment; with
+     * parameters (fontFamily, fontSize, primaryColor, accentColor, pageColor, paperSize, columns,
+     * showDescriptions, showImages, showPrices, includeUnavailable, showQr) it
+     * prints exactly what the customization dialog is previewing, without saving anything.
+     * That is how the dialog keeps its live preview honest: the very same generator draws
+     * the preview and the final file.</p>
+     */
+    @GetMapping("/menu-pdf")
+    public ResponseEntity<byte[]> printMenuPdf(@RequestParam Map<String, String> params,
+                                               HttpServletRequest request) {
+        try {
+            MenuStyle saved = MenuStyle.from(systemConfigurationService.getConfiguration());
+            MenuStyle style = MenuStyle.fromParams(params, saved);
+
+            byte[] pdf = menuPdfService.generateMenuPdf(style, digitalMenuUrl(request));
+            return ResponseEntity.ok()
+                    .headers(pdfHeaders(pdfFileName()))
+                    .body(pdf);
+        } catch (Exception e) {
+            log.error("Error generating the printed menu PDF: {}", e.getMessage(), e);
+            // Plain text, never an HTML error page: the dialog shows it inside the preview.
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(new MediaType("text", "plain", StandardCharsets.UTF_8));
+            return ResponseEntity.internalServerError().headers(headers)
+                    .body(("No se pudo generar la carta: " + e.getMessage()).getBytes(StandardCharsets.UTF_8));
+        }
+    }
+
+    /**
+     * Saves the carta style of the establishment. Called by the customization dialog
+     * before it opens the final PDF; errors are answered as JSON so the dialog can show
+     * the real reason instead of a generic message.
+     */
+    @PostMapping("/menu-pdf/style")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> saveMenuStyle(@RequestBody(required = false) Map<String, String> body) {
+        try {
+            MenuStyle saved = MenuStyle.from(systemConfigurationService.getConfiguration());
+            MenuStyle style = MenuStyle.fromParams(body, saved);
+            systemConfigurationService.updateMenuStyle(style);
+
+            Map<String, Object> response = new LinkedHashMap<>();
+            response.put("success", true);
+            response.put("message", "Estilo de la carta guardado");
+            response.put("fontFamily", style.fontFamily().name());
+            response.put("paperSize", style.paperSize().name());
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("Error saving the printed menu style: {}", e.getMessage(), e);
+            Map<String, Object> response = new LinkedHashMap<>();
+            response.put("error", e.getMessage() == null
+                    ? "No se pudo guardar el estilo de la carta"
+                    : e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    /**
+     * File name of the carta: "Menu &lt;restaurante&gt;.pdf", so whoever saves or prints it
+     * recognizes the file at a glance. Characters that are invalid in a file name are replaced
+     * so the header is always well formed.
+     */
+    private String pdfFileName() {
+        var configuration = systemConfigurationService.getConfiguration();
+        String restaurant = configuration == null ? null : configuration.getRestaurantName();
+        String name = restaurant == null ? "" : restaurant.trim();
+        if (name.isEmpty()) {
+            var company = CompanyContext.getCurrentCompany();
+            name = company == null || company.getName() == null ? "Restaurante" : company.getName().trim();
+        }
+        // Los caracteres que no caben en un nombre de archivo se vuelven espacio: "Bar/Rincón"
+        // queda como "Bar Rincón" en lugar de "Bar-Rincón".
+        name = name.replaceAll("[\\\\/:*?\"<>|]", " ").replaceAll("\\s+", " ").trim();
+        if (name.isEmpty()) {
+            name = "Restaurante";
+        }
+        return "Menu " + name + ".pdf";
+    }
+
+    /**
+     * Inline PDF response: the browser shows it (dialog preview and new tab) instead of
+     * downloading it, and it is never cached so every preview render is the current one.
+     */
+    private HttpHeaders pdfHeaders(String fileName) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_PDF);
+        // UTF-8 so the restaurant name keeps its accents in the file name
+        headers.setContentDisposition(ContentDisposition.inline()
+                .filename(fileName, StandardCharsets.UTF_8).build());
+        headers.setCacheControl("no-store, must-revalidate");
+        return headers;
+    }
+
+    /**
+     * URL encoded in the QR of the carta. Built the same way the payment flow builds the
+     * autofactura links, so a carta printed from the public domain points there.
+     */
+    private String digitalMenuUrl(HttpServletRequest request) {
+        int port = request.getServerPort();
+        String host = request.getServerName() + (port == 80 || port == 443 ? "" : ":" + port);
+        return request.getScheme() + "://" + host + request.getContextPath() + "/home/menu";
     }
 
     /**

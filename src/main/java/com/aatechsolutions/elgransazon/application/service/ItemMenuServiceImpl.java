@@ -82,6 +82,14 @@ public class ItemMenuServiceImpl implements ItemMenuService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public List<ItemMenu> findAllForPrintedMenu() {
+        log.debug("Fetching all menu items for the printed menu (read-only)");
+        Company company = CompanyContext.requireCurrentCompany();
+        return itemMenuRepository.findAllByCompanyWithParentForMenu(company);
+    }
+
+    @Override
     @Transactional
     public List<ItemMenu> findAllOrderByCategoryAndName() {
         log.debug("Fetching all menu items ordered by category and name");

@@ -91,4 +91,17 @@ public interface CategoryService {
      * Check dependencies before hard-deleting a Category.
      */
     java.util.Map<String, Object> checkHardDeleteDependencies(Long id);
+
+    /**
+     * Store the order of the categories as they will appear in the printed menu.
+     *
+     * <p>The received ids are assigned positions 1..N in the order given. Any other
+     * category of the company keeps its current relative order and is appended
+     * after them, so the stored order is always complete and without ties.</p>
+     *
+     * @param orderedIds category ids in the desired order (all from the current company)
+     * @throws IllegalArgumentException if the list is empty or contains an id that does not
+     *                                  belong to the current company
+     */
+    void reorderCategories(java.util.List<Long> orderedIds);
 }

@@ -150,6 +150,15 @@
                 <span class="material-symbols-outlined text-lg">category</span>
                 Categorías
               </a>
+              <button
+                type="button"
+                id="btnCartaPdf"
+                class="flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white font-semibold hover:bg-gray-50 dark:hover:bg-gray-800 transition-all shadow-md text-sm sm:text-base"
+                title="Imprimir la carta del restaurante en PDF"
+              >
+                <span class="material-symbols-outlined text-lg">print</span>
+                Carta en PDF
+              </button>
             </div>
           </div>
 
@@ -890,10 +899,640 @@
     });
     </script>
 
+    <!-- ==================== MODAL: CARTA EN PDF ==================== -->
+    <div
+      id="cartaModal"
+      class="fixed inset-0 z-[60] hidden"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="cartaModalTitle"
+      th:data-pdf-url="@{/admin/menu-items/menu-pdf}"
+      th:data-style-url="@{/admin/menu-items/menu-pdf/style}"
+    >
+      <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" data-carta-close></div>
+
+      <div class="relative z-10 flex h-full items-center justify-center p-2 sm:p-6">
+        <div
+          class="flex h-[94vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-gray-800 dark:bg-gray-900"
+        >
+          <!-- Encabezado -->
+          <div
+            class="flex items-start justify-between gap-4 border-b border-gray-200 px-5 py-4 dark:border-gray-800"
+          >
+            <div>
+              <h3
+                id="cartaModalTitle"
+                class="text-lg font-bold text-gray-900 dark:text-white"
+              >
+                Carta en PDF
+              </h3>
+              <p class="text-xs text-gray-500 dark:text-gray-400">
+                El menú impreso que se entrega al cliente. Lo que ves a la derecha
+                es la carta real que se va a imprimir.
+              </p>
+            </div>
+            <button
+              type="button"
+              data-carta-close
+              class="rounded-lg p-2 text-gray-500 transition-colors hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
+              aria-label="Cerrar"
+            >
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </div>
+
+          <!-- Cuerpo: personalización + vista previa -->
+          <div class="flex min-h-0 flex-1 flex-col lg:flex-row">
+            <div
+              class="max-h-[48vh] min-h-0 shrink overflow-y-auto space-y-5 border-b border-gray-200 p-5 lg:max-h-none lg:w-[360px] lg:shrink-0 lg:border-b-0 lg:border-r dark:border-gray-800"
+            >
+              <!-- Tipografía -->
+              <div>
+                <label
+                  for="cartaFont"
+                  class="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-300"
+                  >Tipografía</label
+                >
+                <select
+                  id="cartaFont"
+                  class="w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                >
+                  <option
+                    th:each="option : ${menuFontOptions}"
+                    th:value="${option}"
+                    th:text="${option.label}"
+                    th:title="${option.description}"
+                    th:selected="${option.name() == menuStyle.fontFamily().name()}"
+                  ></option>
+                </select>
+              </div>
+
+              <!-- Tamaño de letra -->
+              <div>
+                <div class="mb-1 flex items-center justify-between">
+                  <label
+                    for="cartaFontSize"
+                    class="block text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-300"
+                    >Tamaño de la letra</label
+                  >
+                  <span
+                    id="cartaFontSizeValue"
+                    class="text-xs font-bold text-primary-dark dark:text-primary"
+                    th:text="${menuStyle.fontSize() + ' pt'}"
+                  ></span>
+                </div>
+                <input
+                  type="range"
+                  id="cartaFontSize"
+                  min="8"
+                  max="16"
+                  step="1"
+                  th:value="${menuStyle.fontSize()}"
+                  class="w-full accent-primary-dark"
+                />
+                <p class="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
+                  La categoría, el nombre y el precio escalan con este tamaño.
+                </p>
+              </div>
+
+              <!-- Colores -->
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label
+                    for="cartaPrimaryColor"
+                    class="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-300"
+                    >Color principal</label
+                  >
+                  <input
+                    type="color"
+                    id="cartaPrimaryColor"
+                    th:value="${menuStyle.primaryColor()}"
+                    class="h-10 w-full cursor-pointer rounded-xl border border-gray-300 dark:border-gray-700"
+                  />
+                  <p class="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
+                    Títulos, categorías y precios.
+                  </p>
+                </div>
+                <div>
+                  <label
+                    for="cartaAccentColor"
+                    class="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-300"
+                    >Color de acento</label
+                  >
+                  <input
+                    type="color"
+                    id="cartaAccentColor"
+                    th:value="${menuStyle.accentColor()}"
+                    class="h-10 w-full cursor-pointer rounded-xl border border-gray-300 dark:border-gray-700"
+                  />
+                  <p class="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
+                    Descripciones, líneas y pie.
+                  </p>
+                </div>
+              </div>
+
+              <!-- Color de la hoja -->
+              <div>
+                <label
+                  for="cartaPageColor"
+                  class="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-300"
+                  >Color de la hoja</label
+                >
+                <div class="flex items-center gap-3">
+                  <input
+                    type="color"
+                    id="cartaPageColor"
+                    th:value="${menuStyle.pageColor()}"
+                    class="h-10 w-20 shrink-0 cursor-pointer rounded-xl border border-gray-300 dark:border-gray-700"
+                  />
+                  <div class="flex flex-wrap gap-1.5" id="cartaPageColorPresets">
+                    <button
+                      type="button"
+                      th:each="preset : ${menuPageColorPresets}"
+                      th:data-color="${preset.color()}"
+                      th:title="${preset.label()}"
+                      th:aria-label="${preset.label()}"
+                      class="h-7 w-7 rounded-lg border border-gray-300 transition-transform hover:scale-110 dark:border-gray-600"
+                      th:style="'background:' + ${preset.color()}"
+                    ></button>
+                  </div>
+                </div>
+                <p class="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
+                  Fondo de todas las hojas. Blanco es papel normal; un tono claro
+                  ahorra tinta y se ve como cartulina.
+                </p>
+              </div>
+
+              <!-- Formato y columnas -->
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label
+                    for="cartaPaperSize"
+                    class="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-300"
+                    >Hoja</label
+                  >
+                  <select
+                    id="cartaPaperSize"
+                    class="w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                  >
+                    <option
+                      th:each="option : ${menuPaperOptions}"
+                      th:value="${option}"
+                      th:text="${option.label}"
+                      th:selected="${option.name() == menuStyle.paperSize().name()}"
+                    ></option>
+                  </select>
+                </div>
+                <div>
+                  <label
+                    for="cartaColumns"
+                    class="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-300"
+                    >Columnas</label
+                  >
+                  <select
+                    id="cartaColumns"
+                    class="w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                  >
+                    <option value="1" th:selected="${menuStyle.columns() == 1}">1 columna</option>
+                    <option value="2" th:selected="${menuStyle.columns() == 2}">2 columnas</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Contenido -->
+              <div class="space-y-2">
+                <p
+                  class="text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-300"
+                >
+                  Qué incluir
+                </p>
+                <label
+                  class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200"
+                >
+                  <input
+                    type="checkbox"
+                    id="cartaShowDescriptions"
+                    th:checked="${menuStyle.showDescriptions()}"
+                    class="h-4 w-4 rounded border-gray-300 text-primary-dark focus:ring-primary"
+                  />
+                  Descripción de cada platillo
+                </label>
+                <label
+                  class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200"
+                >
+                  <input
+                    type="checkbox"
+                    id="cartaShowPrices"
+                    th:checked="${menuStyle.showPrices()}"
+                    class="h-4 w-4 rounded border-gray-300 text-primary-dark focus:ring-primary"
+                  />
+                  Precios
+                </label>
+                <label
+                  class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200"
+                >
+                  <input
+                    type="checkbox"
+                    id="cartaShowImages"
+                    th:checked="${menuStyle.showImages()}"
+                    class="h-4 w-4 rounded border-gray-300 text-primary-dark focus:ring-primary"
+                  />
+                  Fotos de los platillos
+                </label>
+                <label
+                  class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200"
+                >
+                  <input
+                    type="checkbox"
+                    id="cartaIncludeUnavailable"
+                    th:checked="${menuStyle.includeUnavailable()}"
+                    class="h-4 w-4 rounded border-gray-300 text-primary-dark focus:ring-primary"
+                  />
+                  Incluir platillos agotados
+                </label>
+                <label
+                  class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200"
+                >
+                  <input
+                    type="checkbox"
+                    id="cartaShowQr"
+                    th:checked="${menuStyle.showQr()}"
+                    class="h-4 w-4 rounded border-gray-300 text-primary-dark focus:ring-primary"
+                  />
+                  Código QR al menú digital
+                </label>
+              </div>
+
+              <!-- Pie de cada hoja: fijo, no se puede editar -->
+              <div>
+                <p
+                  class="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-300"
+                >
+                  Pie de cada hoja
+                </p>
+                <p
+                  id="cartaFooterText"
+                  class="flex items-center gap-2 rounded-xl border border-dashed border-gray-300 bg-gray-50 px-3 py-2 text-sm font-semibold text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
+                  th:text="${menuFooterText}"
+                >
+                  Savory Cloud
+                </p>
+                <p class="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
+                  Fijo: el nombre del restaurante con la marca del sistema, junto al
+                  número de página. No se puede cambiar.
+                </p>
+              </div>
+
+              <p class="text-[11px] leading-relaxed text-gray-500 dark:text-gray-400">
+                Los platillos se acomodan con el orden de las categorías (arrástralas en
+                <span class="font-semibold">Categorías</span>) y solo se imprimen los
+                platillos activos.
+              </p>
+            </div>
+
+            <!-- Vista previa -->
+            <div class="relative min-h-[45vh] flex-1 bg-gray-100 p-3 lg:min-h-0 dark:bg-gray-950">
+              <iframe
+                id="cartaPreview"
+                title="Vista previa de la carta"
+                class="h-full w-full rounded-xl border border-gray-200 bg-white dark:border-gray-800"
+              ></iframe>
+              <!-- Mientras se regenera la vista previa; también muestra el error si la carta falla. -->
+              <div
+                id="cartaPreviewLoading"
+                class="absolute inset-3 hidden items-center justify-center rounded-xl bg-white/70 dark:bg-gray-900/70"
+              >
+                <span
+                  class="flex max-w-[85%] flex-col items-center gap-2 text-center text-sm font-semibold text-gray-600 dark:text-gray-300"
+                >
+                  <span
+                    id="cartaPreviewIcon"
+                    class="material-symbols-outlined animate-spin"
+                    >progress_activity</span
+                  >
+                  <span id="cartaPreviewMessage">Generando la carta…</span>
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Acciones -->
+          <div
+            class="flex flex-wrap items-center justify-between gap-3 border-t border-gray-200 px-5 py-4 dark:border-gray-800"
+          >
+            <button
+              type="button"
+              id="cartaReset"
+              class="rounded-xl border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-100 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
+            >
+              Restablecer estilo
+            </button>
+            <div class="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                id="cartaOpenNewTab"
+                class="flex items-center gap-2 rounded-xl border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-100 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
+              >
+                <span class="material-symbols-outlined text-lg">open_in_new</span>
+                Abrir en pestaña nueva
+              </button>
+              <button
+                type="button"
+                id="cartaGenerate"
+                class="flex items-center gap-2 rounded-xl bg-gradient-to-r from-primary to-primary-dark px-5 py-2 text-sm font-semibold text-white shadow-md transition-all hover:shadow-lg hover:shadow-primary/30"
+              >
+                <span class="material-symbols-outlined text-lg">print</span>
+                Guardar y generar PDF
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Sidebar Scripts Fragment -->
     <div th:replace="~{fragments/sidebar :: sidebarScripts}"></div>
     </script>
       
+    <!-- Carta en PDF: personalización con vista previa en vivo -->
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const modal = document.getElementById("cartaModal");
+        const openButton = document.getElementById("btnCartaPdf");
+        if (!modal || !openButton) return;
+
+        // Endpoints come from data attributes so the context path is never hardcoded.
+        const PDF_URL = modal.dataset.pdfUrl;
+        const STYLE_URL = modal.dataset.styleUrl;
+
+        const controls = {
+          font: document.getElementById("cartaFont"),
+          fontSize: document.getElementById("cartaFontSize"),
+          fontSizeValue: document.getElementById("cartaFontSizeValue"),
+          primaryColor: document.getElementById("cartaPrimaryColor"),
+          accentColor: document.getElementById("cartaAccentColor"),
+          pageColor: document.getElementById("cartaPageColor"),
+          paperSize: document.getElementById("cartaPaperSize"),
+          columns: document.getElementById("cartaColumns"),
+          showDescriptions: document.getElementById("cartaShowDescriptions"),
+          showImages: document.getElementById("cartaShowImages"),
+          showPrices: document.getElementById("cartaShowPrices"),
+          includeUnavailable: document.getElementById("cartaIncludeUnavailable"),
+          showQr: document.getElementById("cartaShowQr"),
+          pageColorPresets: document.getElementById("cartaPageColorPresets"),
+        };
+
+        const preview = document.getElementById("cartaPreview");
+        const previewLoading = document.getElementById("cartaPreviewLoading");
+        const previewIcon = document.getElementById("cartaPreviewIcon");
+        const previewMessage = document.getElementById("cartaPreviewMessage");
+        const generateButton = document.getElementById("cartaGenerate");
+        const openNewTabButton = document.getElementById("cartaOpenNewTab");
+        const resetButton = document.getElementById("cartaReset");
+
+        // Must match MenuStyle.defaults() on the server.
+        const DEFAULTS = {
+          font: "MODERNA",
+          fontSize: "11",
+          primaryColor: "#1f2937",
+          accentColor: "#6b7280",
+          pageColor: "#ffffff",
+          paperSize: "LETTER",
+          columns: "1",
+          showDescriptions: true,
+          showImages: false,
+          showPrices: true,
+          includeUnavailable: false,
+          showQr: false,
+        };
+
+        let previewTimer = null;
+        let previewStarted = false;
+        // Only the newest request may paint the preview: dragging the size slider fires
+        // several, and a slow older one must never overwrite the newest carta.
+        let previewToken = 0;
+        let paintedToken = 0;
+        // Object URLs kept alive while the modal is open (the viewer may still be reading the
+        // previous one); they are all revoked when the modal closes.
+        let previewObjectUrls = [];
+
+        function currentStyle() {
+          return {
+            fontFamily: controls.font.value,
+            fontSize: controls.fontSize.value,
+            primaryColor: controls.primaryColor.value,
+            accentColor: controls.accentColor.value,
+            pageColor: controls.pageColor.value,
+            paperSize: controls.paperSize.value,
+            columns: controls.columns.value,
+            showDescriptions: controls.showDescriptions.checked,
+            showImages: controls.showImages.checked,
+            showPrices: controls.showPrices.checked,
+            includeUnavailable: controls.includeUnavailable.checked,
+            showQr: controls.showQr.checked,
+          };
+        }
+
+        function previewUrl() {
+          const params = new URLSearchParams();
+          const style = currentStyle();
+          Object.keys(style).forEach(function (key) {
+            params.set(key, String(style[key]));
+          });
+          params.set("t", Date.now());
+          return PDF_URL + "?" + params.toString();
+        }
+
+        function showPreviewLoading(spinning) {
+          previewIcon.classList.toggle("animate-spin", spinning);
+          previewIcon.textContent = spinning ? "progress_activity" : "error";
+          previewLoading.classList.remove("hidden");
+          previewLoading.classList.add("flex");
+        }
+
+        function hidePreviewLoading() {
+          previewLoading.classList.add("hidden");
+          previewLoading.classList.remove("flex");
+        }
+
+        /**
+         * Rebuilds the preview. The PDF is fetched and handed to the iframe as a blob so the
+         * change is immediate and in order: each request carries a token and only the last
+         * one reaches the viewer, so sliding the size never leaves an older carta on screen.
+         */
+        function refreshPreview(delay) {
+          clearTimeout(previewTimer);
+          previewToken += 1;
+          const token = previewToken;
+          previewMessage.textContent = "Generando la carta…";
+          showPreviewLoading(true);
+
+          previewTimer = setTimeout(function () {
+            fetch(previewUrl(), { headers: { Accept: "application/pdf" } })
+              .then(function (response) {
+                if (!response.ok) {
+                  return response.text().then(function (body) {
+                    throw new Error((body || "").trim().slice(0, 300) || "Error " + response.status);
+                  });
+                }
+                return response.blob();
+              })
+              .then(function (blob) {
+                if (token !== previewToken) return;
+                const url = URL.createObjectURL(blob);
+                previewObjectUrls.push(url);
+                paintedToken = token;
+                preview.src = url;
+              })
+              .catch(function (error) {
+                if (token !== previewToken) return;
+                console.error("No se pudo generar la carta", error);
+                previewMessage.textContent = "No se pudo generar la carta: " + error.message;
+                showPreviewLoading(false);
+              });
+          }, delay === undefined ? 450 : delay);
+        }
+
+        function openModal() {
+          modal.classList.remove("hidden");
+          document.body.style.overflow = "hidden";
+          // Browsing the menu list never builds a PDF: it is generated when the modal opens.
+          // Closing revokes the previous preview, so it is rebuilt on every open and what
+          // you see is always the menu as it is right now.
+          if (!previewStarted || previewObjectUrls.length === 0) {
+            previewStarted = true;
+            refreshPreview(0);
+          }
+        }
+
+        function closeModal() {
+          modal.classList.add("hidden");
+          document.body.style.overflow = "";
+          previewToken += 1; // cancels anything still on the way
+          previewObjectUrls.forEach(function (url) {
+            URL.revokeObjectURL(url);
+          });
+          previewObjectUrls = [];
+          hidePreviewLoading();
+        }
+
+        function resetStyle() {
+          controls.font.value = DEFAULTS.font;
+          controls.fontSize.value = DEFAULTS.fontSize;
+          controls.primaryColor.value = DEFAULTS.primaryColor;
+          controls.accentColor.value = DEFAULTS.accentColor;
+          controls.pageColor.value = DEFAULTS.pageColor;
+          controls.paperSize.value = DEFAULTS.paperSize;
+          controls.columns.value = DEFAULTS.columns;
+          controls.showDescriptions.checked = DEFAULTS.showDescriptions;
+          controls.showImages.checked = DEFAULTS.showImages;
+          controls.showPrices.checked = DEFAULTS.showPrices;
+          controls.includeUnavailable.checked = DEFAULTS.includeUnavailable;
+          controls.showQr.checked = DEFAULTS.showQr;
+          controls.fontSizeValue.textContent = DEFAULTS.fontSize + " pt";
+          refreshPreview(0);
+        }
+
+        function swal(icon, title, text) {
+          const isDark = document.documentElement.classList.contains("dark");
+          return Swal.fire({
+            icon: icon,
+            title: title,
+            text: text,
+            background: isDark ? "#1F2937" : "#fff",
+            color: isDark ? "#F3F4F6" : "#1F2937",
+          });
+        }
+
+        async function saveAndGenerate() {
+          generateButton.disabled = true;
+          generateButton.classList.add("opacity-70");
+          try {
+            const response = await fetch(STYLE_URL, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(currentStyle()),
+            });
+            const data = await response.json().catch(function () {
+              return {};
+            });
+            if (!response.ok || !data.success) {
+              await swal(
+                "error",
+                "No se pudo guardar el estilo",
+                data.error || "Intenta de nuevo en un momento."
+              );
+              return;
+            }
+            window.open(PDF_URL, "_blank");
+          } catch (error) {
+            console.error("Error al guardar el estilo de la carta", error);
+            await swal("error", "Error de conexión", "No se pudo guardar el estilo de la carta.");
+          } finally {
+            generateButton.disabled = false;
+            generateButton.classList.remove("opacity-70");
+          }
+        }
+
+        openButton.addEventListener("click", openModal);
+        modal.querySelectorAll("[data-carta-close]").forEach(function (element) {
+          element.addEventListener("click", closeModal);
+        });
+        document.addEventListener("keydown", function (event) {
+          if (event.key === "Escape" && !modal.classList.contains("hidden")) {
+            closeModal();
+          }
+        });
+
+        preview.addEventListener("load", function () {
+          // An older carta finishing its load must not hide the loader of a newer one.
+          if (paintedToken === previewToken) {
+            hidePreviewLoading();
+          }
+        });
+
+        [
+          controls.font,
+          controls.paperSize,
+          controls.columns,
+          controls.primaryColor,
+          controls.accentColor,
+          controls.pageColor,
+          controls.showDescriptions,
+          controls.showImages,
+          controls.showPrices,
+          controls.includeUnavailable,
+          controls.showQr,
+        ].forEach(function (element) {
+          element.addEventListener("change", function () {
+            refreshPreview();
+          });
+        });
+
+        controls.fontSize.addEventListener("input", function () {
+          controls.fontSizeValue.textContent = controls.fontSize.value + " pt";
+          refreshPreview(200);
+        });
+
+        // Los tonos predefinidos solo mueven el selector de color; el cambio de color ya
+        // refresca la vista previa.
+        if (controls.pageColorPresets) {
+          controls.pageColorPresets.querySelectorAll("button[data-color]").forEach(function (swatch) {
+            swatch.addEventListener("click", function () {
+              controls.pageColor.value = swatch.dataset.color;
+              refreshPreview(150);
+            });
+          });
+        }
+
+        resetButton.addEventListener("click", resetStyle);
+        generateButton.addEventListener("click", saveAndGenerate);
+        openNewTabButton.addEventListener("click", function () {
+          window.open(previewUrl(), "_blank");
+        });
+      });
+    </script>
+
     <!-- Script del Sistema de Temas -->
     <div th:replace="~{fragments/theme :: themeScript}"></div>
   </body>

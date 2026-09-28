@@ -826,6 +826,171 @@
             </div>
           </div>
 
+          <!-- Factura Global (Público en General) - Exclusiones -->
+          <div
+            th:if="${selectedCompany != null}"
+            class="bg-white dark:bg-gray-900 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 overflow-hidden mb-6 animate-slide-in"
+          >
+            <div class="bg-gradient-to-r from-amber-500 to-amber-600 px-6 py-4">
+              <div class="flex items-center gap-3 text-white">
+                <span class="material-symbols-outlined text-2xl"
+                  >receipt_long</span
+                >
+                <h5 class="text-xl font-bold">
+                  Factura Global (Público en General)
+                </h5>
+              </div>
+              <p class="text-amber-50 text-xs mt-1">
+                Operaciones pagadas pendientes de amparar con la factura global del
+                establecimiento. Marque las que el contador del restaurante ya
+                facturó fuera del sistema y exclúyalas para que no se timbren dos
+                veces; con "Agregar excluidas" puede reincorporarlas cuando lo
+                necesite. Al emitir la factura global desde el panel del
+                establecimiento, las operaciones excluidas se omiten
+                automáticamente.
+              </p>
+            </div>
+            <div class="p-6">
+              <input
+                type="hidden"
+                id="pgblCompanyId"
+                th:value="${selectedCompany.idCompany}"
+              />
+
+              <!-- Filtros por rango de fechas -->
+              <div class="flex flex-wrap items-end gap-3">
+                <div>
+                  <label
+                    class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1"
+                    >Desde</label
+                  >
+                  <input
+                    type="date"
+                    id="pgblFrom"
+                    class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label
+                    class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1"
+                    >Hasta</label
+                  >
+                  <input
+                    type="date"
+                    id="pgblTo"
+                    class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                  />
+                </div>
+                <button
+                  id="pgblSearchBtn"
+                  type="button"
+                  class="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-sm font-semibold rounded-lg transition-colors flex items-center gap-1"
+                >
+                  <span class="material-symbols-outlined text-lg">search</span>
+                  Consultar pendientes
+                </button>
+              </div>
+              <p id="pgblError" class="text-sm text-red-500 mt-2 hidden"></p>
+
+              <!-- Preview de operaciones pendientes -->
+              <div id="pgblPanel" class="mt-6 hidden">
+                <div
+                  class="p-5 rounded-2xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800"
+                >
+                  <div
+                    class="flex flex-wrap items-center justify-between gap-3 mb-4"
+                  >
+                    <div>
+                      <h6
+                        class="text-sm font-semibold text-amber-900 dark:text-amber-200"
+                      >
+                        <span id="pgblCount">0</span> operaciones pendientes de
+                        facturar
+                      </h6>
+                      <p
+                        class="text-xs text-amber-700 dark:text-amber-300 mt-1"
+                      >
+                        Total: <span id="pgblTotal" class="font-bold">$0.00</span>
+                        · Seleccionadas:
+                        <span id="pgblSelected" class="font-bold">0</span> (<span
+                          id="pgblSelectedTotal"
+                          >$0.00</span
+                        >)
+                      </p>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                      <button
+                        id="pgblExcludeBtn"
+                        type="button"
+                        class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg transition-colors flex items-center gap-1"
+                      >
+                        <span class="material-symbols-outlined text-lg"
+                          >remove_circle</span
+                        >
+                        Excluir seleccionadas
+                      </button>
+                      <button
+                        id="pgblAddBtn"
+                        type="button"
+                        class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg transition-colors flex items-center gap-1"
+                      >
+                        <span class="material-symbols-outlined text-lg"
+                          >add_circle</span
+                        >
+                        Agregar excluidas
+                      </button>
+                    </div>
+                  </div>
+                  <p
+                    id="pgblPeriodInfo"
+                    class="text-xs text-amber-700 dark:text-amber-300 mb-3 hidden"
+                  ></p>
+                  <div
+                    class="max-h-96 overflow-y-auto rounded-xl border border-amber-200 dark:border-amber-800 bg-white dark:bg-gray-900"
+                  >
+                    <table class="w-full text-sm">
+                      <thead
+                        class="bg-amber-100 dark:bg-amber-900/40 text-amber-900 dark:text-amber-200 sticky top-0"
+                      >
+                        <tr>
+                          <th class="px-3 py-2 text-center font-semibold w-10">
+                            <input
+                              type="checkbox"
+                              id="pgblSelectAll"
+                              class="rounded border-gray-300 dark:border-gray-600"
+                            />
+                          </th>
+                          <th class="px-3 py-2 text-left font-semibold">Folio</th>
+                          <th class="px-3 py-2 text-left font-semibold">Tipo</th>
+                          <th class="px-3 py-2 text-left font-semibold">
+                            Fecha de pago
+                          </th>
+                          <th class="px-3 py-2 text-left font-semibold">
+                            Forma de pago
+                          </th>
+                          <th class="px-3 py-2 text-right font-semibold">
+                            Monto
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody
+                        id="pgblBody"
+                        class="divide-y divide-amber-100 dark:divide-amber-900/40"
+                      ></tbody>
+                    </table>
+                  </div>
+                  <p
+                    id="pgblEmpty"
+                    class="text-sm text-amber-800 dark:text-amber-200 mt-3 hidden"
+                  >
+                    No hay operaciones pendientes de facturar en el rango
+                    seleccionado.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <!-- Financial Summary -->
           <div
             class="bg-white dark:bg-gray-900 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 overflow-hidden mb-6 animate-slide-in"
@@ -3237,7 +3402,600 @@
               },
             });
           });
+
+          // ========== FACTURA GLOBAL (Exclusiones de operaciones) ==========
+          // El establecimiento emite la factura global desde su panel; aquí el
+          // programador marca las operaciones que el contador ya facturó fuera del
+          // sistema (factura_global_excluida = true) o las reincorpora.
+          // El bloque del modal de "Agregar excluidas" está más abajo en el documento,
+          // después de este script: hay que esperar a que el DOM termine de parsearse,
+          // porque de lo contrario getElementById devuelve null y el modal no abre.
+          document.addEventListener("DOMContentLoaded", function () {
+            const companyInput = document.getElementById("pgblCompanyId");
+            if (!companyInput) return; // Sin establecimiento seleccionado
+
+            const TICKET_CLASS = "pgbl-ticket";
+
+            const fromEl = document.getElementById("pgblFrom");
+            const toEl = document.getElementById("pgblTo");
+            const searchBtn = document.getElementById("pgblSearchBtn");
+            const errorEl = document.getElementById("pgblError");
+            const panelEl = document.getElementById("pgblPanel");
+            const bodyEl = document.getElementById("pgblBody");
+            const emptyEl = document.getElementById("pgblEmpty");
+            const selectAllEl = document.getElementById("pgblSelectAll");
+            const countEl = document.getElementById("pgblCount");
+            const totalEl = document.getElementById("pgblTotal");
+            const selectedEl = document.getElementById("pgblSelected");
+            const selectedTotalEl = document.getElementById("pgblSelectedTotal");
+            const periodInfoEl = document.getElementById("pgblPeriodInfo");
+            const excludeBtn = document.getElementById("pgblExcludeBtn");
+            const addBtn = document.getElementById("pgblAddBtn");
+
+            const modalEl = document.getElementById("pgblModal");
+            const modalBodyEl = document.getElementById("pgblModalBody");
+            const modalEmptyEl = document.getElementById("pgblModalEmpty");
+            const modalRangeEl = document.getElementById("pgblModalRange");
+            const modalTotalEl = document.getElementById("pgblModalTotal");
+            const modalSelectedEl = document.getElementById("pgblModalSelected");
+            const modalSelectAllEl = document.getElementById("pgblModalSelectAll");
+            const modalIncludeBtn = document.getElementById("pgblModalIncludeBtn");
+
+            const fmtMoney = new Intl.NumberFormat("es-MX", {
+              style: "currency",
+              currency: "MXN",
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            });
+            const typeLabels = {
+              ORDER: "Orden",
+              PAYMENT: "Cuenta dividida",
+            };
+            const isDark = document.documentElement.classList.contains("dark");
+            const swalBase = {
+              background: isDark ? "#1f2937" : "#ffffff",
+              color: isDark ? "#f3f4f6" : "#1f2937",
+            };
+
+            // Rango sobre el que se pintó la tabla actual.
+            let currentRange = null;
+            // Rango con el que se abrió el modal de operaciones excluidas.
+            let modalRange = null;
+
+            function isoDate(date) {
+              const month = String(date.getMonth() + 1).padStart(2, "0");
+              const day = String(date.getDate()).padStart(2, "0");
+              return date.getFullYear() + "-" + month + "-" + day;
+            }
+
+            // Rango por defecto: del primer día del mes en curso a hoy.
+            if (!fromEl.value && !toEl.value) {
+              const today = new Date();
+              fromEl.value = isoDate(
+                new Date(today.getFullYear(), today.getMonth(), 1),
+              );
+              toEl.value = isoDate(today);
+            }
+
+            function escapeHtml(value) {
+              return String(value == null ? "" : value)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;");
+            }
+
+            function showError(message) {
+              errorEl.textContent = message;
+              errorEl.classList.remove("hidden");
+            }
+
+            function readRange() {
+              const from = fromEl.value;
+              const to = toEl.value;
+              if (!from || !to) {
+                showError("Ambas fechas son requeridas");
+                return null;
+              }
+              if (from > to) {
+                showError('La fecha "Desde" debe ser menor o igual a "Hasta"');
+                return null;
+              }
+              errorEl.classList.add("hidden");
+              return { from: from, to: to };
+            }
+
+            function ticketRow(ticket) {
+              const amount = Number(ticket.total) || 0;
+              const label = typeLabels[ticket.type] || ticket.type || "";
+              return (
+                '<tr class="text-gray-700 dark:text-gray-300">' +
+                '<td class="px-3 py-2 text-center">' +
+                '<input type="checkbox" class="' +
+                TICKET_CLASS +
+                ' rounded border-gray-300 dark:border-gray-600" value="' +
+                escapeHtml(ticket.key) +
+                '" data-total="' +
+                amount +
+                '" data-folio="' +
+                escapeHtml(ticket.folio) +
+                '" />' +
+                "</td>" +
+                '<td class="px-3 py-2 font-mono text-xs">' +
+                escapeHtml(ticket.folio) +
+                "</td>" +
+                '<td class="px-3 py-2">' +
+                escapeHtml(label) +
+                "</td>" +
+                '<td class="px-3 py-2">' +
+                escapeHtml(ticket.date) +
+                "</td>" +
+                '<td class="px-3 py-2">' +
+                escapeHtml(ticket.paymentMethod) +
+                "</td>" +
+                '<td class="px-3 py-2 text-right font-semibold">' +
+                fmtMoney.format(amount) +
+                "</td>" +
+                "</tr>"
+              );
+            }
+
+            function renderTickets(tbody, tickets) {
+              tbody.innerHTML = "";
+              tickets.forEach(function (ticket) {
+                tbody.insertAdjacentHTML("beforeend", ticketRow(ticket));
+              });
+            }
+
+            function checkboxes(container) {
+              return Array.prototype.slice.call(
+                container.querySelectorAll("input." + TICKET_CLASS),
+              );
+            }
+
+            function selectedKeys(container) {
+              return checkboxes(container)
+                .filter(function (checkbox) {
+                  return checkbox.checked;
+                })
+                .map(function (checkbox) {
+                  return checkbox.value;
+                });
+            }
+
+            function selectionSummary(container) {
+              const selected = checkboxes(container).filter(function (checkbox) {
+                return checkbox.checked;
+              });
+              const total = selected.reduce(function (sum, checkbox) {
+                return sum + (Number(checkbox.dataset.total) || 0);
+              }, 0);
+              return { count: selected.length, total: total };
+            }
+
+            function refreshSelectionSummary() {
+              const summary = selectionSummary(bodyEl);
+              selectedEl.textContent = summary.count;
+              selectedTotalEl.textContent = fmtMoney.format(summary.total);
+            }
+
+            function refreshModalSummary() {
+              modalSelectedEl.textContent = selectionSummary(modalBodyEl).count;
+            }
+
+            function loadPending() {
+              const range = readRange();
+              if (!range) return;
+
+              searchBtn.disabled = true;
+              const originalHtml = searchBtn.innerHTML;
+              searchBtn.innerHTML =
+                '<span class="material-symbols-outlined text-lg animate-spin">progress_activity</span> Consultando...';
+
+              fetch(
+                "/programmer/api/global-invoice-preview?companyId=" +
+                  encodeURIComponent(companyInput.value) +
+                  "&from=" +
+                  range.from +
+                  "&to=" +
+                  range.to,
+              )
+                .then(function (response) {
+                  return response.json();
+                })
+                .then(function (data) {
+                  if (data.error) {
+                    panelEl.classList.add("hidden");
+                    showError(data.error);
+                    return;
+                  }
+
+                  const tickets = data.tickets || [];
+                  currentRange = range;
+                  renderTickets(bodyEl, tickets);
+                  selectAllEl.checked = false;
+                  countEl.textContent = data.count;
+                  totalEl.textContent = fmtMoney.format(Number(data.total) || 0);
+                  refreshSelectionSummary();
+                  emptyEl.classList.toggle("hidden", tickets.length > 0);
+
+                  periodInfoEl.classList.remove("hidden");
+                  periodInfoEl.textContent = data.validPeriod
+                    ? "Rango válido para emitir la factura global (" +
+                      (data.periodicity === "04" ? "mensual" : "diaria") +
+                      ")."
+                    : "El rango no es un día ni un mes completo: sirve para gestionar exclusiones, pero la factura global solo puede emitirse por día o por mes completo.";
+
+                  panelEl.classList.remove("hidden");
+                })
+                .catch(function () {
+                  showError("Error al consultar las operaciones pendientes");
+                })
+                .finally(function () {
+                  searchBtn.disabled = false;
+                  searchBtn.innerHTML = originalHtml;
+                });
+            }
+
+            function openModal(range) {
+              fetch(
+                "/programmer/api/global-invoice-excluded?companyId=" +
+                  encodeURIComponent(companyInput.value) +
+                  "&from=" +
+                  range.from +
+                  "&to=" +
+                  range.to,
+              )
+                .then(function (response) {
+                  return response.json();
+                })
+                .then(function (data) {
+                  if (data.error) {
+                    Swal.fire(
+                      Object.assign(
+                        {
+                          icon: "error",
+                          title: "Error",
+                          text: data.error,
+                        },
+                        swalBase,
+                      ),
+                    );
+                    return;
+                  }
+
+                  const tickets = data.tickets || [];
+                  modalRange = range;
+                  modalRangeEl.textContent = data.from + " → " + data.to;
+                  renderTickets(modalBodyEl, tickets);
+                  modalSelectAllEl.checked = false;
+                  modalTotalEl.textContent = fmtMoney.format(
+                    Number(data.total) || 0,
+                  );
+                  refreshModalSummary();
+                  modalEmptyEl.classList.toggle("hidden", tickets.length > 0);
+                  modalEl.classList.remove("hidden");
+                  modalEl.classList.add("flex");
+                })
+                .catch(function (error) {
+                  console.error(
+                    "Error al consultar las operaciones excluidas",
+                    error,
+                  );
+                  Swal.fire(
+                    Object.assign(
+                      {
+                        icon: "error",
+                        title: "Error",
+                        text: "Error al consultar las operaciones excluidas",
+                      },
+                      swalBase,
+                    ),
+                  );
+                });
+            }
+
+            function closeModal() {
+              modalEl.classList.add("hidden");
+              modalEl.classList.remove("flex");
+            }
+
+            function applyExclusion(keys, excluded, range, onSuccess) {
+              const body = new URLSearchParams();
+              body.set("companyId", companyInput.value);
+              body.set("from", range.from);
+              body.set("to", range.to);
+              body.set("excluded", excluded ? "true" : "false");
+              keys.forEach(function (key) {
+                body.append("ticket", key);
+              });
+
+              fetch("/programmer/api/global-invoice-exclusion", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/x-www-form-urlencoded",
+                },
+                body: body.toString(),
+              })
+                .then(function (response) {
+                  return response.json();
+                })
+                .then(function (data) {
+                  if (data.error) {
+                    Swal.fire(
+                      Object.assign(
+                        { icon: "error", title: "Error", text: data.error },
+                        swalBase,
+                      ),
+                    );
+                    return;
+                  }
+
+                  const updated = Number(data.updated) || 0;
+                  const skipped = keys.length - updated;
+                  let message =
+                    updated +
+                    " operación(es) " +
+                    (excluded ? "excluidas" : "reincorporadas") +
+                    " de la factura global.";
+                  if (skipped > 0) {
+                    message +=
+                      " " +
+                      skipped +
+                      " no se modificaron porque ya estaban facturadas o no pertenecen al rango.";
+                  }
+
+                  Swal.fire(
+                    Object.assign(
+                      {
+                        icon: "success",
+                        title: excluded
+                          ? "Operaciones excluidas"
+                          : "Operaciones reincorporadas",
+                        text: message,
+                        confirmButtonColor: "#16a34a",
+                      },
+                      swalBase,
+                    ),
+                  );
+
+                  if (typeof onSuccess === "function") onSuccess();
+                  loadPending();
+                })
+                .catch(function () {
+                  Swal.fire(
+                    Object.assign(
+                      {
+                        icon: "error",
+                        title: "Error",
+                        text: "Error de conexión al actualizar las exclusiones",
+                      },
+                      swalBase,
+                    ),
+                  );
+                });
+            }
+
+            searchBtn.addEventListener("click", loadPending);
+
+            selectAllEl.addEventListener("change", function () {
+              checkboxes(bodyEl).forEach(function (checkbox) {
+                checkbox.checked = selectAllEl.checked;
+              });
+              refreshSelectionSummary();
+            });
+
+            bodyEl.addEventListener("change", function (event) {
+              if (event.target.classList.contains(TICKET_CLASS)) {
+                refreshSelectionSummary();
+              }
+            });
+
+            excludeBtn.addEventListener("click", function () {
+              const keys = selectedKeys(bodyEl);
+              if (!keys.length) {
+                Swal.fire(
+                  Object.assign(
+                    {
+                      icon: "info",
+                      title: "Seleccione operaciones",
+                      text: "Marque al menos una operación de la tabla para excluirla de la factura global.",
+                    },
+                    swalBase,
+                  ),
+                );
+                return;
+              }
+              if (!currentRange) return;
+
+              Swal.fire(
+                Object.assign(
+                  {
+                    title: "¿Excluir de la factura global?",
+                    html:
+                      "Se marcarán <b>" +
+                      keys.length +
+                      "</b> operación(es) como excluidas: no se incluirán cuando el establecimiento emita la factura global del periodo. Puede reincorporarlas después con \"Agregar excluidas\".",
+                    icon: "warning",
+                    showCancelButton: true,
+                    confirmButtonColor: "#dc2626",
+                    cancelButtonColor: "#6b7280",
+                    confirmButtonText: "Sí, excluir",
+                    cancelButtonText: "Cancelar",
+                  },
+                  swalBase,
+                ),
+              ).then(function (result) {
+                if (result.isConfirmed) {
+                  applyExclusion(keys, true, currentRange, null);
+                }
+              });
+            });
+
+            addBtn.addEventListener("click", function () {
+              const range = readRange();
+              if (!range) return;
+              openModal(range);
+            });
+
+            modalSelectAllEl.addEventListener("change", function () {
+              checkboxes(modalBodyEl).forEach(function (checkbox) {
+                checkbox.checked = modalSelectAllEl.checked;
+              });
+              refreshModalSummary();
+            });
+
+            modalBodyEl.addEventListener("change", function (event) {
+              if (event.target.classList.contains(TICKET_CLASS)) {
+                refreshModalSummary();
+              }
+            });
+
+            modalIncludeBtn.addEventListener("click", function () {
+              const keys = selectedKeys(modalBodyEl);
+              if (!keys.length) {
+                Swal.fire(
+                  Object.assign(
+                    {
+                      icon: "info",
+                      title: "Seleccione operaciones",
+                      text: "Marque al menos una operación excluida para reincorporarla a la factura global.",
+                    },
+                    swalBase,
+                  ),
+                );
+                return;
+              }
+              if (!modalRange) return;
+
+              Swal.fire(
+                Object.assign(
+                  {
+                    title: "¿Reincorporar operaciones?",
+                    html:
+                      "Se volverán a tomar en cuenta <b>" +
+                      keys.length +
+                      "</b> operación(es) al emitir la factura global del periodo.",
+                    icon: "question",
+                    showCancelButton: true,
+                    confirmButtonColor: "#16a34a",
+                    cancelButtonColor: "#6b7280",
+                    confirmButtonText: "Sí, reincorporar",
+                    cancelButtonText: "Cancelar",
+                  },
+                  swalBase,
+                ),
+              ).then(function (result) {
+                if (result.isConfirmed) {
+                  applyExclusion(keys, false, modalRange, closeModal);
+                }
+              });
+            });
+
+            document
+              .getElementById("pgblModalClose")
+              .addEventListener("click", closeModal);
+            document
+              .getElementById("pgblModalCancel")
+              .addEventListener("click", closeModal);
+            modalEl.addEventListener("click", function (event) {
+              if (event.target === modalEl) closeModal();
+            });
+          });
         </script>
+    <!-- Modal: operaciones excluidas de la factura global -->
+    <div
+      th:if="${selectedCompany != null}"
+      id="pgblModal"
+      class="hidden fixed inset-0 z-50 bg-black/60 p-4 items-center justify-center"
+    >
+      <div
+        class="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800 w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden"
+      >
+        <div
+          class="bg-gradient-to-r from-green-600 to-emerald-600 px-6 py-4 flex items-start justify-between gap-3"
+        >
+          <div>
+            <h5 class="text-lg font-bold text-white">
+              Operaciones excluidas de la factura global
+            </h5>
+            <p class="text-emerald-50 text-xs mt-1">
+              Rango consultado: <span id="pgblModalRange">-</span>. Marque las
+              operaciones que desee reincorporar a la factura global.
+            </p>
+          </div>
+          <button
+            type="button"
+            id="pgblModalClose"
+            class="text-white/80 hover:text-white"
+          >
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+        <div class="p-5 flex-1 overflow-y-auto">
+          <div
+            class="max-h-80 overflow-y-auto rounded-xl border border-gray-200 dark:border-gray-700"
+          >
+            <table class="w-full text-sm">
+              <thead
+                class="bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 sticky top-0"
+              >
+                <tr>
+                  <th class="px-3 py-2 text-center font-semibold w-10">
+                    <input
+                      type="checkbox"
+                      id="pgblModalSelectAll"
+                      class="rounded border-gray-300 dark:border-gray-600"
+                    />
+                  </th>
+                  <th class="px-3 py-2 text-left font-semibold">Folio</th>
+                  <th class="px-3 py-2 text-left font-semibold">Tipo</th>
+                  <th class="px-3 py-2 text-left font-semibold">Fecha de pago</th>
+                  <th class="px-3 py-2 text-left font-semibold">Forma de pago</th>
+                  <th class="px-3 py-2 text-right font-semibold">Monto</th>
+                </tr>
+              </thead>
+              <tbody
+                id="pgblModalBody"
+                class="divide-y divide-gray-100 dark:divide-gray-800"
+              ></tbody>
+            </table>
+          </div>
+          <p
+            id="pgblModalEmpty"
+            class="text-sm text-gray-500 dark:text-gray-400 mt-3 hidden"
+          >
+            No hay operaciones excluidas en el rango consultado.
+          </p>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-3">
+            Total excluido:
+            <span id="pgblModalTotal" class="font-semibold">$0.00</span> ·
+            Seleccionadas:
+            <span id="pgblModalSelected" class="font-semibold">0</span>
+          </p>
+        </div>
+        <div
+          class="px-5 py-4 border-t border-gray-200 dark:border-gray-800 flex flex-wrap justify-end gap-2"
+        >
+          <button
+            type="button"
+            id="pgblModalCancel"
+            class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-sm font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+          >
+            Cerrar
+          </button>
+          <button
+            type="button"
+            id="pgblModalIncludeBtn"
+            class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg transition-colors flex items-center gap-1"
+          >
+            <span class="material-symbols-outlined text-lg">add_circle</span>
+            Reincorporar seleccionadas
+          </button>
+        </div>
+      </div>
+    </div>
+
         <!-- Cargado al final para que window.CFDirectUpload exista cuando se dispare 'load'. -->
         <script th:src="@{/js/cf-direct-upload.js}"></script>
       </div>

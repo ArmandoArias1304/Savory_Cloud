@@ -65,6 +65,15 @@ public interface ItemMenuService {
     List<ItemMenu> findAllActive();
 
     /**
+     * All items of the current company with their size-parent loaded, in no fixed
+     * order and WITHOUT touching the database (no availability recalculation).
+     * Used by the printed menu ("carta") generator, which groups and filters in memory.
+     *
+     * @return every item of the company, deleted and inactive ones included
+     */
+    List<ItemMenu> findAllForPrintedMenu();
+
+    /**
      * Find all available menu items (active and with enough stock)
      */
     List<ItemMenu> findAvailableItems();

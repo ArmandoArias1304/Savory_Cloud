@@ -13,6 +13,8 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -214,6 +216,41 @@ public class CategoryController {
             return ResponseEntity.ok(result);
         } catch (Exception e) {
             log.error("Error checking dependencies: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /**
+     * Store the order the categories follow in the printed menu (carta).
+     * Called by the drag & drop / up-down arrows of the categories table.
+     * The body is {"ids": [3, 1, 2, ...]} in the desired order.
+     */
+    @PostMapping("/reorder")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> reorderCategories(
+            @RequestBody(required = false) Map<String, Object> body) {
+
+        Object rawIds = body == null ? null : body.get("ids");
+        List<Long> ids = new ArrayList<>();
+        if (rawIds instanceof List<?> values) {
+            for (Object value : values) {
+                if (value == null) {
+                    continue;
+                }
+                try {
+                    ids.add(Long.parseLong(String.valueOf(value).trim()));
+                } catch (NumberFormatException e) {
+                    log.warn("Reorder received a non-numeric category id: {}", value);
+                    return ResponseEntity.badRequest().body(Map.of("error", "Orden inválido"));
+                }
+            }
+        }
+
+        try {
+            categoryService.reorderCategories(ids);
+            return ResponseEntity.ok(Map.of("success", true, "count", ids.size()));
+        } catch (IllegalArgumentException e) {
+            log.error("Error reordering categories: {}", e.getMessage());
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }

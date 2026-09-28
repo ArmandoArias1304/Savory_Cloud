@@ -12,9 +12,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.HashMap;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -37,7 +40,7 @@ public class CategoryServiceImpl implements CategoryService {
     public List<Category> getAllCategories() {
         log.debug("Fetching all categories");
         Company company = CompanyContext.requireCurrentCompany();
-        return categoryRepository.findAllByCompanyOrderedByName(company);
+        return categoryRepository.findAllByCompanyOrderedForMenu(company);
     }
 
     @Override
@@ -45,7 +48,7 @@ public class CategoryServiceImpl implements CategoryService {
     public List<Category> getAllActiveCategories() {
         log.debug("Fetching all active categories");
         Company company = CompanyContext.requireCurrentCompany();
-        return categoryRepository.findAllActiveByCompanyOrderedByName(company);
+        return categoryRepository.findAllActiveByCompanyOrderedForMenu(company);
     }
 
     @Override
@@ -216,5 +219,48 @@ public class CategoryServiceImpl implements CategoryService {
         // MULTI-TENANT: Require company context - no fallback to global data
         Company company = CompanyContext.requireCurrentCompany();
         return categoryRepository.countByActiveTrueAndCompany(company);
+    }
+
+    @Override
+    public void reorderCategories(List<Long> orderedIds) {
+        Company company = CompanyContext.requireCurrentCompany();
+
+        List<Long> ids = (orderedIds == null ? List.<Long>of() : orderedIds).stream()
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
+
+        if (ids.isEmpty()) {
+            log.warn("Reorder received an empty category list");
+            throw new IllegalArgumentException("No se recibió ninguna categoría para ordenar");
+        }
+
+        // Sorted by the current stored order (positioned first, then alphabetical).
+        // Any category the client did not send keeps this relative order and is
+        // appended after the received ones, so the stored order is never left with ties.
+        List<Category> companyCategories = categoryRepository.findAllByCompanyOrderedForMenu(company);
+        Map<Long, Category> pending = companyCategories.stream()
+                .collect(Collectors.toMap(Category::getIdCategory, category -> category,
+                        (first, second) -> first, LinkedHashMap::new));
+
+        List<Category> ordered = new ArrayList<>(ids.size());
+        for (Long id : ids) {
+            Category category = pending.remove(id);
+            if (category == null) {
+                log.warn("Category id {} does not belong to company {}", id, company.getSlug());
+                throw new IllegalArgumentException(
+                        "La categoría con id " + id + " no pertenece a este restaurante");
+            }
+            ordered.add(category);
+        }
+        ordered.addAll(pending.values());
+
+        int position = 1;
+        for (Category category : ordered) {
+            category.setDisplayOrder(position++);
+        }
+        categoryRepository.saveAll(ordered);
+
+        log.info("Stored menu order for {} categories of company {}", ordered.size(), company.getSlug());
     }
 }

@@ -118,6 +118,12 @@ public class SecurityConfig {
                                                 .expiredUrl("/login") // Redirect to login without message
                                                 .sessionRegistry(sessionRegistry()))
                                 .csrf(csrf -> csrf.disable()) // For development, enable in production
+                                // Same-origin framing only: the app embeds its own content (the
+                                // printed-menu preview shows the generated PDF inside an iframe),
+                                // while other sites still cannot frame the system (clickjacking).
+                                // Spring Security's default is DENY, which blocks even our own pages.
+                                .headers(headers -> headers
+                                                .frameOptions(frameOptions -> frameOptions.sameOrigin()))
                                 // Add filter to set company context based on host
                                 .addFilterBefore(companyContextFilter, UsernamePasswordAuthenticationFilter.class)
                                 // Add filter to validate user enabled status on each request

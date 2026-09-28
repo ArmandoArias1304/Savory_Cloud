@@ -206,9 +206,15 @@
             class="bg-white dark:bg-gray-900 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 overflow-hidden"
           >
             <div class="overflow-x-auto">
-              <table class="w-full">
+              <table class="w-full" th:data-reorder-url="@{/admin/categories/reorder}">
                 <thead class="bg-gray-50 dark:bg-gray-800">
                   <tr>
+                    <th
+                      class="px-3 py-4 text-center text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider"
+                      title="Arrastra para ordenar las categorías en la carta"
+                    >
+                      Orden
+                    </th>
                     <th
                       class="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider"
                     >
@@ -244,7 +250,7 @@
                 <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
                   <tr th:if="${#lists.isEmpty(categories)}">
                     <td
-                      colspan="6"
+                      colspan="7"
                       class="px-6 py-8 text-center text-gray-500 dark:text-gray-400"
                     >
                       <span
@@ -260,9 +266,26 @@
                     </td>
                   </tr>
                   <tr
-                    th:each="category : ${categories}"
-                    class="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                    th:each="category, categoryStat : ${categories}"
+                    draggable="true"
+                    th:data-category-id="${category.idCategory}"
+                    th:data-category-name="${category.name}"
+                    class="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-move"
                   >
+                    <td class="px-3 py-4 text-center align-middle">
+                      <div class="flex items-center justify-center gap-1">
+                        <span
+                          class="material-symbols-outlined text-gray-400 dark:text-gray-500"
+                          title="Arrastra para cambiar el orden de la carta"
+                          >drag_indicator</span
+                        >
+                        <span
+                          class="category-position w-6 text-xs font-bold text-gray-500 dark:text-gray-400"
+                          th:text="${categoryStat.count}"
+                          >1</span
+                        >
+                      </div>
+                    </td>
                     <td
                       class="px-6 py-4 text-sm text-gray-900 dark:text-white font-medium"
                       th:text="${category.idCategory}"
@@ -312,6 +335,26 @@
                     </td>
                     <td class="px-6 py-4">
                       <div class="flex items-center justify-center gap-2">
+                        <!-- Subir / bajar: la forma de ordenar cuando se entra desde el celular,
+                             donde arrastrar no funciona -->
+                        <button
+                          type="button"
+                          class="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors btn-move-category"
+                          data-move="up"
+                          title="Mover arriba"
+                          aria-label="Mover la categoría arriba"
+                        >
+                          <span class="material-symbols-outlined text-xl">arrow_upward</span>
+                        </button>
+                        <button
+                          type="button"
+                          class="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors btn-move-category"
+                          data-move="down"
+                          title="Mover abajo"
+                          aria-label="Mover la categoría abajo"
+                        >
+                          <span class="material-symbols-outlined text-xl">arrow_downward</span>
+                        </button>
                         <a
                           th:href="@{/admin/categories/{id}/edit(id=${category.idCategory})}"
                           class="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
@@ -521,6 +564,128 @@
                 color: isDark ? "#F3F4F6" : "#1F2937",
               });
             }
+          });
+        });
+      });
+    </script>
+
+    <!-- Orden de las categorías en la carta: arrastrar, flechas y guardado -->
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const table = document.querySelector("table[data-reorder-url]");
+        const tableBody = table ? table.querySelector("tbody") : null;
+        if (!tableBody) return;
+
+        // Endpoint comes from a data attribute so the context path is never hardcoded.
+        const REORDER_URL = table.dataset.reorderUrl;
+
+        function rows() {
+          return Array.from(tableBody.querySelectorAll("tr[data-category-id]"));
+        }
+        if (rows().length === 0) return;
+
+        let draggedRow = null;
+
+        function isDark() {
+          return document.documentElement.classList.contains("dark");
+        }
+
+        function toast(message) {
+          Swal.fire({
+            toast: true,
+            position: "bottom-end",
+            icon: "success",
+            title: message,
+            showConfirmButton: false,
+            timer: 1800,
+            timerProgressBar: true,
+            background: isDark() ? "#1F2937" : "#fff",
+            color: isDark() ? "#F3F4F6" : "#1F2937",
+          });
+        }
+
+        function renumber() {
+          rows().forEach(function (row, index) {
+            const position = row.querySelector(".category-position");
+            if (position) position.textContent = index + 1;
+          });
+        }
+
+        async function saveOrder() {
+          const ids = rows().map(function (row) {
+            return Number(row.dataset.categoryId);
+          });
+          renumber();
+          try {
+            const response = await fetch(REORDER_URL, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ ids: ids }),
+            });
+            const data = await response.json().catch(function () {
+              return {};
+            });
+            if (!response.ok || !data.success) {
+              throw new Error(data.error || "Error del servidor");
+            }
+            toast("Orden guardado");
+          } catch (error) {
+            console.error("Error al guardar el orden de las categorías", error);
+            Swal.fire({
+              icon: "error",
+              title: "No se pudo guardar el orden",
+              text: error.message || "Error de conexión",
+              background: isDark() ? "#1F2937" : "#fff",
+              color: isDark() ? "#F3F4F6" : "#1F2937",
+            });
+            // The table no longer matches the database: reload it.
+            setTimeout(function () {
+              window.location.reload();
+            }, 1800);
+          }
+        }
+
+        // ---- Arrastrar y soltar (escritorio) ----
+        rows().forEach(function (row) {
+          row.addEventListener("dragstart", function (event) {
+            draggedRow = row;
+            row.classList.add("opacity-50");
+            event.dataTransfer.effectAllowed = "move";
+            event.dataTransfer.setData("text/plain", String(row.dataset.categoryId));
+          });
+
+          row.addEventListener("dragover", function (event) {
+            event.preventDefault();
+            if (!draggedRow || draggedRow === row) return;
+            const box = row.getBoundingClientRect();
+            const goesBefore = event.clientY < box.top + box.height / 2;
+            tableBody.insertBefore(draggedRow, goesBefore ? row : row.nextSibling);
+          });
+
+          row.addEventListener("dragend", function () {
+            row.classList.remove("opacity-50");
+            if (draggedRow) {
+              draggedRow = null;
+              saveOrder();
+            }
+          });
+        });
+
+        // ---- Flechas arriba / abajo (celular y accesibilidad) ----
+        tableBody.querySelectorAll(".btn-move-category").forEach(function (button) {
+          button.addEventListener("click", function () {
+            const row = button.closest("tr[data-category-id]");
+            if (!row) return;
+            const list = rows();
+            const index = list.indexOf(row);
+            const targetIndex = button.dataset.move === "up" ? index - 1 : index + 1;
+            if (targetIndex < 0 || targetIndex >= list.length) return;
+            if (button.dataset.move === "up") {
+              tableBody.insertBefore(row, list[targetIndex]);
+            } else {
+              tableBody.insertBefore(list[targetIndex], row);
+            }
+            saveOrder();
           });
         });
       });

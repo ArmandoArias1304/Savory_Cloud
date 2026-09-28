@@ -1,6 +1,7 @@
 package com.aatechsolutions.elgransazon.application.service;
 
 //import com.aatechsolutions.elgransazon.domain.entity.BusinessHours;
+import com.aatechsolutions.elgransazon.application.dto.MenuStyle;
 import com.aatechsolutions.elgransazon.domain.entity.Company;
 import com.aatechsolutions.elgransazon.domain.entity.DayOfWeek;
 import com.aatechsolutions.elgransazon.domain.entity.PaymentMethodType;
@@ -118,8 +119,16 @@ public class SystemConfigurationServiceImpl implements SystemConfigurationServic
         existingConfig.setEmail(configuration.getEmail());
         existingConfig.setRfc(configuration.getRfc());
         // taxRate is managed by PROGRAMMER, not by admin — preserve existing value
+        // NOTE: the printed menu ("carta") style fields are intentionally NOT copied here.
+        // They are managed from the menu view (Personalizar carta) through
+        // ItemMenuController#saveMenuStyle, so an admin editing this form never resets them.
         existingConfig.setAverageConsumptionTimeMinutes(configuration.getAverageConsumptionTimeMinutes());
         existingConfig.setTicketLogoOpacity(configuration.getTicketLogoOpacity());
+
+        // Ticket footer legends. The getters already resolve blank/null to the built-in
+        // text, so an empty field keeps printing what the ticket always printed.
+        existingConfig.setTicketFooterLine1(configuration.getTicketFooterLine1());
+        existingConfig.setTicketFooterLine2(configuration.getTicketFooterLine2());
 
         // Default delivery cost (admin-managed). Treat null as ZERO to honor non-null DB constraint.
         if (configuration.getDefaultDeliveryCost() != null) {
@@ -168,6 +177,33 @@ public class SystemConfigurationServiceImpl implements SystemConfigurationServic
         SystemConfiguration saved = configurationRepository.save(existingConfig);
         invalidateConfigCache();
         log.info("System configuration updated successfully");
+        return saved;
+    }
+
+    @Override
+    public SystemConfiguration updateMenuStyle(MenuStyle style) {
+        Company company = CompanyContext.requireCurrentCompany();
+        SystemConfiguration existingConfig = configurationRepository.findByCompany(company)
+                .orElseThrow(() -> new IllegalStateException(
+                        "System configuration not found for company: " + company.getSlug()));
+
+        MenuStyle effective = style == null ? MenuStyle.defaults() : style;
+        existingConfig.setMenuFontFamily(effective.fontFamily().name());
+        existingConfig.setMenuFontSize(effective.fontSize());
+        existingConfig.setMenuPrimaryColor(effective.primaryColor());
+        existingConfig.setMenuAccentColor(effective.accentColor());
+        existingConfig.setMenuPageColor(effective.pageColor());
+        existingConfig.setMenuPaperSize(effective.paperSize().name());
+        existingConfig.setMenuColumns(effective.columns());
+        existingConfig.setMenuShowDescriptions(effective.showDescriptions());
+        existingConfig.setMenuShowImages(effective.showImages());
+        existingConfig.setMenuShowPrices(effective.showPrices());
+        existingConfig.setMenuIncludeUnavailable(effective.includeUnavailable());
+        existingConfig.setMenuShowQr(effective.showQr());
+
+        SystemConfiguration saved = configurationRepository.save(existingConfig);
+        invalidateConfigCache();
+        log.info("Printed menu style updated for company {}", company.getSlug());
         return saved;
     }
 

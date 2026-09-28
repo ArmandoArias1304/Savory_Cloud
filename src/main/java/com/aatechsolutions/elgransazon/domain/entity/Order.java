@@ -372,10 +372,99 @@ public class Order implements Serializable {
     private LocalDateTime facturaGlobalCfdiCreatedAt;
 
     /**
+     * When true, this ticket was deliberately EXCLUDED from the factura global
+     * (público en general) — typically because the restaurant's accountant already
+     * invoiced the operation OUTSIDE the system before the billing service was
+     * contracted. Excluded tickets are skipped when emitting the global invoice and
+     * can be re-included at any time from the programmer panel.
+     *
+     * NULL is treated as false (orders created before this column existed).
+     */
+    @Column(name = "factura_global_excluida")
+    @Builder.Default
+    private Boolean facturaGlobalExcluida = false;
+
+    /**
      * Full self-invoice URL for this order (e.g. https://slug.domain.com/autofactura/{key}).
      */
     @Column(name = "self_invoice_url", length = 300)
     private String selfInvoiceUrl;
+
+    /**
+     * True when the self-invoice link (the QR printed on the ticket) can still be
+     * generated for a WHOLE-ORDER ticket: there is no link yet and nothing forbids
+     * invoicing it (an individual CFDI, a factura global that already amparó it or a
+     * manual exclusion from the global invoice).
+     *
+     * <p>The sales view (admin/manager) and the generation endpoint share this rule, so
+     * the button only shows up where the server would actually generate something.</p>
+     */
+    public boolean canGenerateInvoiceLink() {
+        return isMissing(autofacturaKey) && !isInvoiced();
+    }
+
+    /**
+     * True when this ticket already has a fiscal receipt: invoiced individually or amparado by
+     * a factura global. Operations EXCLUDED from the global invoice also count as invoiced,
+     * because the restaurant's accountant invoiced them outside the system (that is exactly why
+     * they were excluded).
+     */
+    public boolean isInvoiced() {
+        return !isMissing(facturamaCfdiId)
+                || !isMissing(facturaGlobalCfdiId)
+                || Boolean.TRUE.equals(facturaGlobalExcluida);
+    }
+
+    /**
+     * Invoiceable units of the sale: one per split account, or the order itself when the whole
+     * bill was paid as a single ticket.
+     */
+    public int getInvoiceableUnitCount() {
+        return payments != null && !payments.isEmpty() ? payments.size() : 1;
+    }
+
+    /**
+     * How many of {@link #getInvoiceableUnitCount()} units already have a fiscal receipt.
+     */
+    public int getInvoicedUnitCount() {
+        if (payments != null && !payments.isEmpty()) {
+            return (int) payments.stream().filter(Payment::isInvoiced).count();
+        }
+        return isInvoiced() ? 1 : 0;
+    }
+
+    /**
+     * True when every invoiceable unit of the sale already has a fiscal receipt. A split bill
+     * with only some accounts invoiced is NOT fully invoiced yet.
+     */
+    public boolean isFullyInvoiced() {
+        return getInvoicedUnitCount() >= getInvoiceableUnitCount();
+    }
+
+    /**
+     * True when a split bill has some accounts invoiced and some still pending, so the sales
+     * view can show how many are missing.
+     */
+    public boolean isPartiallyInvoiced() {
+        int invoiced = getInvoicedUnitCount();
+        return invoiced > 0 && invoiced < getInvoiceableUnitCount();
+    }
+
+    /**
+     * True when any invoiceable unit of this sale still needs its self-invoice link: the
+     * whole order for a single ticket, or at least one account of a split bill. Each split
+     * account prints its own ticket, so it carries its own QR.
+     */
+    public boolean hasInvoiceLinkPending() {
+        if (payments != null && !payments.isEmpty()) {
+            return payments.stream().anyMatch(Payment::canGenerateInvoiceLink);
+        }
+        return canGenerateInvoiceLink();
+    }
+
+    private static boolean isMissing(String value) {
+        return value == null || value.isBlank();
+    }
 
     // ========== Lifecycle Callbacks ==========
 

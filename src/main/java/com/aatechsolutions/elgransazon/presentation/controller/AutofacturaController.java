@@ -79,6 +79,7 @@ public class AutofacturaController {
         // Always expose both status flags as booleans so the template can branch on them safely
         model.addAttribute("alreadyInvoiced", isAlreadyInvoiced(payment, order));
         model.addAttribute("inGlobalInvoice", isInGlobalInvoice(payment, order));
+        model.addAttribute("excludedFromGlobalInvoice", isExcludedFromGlobalInvoice(payment, order));
 
         // Block if the operation was already included in a global invoice (público en general)
         if (isInGlobalInvoice(payment, order)) {
@@ -87,6 +88,18 @@ public class AutofacturaController {
                 model.addAttribute("payment", payment);
             }
             model.addAttribute("inGlobalInvoice", true);
+            return "autofactura";
+        }
+
+        // Block if the operation was excluded from the global invoice: the restaurant's
+        // accountant already invoiced it outside the system, so self-invoicing it again
+        // would duplicate the CFDI.
+        if (isExcludedFromGlobalInvoice(payment, order)) {
+            model.addAttribute("order", order);
+            if (payment != null) {
+                model.addAttribute("payment", payment);
+            }
+            model.addAttribute("excludedFromGlobalInvoice", true);
             return "autofactura";
         }
 
@@ -168,6 +181,7 @@ public class AutofacturaController {
         // Always expose both status flags as booleans so the template can branch on them safely
         model.addAttribute("alreadyInvoiced", isAlreadyInvoiced(payment, order));
         model.addAttribute("inGlobalInvoice", isInGlobalInvoice(payment, order));
+        model.addAttribute("excludedFromGlobalInvoice", isExcludedFromGlobalInvoice(payment, order));
 
         // Block if the operation was already included in a global invoice (público en general)
         if (isInGlobalInvoice(payment, order)) {
@@ -176,6 +190,18 @@ public class AutofacturaController {
                 model.addAttribute("payment", payment);
             }
             model.addAttribute("inGlobalInvoice", true);
+            return "autofactura";
+        }
+
+        // Block if the operation was excluded from the global invoice: the restaurant's
+        // accountant already invoiced it outside the system, so self-invoicing it again
+        // would duplicate the CFDI.
+        if (isExcludedFromGlobalInvoice(payment, order)) {
+            model.addAttribute("order", order);
+            if (payment != null) {
+                model.addAttribute("payment", payment);
+            }
+            model.addAttribute("excludedFromGlobalInvoice", true);
             return "autofactura";
         }
 
@@ -257,6 +283,16 @@ public class AutofacturaController {
             Order freshOrder = (freshPayment != null) ? freshPayment.getOrder()
                     : orderRepository.findByAutofacturaKeyAndCompany(key, CompanyContext.getCurrentCompany())
                             .orElse(null);
+            // The operation may have been excluded from the global invoice while this request waited
+            if (freshOrder != null && isExcludedFromGlobalInvoice(freshPayment, freshOrder)) {
+                model.addAttribute("order", freshOrder);
+                if (freshPayment != null) {
+                    model.addAttribute("payment", freshPayment);
+                }
+                model.addAttribute("excludedFromGlobalInvoice", true);
+                return "autofactura";
+            }
+
             if (freshOrder != null && isAlreadyInvoiced(freshPayment, freshOrder)) {
                 model.addAttribute("order", freshOrder);
                 if (freshPayment != null) {
@@ -400,6 +436,18 @@ public class AutofacturaController {
             return payment.getFacturaGlobalCfdiId() != null && !payment.getFacturaGlobalCfdiId().isBlank();
         }
         return order.getFacturaGlobalCfdiId() != null && !order.getFacturaGlobalCfdiId().isBlank();
+    }
+
+    /**
+     * True when the operation was explicitly excluded from the global invoice.
+     * That usually means the accountant already invoiced it outside the system,
+     * so a self-invoice (autofactura) must not be generated for it.
+     */
+    private boolean isExcludedFromGlobalInvoice(Payment payment, Order order) {
+        if (payment != null) {
+            return Boolean.TRUE.equals(payment.getFacturaGlobalExcluida());
+        }
+        return Boolean.TRUE.equals(order.getFacturaGlobalExcluida());
     }
 
     // ========== Helpers ==========

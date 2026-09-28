@@ -526,14 +526,14 @@ public class TicketPdfService {
                 .setMarginBottom(5));
 
         // Thank you message
-        Paragraph thankYou = new Paragraph("¡Gracias por su preferencia!")
+        Paragraph thankYou = new Paragraph(config.getTicketFooterLine1())
                 .setFont(boldFont)
                 .setFontSize(10)
                 .setTextAlignment(TextAlignment.CENTER)
                 .setMarginTop(5);
         document.add(thankYou);
 
-        Paragraph visitAgain = new Paragraph("Esperamos volver a atenderle pronto")
+        Paragraph visitAgain = new Paragraph(config.getTicketFooterLine2())
                 .setFont(normalFont)
                 .setFontSize(8)
                 .setTextAlignment(TextAlignment.CENTER)
@@ -965,14 +965,14 @@ public class TicketPdfService {
                 .setMarginBottom(5));
 
         // Thank you message
-        Paragraph thankYou = new Paragraph("¡Gracias por su preferencia!")
+        Paragraph thankYou = new Paragraph(config.getTicketFooterLine1())
                 .setFont(boldFont)
                 .setFontSize(10)
                 .setTextAlignment(TextAlignment.CENTER)
                 .setMarginTop(5);
         document.add(thankYou);
 
-        Paragraph visitAgain = new Paragraph("Esperamos volver a atenderle pronto")
+        Paragraph visitAgain = new Paragraph(config.getTicketFooterLine2())
                 .setFont(normalFont)
                 .setFontSize(8)
                 .setTextAlignment(TextAlignment.CENTER)

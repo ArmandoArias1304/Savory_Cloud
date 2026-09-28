@@ -2157,8 +2157,10 @@
     <script th:inline="javascript">
       /*<![CDATA[*/
       (function () {
-        var cashOpen = /*[[${cashRegisterOpen}]]*/ true;
-        if (cashOpen) return;
+        // Only the first load of each login session shows the warning
+        // (the server marks the session, so refreshing stays quiet).
+        var showClosedAlert = /*[[${showCashRegisterClosedAlert}]]*/ false;
+        if (!showClosedAlert) return;
         var cashUrl = /*[[${cashRegisterUrl}]]*/ "/admin/cash-register";
         document.addEventListener("DOMContentLoaded", function () {
           if (typeof Swal === "undefined") return;

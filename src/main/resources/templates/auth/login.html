@@ -35,17 +35,14 @@
       body {
         font-family:
           "Work Sans", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-        background: linear-gradient(
-          135deg,
-          #38e07b 0%,
-          #2bc866 50%,
-          #1fa552 100%
-        ) !important;
+        background: #2bc866 !important;
+        min-height: 100vh;
         display: flex;
         justify-content: center;
         align-items: center;
-        min-height: 100vh;
         padding: 20px;
+        position: relative;
+        overflow-x: hidden;
       }
 
       .material-symbols-outlined {
@@ -54,6 +51,95 @@
           "wght" 400,
           "GRAD" 0,
           "opsz" 24;
+      }
+
+      /* ============ Fondo decorativo ============ */
+      .bg-decor {
+        position: fixed;
+        inset: 0;
+        overflow: hidden;
+        pointer-events: none;
+        z-index: 0;
+      }
+
+      .bg-dots {
+        position: absolute;
+        inset: -10%;
+        background-image: radial-gradient(
+          rgba(255, 255, 255, 0.55) 1.8px,
+          transparent 1.8px
+        );
+        background-size: 26px 26px;
+        animation: dots-drift 40s linear infinite;
+      }
+
+      @keyframes dots-drift {
+        to {
+          background-position: 26px 26px;
+        }
+      }
+
+      /* Tarjetas flotantes con motivo de restaurante, solo en pantallas grandes */
+      .float-card {
+        position: absolute;
+        display: none;
+        width: 168px;
+        padding: 14px 16px;
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.16);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        backdrop-filter: blur(6px);
+        color: white;
+      }
+
+      .float-card .material-symbols-outlined {
+        font-size: 20px;
+        opacity: 0.9;
+      }
+
+      .float-card .fc-title {
+        font-size: 12px;
+        font-weight: 700;
+        margin-top: 8px;
+      }
+
+      .float-card .fc-line {
+        height: 6px;
+        border-radius: 4px;
+        background: rgba(255, 255, 255, 0.4);
+        margin-top: 8px;
+      }
+
+      @media (min-width: 1280px) {
+        .float-card {
+          display: block;
+        }
+        .fc-1 {
+          top: 12%;
+          left: 6%;
+          transform: rotate(-6deg);
+        }
+        .fc-2 {
+          bottom: 10%;
+          left: 4%;
+          transform: rotate(5deg);
+        }
+        .fc-3 {
+          top: 14%;
+          right: 6%;
+          transform: rotate(6deg);
+        }
+      }
+
+      @keyframes enter {
+        from {
+          opacity: 0;
+          transform: translateY(24px) scale(0.97);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+        }
       }
 
       @keyframes fadeIn {
@@ -67,8 +153,28 @@
         }
       }
 
+      @media (prefers-reduced-motion: reduce) {
+        .bg-dots,
+        .caret,
+        .login-container {
+          animation: none !important;
+        }
+
+        /* Sin animación la bienvenida debe verse igual, no quedarse invisible */
+        .welcome-content,
+        .welcome-logo,
+        .welcome-title,
+        .welcome-subtitle,
+        .welcome-slogan {
+          animation: none !important;
+          opacity: 1 !important;
+          transform: none !important;
+        }
+      }
+
       .login-container {
-        background: white;
+        position: relative;
+        z-index: 10;
         border-radius: 20px;
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
         overflow: hidden;
@@ -76,17 +182,23 @@
         width: 100%;
         display: flex;
         flex-direction: column;
-        animation: fadeIn 0.6s ease-out;
+        animation: enter 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both;
       }
 
       @media (min-width: 768px) {
         .login-container {
-          max-width: 950px;
+          max-width: 1000px;
+          max-height: 90vh;
           flex-direction: row;
           border-radius: 32px;
           box-shadow:
-            0 25px 50px rgba(0, 0, 0, 0.5),
-            0 15px 30px rgba(0, 0, 0, 0.35);
+            0 25px 60px rgba(15, 61, 34, 0.35),
+            0 15px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .login-header,
+        .login-body {
+          overflow-y: auto;
         }
       }
 
@@ -106,8 +218,8 @@
 
       @media (min-width: 768px) {
         .login-header {
-          width: 40%;
-          padding: 48px;
+          width: 37%;
+          padding: 28px 30px;
         }
       }
 
@@ -119,6 +231,23 @@
         background-image: radial-gradient(circle, #38e07b 1px, transparent 1px);
         background-size: 20px 20px;
         opacity: 0.05;
+      }
+
+      /* Resplandor verde detrás del logo */
+      .login-header::after {
+        content: "";
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 260px;
+        height: 260px;
+        transform: translate(-50%, -60%);
+        background: radial-gradient(
+          circle,
+          rgba(56, 224, 123, 0.35),
+          transparent 70%
+        );
+        filter: blur(10px);
       }
 
       .login-header-content {
@@ -135,16 +264,16 @@
         height: 170px;
         border-radius: 50%;
         background: #fff;
-        box-shadow: 0 8px 20px rgba(56, 224, 123, 0.18);
+        box-shadow: 0 8px 24px rgba(56, 224, 123, 0.35);
         margin-bottom: 8px;
         border: 4px solid #38e07b33; /* Borde verde semitransparente para resaltar */
       }
 
       @media (min-width: 768px) {
         .logo-circle {
-          width: 230px;
-          height: 230px;
-          margin-bottom: 16px;
+          width: 175px;
+          height: 175px;
+          margin-bottom: 12px;
         }
       }
 
@@ -155,7 +284,7 @@
 
       @media (min-width: 768px) {
         .logo-circle .material-symbols-outlined {
-          font-size: 60px;
+          font-size: 48px;
         }
       }
 
@@ -175,8 +304,8 @@
 
       @media (min-width: 768px) {
         .login-header h1 {
-          font-size: 48px;
-          margin-bottom: 16px;
+          font-size: 36px;
+          margin-bottom: 8px;
         }
       }
 
@@ -189,10 +318,85 @@
         display: none;
       }
 
+      .login-header p.login-eyebrow {
+        display: block;
+      }
+
       @media (min-width: 768px) {
-        .login-header p {
+        .login-header p:not(.login-eyebrow) {
           display: block;
           font-size: 18px;
+        }
+      }
+
+      /* Etiqueta pequeña (categoría) */
+      .login-eyebrow {
+        font-size: 10px;
+        font-weight: 600;
+        letter-spacing: 0.01em;
+        text-transform: none;
+        color: #6ee7b7;
+        line-height: 1.35;
+        margin-bottom: 10px;
+        white-space: normal;
+        overflow-wrap: break-word;
+        max-width: 220px;
+        margin-left: auto;
+        margin-right: auto;
+        text-align: center;
+      }
+
+      @media (min-width: 768px) {
+        .login-eyebrow {
+          font-size: 12.5px;
+          margin-bottom: 14px;
+          max-width: 260px;
+        }
+      }
+
+      /* Titular grande con efecto de escritura, solo desktop */
+      .login-headline {
+        display: none;
+        color: white;
+        font-size: 26px;
+        font-weight: 800;
+        line-height: 1.18;
+        margin-bottom: 28px;
+      }
+
+      @media (min-width: 768px) {
+        .login-headline {
+          display: block;
+          font-size: 24px;
+          margin-bottom: 16px;
+        }
+      }
+
+      @media (min-width: 1024px) {
+        .login-headline {
+          font-size: 28px;
+        }
+      }
+
+      .headline-typed {
+        display: block;
+        font-style: italic;
+        color: #38e07b;
+      }
+
+      .caret {
+        display: inline-block;
+        width: 3px;
+        height: 0.85em;
+        margin-left: 2px;
+        background: #38e07b;
+        vertical-align: -0.05em;
+        animation: blink 1s steps(1) infinite;
+      }
+
+      @keyframes blink {
+        50% {
+          opacity: 0;
         }
       }
 
@@ -213,54 +417,73 @@
       .feature-item {
         display: flex;
         align-items: center;
-        gap: 12px;
-        margin-bottom: 16px;
+        gap: 10px;
+        padding: 6px 12px;
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        margin-bottom: 5px;
       }
 
       .feature-item .material-symbols-outlined {
-        font-size: 24px;
+        flex: none;
+        font-size: 20px;
         color: #38e07b;
-        background-color: rgba(56, 224, 123, 0.2);
+        background-color: rgba(56, 224, 123, 0.22);
         border-radius: 50%;
         padding: 6px;
       }
 
-      .feature-item span {
-        font-size: 14px;
-        color: #e5e7eb;
+      .feature-item span:last-child {
+        font-size: 13.5px;
+        font-weight: 500;
+        color: #f3f4f6;
+        line-height: 1.35;
       }
 
       /* PANEL DERECHO - FORMULARIO */
       .login-body {
-        padding: 28px 24px;
+        padding: 30px 24px;
         background-color: white;
       }
 
       @media (min-width: 480px) {
         .login-body {
-          padding: 32px 28px;
+          padding: 34px 30px;
         }
       }
 
       @media (min-width: 768px) {
         .login-body {
-          width: 60%;
-          padding: 48px;
+          width: 63%;
+          padding: 36px 52px;
+          display: flex;
+          flex-direction: column;
+        }
+
+        /* El aire que sobra se reparte arriba y abajo del formulario:
+           se ve centrado en su columna en vez de dejar un hueco al final. */
+        .login-body-header {
+          margin-top: auto;
+        }
+
+        .help-links {
+          margin-bottom: auto;
         }
       }
 
       .login-body-header {
-        margin-bottom: 20px;
+        margin-bottom: 22px;
       }
 
       @media (min-width: 768px) {
         .login-body-header {
-          margin-bottom: 32px;
+          margin-bottom: 26px;
         }
       }
 
       .login-body-header h2 {
-        font-size: 22px;
+        font-size: 24px;
         font-weight: 800;
         color: #1f2937;
         margin-bottom: 8px;
@@ -268,26 +491,28 @@
 
       @media (min-width: 480px) {
         .login-body-header h2 {
-          font-size: 26px;
+          font-size: 28px;
         }
       }
 
       @media (min-width: 768px) {
         .login-body-header h2 {
-          font-size: 36px;
-          margin-bottom: 12px;
+          font-size: 31px;
+          letter-spacing: -0.01em;
+          margin-bottom: 10px;
         }
       }
 
       .login-body-header p {
         font-size: 14px;
-        color: #6b7280;
+        color: #374151;
         line-height: 1.4;
       }
 
       @media (min-width: 768px) {
         .login-body-header p {
-          font-size: 16px;
+          font-size: 17px;
+          line-height: 1.5;
         }
       }
 
@@ -344,7 +569,7 @@
 
       /* Formulario */
       .form-group {
-        margin-bottom: 18px;
+        margin-bottom: 20px;
         position: relative;
       }
 
@@ -356,10 +581,10 @@
 
       .form-group label {
         display: block;
-        margin-bottom: 8px;
+        margin-bottom: 10px;
         color: #374151;
         font-weight: 600;
-        font-size: 14px;
+        font-size: 15px;
       }
 
       .input-wrapper {
@@ -378,17 +603,17 @@
 
       @media (min-width: 768px) {
         .input-wrapper .material-symbols-outlined {
-          left: 16px;
-          font-size: 24px;
+          left: 18px;
+          font-size: 26px;
         }
       }
 
       .form-group input {
         width: 100%;
-        padding: 13px 16px 13px 44px;
+        padding: 15px 16px 15px 46px;
         border: 2px solid #e5e7eb;
-        border-radius: 12px;
-        font-size: 14px;
+        border-radius: 14px;
+        font-size: 15px;
         font-family: "Work Sans", sans-serif;
         background-color: #f9fafb;
         color: #1f2937;
@@ -397,7 +622,8 @@
 
       @media (min-width: 768px) {
         .form-group input {
-          padding: 14px 16px 14px 48px;
+          padding: 17px 18px 17px 52px;
+          font-size: 16px;
         }
       }
 
@@ -428,7 +654,7 @@
 
       @media (min-width: 768px) {
         .form-options {
-          margin-bottom: 24px;
+          margin-bottom: 16px;
           gap: 12px;
         }
       }
@@ -493,12 +719,12 @@
       /* Botón de login */
       .btn-login {
         width: 100%;
-        padding: 14px 20px;
+        padding: 16px 22px;
         background: linear-gradient(135deg, #38e07b 0%, #2bc866 100%);
         color: white;
         border: none;
-        border-radius: 12px;
-        font-size: 15px;
+        border-radius: 14px;
+        font-size: 16px;
         font-weight: 700;
         cursor: pointer;
         transition: all 0.3s ease;
@@ -511,8 +737,8 @@
 
       @media (min-width: 768px) {
         .btn-login {
-          padding: 16px 24px;
-          font-size: 16px;
+          padding: 19px 26px;
+          font-size: 17px;
         }
       }
 
@@ -525,16 +751,23 @@
         transform: scale(0.98);
       }
 
+      .btn-login:focus-visible,
+      .forgot-password:focus-visible,
+      .help-link:focus-visible {
+        outline: 3px solid #1fa552;
+        outline-offset: 2px;
+      }
+
       /* Divider */
       .divider {
         position: relative;
         text-align: center;
-        margin: 20px 0;
+        margin: 22px 0;
       }
 
       @media (min-width: 768px) {
         .divider {
-          margin: 32px 0;
+          margin: 20px 0;
         }
       }
 
@@ -550,15 +783,18 @@
 
       .divider span {
         position: relative;
-        background-color: white;
+        background-color: rgba(255, 255, 255, 0.55);
+        backdrop-filter: blur(6px);
+        -webkit-backdrop-filter: blur(6px);
+        border-radius: 6px;
         padding: 0 16px;
-        color: #9ca3af;
+        color: #6b7280;
         font-size: 13px;
       }
 
       @media (min-width: 768px) {
         .divider span {
-          font-size: 14px;
+          font-size: 15px;
         }
       }
 
@@ -588,7 +824,7 @@
 
       @media (min-width: 768px) {
         .help-link {
-          font-size: 14px;
+          font-size: 15px;
         }
       }
 
@@ -597,7 +833,7 @@
       }
 
       .help-link .material-symbols-outlined {
-        font-size: 18px;
+        font-size: 20px;
       }
 
       /* Footer */
@@ -625,13 +861,13 @@
       /* Toggle password visibility */
       .input-wrapper .toggle-password {
         position: absolute;
-        right: 14px;
+        right: 18px;
         left: auto;
         top: 50%;
         transform: translateY(-50%);
         cursor: pointer;
         color: #9ca3af;
-        font-size: 22px;
+        font-size: 24px;
         transition: color 0.3s ease;
         user-select: none;
         z-index: 2;
@@ -643,11 +879,256 @@
 
       .form-group input[type="password"],
       .form-group input.has-toggle {
-        padding-right: 44px;
+        padding-right: 52px;
+      }
+
+      /* ============ Pantalla de bienvenida (login exitoso) ============ */
+      .welcome-overlay {
+        position: fixed;
+        inset: 0;
+        background: #2bc866;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-start;
+        z-index: 1000;
+        opacity: 0;
+        visibility: hidden;
+        transition:
+          opacity 0.35s ease,
+          visibility 0.35s ease;
+        overflow: hidden;
+      }
+
+      .welcome-overlay.active {
+        opacity: 1;
+        visibility: visible;
+      }
+
+      .welcome-dots {
+        position: absolute;
+        inset: -10%;
+        background-image: radial-gradient(
+          rgba(255, 255, 255, 0.55) 1.8px,
+          transparent 1.8px
+        );
+        background-size: 26px 26px;
+        animation: dots-drift 40s linear infinite;
+      }
+
+      .welcome-content {
+        position: relative;
+        z-index: 2;
+        /* Toma el alto disponible y centra el bloque: en pantallas bajas el
+           eslogan se acomoda solo, sin encimarse nunca */
+        flex: 1 1 auto;
+        width: 100%;
+        max-width: 1100px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        color: white;
+        padding: clamp(20px, 5vh, 44px) clamp(18px, 5vw, 40px);
+        opacity: 0;
+        transform: translateY(16px) scale(0.96);
+      }
+
+      .welcome-overlay.active .welcome-content {
+        animation: welcome-in 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) 0.15s forwards;
+      }
+
+      @keyframes welcome-in {
+        to {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+        }
+      }
+
+      /* Logo de SavoryCloud (el mismo que se configura en el panel del
+         programador) sobre una tarjeta blanca: así se ve nítido sobre el
+         verde sin importar el color del archivo */
+      .welcome-logo {
+        width: clamp(120px, 28vw, 190px);
+        height: clamp(120px, 28vw, 190px);
+        margin: 0 auto clamp(22px, 4.5vh, 44px);
+        border-radius: clamp(26px, 6.5vw, 44px);
+        background: #ffffff;
+        border: 1px solid rgba(255, 255, 255, 0.9);
+        box-shadow:
+          0 18px 40px rgba(0, 0, 0, 0.28),
+          0 6px 16px rgba(0, 0, 0, 0.2);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: clamp(14px, 3.4vw, 24px);
+        transform: scale(0);
+      }
+
+      .welcome-logo img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        display: block;
+      }
+
+      .welcome-overlay.active .welcome-logo {
+        animation: welcome-logo-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.1s
+          forwards;
+      }
+
+      @keyframes welcome-logo-pop {
+        to {
+          transform: scale(1);
+        }
+      }
+
+      /* Entrada escalonada: logo, saludo, bienvenida y eslogan */
+      .welcome-overlay.active .welcome-title,
+      .welcome-overlay.active .welcome-subtitle {
+        animation: welcome-line 0.5s ease-out 0.35s both;
+      }
+
+      .welcome-overlay.active .welcome-subtitle {
+        animation-delay: 0.5s;
+      }
+
+      .welcome-overlay.active .welcome-slogan {
+        animation: welcome-line 0.6s ease-out 0.9s both;
+      }
+
+      @keyframes welcome-line {
+        from {
+          opacity: 0;
+          transform: translateY(14px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      /* Sombra marcada en las letras para que se lean sobre el verde y los
+         puntos del fondo */
+      .welcome-title {
+        font-size: clamp(30px, 6.6vw, 56px);
+        font-weight: 900;
+        margin: 0 0 clamp(10px, 2vh, 20px);
+        line-height: 1.15;
+        letter-spacing: -0.01em;
+        text-shadow:
+          0 1px 0 rgba(0, 0, 0, 0.22),
+          0 4px 10px rgba(0, 0, 0, 0.35),
+          0 10px 26px rgba(0, 0, 0, 0.35),
+          0 18px 46px rgba(0, 0, 0, 0.28);
+      }
+
+      .welcome-subtitle {
+        font-size: clamp(19px, 4.2vw, 32px);
+        font-weight: 600;
+        margin: 0;
+        opacity: 1;
+        line-height: 1.3;
+        text-shadow:
+          0 1px 0 rgba(0, 0, 0, 0.2),
+          0 3px 9px rgba(0, 0, 0, 0.34),
+          0 9px 22px rgba(0, 0, 0, 0.28);
+      }
+
+      /* Eslogan de SavoryCloud: abajo, pero levantado del borde y más grande */
+      .welcome-slogan {
+        position: relative;
+        z-index: 2;
+        flex: 0 0 auto;
+        width: 100%;
+        max-width: 760px;
+        margin: 0 auto;
+        padding: clamp(18px, 3.5vh, 30px) clamp(18px, 5vw, 40px)
+          clamp(46px, 11vh, 120px);
+        border-top: 1px solid rgba(255, 255, 255, 0.4);
+        text-align: center;
+        color: #ffffff;
+        font-size: clamp(17px, 3.6vw, 26px);
+        font-weight: 700;
+        letter-spacing: 0.01em;
+        line-height: 1.4;
+        text-shadow:
+          0 1px 0 rgba(0, 0, 0, 0.2),
+          0 3px 9px rgba(0, 0, 0, 0.34),
+          0 8px 20px rgba(0, 0, 0, 0.26);
+        opacity: 0;
+      }
+
+      /* Tablet */
+      @media (min-width: 768px) {
+        .welcome-logo {
+          width: clamp(150px, 22vw, 200px);
+          height: clamp(150px, 22vw, 200px);
+        }
+
+        .welcome-slogan {
+          letter-spacing: 0.02em;
+        }
+      }
+
+      /* Celular en horizontal o pantallas muy bajas: se compacta sin recortar */
+      @media (max-height: 560px) and (orientation: landscape) {
+        .welcome-content {
+          padding: 14px 18px;
+        }
+
+        .welcome-logo {
+          width: 84px;
+          height: 84px;
+          padding: 10px;
+          border-radius: 22px;
+          margin-bottom: 12px;
+        }
+
+        .welcome-title {
+          font-size: clamp(22px, 4.4vw, 34px);
+          margin-bottom: 6px;
+        }
+
+        .welcome-subtitle {
+          font-size: clamp(15px, 2.6vw, 20px);
+        }
+
+        .welcome-slogan {
+          font-size: clamp(13px, 2.4vw, 18px);
+          padding: 10px 18px 16px;
+        }
       }
     </style>
   </head>
   <body>
+    <!-- Fondo decorativo: manchas, malla de puntos y tarjetas flotantes -->
+    <div class="bg-decor" aria-hidden="true">
+      <div class="bg-dots"></div>
+
+      <div class="float-card fc-1">
+        <span class="material-symbols-outlined">restaurant_menu</span>
+        <div class="fc-title">Pedido #128</div>
+        <div class="fc-line" style="width: 100%"></div>
+        <div class="fc-line" style="width: 70%"></div>
+      </div>
+
+      <div class="float-card fc-2">
+        <span class="material-symbols-outlined">receipt_long</span>
+        <div class="fc-title">Ticket cerrado</div>
+        <div class="fc-line" style="width: 80%"></div>
+        <div class="fc-line" style="width: 55%"></div>
+      </div>
+
+      <div class="float-card fc-3">
+        <span class="material-symbols-outlined">inventory_2</span>
+        <div class="fc-title">Inventario</div>
+        <div class="fc-line" style="width: 90%"></div>
+        <div class="fc-line" style="width: 60%"></div>
+      </div>
+    </div>
+
     <div class="login-container">
       <!-- PANEL IZQUIERDO - BRANDING -->
       <div class="login-header">
@@ -669,12 +1150,23 @@
             SavoryCloud
           </h1>
 
-          <!-- Subtítulo -->
+          <!-- Etiqueta pequeña (categoría) - Dynamic from configuration -->
           <p
+            class="login-eyebrow"
             th:text="${globalSystemConfig != null and globalSystemConfig.systemSlogan != null and !globalSystemConfig.systemSlogan.isEmpty()} ? ${globalSystemConfig.systemSlogan} : 'Sistema de gestión integral para tu restaurante'"
           >
             Sistema de gestión integral para tu restaurante
           </p>
+
+          <!-- Titular grande con efecto de escritura -->
+          <h2 class="login-headline">
+            Tu restaurante
+            <span class="headline-typed"
+              ><span id="typed">eficiente</span
+              ><span class="caret" aria-hidden="true"></span
+            ></span>
+            comienza aquí.
+          </h2>
 
           <!-- Características -->
           <div class="features-list">
@@ -839,6 +1331,28 @@
         </div>
       </div>
     </div>
+    <!-- Pantalla de bienvenida tras iniciar sesión correctamente -->
+    <div class="welcome-overlay" id="welcomeOverlay" aria-hidden="true">
+      <div class="welcome-dots"></div>
+      <div class="welcome-content">
+        <div class="welcome-logo">
+          <img
+            th:src="${globalSystemConfig != null and globalSystemConfig.systemLogoUrl != null and !globalSystemConfig.systemLogoUrl.isEmpty()} ? ${@cloudinaryUrl.logoHero(globalSystemConfig.systemLogoUrl)} : '/images/savoryCloudLogo.png'"
+            alt="Savory Cloud"
+          />
+        </div>
+        <h2 class="welcome-title">
+          ¡Hola, <span id="welcomeUserName">Usuario</span>!
+        </h2>
+        <p class="welcome-subtitle">
+          Bienvenido a <span id="welcomeSystemName">SavoryCloud</span>
+        </p>
+      </div>
+      <p class="welcome-slogan" id="welcomeSlogan">
+        Tú pones el sazón, nosotros la gestión
+      </p>
+    </div>
+
     <script>
       document.querySelector("form").addEventListener("submit", function () {
         this.querySelectorAll('input[type="text"]').forEach(function (el) {
@@ -856,6 +1370,166 @@
           icon.textContent = "visibility_off";
         }
       }
+
+      // Efecto de escritura en el titular del panel izquierdo
+      (function () {
+        var typed = document.getElementById("typed");
+        if (!typed) return;
+
+        var reduceMotion =
+          window.matchMedia &&
+          window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        if (reduceMotion) return;
+
+        var words = ["eficiente", "rentable", "organizado", "exitoso"];
+        var wordIndex = 0;
+        var chars = words[0].length;
+        var deleting = true;
+
+        function tick() {
+          var word = words[wordIndex];
+          var delay;
+          if (deleting) {
+            chars--;
+            typed.textContent = word.slice(0, chars);
+            if (chars === 0) {
+              deleting = false;
+              wordIndex = (wordIndex + 1) % words.length;
+              delay = 300;
+            } else {
+              delay = 45;
+            }
+          } else {
+            chars++;
+            typed.textContent = word.slice(0, chars);
+            if (chars === word.length) {
+              deleting = true;
+              delay = 1700;
+            } else {
+              delay = 90;
+            }
+          }
+          setTimeout(tick, delay);
+        }
+
+        setTimeout(tick, 1700);
+      })();
+
+      // Interceptar el login: valida contra el backend y, si es correcto,
+      // muestra la pantalla verde de bienvenida antes de redirigir.
+      (function () {
+        var form = document.querySelector("form");
+        if (!form) return;
+
+        var overlay = document.getElementById("welcomeOverlay");
+        var welcomeUserName = document.getElementById("welcomeUserName");
+        var welcomeSystemName = document.getElementById("welcomeSystemName");
+        var systemNameEl = document.querySelector(".login-header h1");
+        if (systemNameEl && welcomeSystemName) {
+          welcomeSystemName.textContent = systemNameEl.textContent.trim();
+        }
+
+        // El nombre real del empleado ("Armando Arias") solo lo conoce el
+        // servidor: el formulario nada más sabe qué usuario se tecleó. Si la
+        // consulta falla, se saluda con el usuario para no dejar la pantalla
+        // sin nombre.
+        function fetchWelcomeName(typedUsername) {
+          var lookup = fetch("/api/session/welcome", {
+            headers: { Accept: "application/json" },
+            credentials: "same-origin",
+          })
+            .then(function (response) {
+              return response.ok ? response.json() : null;
+            })
+            .then(function (data) {
+              return data && data.fullName ? data.fullName : typedUsername;
+            })
+            .catch(function () {
+              return typedUsername;
+            });
+
+          // Red de seguridad: la pantalla de bienvenida nunca debe dejar el
+          // login atorado esperando este dato
+          var safetyNet = new Promise(function (resolve) {
+            setTimeout(function () {
+              resolve(typedUsername);
+            }, 1200);
+          });
+
+          return Promise.race([lookup, safetyNet]);
+        }
+
+        function showWelcomeThenGo(finalUrl, usernameInput) {
+          var typed = (usernameInput && usernameInput.value) || "";
+          var fallback = typed.trim() || "Usuario";
+
+          fetchWelcomeName(fallback).then(function (name) {
+            if (!overlay) {
+              window.location.href = finalUrl;
+              return;
+            }
+            if (welcomeUserName) {
+              welcomeUserName.textContent = name;
+            }
+            overlay.classList.add("active");
+            overlay.setAttribute("aria-hidden", "false");
+            // Tiempo para leer el saludo y el eslogan antes de entrar
+            setTimeout(function () {
+              window.location.href = finalUrl;
+            }, 2200);
+          });
+        }
+
+        form.addEventListener("submit", function (e) {
+          e.preventDefault();
+
+          form.querySelectorAll('input[type="text"]').forEach(function (el) {
+            el.value = el.value.trim();
+          });
+
+          var usernameInput = document.getElementById("username");
+          var submitBtn = form.querySelector(".btn-login");
+          var originalBtnHtml = submitBtn ? submitBtn.innerHTML : "";
+          if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = "<span>Verificando…</span>";
+          }
+
+          var params = new URLSearchParams();
+          new FormData(form).forEach(function (value, key) {
+            params.append(key, value);
+          });
+
+          fetch(form.getAttribute("action"), {
+            method: "POST",
+            body: params,
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            credentials: "same-origin",
+            redirect: "follow",
+          })
+            .then(function (response) {
+              var finalUrl = response.url || form.getAttribute("action");
+              var isLoginPage =
+                finalUrl.indexOf("/login") !== -1 ||
+                finalUrl.indexOf("error") !== -1;
+
+              if (isLoginPage) {
+                window.location.href = finalUrl;
+                return;
+              }
+
+              showWelcomeThenGo(finalUrl, usernameInput);
+            })
+            .catch(function () {
+              // Si falla la petición (red, CORS, etc.), respaldo: envío normal
+              if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalBtnHtml;
+              }
+              form.submit();
+            });
+        });
+      })();
     </script>
   </body>
 </html>

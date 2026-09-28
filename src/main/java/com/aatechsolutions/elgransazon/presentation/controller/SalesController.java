@@ -1,11 +1,16 @@
 package com.aatechsolutions.elgransazon.presentation.controller;
 
 import com.aatechsolutions.elgransazon.application.service.DateTimeService;
+import com.aatechsolutions.elgransazon.application.service.FacturamaService;
+import com.aatechsolutions.elgransazon.application.service.InvoiceLinkService;
 import com.aatechsolutions.elgransazon.application.service.OrderService;
 import com.aatechsolutions.elgransazon.application.service.EmployeeService;
 import com.aatechsolutions.elgransazon.domain.entity.*;
+import com.aatechsolutions.elgransazon.infrastructure.context.CompanyContext;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -29,18 +34,44 @@ import java.util.stream.Collectors;
 @Slf4j
 public class SalesController {
 
+    /**
+     * Invoice-status filter of the sales view: a sale counts as invoiced when every one of its
+     * invoiceable units (the ticket, or each account of a split bill) already has a fiscal
+     * receipt (individual CFDI, factura global, or an operation invoiced outside the system).
+     */
+    public enum InvoiceStatusFilter {
+        INVOICED("Facturadas"),
+        NOT_INVOICED("No facturadas");
+
+        private final String displayName;
+
+        InvoiceStatusFilter(String displayName) {
+            this.displayName = displayName;
+        }
+
+        public String getDisplayName() {
+            return displayName;
+        }
+    }
+
     private final OrderService orderService;
     private final EmployeeService employeeService;
     private final DateTimeService dateTimeService;
+    private final InvoiceLinkService invoiceLinkService;
+    private final FacturamaService facturamaService;
 
     // Constructor manual para inyectar adminOrderService específicamente
     public SalesController(
             @Qualifier("adminOrderService") OrderService orderService,
             EmployeeService employeeService,
-            DateTimeService dateTimeService) {
+            DateTimeService dateTimeService,
+            InvoiceLinkService invoiceLinkService,
+            FacturamaService facturamaService) {
         this.orderService = orderService;
         this.employeeService = employeeService;
         this.dateTimeService = dateTimeService;
+        this.invoiceLinkService = invoiceLinkService;
+        this.facturamaService = facturamaService;
     }
 
     /**
@@ -52,6 +83,7 @@ public class SalesController {
             @RequestParam(required = false) String endDate,
             @RequestParam(required = false) Long employeeId,
             @RequestParam(required = false) PaymentMethodType paymentMethod,
+            @RequestParam(required = false) InvoiceStatusFilter invoiceStatus,
             @RequestParam(defaultValue = "1") int page,
             Model model) {
         
@@ -78,6 +110,15 @@ public class SalesController {
         if (paymentMethod != null) {
             paidOrders = paidOrders.stream()
                 .filter(order -> order.usesPaymentMethod(paymentMethod))
+                .collect(Collectors.toList());
+        }
+
+        // Filter by invoice status (facturada / no facturada)
+        if (invoiceStatus != null) {
+            paidOrders = paidOrders.stream()
+                .filter(order -> invoiceStatus == InvoiceStatusFilter.INVOICED
+                        ? order.isFullyInvoiced()
+                        : !order.isFullyInvoiced())
                 .collect(Collectors.toList());
         }
 
@@ -133,10 +174,80 @@ public class SalesController {
         model.addAttribute("totalCount", totalCount);
         model.addAttribute("selectedEmployeeId", employeeId);
         model.addAttribute("selectedPaymentMethod", paymentMethod);
+        model.addAttribute("invoiceStatuses", InvoiceStatusFilter.values());
+        model.addAttribute("selectedInvoiceStatus", invoiceStatus);
         model.addAttribute("startDate", startDate);
         model.addAttribute("endDate", endDate);
+        // Without a ready Facturama config the generated link would lead the client to a
+        // "billing not available" page, so the sales view hides the action.
+        model.addAttribute("billingEnabled", facturamaService.isFacturacionEnabled());
+        // Used by the view to warn when the self-invoice deadline of a sale already passed.
+        model.addAttribute("companyZone", dateTimeService.getCompanyZone());
 
         return "admin/sales/list";
+    }
+
+    /**
+     * AJAX endpoint: generates the self-invoice link (the QR printed on the ticket) of a
+     * PAID sale that does not have one yet, so the ticket can be reprinted with the QR and
+     * the client can invoice the operation.
+     *
+     * <p>One link per invoiceable unit: the order itself for a whole-order ticket, or one per
+     * account of a split bill. Units that already have a link, that were already invoiced
+     * (individual CFDI or factura global) or that were excluded from the global invoice are
+     * skipped, and the response tells how many of each.</p>
+     */
+    @PostMapping("/{orderId}/generate-invoice-link")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_MANAGER')")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> generateInvoiceLink(
+            @PathVariable Long orderId,
+            HttpServletRequest request) {
+        try {
+            Company company = CompanyContext.getCurrentCompany();
+            if (company == null) {
+                return ResponseEntity.badRequest()
+                        .body(jsonError("No hay un establecimiento activo"));
+            }
+            if (!facturamaService.isFacturacionEnabled()) {
+                return ResponseEntity.badRequest().body(jsonError(
+                        "La facturación electrónica no está disponible para este establecimiento"));
+            }
+
+            InvoiceLinkService.InvoiceLinkResult result = invoiceLinkService.generateForSale(
+                    orderId, company, publicBaseUrl(request));
+
+            Map<String, Object> body = new LinkedHashMap<>();
+            body.put("success", true);
+            body.put("generated", result.generated());
+            body.put("skipped", result.skipped());
+            body.put("links", result.links());
+            return ResponseEntity.ok(body);
+        } catch (Exception e) {
+            log.error("Error generating the self-invoice link of sale {}: {}", orderId, e.getMessage(), e);
+            // The message may be null (e.g. a bare NPE), and Map.of would then throw and turn
+            // a readable JSON error into the HTML error page.
+            return ResponseEntity.badRequest().body(jsonError(
+                    e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName()));
+        }
+    }
+
+    /**
+     * Public base URL of the establishment, built the same way the payment flow does it when
+     * it creates the key, so both links look identical.
+     */
+    private String publicBaseUrl(HttpServletRequest request) {
+        int port = request.getServerPort();
+        String host = request.getServerName()
+                + (port == 80 || port == 443 ? "" : ":" + port);
+        return request.getScheme() + "://" + host;
+    }
+
+    /** Null-safe error payload (never use Map.of with a message that can be null). */
+    private Map<String, Object> jsonError(String message) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("error", message);
+        return body;
     }
 
     /**

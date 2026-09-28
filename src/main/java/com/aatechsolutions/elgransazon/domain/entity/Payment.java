@@ -204,6 +204,19 @@ public class Payment implements Serializable {
     private LocalDateTime facturaGlobalCfdiCreatedAt;
 
     /**
+     * When true, this account was deliberately EXCLUDED from the factura global
+     * (público en general) — typically because the restaurant's accountant already
+     * invoiced the operation OUTSIDE the system before the billing service was
+     * contracted. Excluded accounts are skipped when emitting the global invoice and
+     * can be re-included at any time from the programmer panel.
+     *
+     * NULL is treated as false (accounts created before this column existed).
+     */
+    @Column(name = "factura_global_excluida")
+    @Builder.Default
+    private Boolean facturaGlobalExcluida = false;
+
+    /**
      * Full self-invoice URL for this account (e.g. https://slug.domain.com/autofactura/{key}).
      */
     @Column(name = "self_invoice_url", length = 300)
@@ -238,6 +251,32 @@ public class Payment implements Serializable {
     @OneToMany(mappedBy = "payment", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @Builder.Default
     private java.util.List<PaymentTender> paymentTenders = new java.util.ArrayList<>();
+
+    /**
+     * True when the self-invoice link (the QR printed on this account's ticket) can still
+     * be generated: there is no link yet and nothing forbids invoicing the account (an
+     * individual CFDI, a factura global that already amparó it or a manual exclusion).
+     *
+     * Shared by the sales view (admin/manager) and the generation endpoint.
+     */
+    public boolean canGenerateInvoiceLink() {
+        return isMissing(autofacturaKey) && !isInvoiced();
+    }
+
+    /**
+     * True when this account already has a fiscal receipt: invoiced individually or amparada by
+     * a factura global. Accounts EXCLUDED from the global invoice also count as invoiced, because
+     * the accountant invoiced them outside the system.
+     */
+    public boolean isInvoiced() {
+        return !isMissing(facturamaCfdiId)
+                || !isMissing(facturaGlobalCfdiId)
+                || Boolean.TRUE.equals(facturaGlobalExcluida);
+    }
+
+    private static boolean isMissing(String value) {
+        return value == null || value.isBlank();
+    }
 
     // ========== Lifecycle Callbacks ==========
 

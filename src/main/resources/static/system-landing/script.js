@@ -1181,13 +1181,13 @@ document.addEventListener("DOMContentLoaded", () => {
             p.firstChild.nodeType === 3 &&
             (p.firstChild.nodeValue = "$" + year);
           var span = p.querySelector("span");
-          if (span) span.textContent = "/año + IVA";
+          if (span) span.textContent = "/año";
         } else {
           p.firstChild &&
             p.firstChild.nodeType === 3 &&
             (p.firstChild.nodeValue = "$" + month);
           var span = p.querySelector("span");
-          if (span) span.textContent = "/mes + IVA";
+          if (span) span.textContent = "/mes";
         }
       });
     }

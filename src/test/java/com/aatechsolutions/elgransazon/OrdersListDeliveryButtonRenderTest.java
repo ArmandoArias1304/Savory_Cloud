@@ -129,6 +129,30 @@ class OrdersListDeliveryButtonRenderTest {
     }
 
     @Test
+    void cashRegisterWarningRendersOnlyWhenTheServerAsksForIt() {
+        AbstractContext withWarning = webContext();
+        baseFlags(withWarning, true);
+        withWarning.setVariable("showCashRegisterClosedAlert", true);
+        withWarning.setVariable("orders", List.of(deliveryOrder()));
+
+        String warned = templateEngine.process("admin/orders/list", withWarning);
+        assertTrue(warned.contains("var showClosedAlert = true"),
+                "the flag must reach the script that fires the warning");
+
+        AbstractContext alreadyWarned = webContext();
+        baseFlags(alreadyWarned, true);
+        // The server only sends true the first time of the session, false afterwards.
+        alreadyWarned.setVariable("showCashRegisterClosedAlert", false);
+        alreadyWarned.setVariable("orders", List.of(deliveryOrder()));
+
+        String quiet = templateEngine.process("admin/orders/list", alreadyWarned);
+        assertTrue(quiet.contains("var showClosedAlert = false"),
+                "a refresh of the same session must not fire the warning again");
+        assertTrue(quiet.contains("title: \"Caja cerrada\""),
+                "the dialog itself is still part of the page, only the trigger changes");
+    }
+
+    @Test
     void adminListRendersDeliveryButtonWhenFlagOn() {
         AbstractContext ctx = webContext();
         baseFlags(ctx, true);

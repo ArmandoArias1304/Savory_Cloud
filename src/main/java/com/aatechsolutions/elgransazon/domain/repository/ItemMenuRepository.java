@@ -164,6 +164,15 @@ public interface ItemMenuRepository extends JpaRepository<ItemMenu, Long> {
     List<ItemMenu> findAllByCompanyOrderByCategoryAndNameWithParent(@Param("company") Company company);
 
     /**
+     * All items of a company with their parent (size variant) eagerly loaded, no
+     * ordering guarantee and NO side effects (unlike findAllOrderByCategoryAndName,
+     * which recalculates availability and writes). Used by the printed menu (carta)
+     * generator, which applies its own filters and ordering in memory.
+     */
+    @Query("SELECT i FROM ItemMenu i LEFT JOIN FETCH i.parentItem WHERE i.company = :company ORDER BY i.name ASC")
+    List<ItemMenu> findAllByCompanyWithParentForMenu(@Param("company") Company company);
+
+    /**
      * Search menu items of a company with optional filters, paginated (20 per page in the admin list).
      * All filter parameters are optional: pass null to ignore them.
      */

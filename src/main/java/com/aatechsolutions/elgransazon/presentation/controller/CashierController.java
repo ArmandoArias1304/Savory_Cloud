@@ -3,7 +3,9 @@ package com.aatechsolutions.elgransazon.presentation.controller;
 import com.aatechsolutions.elgransazon.application.service.*;
 import com.aatechsolutions.elgransazon.domain.entity.*;
 import com.aatechsolutions.elgransazon.infrastructure.context.CompanyContext;
+import com.aatechsolutions.elgransazon.util.CashRegisterAlertSupport;
 import com.aatechsolutions.elgransazon.util.DeliveryStatusSupport;
+import jakarta.servlet.http.HttpSession;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -114,6 +116,7 @@ public class CashierController {
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "1") int globalPage,
             Authentication authentication,
+            HttpSession session,
             Model model) {
         
         String username = authentication.getName();
@@ -317,15 +320,17 @@ public class CashierController {
 
         model.addAttribute("currentRole", "cashier");
         addStaffPermissionFlags(model);
-        addCashRegisterOpenFlag(authentication, model);
+        addCashRegisterOpenFlag(authentication, session, model);
 
         return "cashier/orders/list";
     }
 
     /**
-     * Frontend-only warning flag: whether this cashier currently has an open drawer.
+     * Frontend-only warning flag: whether the orders list must warn that this cashier still has
+     * no open drawer. It is shown once per login session (see {@link CashRegisterAlertSupport}),
+     * not on every load or refresh.
      */
-    private void addCashRegisterOpenFlag(Authentication authentication, Model model) {
+    private void addCashRegisterOpenFlag(Authentication authentication, HttpSession session, Model model) {
         boolean open = false;
         try {
             Employee employee = employeeService.findByUsername(authentication.getName()).orElse(null);
@@ -336,7 +341,8 @@ public class CashierController {
         } catch (Exception e) {
             log.debug("Could not resolve cash register session: {}", e.getMessage());
         }
-        model.addAttribute("cashRegisterOpen", open);
+        model.addAttribute("showCashRegisterClosedAlert",
+                CashRegisterAlertSupport.showOnce(session, open));
         model.addAttribute("cashRegisterUrl", "/cashier/cash-register");
     }
 

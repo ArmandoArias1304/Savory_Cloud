@@ -59,16 +59,24 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
     Optional<Category> findByNameAndCompany(String name, Company company);
 
     /**
-     * Find all active categories by company ordered by name
+     * Find all active categories by company ordered for the printed menu.
+     *
+     * <p>Categories the user has positioned (display_order not null) come first, in
+     * that order; the rest fall to the end alphabetically, which is how they were
+     * listed before display_order existed. COALESCE keeps the query portable
+     * (MySQL has no NULLS LAST) and the same order is used by the admin views, the
+     * POS category pickers and the PDF carta.</p>
      */
-    @Query("SELECT c FROM Category c WHERE c.company = :company AND c.active = true ORDER BY c.name ASC")
-    List<Category> findAllActiveByCompanyOrderedByName(@Param("company") Company company);
+    @Query("SELECT c FROM Category c WHERE c.company = :company AND c.active = true "
+            + "ORDER BY COALESCE(c.displayOrder, 2147483647) ASC, c.name ASC")
+    List<Category> findAllActiveByCompanyOrderedForMenu(@Param("company") Company company);
 
     /**
-     * Find all categories by company ordered by name
+     * Find all categories by company ordered for the printed menu (see above).
      */
-    @Query("SELECT c FROM Category c WHERE c.company = :company ORDER BY c.name ASC")
-    List<Category> findAllByCompanyOrderedByName(@Param("company") Company company);
+    @Query("SELECT c FROM Category c WHERE c.company = :company "
+            + "ORDER BY COALESCE(c.displayOrder, 2147483647) ASC, c.name ASC")
+    List<Category> findAllByCompanyOrderedForMenu(@Param("company") Company company);
 
     /**
      * Check if category name exists for a company

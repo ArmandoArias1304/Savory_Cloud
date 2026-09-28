@@ -72,4 +72,17 @@ public interface SystemConfigurationService {
      * Get tax rate
      */
     java.math.BigDecimal getTaxRate();
+
+    /**
+     * Persist the printed-menu ("carta") style of the current company.
+     *
+     * <p>Only the carta columns are touched: the general configuration form
+     * ({@link #updateConfiguration(SystemConfiguration)}) deliberately ignores them, so the
+     * two entry points never overwrite each other. Invalidates the configuration cache so
+     * the next preview or print already uses the new style.</p>
+     *
+     * @param style style chosen in the menu view (null falls back to the built-in design)
+     * @return the saved configuration
+     */
+    SystemConfiguration updateMenuStyle(com.aatechsolutions.elgransazon.application.dto.MenuStyle style);
 }

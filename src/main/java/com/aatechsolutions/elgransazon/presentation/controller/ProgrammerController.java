@@ -3,6 +3,7 @@ package com.aatechsolutions.elgransazon.presentation.controller;
 import com.aatechsolutions.elgransazon.application.service.BackupService;
 import com.aatechsolutions.elgransazon.application.service.CompanyService;
 import com.aatechsolutions.elgransazon.application.service.EmployeeService;
+import com.aatechsolutions.elgransazon.application.service.GlobalInvoiceService;
 import com.aatechsolutions.elgransazon.application.service.GlobalSystemConfigService;
 import com.aatechsolutions.elgransazon.application.service.ImageStorageService;
 import com.aatechsolutions.elgransazon.application.service.LandingImageService;
@@ -32,6 +33,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -58,6 +60,7 @@ public class ProgrammerController {
     private final PaymentRepository paymentRepository;
     private final GlobalInvoiceRepository globalInvoiceRepository;
     private final CustomerRepository customerRepository;
+    private final GlobalInvoiceService globalInvoiceService;
 
     /**
      * Programmer dashboard
@@ -661,6 +664,146 @@ public class ProgrammerController {
             log.error("Error counting CFDIs: {}", e.getMessage());
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
+    }
+
+    // ========== Factura Global (Público en General) ==========
+
+    /**
+     * AJAX endpoint: paid tickets pending the global invoice (público en general) of a
+     * company inside a date range.
+     *
+     * The programmer uses this table to EXCLUDE the operations that the restaurant's
+     * accountant already invoiced OUTSIDE the system (factura_global_excluida = true),
+     * so they are never stamped again inside a global invoice. The range is free (the
+     * admin emission still requires a single day or a full month) because the exclusions
+     * are usually done in bulk when the billing service is contracted.
+     */
+    @GetMapping("/api/global-invoice-preview")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> globalInvoicePreview(
+            @RequestParam Long companyId,
+            @RequestParam String from,
+            @RequestParam String to) {
+        try {
+            Company company = resolveCompany(companyId);
+            if (company == null) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Empresa no encontrada"));
+            }
+
+            LocalDate fromDate = LocalDate.parse(from);
+            LocalDate toDate = LocalDate.parse(to);
+
+            String periodicity = globalInvoiceService.resolvePeriodicity(fromDate, toDate);
+            List<Map<String, Object>> tickets = globalInvoiceService.findPendingTickets(company, fromDate, toDate);
+
+            Map<String, Object> result = new LinkedHashMap<>();
+            result.put("companyId", company.getIdCompany());
+            result.put("from", fromDate.toString());
+            result.put("to", toDate.toString());
+            result.put("periodicity", periodicity);
+            result.put("validPeriod", periodicity != null);
+            result.put("count", tickets.size());
+            result.put("total", globalInvoiceService.sumTotals(tickets));
+            result.put("tickets", tickets);
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            log.error("Error building global invoice preview for company {}: {}", companyId, e.getMessage());
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /**
+     * AJAX endpoint: tickets of a company EXCLUDED from the global invoice
+     * (flag factura_global_excluida = true) inside a date range.
+     *
+     * Feeds the "Agregar" modal, where the programmer can re-include operations that were
+     * excluded by mistake.
+     */
+    @GetMapping("/api/global-invoice-excluded")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> globalInvoiceExcluded(
+            @RequestParam Long companyId,
+            @RequestParam String from,
+            @RequestParam String to) {
+        try {
+            Company company = resolveCompany(companyId);
+            if (company == null) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Empresa no encontrada"));
+            }
+
+            LocalDate fromDate = LocalDate.parse(from);
+            LocalDate toDate = LocalDate.parse(to);
+
+            List<Map<String, Object>> tickets = globalInvoiceService.findExcludedTickets(company, fromDate, toDate);
+
+            Map<String, Object> result = new LinkedHashMap<>();
+            result.put("companyId", company.getIdCompany());
+            result.put("from", fromDate.toString());
+            result.put("to", toDate.toString());
+            result.put("count", tickets.size());
+            result.put("total", globalInvoiceService.sumTotals(tickets));
+            result.put("tickets", tickets);
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            log.error("Error listing excluded global invoice tickets for company {}: {}", companyId, e.getMessage());
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /**
+     * AJAX endpoint: exclude (or re-include) the selected tickets from the global invoice
+     * of a company. Only tickets inside the range that are still pending are updated.
+     *
+     * @param ticket   ticket keys of the selected rows, e.g. {@code ORDER:12}, {@code PAYMENT:34}
+     * @param excluded true to exclude, false to re-include
+     */
+    @PostMapping("/api/global-invoice-exclusion")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> updateGlobalInvoiceExclusion(
+            @RequestParam Long companyId,
+            @RequestParam String from,
+            @RequestParam String to,
+            @RequestParam(value = "ticket", required = false) List<String> ticket,
+            @RequestParam(defaultValue = "true") boolean excluded,
+            Authentication authentication) {
+        try {
+            Company company = resolveCompany(companyId);
+            if (company == null) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Empresa no encontrada"));
+            }
+
+            String username = authentication != null && authentication.getName() != null
+                    ? authentication.getName()
+                    : "PROGRAMMER";
+
+            GlobalInvoiceService.ExclusionResult update = globalInvoiceService.setExclusion(
+                    company, username, LocalDate.parse(from), LocalDate.parse(to), ticket, excluded);
+
+            Map<String, Object> result = new LinkedHashMap<>();
+            result.put("success", true);
+            result.put("excluded", update.excluded());
+            result.put("updated", update.total());
+            result.put("orders", update.orderCount());
+            result.put("payments", update.paymentCount());
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            log.error("Error updating global invoice exclusion for company {}: {}", companyId, e.getMessage());
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /**
+     * Company lookup for the programmer endpoints (they work outside a company subdomain,
+     * so the company always comes as a request parameter).
+     */
+    private Company resolveCompany(Long companyId) {
+        if (companyId == null) {
+            return null;
+        }
+        return companyService.findAll().stream()
+                .filter(c -> companyId.equals(c.getIdCompany()))
+                .findFirst()
+                .orElse(null);
     }
 
     /**

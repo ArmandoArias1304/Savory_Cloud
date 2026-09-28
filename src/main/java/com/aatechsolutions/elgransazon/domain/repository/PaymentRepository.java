@@ -4,11 +4,13 @@ import com.aatechsolutions.elgransazon.domain.entity.Company;
 import com.aatechsolutions.elgransazon.domain.entity.Order;
 import com.aatechsolutions.elgransazon.domain.entity.Payment;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -93,8 +95,8 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
 
     /**
      * PAID split accounts (per-person tickets) still pending the global invoice
-     * for a company within a paid date range (UTC): no individual CFDI and not yet
-     * included in a previous global invoice.
+     * for a company within a paid date range (UTC): no individual CFDI, not yet
+     * included in a previous global invoice and NOT manually excluded.
      *
      * Each account becomes one concept of the factura global (público en general),
      * per regla 2.7.1.21 RMF.
@@ -105,9 +107,54 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
            "  AND p.paidAt < :endDate " +
            "  AND p.facturamaCfdiId IS NULL " +
            "  AND p.facturaGlobalCfdiId IS NULL " +
+           "  AND (p.facturaGlobalExcluida IS NULL OR p.facturaGlobalExcluida = false) " +
            "ORDER BY p.paidAt ASC")
     List<Payment> findPaidPendingGlobalInvoiceByDateRange(
             @Param("company") Company company,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate);
+
+    /**
+     * PAID split accounts EXCLUDED from the global invoice
+     * (flag {@code factura_global_excluida = true}) within a paid date range (UTC).
+     *
+     * Listed in the programmer panel so a wrongly excluded account can be re-included;
+     * already invoiced accounts are never listed.
+     */
+    @Query("SELECT p FROM Payment p " +
+           "WHERE p.company = :company " +
+           "  AND p.paidAt >= :startDate " +
+           "  AND p.paidAt < :endDate " +
+           "  AND p.facturamaCfdiId IS NULL " +
+           "  AND p.facturaGlobalCfdiId IS NULL " +
+           "  AND p.facturaGlobalExcluida = true " +
+           "ORDER BY p.paidAt ASC")
+    List<Payment> findPaidExcludedFromGlobalInvoiceByDateRange(
+            @Param("company") Company company,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate);
+
+    /**
+     * Flags (or unflags) split accounts as excluded from the factura global.
+     *
+     * Only accounts that are still pending can be flagged: inside the paid date range
+     * (UTC), without an individual CFDI and not amparado by a global invoice yet.
+     * Returns the number of accounts actually updated.
+     */
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE Payment p " +
+           "SET p.facturaGlobalExcluida = :excluded, p.updatedBy = :updatedBy " +
+           "WHERE p.idPayment IN :ids " +
+           "  AND p.company = :company " +
+           "  AND p.paidAt >= :startDate " +
+           "  AND p.paidAt < :endDate " +
+           "  AND p.facturamaCfdiId IS NULL " +
+           "  AND p.facturaGlobalCfdiId IS NULL")
+    int updateGlobalInvoiceExclusion(
+            @Param("company") Company company,
+            @Param("ids") Collection<Long> ids,
+            @Param("excluded") boolean excluded,
+            @Param("updatedBy") String updatedBy,
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate);
 
