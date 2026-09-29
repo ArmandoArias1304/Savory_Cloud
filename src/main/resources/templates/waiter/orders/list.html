@@ -446,6 +446,43 @@
                           >
                           NUEVOS
                         </span>
+                        <!-- Transferido: el pedido llegó de otro mesero (o tú lo entregaste).
+                             El tooltip cuenta de quién a quién y cuándo. -->
+                        <span
+                          th:if="${order.wasTransferred()}"
+                          class="order-transferred-badge inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-violet-100 text-violet-800 dark:bg-violet-900/40 dark:text-violet-300"
+                          th:title="${order.transferLegend}"
+                        >
+                          <svg
+                            class="w-3 h-3"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            aria-hidden="true"
+                          >
+                            <circle cx="6.4" cy="13.4" r="2.9" />
+                            <path d="M1.8 21a4.6 4.6 0 0 1 9.2 0" />
+                            <circle cx="17.6" cy="13.4" r="2.9" />
+                            <path d="M13 21a4.6 4.6 0 0 1 9.2 0" />
+                            <rect x="2.6" y="4.3" width="13" height="2.6" fill="currentColor" stroke="none" />
+                            <path d="M15.2 2.9 19.4 5.6 15.2 8.3z" fill="currentColor" stroke="none" />
+                          </svg>
+                          TRANSFERIDO
+                        </span>
+                        <!-- Transferencia pendiente de respuesta del mesero destino -->
+                        <span
+                          th:if="${order.hasPendingTransfer()}"
+                          class="order-pending-transfer-badge inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 animate-pulse"
+                          th:title="${'Esperando que ' + (order.transferRequestedTo != null ? order.transferRequestedTo.fullName : 'el mesero') + ' acepte la transferencia'}"
+                        >
+                          <span class="material-symbols-outlined !text-xs"
+                            >hourglass_top</span
+                          >
+                          PENDIENTE
+                        </span>
                       </div>
                     </td>
 
@@ -570,6 +607,21 @@
                           <i class="fas fa-receipt"></i>
                         </a>
 
+                        <!-- Solo consulta: el pedido se transfirió a otro mesero. El creador
+                             conserva el historial pero ya no puede operarlo ni cobrarlo. -->
+                        <span
+                          th:if="${order.isReadOnlyFor(currentUsername)}"
+                          class="order-readonly-hint inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 text-xs font-semibold"
+                          title="Transferiste este pedido a otro mesero: solo puedes consultarlo"
+                        >
+                          <span class="material-symbols-outlined !text-sm">visibility</span>
+                          Solo consulta
+                        </span>
+
+                        <!-- Acciones del mesero que ATIENDE el pedido: editar, agregar items,
+                             avanzar preparación, cobrar, cancelar y transferir. Un mesero que ya
+                             transfirió su pedido no las ve. -->
+                        <th:block th:if="${order.isOperatedBy(currentUsername)}">
                         <!-- Add Items (only for DINE_IN and TAKEOUT orders that can accept new items) -->
                         <a
                           th:if="${order.canAcceptNewItems()}"
@@ -663,6 +715,37 @@
                         >
                           <i class="fas fa-times-circle"></i>
                         </button>
+
+                        <!-- Transferir a otro mesero (el pedido solo cambia de dueño cuando
+                             el mesero destino ACEPTA la transferencia) -->
+                        <button
+                          th:if="${order.canBeTransferred()}"
+                          class="btn-transfer-order p-2 rounded-lg bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300 ring-1 ring-violet-300/70 dark:ring-violet-700/60 hover:bg-violet-200 dark:hover:bg-violet-900/60 transition-all"
+                          th:data-order-id="${order.idOrder}"
+                          th:data-order-number="${order.orderNumber}"
+                          title="Transferir el pedido a otro mesero"
+                        >
+                          <!-- Icono propio de transferencia (dos meseros y el pedido que pasa
+                               de uno a otro): no se parece al de cambiar estado. -->
+                          <svg
+                            class="order-transfer-icon w-5 h-5"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="1.8"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            aria-hidden="true"
+                          >
+                            <circle cx="6.4" cy="13.4" r="2.9" />
+                            <path d="M1.8 21a4.6 4.6 0 0 1 9.2 0" />
+                            <circle cx="17.6" cy="13.4" r="2.9" />
+                            <path d="M13 21a4.6 4.6 0 0 1 9.2 0" />
+                            <rect x="2.6" y="4.3" width="13" height="2.6" fill="currentColor" stroke="none" />
+                            <path d="M15.2 2.9 19.4 5.6 15.2 8.3z" fill="currentColor" stroke="none" />
+                          </svg>
+                        </button>
+                        </th:block>
                       </div>
                     </td>
 
@@ -1302,6 +1385,11 @@
     <script th:inline="javascript">
       /*<![CDATA[*/
       const companyId = /*[[${systemConfig.company != null ? systemConfig.company.idCompany : 0}]]*/ 0;
+      // Compañeros meseros a los que se puede transferir un pedido ({id: "Nombre Apellido"}).
+      const waiterColleagues = /*[[${waiterColleagues}]]*/ {};
+      // Solicitudes de transferencia dirigidas a este mesero que quedaron sin responder
+      // (si perdió el aviso en vivo, se le vuelven a preguntar al abrir la lista).
+      const pendingTransferAlerts = /*[[${pendingTransferRequests}]]*/ [];
       /*]]>*/
     </script>
     <script>
@@ -1333,6 +1421,12 @@
                 handleOrderListUpdate(notification);
               },
             );
+
+            // Traspaso de pedidos: cola personal del mesero (solicitudes que le llegan y
+            // respuestas a las solicitudes que él envió).
+            stompClient.subscribe(`/user/queue/order-transfers`, function (message) {
+              handleTransferNotification(JSON.parse(message.body));
+            });
           },
           function (error) {
             if (isIntentionalDisconnect) return;
@@ -1455,8 +1549,219 @@
         }
       }
 
+      // ===== Traspaso de pedidos entre meseros =====
+      // El mesero destino responde Aceptar / Denegar en vivo; mientras no responda, el
+      // pedido sigue siendo del mesero que lo solicitó.
+      const transferHandledIds = new Set();
+
+      function transferDialogHtml(notification) {
+        let html = `<div class="text-left space-y-1 text-sm">`;
+        html += `<div>Pedido <strong>#${notification.orderNumber}</strong>`;
+        if (notification.tableNumber) {
+          html += ` · Mesa <strong>#${notification.tableNumber}</strong>`;
+        }
+        html += `</div>`;
+        if (notification.total != null) {
+          html += `<div>Total: <strong>${formatCurrency(notification.total)}</strong></div>`;
+        }
+        if (notification.fromName) {
+          html += `<div class="text-gray-500">Atendido por <strong>${notification.fromName}</strong></div>`;
+        }
+        html += `</div>`;
+        return html;
+      }
+
+      function transferToast(title, text, icon) {
+        if (typeof Swal === "undefined") return;
+        Swal.fire({
+          toast: true,
+          position: "top-end",
+          icon: icon,
+          title: title,
+          text: text,
+          showConfirmButton: false,
+          timer: 4000,
+          timerProgressBar: true,
+          customClass: getSwalDarkModeClasses(),
+        });
+      }
+
+      function respondToTransfer(orderId, accept) {
+        return fetch(
+          `/waiter/orders/${orderId}/transfer/${accept ? "accept" : "deny"}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+          },
+        )
+          .then((response) => response.json())
+          .then((data) => {
+            if (!data.success) {
+              throw new Error(data.message || "No se pudo resolver la transferencia");
+            }
+            return data;
+          });
+      }
+
+      function handleTransferNotification(notification) {
+        if (!notification || !notification.notificationType) return;
+        const type = notification.notificationType;
+        if (type === "TRANSFER_REQUEST") {
+          showTransferRequestAlert(notification);
+        } else if (type === "TRANSFER_ACCEPTED" || type === "ORDER_TRANSFERRED") {
+          transferToast("🔁 Pedido transferido", notification.message || "", "success");
+          scheduleListReload(1500);
+        } else if (type === "TRANSFER_DENIED") {
+          transferToast("🔁 Transferencia denegada", notification.message || "", "info");
+          scheduleListReload(1500);
+        }
+      }
+
+      function showTransferRequestAlert(notification, onDone) {
+        const orderId = notification.orderId;
+        if (!orderId || transferHandledIds.has(String(orderId))) {
+          if (onDone) onDone();
+          return;
+        }
+        transferHandledIds.add(String(orderId));
+        const isDarkMode = document.documentElement.classList.contains("dark");
+        Swal.fire({
+          icon: "question",
+          title: "Te transfieren un pedido",
+          html: transferDialogHtml(notification),
+          showDenyButton: true,
+          confirmButtonText: "Aceptar",
+          denyButtonText: "Denegar",
+          confirmButtonColor: "#38e07b",
+          denyButtonColor: "#ef4444",
+          reverseButtons: true,
+          allowOutsideClick: false,
+          allowEscapeKey: false,
+          background: isDarkMode ? "#1f2937" : undefined,
+          customClass: getSwalDarkModeClasses(),
+        }).then(function (result) {
+          if (!result.isConfirmed && !result.isDenied) {
+            if (onDone) onDone();
+            return;
+          }
+          const accept = result.isConfirmed;
+          Swal.fire({
+            title: accept ? "Aceptando el pedido..." : "Denegando la transferencia...",
+            text: "Un momento por favor",
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            showConfirmButton: false,
+            didOpen: () => Swal.showLoading(),
+            background: isDarkMode ? "#1f2937" : undefined,
+            customClass: getSwalDarkModeClasses(),
+          });
+          respondToTransfer(orderId, accept)
+            .then((data) => {
+              transferToast(
+                accept ? "Pedido aceptado" : "Transferencia denegada",
+                data.message || "",
+                accept ? "success" : "info",
+              );
+              window.location.reload();
+            })
+            .catch((error) => {
+              transferToast("No se pudo resolver", error.message, "error");
+              if (onDone) onDone();
+            });
+        });
+      }
+
+      function showPendingTransferAlerts(list) {
+        if (!list || !list.length) return;
+        const pending = list.slice();
+        const next = function () {
+          const notification = pending.shift();
+          if (!notification) return;
+          showTransferRequestAlert(notification, next);
+        };
+        next();
+      }
+
+      function showTransferModal(orderId, orderNumber) {
+        const isDarkMode = document.documentElement.classList.contains("dark");
+        const colleagues = waiterColleagues || {};
+        if (Object.keys(colleagues).length === 0) {
+          Swal.fire({
+            icon: "info",
+            title: "Sin compañeros disponibles",
+            text: "No hay otros meseros activos a los que transferir el pedido en este momento.",
+            confirmButtonColor: "#38e07b",
+            background: isDarkMode ? "#1f2937" : undefined,
+            customClass: getSwalDarkModeClasses(),
+          });
+          return;
+        }
+        Swal.fire({
+          icon: "question",
+          title: "Transferir pedido",
+          html:
+            `<div class="text-left text-sm">El pedido <strong>#${orderNumber}</strong> ` +
+            `pasará al mesero que elijas. Él debe <strong>aceptar</strong> la ` +
+            `transferencia: hasta entonces el pedido sigue a tu cargo.</div>`,
+          input: "select",
+          inputOptions: colleagues,
+          inputPlaceholder: "Selecciona el mesero",
+          showCancelButton: true,
+          confirmButtonText: "Enviar solicitud",
+          cancelButtonText: "Cancelar",
+          confirmButtonColor: "#38e07b",
+          cancelButtonColor: "#6b7280",
+          reverseButtons: true,
+          showLoaderOnConfirm: true,
+          allowOutsideClick: () => !Swal.isLoading(),
+          background: isDarkMode ? "#1f2937" : undefined,
+          customClass: getSwalDarkModeClasses(),
+          inputValidator: (value) => (!value ? "Selecciona un mesero" : undefined),
+          preConfirm: () => {
+            const select = Swal.getInput();
+            const targetEmployeeId = select ? select.value : null;
+            return fetch(`/waiter/orders/${orderId}/transfer`, {
+              method: "POST",
+              headers: { "Content-Type": "application/x-www-form-urlencoded" },
+              body: `targetEmployeeId=${encodeURIComponent(targetEmployeeId)}`,
+            })
+              .then((response) => response.json())
+              .then((data) => {
+                if (!data.success) {
+                  throw new Error(data.message || "No se pudo enviar la solicitud");
+                }
+                return data;
+              });
+          },
+        }).then(function (result) {
+          if (result.isConfirmed) {
+            transferToast(
+              "Solicitud enviada",
+              (result.value && result.value.message) || "",
+              "success",
+            );
+            window.location.reload();
+          }
+        });
+      }
+
       document.addEventListener("DOMContentLoaded", function () {
         connectOrderListWebSocket();
+
+        // Transferir pedido a otro mesero
+        document.querySelectorAll(".btn-transfer-order").forEach(function (button) {
+          button.addEventListener("click", function () {
+            showTransferModal(
+              this.getAttribute("data-order-id"),
+              this.getAttribute("data-order-number"),
+            );
+          });
+        });
+
+        // Solicitudes de transferencia que quedaron pendientes de respuesta
+        setTimeout(function () {
+          showPendingTransferAlerts(pendingTransferAlerts);
+        }, 1200);
       });
 
       window.addEventListener("beforeunload", function () {

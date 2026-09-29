@@ -1,9 +1,11 @@
 package com.aatechsolutions.elgransazon.application.service;
 
+import com.aatechsolutions.elgransazon.domain.entity.Employee;
 import com.aatechsolutions.elgransazon.domain.entity.Order;
 import com.aatechsolutions.elgransazon.domain.entity.OrderDetail;
 import com.aatechsolutions.elgransazon.presentation.dto.KitchenStatsDTO;
 import com.aatechsolutions.elgransazon.presentation.dto.OrderNotificationDTO;
+import com.aatechsolutions.elgransazon.presentation.dto.OrderTransferNotificationDTO;
 import com.aatechsolutions.elgransazon.presentation.dto.PrintComandaNotificationDTO;
 import com.aatechsolutions.elgransazon.presentation.dto.PrintTicketNotificationDTO;
 
@@ -1038,6 +1040,85 @@ public class WebSocketNotificationService {
         messagingTemplate.convertAndSend(getCompanyTopic("/topic/admin/kitchen", order), notification);
 
         log.info("WebSocket: Item deletion notification - {} from order {}", itemName, order.getOrderNumber());
+    }
+
+    // ========== Traspaso de pedidos entre meseros ==========
+
+    /**
+     * Pide al mesero destino que acepte o deniegue un pedido que le están
+     * transfiriendo.
+     *
+     * <p>Va a la cola personal del mesero ({@code /user/{username}/queue/order-transfers}),
+     * no a un topic de la empresa: solo le interesa a él. El cliente responde con un
+     * SweetAlert de Aceptar / Denegar.</p>
+     */
+    public void notifyTransferRequested(Order order, Employee from, Employee to) {
+        if (order == null || to == null || to.getUsername() == null) {
+            log.warn("WebSocket: transferencia sin mesero destino para el pedido {}",
+                    order != null ? order.getOrderNumber() : "null");
+            return;
+        }
+        OrderTransferNotificationDTO notification = buildTransferNotification(
+                order, "TRANSFER_REQUEST", from, to,
+                displayName(from) + " quiere transferirte el pedido #" + order.getOrderNumber());
+        messagingTemplate.convertAndSendToUser(to.getUsername(), "/queue/order-transfers", notification);
+        log.info("🔁 WebSocket: Solicitud de transferencia del pedido {} de {} a {}",
+                order.getOrderNumber(), displayName(from), displayName(to));
+    }
+
+    /**
+     * Informa al mesero que solicitó la transferencia que el mesero destino la aceptó
+     * o la denegó, para que su lista se actualice sola.
+     *
+     * <p>Cuando se acepta, además se avisa al topic de la empresa para que las pantallas
+     * de admin/cajero refresquen quién atiende el pedido.</p>
+     */
+    public void notifyTransferResolved(Order order, Employee from, Employee to, boolean accepted) {
+        if (order == null) {
+            return;
+        }
+        String type = accepted ? "TRANSFER_ACCEPTED" : "TRANSFER_DENIED";
+        String message = accepted
+                ? displayName(to) + " aceptó el pedido #" + order.getOrderNumber()
+                : displayName(to) + " denegó el pedido #" + order.getOrderNumber();
+        OrderTransferNotificationDTO notification = buildTransferNotification(order, type, from, to, message);
+
+        if (from != null && from.getUsername() != null) {
+            messagingTemplate.convertAndSendToUser(from.getUsername(), "/queue/order-transfers", notification);
+        }
+
+        if (accepted) {
+            // El responsable cambió: las listas de admin/cajero deben refrescar el
+            // "Creado por" / responsable y los permisos de esa fila.
+            messagingTemplate.convertAndSend(getCompanyTopic("/topic/admin/kitchen", order),
+                    buildOrderNotification(order, "ORDER_TRANSFERRED", message));
+        }
+
+        log.info("🔁 WebSocket: Transferencia {} del pedido {} (de {} a {})",
+                accepted ? "aceptada" : "denegada", order.getOrderNumber(), displayName(from),
+                displayName(to));
+    }
+
+    private OrderTransferNotificationDTO buildTransferNotification(
+            Order order, String type, Employee from, Employee to, String message) {
+        return OrderTransferNotificationDTO.builder()
+                .notificationType(type)
+                .orderId(order.getIdOrder())
+                .orderNumber(order.getOrderNumber())
+                .fromName(displayName(from))
+                .toName(displayName(to))
+                .tableNumber(order.getTable() != null ? order.getTable().getTableNumber() : null)
+                .total(order.getTotal())
+                .message(message)
+                .build();
+    }
+
+    private String displayName(Employee employee) {
+        if (employee == null) {
+            return "";
+        }
+        String fullName = employee.getFullName();
+        return fullName != null && !fullName.isBlank() ? fullName.trim() : employee.getUsername();
     }
 
     // Helper method to build order notification DTO

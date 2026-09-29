@@ -79,6 +79,14 @@ public class WaiterPaymentController {
 
         return waiterOrderService.findByIdWithDetails(orderId)
                 .map(order -> {
+                    // Un pedido transferido solo se consulta: el mesero que lo entregó ya no
+                    // puede cobrarlo, ahora le toca al mesero que lo aceptó.
+                    if (!order.isOperatedBy(username)) {
+                        redirectAttributes.addFlashAttribute("errorMessage",
+                            "Este pedido ya no está a tu cargo: solo puedes consultarlo");
+                        return "redirect:/waiter/orders";
+                    }
+
                     // A departing-guest collection may charge the ENTREGADO items of an
                     // open order (some items still PENDING/READY). Full-order payment
                     // requires the whole order ENTREGADO.
@@ -197,6 +205,11 @@ public class WaiterPaymentController {
             // Find the order
             Order order = waiterOrderService.findByIdWithDetails(orderId)
                     .orElseThrow(() -> new IllegalArgumentException("Orden no encontrada"));
+
+            // Un pedido transferido solo se consulta: manda al mesero responsable.
+            if (!order.isOperatedBy(username)) {
+                throw new IllegalStateException("Este pedido ya no está a tu cargo: solo puedes consultarlo");
+            }
 
             // Validate that order is NOT DELIVERY - waiters cannot collect delivery payments
             if (order.getOrderType() == OrderType.DELIVERY) {

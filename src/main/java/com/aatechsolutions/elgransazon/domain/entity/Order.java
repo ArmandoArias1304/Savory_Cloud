@@ -29,7 +29,7 @@ import java.util.Map;
 @AllArgsConstructor
 @Builder
 @EqualsAndHashCode(of = {"idOrder"})
-@ToString(exclude = {"company", "table", "employee", "preparedBy", "paidBy", "deliveredBy", "orderDetails", "payments", "paymentTenders"})
+@ToString(exclude = {"company", "table", "employee", "preparedBy", "paidBy", "deliveredBy", "transferredFrom", "transferRequestedTo", "orderDetails", "payments", "paymentTenders"})
 public class Order implements Serializable {
 
     @Id
@@ -312,6 +312,42 @@ public class Order implements Serializable {
     @Column(name = "paid_at")
     private LocalDateTime paidAt;
 
+    // ========== Transferencia entre meseros ==========
+    // Un pedido puede traspasarse a otro mesero (el dueño se retira, cambia de turno...).
+    // IMPORTANTE: `createdBy` NUNCA se reescribe, es la bitácora de quién capturó el
+    // pedido; `employee` es el mesero RESPONSABLE vigente y es quien opera el pedido,
+    // lo cobra, recibe su propina y suma en sus estadísticas. El traspaso se solicita y
+    // el mesero destino debe ACEPTARLO (o denegarlo) para que surta efecto.
+
+    /**
+     * Mesero que entregó el pedido (responsable anterior). NULL cuando nunca se ha
+     * transferido. Junto con {@link #employee} forma la leyenda "Transferido de X a Y".
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_transferred_from", nullable = true)
+    private Employee transferredFrom;
+
+    /**
+     * Momento (UTC) en que el mesero destino ACEPTÓ la transferencia.
+     */
+    @Column(name = "transferred_at")
+    private LocalDateTime transferredAt;
+
+    /**
+     * Mesero al que se le solicitó el pedido. NULL cuando no hay solicitud pendiente:
+     * mientras esté presente, el pedido sigue perteneciendo a {@link #employee} hasta
+     * que el destino responda.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_transfer_requested_to", nullable = true)
+    private Employee transferRequestedTo;
+
+    /**
+     * Momento (UTC) de la solicitud de transferencia pendiente.
+     */
+    @Column(name = "transfer_requested_at")
+    private LocalDateTime transferRequestedAt;
+
     // ========== Reservation Association ==========
     // This field stores the reservation ID associated with this order
     // When an order is created for a reserved table, this field links to the reservation
@@ -464,6 +500,94 @@ public class Order implements Serializable {
 
     private static boolean isMissing(String value) {
         return value == null || value.isBlank();
+    }
+
+    // ========== Transferencia entre meseros (helpers) ==========
+
+    /**
+     * True cuando hay una solicitud de transferencia esperando respuesta del mesero
+     * destino. Mientras exista, el pedido no admite una segunda solicitud y el
+     * responsable sigue siendo el mesero actual.
+     */
+    public boolean hasPendingTransfer() {
+        return transferRequestedTo != null;
+    }
+
+    /**
+     * True cuando el pedido ya cambió de responsable alguna vez (alguien lo transfirió).
+     */
+    public boolean wasTransferred() {
+        return transferredFrom != null;
+    }
+
+    /**
+     * True cuando {@code username} es el mesero RESPONSABLE vigente del pedido, es decir
+     * quien puede operarlo (editar, agregar items, cambiar estado, cobrar).
+     *
+     * <p>Cuando el pedido no tiene responsable asignado (pedidos legados o creados
+     * antes de que existiera la asignación) cae al creador, para no dejar pedidos sin
+     * dueño operativo.</p>
+     */
+    public boolean isOperatedBy(String username) {
+        if (username == null) {
+            return false;
+        }
+        if (employee != null && employee.getUsername() != null) {
+            return employee.getUsername().equalsIgnoreCase(username);
+        }
+        return createdBy != null && createdBy.equalsIgnoreCase(username);
+    }
+
+    /**
+     * True cuando {@code username} creó el pedido pero ya NO es el responsable: puede
+     * verlo (conserva su historial) pero no operarlo ni cobrarlo.
+     */
+    public boolean isReadOnlyFor(String username) {
+        return createdBy != null
+                && createdBy.equalsIgnoreCase(username)
+                && !isOperatedBy(username);
+    }
+
+    /**
+     * True cuando el pedido admite un traspaso: ni PAGADO ni CANCELADO (una venta ya
+     * cerrada no cambia de dueño).
+     *
+     * <p>Una solicitud pendiente NO bloquea al dueño: si el mesero destino no responde,
+     * el responsable puede volver a solicitar el traspaso a otro compañero y la nueva
+     * solicitud reemplaza la anterior.</p>
+     */
+    public boolean canBeTransferred() {
+        return status != OrderStatus.PAID
+                && status != OrderStatus.CANCELLED;
+    }
+
+    /**
+     * Nombre completo del mesero responsable vigente, o el del creador original cuando
+     * el pedido no tiene responsable asignado. Cadena vacía si no se puede resolver.
+     */
+    public String getOwnerName() {
+        if (employee != null && employee.getFullName() != null && !employee.getFullName().isBlank()) {
+            return employee.getFullName();
+        }
+        return createdBy != null ? createdBy : "";
+    }
+
+    /**
+     * Leyenda de trazabilidad para las vistas del pedido: "Transferido de X a Y el
+     * dd/MM/yyyy HH:mm". Vacía cuando el pedido nunca se transfirió.
+     */
+    public String getTransferLegend() {
+        if (transferredFrom == null) {
+            return "";
+        }
+        String from = transferredFrom.getFullName() != null ? transferredFrom.getFullName() : "";
+        String to = getOwnerName();
+        String when = transferredAt != null
+                ? transferredAt.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
+                : "";
+        return when.isEmpty()
+                ? "Transferido de " + from + " a " + to
+                : "Transferido de " + from + " a " + to + " el " + when;
     }
 
     // ========== Lifecycle Callbacks ==========

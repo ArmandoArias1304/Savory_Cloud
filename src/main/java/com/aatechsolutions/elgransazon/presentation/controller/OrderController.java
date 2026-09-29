@@ -68,6 +68,7 @@ public class OrderController {
     private final ReservationService reservationService;
     private final DateTimeService dateTimeService;
     private final CashRegisterService cashRegisterService;
+    private final OrderTransferService orderTransferService;
 
     /**
      * Constructor with dependency injection
@@ -101,7 +102,8 @@ public class OrderController {
             ObjectMapper objectMapper,
             ReservationService reservationService,
             DateTimeService dateTimeService,
-            CashRegisterService cashRegisterService) {
+            CashRegisterService cashRegisterService,
+            OrderTransferService orderTransferService) {
         
         this.chefOrderService = chefOrderService; // Store direct reference
         this.parrilleroOrderService = parrilleroOrderService; // Store direct reference
@@ -134,6 +136,7 @@ public class OrderController {
         this.reservationService = reservationService;
         this.dateTimeService = dateTimeService;
         this.cashRegisterService = cashRegisterService;
+        this.orderTransferService = orderTransferService;
     }
 
     /**
@@ -389,6 +392,15 @@ public class OrderController {
         model.addAttribute("selectedPaymentMethod", paymentMethod);
         model.addAttribute("selectedDate", date);
         model.addAttribute("currentRole", role);
+        model.addAttribute("currentUsername", currentUsername);
+
+        // Traspaso de pedidos entre meseros: compañeros a los que se puede solicitar el
+        // traspaso y solicitudes pendientes dirigidas a este mesero (por si se perdió el
+        // aviso en vivo, se le vuelve a preguntar al entrar a la lista).
+        if ("waiter".equals(role)) {
+            model.addAttribute("waiterColleagues", waiterColleagues(currentUsername));
+            model.addAttribute("pendingTransferRequests", pendingTransferAlerts(currentUsername));
+        }
         
         // Check if restaurant is currently open
         boolean isRestaurantOpen = businessHoursService.isOpenNow();
@@ -1886,6 +1898,161 @@ public class OrderController {
         }
 
         return response;
+    }
+
+    // ========== Traspaso de pedidos entre meseros (AJAX) ==========
+
+    /**
+     * Compañeros meseros activos de la empresa (sin el usuario autenticado), como
+     * {idEmpleado: "Nombre Apellido"}, para el selector del diálogo de transferencia.
+     * Se envía un mapa plano (no las entidades) para poder serializarlo al JavaScript de la
+     * vista sin arrastrar relaciones lazy.
+     */
+    private Map<String, String> waiterColleagues(String currentUsername) {
+        Map<String, String> colleagues = new LinkedHashMap<>();
+        employeeService.findByRole(Role.WAITER).stream()
+                .filter(e -> e.getUsername() != null
+                        && !e.getUsername().equalsIgnoreCase(currentUsername))
+                .filter(e -> e.getEnabled() == null || Boolean.TRUE.equals(e.getEnabled()))
+                .sorted(Comparator.comparing(
+                        (Employee e) -> e.getNombre() == null ? "" : e.getNombre(),
+                        String.CASE_INSENSITIVE_ORDER))
+                .forEach(e -> colleagues.put(
+                        String.valueOf(e.getIdEmpleado()),
+                        e.getFullName() != null && !e.getFullName().isBlank()
+                                ? e.getFullName()
+                                : e.getUsername()));
+        return colleagues;
+    }
+
+    /**
+     * Solicitudes de transferencia pendientes dirigidas al usuario autenticado, con las
+     * mismas claves que envía el aviso en vivo ({@link
+     * com.aatechsolutions.elgransazon.presentation.dto.OrderTransferNotificationDTO}) para
+     * volver a preguntarle al mesero cuando entra a la lista.
+     */
+    private List<Map<String, Object>> pendingTransferAlerts(String currentUsername) {
+        List<Map<String, Object>> alerts = new ArrayList<>();
+        for (Order order : orderTransferService.findPendingTransfersFor(currentUsername)) {
+            String fromName = order.getOwnerName();
+            Map<String, Object> alert = new LinkedHashMap<>();
+            alert.put("notificationType", "TRANSFER_REQUEST");
+            alert.put("orderId", order.getIdOrder());
+            alert.put("orderNumber", order.getOrderNumber());
+            alert.put("tableNumber",
+                    order.getTable() != null ? order.getTable().getTableNumber() : null);
+            alert.put("total", order.getTotal());
+            alert.put("fromName", fromName);
+            alert.put("toName", order.getTransferRequestedTo() != null
+                    ? order.getTransferRequestedTo().getFullName() : null);
+            alert.put("message",
+                    fromName + " quiere transferirte el pedido #" + order.getOrderNumber());
+            alerts.add(alert);
+        }
+        return alerts;
+    }
+
+    /**
+     * Solicita transferir el pedido a otro mesero (AJAX).
+     *
+     * <p>Solo el mesero que atiende el pedido puede solicitarlo. El mesero destino recibe
+     * la solicitud en tiempo real y la acepta o la deniega; hasta entonces el pedido sigue
+     * siendo del mesero actual.</p>
+     */
+    @PostMapping("/{id}/transfer")
+    @ResponseBody
+    public Map<String, Object> requestOrderTransfer(
+            @PathVariable String role,
+            @PathVariable Long id,
+            @RequestParam Long targetEmployeeId,
+            Authentication authentication) {
+
+        String username = authentication.getName();
+        log.info("Order transfer requested - order: {} to employee: {} by {}", id, targetEmployeeId, username);
+
+        validateRole(role, authentication);
+
+        Map<String, Object> response = new HashMap<>();
+        try {
+            requireWaiterRole(role);
+            Order order = orderTransferService.requestTransfer(id, targetEmployeeId, username);
+            response.put("success", true);
+            response.put("message", "Solicitud enviada. El pedido " + order.getOrderNumber()
+                    + " se transferirá cuando el mesero la acepte");
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            log.warn("Error requesting order transfer: {}", e.getMessage());
+            response.put("success", false);
+            response.put("message", e.getMessage());
+        }
+        return response;
+    }
+
+    /**
+     * Acepta una transferencia pendiente: el pedido pasa a ser del mesero que acepta
+     * (AJAX).
+     */
+    @PostMapping("/{id}/transfer/accept")
+    @ResponseBody
+    public Map<String, Object> acceptOrderTransfer(
+            @PathVariable String role,
+            @PathVariable Long id,
+            Authentication authentication) {
+
+        String username = authentication.getName();
+        log.info("Order transfer accepted - order: {} by {}", id, username);
+
+        validateRole(role, authentication);
+
+        Map<String, Object> response = new HashMap<>();
+        try {
+            requireWaiterRole(role);
+            Order order = orderTransferService.acceptTransfer(id, username);
+            response.put("success", true);
+            response.put("message", "El pedido " + order.getOrderNumber() + " ahora está a tu cargo");
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            log.warn("Error accepting order transfer: {}", e.getMessage());
+            response.put("success", false);
+            response.put("message", e.getMessage());
+        }
+        return response;
+    }
+
+    /**
+     * Deniega una transferencia pendiente: el pedido se queda con su mesero actual (AJAX).
+     */
+    @PostMapping("/{id}/transfer/deny")
+    @ResponseBody
+    public Map<String, Object> denyOrderTransfer(
+            @PathVariable String role,
+            @PathVariable Long id,
+            Authentication authentication) {
+
+        String username = authentication.getName();
+        log.info("Order transfer denied - order: {} by {}", id, username);
+
+        validateRole(role, authentication);
+
+        Map<String, Object> response = new HashMap<>();
+        try {
+            requireWaiterRole(role);
+            Order order = orderTransferService.denyTransfer(id, username);
+            response.put("success", true);
+            response.put("message", "Denegaste el pedido " + order.getOrderNumber());
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            log.warn("Error denying order transfer: {}", e.getMessage());
+            response.put("success", false);
+            response.put("message", e.getMessage());
+        }
+        return response;
+    }
+
+    /**
+     * El traspaso de pedidos es exclusivo del mesero que los atiende.
+     */
+    private void requireWaiterRole(String role) {
+        if (!"waiter".equalsIgnoreCase(role)) {
+            throw new IllegalStateException("Solo el mesero que atiende el pedido puede transferirlo");
+        }
     }
 
     /**

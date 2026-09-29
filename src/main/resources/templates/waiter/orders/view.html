@@ -612,6 +612,38 @@
                   >
                   <span th:text="${order.createdBy}"></span>
                 </p>
+                <!-- Traspaso entre meseros: "Creado por" no cambia (bitácora de quien capturó
+                     el pedido), pero el pedido puede estar a cargo de otro mesero. -->
+                <p th:if="${order.employee != null}" class="mt-1">
+                  <span class="font-semibold text-gray-700 dark:text-gray-300"
+                    >Atendido por:</span
+                  >
+                  <span th:text="${order.ownerName}"></span>
+                </p>
+                <p
+                  th:if="${order.wasTransferred()}"
+                  class="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-violet-100 text-violet-800 dark:bg-violet-900/40 dark:text-violet-300"
+                  title="Trazabilidad del traspaso entre meseros"
+                >
+                  <svg
+                    class="w-3 h-3"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <circle cx="6.4" cy="13.4" r="2.9" />
+                    <path d="M1.8 21a4.6 4.6 0 0 1 9.2 0" />
+                    <circle cx="17.6" cy="13.4" r="2.9" />
+                    <path d="M13 21a4.6 4.6 0 0 1 9.2 0" />
+                    <rect x="2.6" y="4.3" width="13" height="2.6" fill="currentColor" stroke="none" />
+                    <path d="M15.2 2.9 19.4 5.6 15.2 8.3z" fill="currentColor" stroke="none" />
+                  </svg>
+                  <span th:text="${order.transferLegend}"></span>
+                </p>
               </div>
               <div
                 th:if="${order.paidAt != null}"

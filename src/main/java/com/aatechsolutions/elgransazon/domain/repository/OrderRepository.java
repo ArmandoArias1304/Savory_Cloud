@@ -599,29 +599,37 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
             @Param("company") Company company);
 
     /**
-     * Get revenue for orders created by user but paid by others in date range.
+     * Get revenue for orders RESPONSIBLE for the user but paid by someone else in date
+     * range.
      * Filters by {@code paidAt} (authoritative payment timestamp).
      * Used for Waiter's "Ingresos Globales" card.
+     *
+     * <p>The responsible waiter is {@code o.employee} (the current owner), NOT
+     * {@code o.createdBy}: a transferred order belongs to the waiter who attends it, so
+     * its sale follows the new owner even though the creator never changes.</p>
      */
     @Query("SELECT COALESCE(SUM(o.total), 0) FROM Order o WHERE o.company = :company " +
            "AND o.status = 'PAID' " +
-           "AND o.createdBy = :createdByUsername " +
-           "AND o.paidBy.username <> :createdByUsername " +
+           "AND o.employee.username = :username " +
+           "AND o.paidBy.username <> :username " +
            "AND o.paidAt BETWEEN :startDate AND :endDate")
     BigDecimal getRevenueCreatedByUserPaidByOthersAndDateRangeAndCompany(
-            @Param("createdByUsername") String createdByUsername,
+            @Param("username") String username,
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate,
             @Param("company") Company company);
 
     /**
-     * Get revenue for orders created AND paid by the same user in date range.
+     * Get revenue for orders the user is RESPONSIBLE for AND collected in date range.
      * Filters by {@code paidAt} (authoritative payment timestamp).
-     * Used for Waiter/Cashier's "Ingresos Propios" card (orders I created AND I collected).
+     * Used for Waiter/Cashier's "Ingresos Propios" card (orders I attend AND I collected).
+     *
+     * <p>Uses {@code o.employee} (current owner) so a transferred order counts for the
+     * waiter who actually served and charged it, not for whoever captured it.</p>
      */
     @Query("SELECT COALESCE(SUM(o.total), 0) FROM Order o WHERE o.company = :company " +
            "AND o.status = 'PAID' " +
-           "AND o.createdBy = :username " +
+           "AND o.employee.username = :username " +
            "AND o.paidBy.username = :username " +
            "AND o.paidAt BETWEEN :startDate AND :endDate")
     BigDecimal getRevenueCreatedAndPaidBySameUserAndDateRangeAndCompany(
@@ -645,6 +653,20 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
             @Param("username") String username,
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate,
+            @Param("company") Company company);
+
+    /**
+     * Transferencias pendientes dirigidas a un usuario (mesero destino que todavía no
+     * responde). Sirve para volver a mostrarle la solicitud cuando entra a su lista
+     * de pedidos y se perdió el aviso en vivo.
+     * Los pedidos ya pagados o cancelados se excluyen: su transferencia ya no aplica.
+     */
+    @Query("SELECT o FROM Order o WHERE o.company = :company " +
+           "AND o.transferRequestedTo.username = :username " +
+           "AND o.status <> 'PAID' AND o.status <> 'CANCELLED' " +
+           "ORDER BY o.transferRequestedAt ASC")
+    List<Order> findPendingTransfersForUserAndCompany(
+            @Param("username") String username,
             @Param("company") Company company);
 
     // ========== Migration Helper Methods ==========

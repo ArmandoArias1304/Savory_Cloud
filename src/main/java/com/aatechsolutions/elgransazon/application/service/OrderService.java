@@ -252,14 +252,17 @@ public interface OrderService {
     BigDecimal getRevenueByUsernameAndDateRange(String username, LocalDateTime startDate, LocalDateTime endDate);
 
     /**
-     * Get revenue for orders created by user but paid by others in date range
+     * Get revenue for orders the user is RESPONSIBLE for but were paid by others in
+     * date range. The responsible waiter is the current owner (transfer aware), so a
+     * transferred order counts for whoever attends it.
      * Used for Waiter's "Ingresos Globales" card
      */
     BigDecimal getRevenueCreatedByUserPaidByOthersAndDateRange(String username, LocalDateTime startDate, LocalDateTime endDate);
 
     /**
-     * Get revenue for orders created AND paid by the same user in date range
-     * Used for Waiter/Cashier's "Ingresos Propios" card (orders I created AND I collected)
+     * Get revenue for orders the user is RESPONSIBLE for AND paid in date range
+     * (transfer aware: counts for the waiter who attends the order).
+     * Used for Waiter/Cashier's "Ingresos Propios" card (orders I attend AND I collected)
      */
     BigDecimal getRevenueCreatedAndPaidBySameUserAndDateRange(String username, LocalDateTime startDate, LocalDateTime endDate);
 

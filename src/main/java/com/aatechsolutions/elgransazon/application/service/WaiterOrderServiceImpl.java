@@ -19,9 +19,11 @@ import java.util.stream.Collectors;
  * WaiterOrderServiceImpl - Implementation for Waiter role
  * 
  * Restrictions:
- * - Can only see orders created by themselves
+ * - Sees the orders they ATTEND (the current responsible waiter) plus the ones they
+ *   created, even if they transferred them to a colleague: transferred-away orders stay
+ *   in their history as READ-ONLY.
  * - Cannot mark CASH payment orders as PAID (only cashier can)
- * - Can only edit/cancel their own orders
+ * - Can only edit/cancel/charge the orders they currently attend
  */
 @Service("waiterOrderService")
 @RequiredArgsConstructor
@@ -40,12 +42,27 @@ public class WaiterOrderServiceImpl implements OrderService {
     }
 
     /**
-     * Validate if waiter can access this order
+     * True cuando el mesero puede VER el pedido: los que atiende ahora y los que creó,
+     * incluso si ya los transfirió a un compañero (conserva su historial en solo lectura).
+     */
+    private boolean canView(Order order, String username) {
+        if (username == null) {
+            return false;
+        }
+        return (order.getCreatedBy() != null && order.getCreatedBy().equalsIgnoreCase(username))
+                || order.isOperatedBy(username);
+    }
+
+    /**
+     * Validate if waiter can OPERATE this order (edit, add items, change status, cancel,
+     * charge). Después de una transferencia aceptada, el mesero anterior solo puede
+     * consultarlo; el responsable vigente es quien lo opera.
      */
     private void validateOrderOwnership(Order order) {
         String currentUsername = getCurrentUsername();
-        if (currentUsername == null || !order.getCreatedBy().equalsIgnoreCase(currentUsername)) {
-            throw new IllegalStateException("No tiene permisos para acceder a este pedido");
+        if (currentUsername == null || !order.isOperatedBy(currentUsername)) {
+            throw new IllegalStateException(
+                    "Este pedido ya no está a tu cargo: solo puedes consultarlo");
         }
     }
 
@@ -138,23 +155,21 @@ public class WaiterOrderServiceImpl implements OrderService {
     public List<Order> findAll() {
         String currentUsername = getCurrentUsername();
         log.debug("Waiter {} fetching their orders", currentUsername);
-        // Only return orders created by this waiter
+        // Orders they attend (current owner) plus the ones they created, transferred away
+        // ones included: those stay visible but read-only.
         return adminOrderService.findAll().stream()
-                .filter(order -> order.getCreatedBy().equalsIgnoreCase(currentUsername))
+                .filter(order -> canView(order, currentUsername))
                 .collect(Collectors.toList());
     }
 
     @Override
     public Optional<Order> findById(Long id) {
         Optional<Order> order = adminOrderService.findById(id);
+        if (order.isPresent() && canView(order.get(), getCurrentUsername())) {
+            return order;
+        }
         if (order.isPresent()) {
-            try {
-                validateOrderOwnership(order.get());
-                return order;
-            } catch (IllegalStateException e) {
-                log.warn("Waiter {} tried to access order {} they don't own", getCurrentUsername(), id);
-                return Optional.empty();
-            }
+            log.warn("Waiter {} tried to access order {} they don't own", getCurrentUsername(), id);
         }
         return Optional.empty();
     }
@@ -162,52 +177,33 @@ public class WaiterOrderServiceImpl implements OrderService {
     @Override
     public Optional<Order> findByIdWithDetails(Long id) {
         Optional<Order> order = adminOrderService.findByIdWithDetails(id);
+        if (order.isPresent() && canView(order.get(), getCurrentUsername())) {
+            return order;
+        }
         if (order.isPresent()) {
-            try {
-                validateOrderOwnership(order.get());
-                return order;
-            } catch (IllegalStateException e) {
-                log.warn("Waiter {} tried to access order {} they don't own", getCurrentUsername(), id);
-                return Optional.empty();
-            }
+            log.warn("Waiter {} tried to access order {} they don't own", getCurrentUsername(), id);
         }
         return Optional.empty();
     }
 
     @Override
     public Optional<Order> findByOrderNumber(String orderNumber) {
-        Optional<Order> order = adminOrderService.findByOrderNumber(orderNumber);
-        if (order.isPresent()) {
-            try {
-                validateOrderOwnership(order.get());
-                return order;
-            } catch (IllegalStateException e) {
-                return Optional.empty();
-            }
-        }
-        return Optional.empty();
+        return adminOrderService.findByOrderNumber(orderNumber)
+                .filter(order -> canView(order, getCurrentUsername()));
     }
 
     @Override
     public List<Order> findByTableId(Long tableId) {
         String currentUsername = getCurrentUsername();
         return adminOrderService.findByTableId(tableId).stream()
-                .filter(order -> order.getCreatedBy().equalsIgnoreCase(currentUsername))
+                .filter(order -> canView(order, currentUsername))
                 .collect(Collectors.toList());
     }
 
     @Override
     public Optional<Order> findActiveOrderByTableId(Long tableId) {
-        Optional<Order> order = adminOrderService.findActiveOrderByTableId(tableId);
-        if (order.isPresent()) {
-            try {
-                validateOrderOwnership(order.get());
-                return order;
-            } catch (IllegalStateException e) {
-                return Optional.empty();
-            }
-        }
-        return Optional.empty();
+        return adminOrderService.findActiveOrderByTableId(tableId)
+                .filter(order -> canView(order, getCurrentUsername()));
     }
 
     @Override
@@ -220,7 +216,7 @@ public class WaiterOrderServiceImpl implements OrderService {
     public List<Order> findByStatus(OrderStatus status) {
         String currentUsername = getCurrentUsername();
         return adminOrderService.findByStatus(status).stream()
-                .filter(order -> order.getCreatedBy().equalsIgnoreCase(currentUsername))
+                .filter(order -> canView(order, currentUsername))
                 .collect(Collectors.toList());
     }
 
@@ -228,7 +224,7 @@ public class WaiterOrderServiceImpl implements OrderService {
     public List<Order> findByOrderType(OrderType orderType) {
         String currentUsername = getCurrentUsername();
         return adminOrderService.findByOrderType(orderType).stream()
-                .filter(order -> order.getCreatedBy().equalsIgnoreCase(currentUsername))
+                .filter(order -> canView(order, currentUsername))
                 .collect(Collectors.toList());
     }
 
@@ -236,7 +232,7 @@ public class WaiterOrderServiceImpl implements OrderService {
     public List<Order> findTodaysOrders() {
         String currentUsername = getCurrentUsername();
         return adminOrderService.findTodaysOrders().stream()
-                .filter(order -> order.getCreatedBy().equalsIgnoreCase(currentUsername))
+                .filter(order -> canView(order, currentUsername))
                 .collect(Collectors.toList());
     }
 
@@ -244,7 +240,7 @@ public class WaiterOrderServiceImpl implements OrderService {
     public List<Order> findActiveOrders() {
         String currentUsername = getCurrentUsername();
         return adminOrderService.findActiveOrders().stream()
-                .filter(order -> order.getCreatedBy().equalsIgnoreCase(currentUsername))
+                .filter(order -> canView(order, currentUsername))
                 .collect(Collectors.toList());
     }
 
@@ -252,7 +248,7 @@ public class WaiterOrderServiceImpl implements OrderService {
     public List<Order> findByDateRange(LocalDateTime startDate, LocalDateTime endDate) {
         String currentUsername = getCurrentUsername();
         return adminOrderService.findByDateRange(startDate, endDate).stream()
-                .filter(order -> order.getCreatedBy().equalsIgnoreCase(currentUsername))
+                .filter(order -> canView(order, currentUsername))
                 .collect(Collectors.toList());
     }
 
@@ -296,7 +292,7 @@ public class WaiterOrderServiceImpl implements OrderService {
     public long countTodaysOrdersByStatus(OrderStatus status) {
         String currentUsername = getCurrentUsername();
         return adminOrderService.findTodaysOrders().stream()
-                .filter(order -> order.getCreatedBy().equalsIgnoreCase(currentUsername))
+                .filter(order -> canView(order, currentUsername))
                 .filter(order -> order.getStatus() == status)
                 .count();
     }
