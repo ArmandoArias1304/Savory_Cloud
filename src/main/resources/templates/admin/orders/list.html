@@ -599,6 +599,20 @@
                           <i class="fas fa-receipt"></i>
                         </a>
 
+                        <!-- Autofactura del pedido (solo PAGADO, sin cuentas divididas y con
+                             facturación electrónica habilitada: la clave se genera al cobrar
+                             únicamente cuando la empresa tiene una configuración de Facturama
+                             lista). Es el mismo botón morado de las cuentas divididas, para que
+                             el cliente pueda facturar directo desde la lista (admin/gerente). -->
+                        <a
+                          th:if="${order.status.name() == 'PAID' and order.autofacturaKey != null and (order.payments == null or order.payments.isEmpty())}"
+                          th:href="@{/autofactura/{key}(key=${order.autofacturaKey})}"
+                          class="p-2 rounded-lg bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 hover:bg-purple-100 dark:hover:bg-purple-900/40 transition-all"
+                          title="Autofactura del pedido"
+                        >
+                          <i class="fas fa-file-invoice"></i>
+                        </a>
+
                         <!-- Add Items (only for DINE_IN and TAKEOUT orders that can accept new items) -->
                         <a
                           th:if="${order.canAcceptNewItems()}"

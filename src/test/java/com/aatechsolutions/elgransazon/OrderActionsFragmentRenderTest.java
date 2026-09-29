@@ -165,6 +165,57 @@ class OrderActionsFragmentRenderTest {
                 "los enlaces deben salir en el área del rol que renderiza la columna");
     }
 
+    /**
+     * Un pedido PAGADO cuya empresa tiene facturación electrónica habilitada llegó al cobro con
+     * su clave de autofactura ya generada: la columna debe ofrecer el botón morado que factura
+     * directo al cliente, junto al ojo y al ticket.
+     */
+    @Test
+    void paidOrderWithBillingEnabledOffersThePurpleAutofacturaButton() {
+        Order order = order(OrderStatus.PAID, OrderType.DINE_IN, OrderStatus.DELIVERED);
+        order.setAutofacturaKey("clave-autofactura-76");
+
+        String html = render(order, false);
+
+        assertTrue(html.contains("/autofactura/clave-autofactura-76"),
+                "un pedido PAGADO con facturación habilitada debe ofrecer su autofactura");
+        assertTrue(html.contains("title=\"Autofactura del pedido\""),
+                "el botón morado debe traer su título para que la cajera sepa qué hace");
+        assertTrue(html.contains("bg-purple-50"),
+                "y conservar el color morado de las cuentas divididas");
+        // Las tres acciones que el pedido pagado debe ofrecer a la vez.
+        assertTrue(html.contains("/cashier/orders/view/76"), "el ojito de ver detalles sigue ahí");
+        assertTrue(html.contains("/cashier/orders/76/download-ticket\""), "el ticket sigue ahí");
+    }
+
+    /**
+     * Sin facturación electrónica habilitada en el restaurante no se generó la clave al cobrar:
+     * el pedido pagado conserva el ojo y el ticket, pero no debe ofrecer el botón morado.
+     */
+    @Test
+    void paidOrderWithoutInvoiceKeyKeepsItsActionsWithoutThePurpleButton() {
+        String html = render(order(OrderStatus.PAID, OrderType.DINE_IN, OrderStatus.DELIVERED), false);
+
+        assertTrue(html.contains("/cashier/orders/76/download-ticket\""), "el ticket sigue ahí");
+        assertFalse(html.contains("/autofactura/"),
+                "sin facturación habilitada no hay autofactura que ofrecer");
+    }
+
+    /**
+     * Mientras el pedido no esté PAGADO no se factura, aunque el pedido ya traiga una clave
+     * (por ejemplo una reimpresión o una autofactura generada antes de cancelar).
+     */
+    @Test
+    void unpaidOrderNeverOffersTheAutofacturaButton() {
+        Order order = order(OrderStatus.DELIVERED, OrderType.DINE_IN, OrderStatus.DELIVERED);
+        order.setAutofacturaKey("clave-autofactura-76");
+
+        String html = render(order, false);
+
+        assertFalse(html.contains("/autofactura/"),
+                "la autofactura solo se ofrece cuando el pedido ya está pagado");
+    }
+
     @Test
     void cancelledOrderOnlyKeepsTheReadOnlyActions() {
         String html = render(order(OrderStatus.CANCELLED, OrderType.DINE_IN, OrderStatus.CANCELLED), true);

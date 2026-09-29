@@ -187,4 +187,53 @@ class OrdersListDeliveryButtonRenderTest {
         assertNotNull(html);
         assertTrue(html.contains("btn-advance-delivery p-2"), "delivery advance button should render");
     }
+
+    /** A PAID order, optionally with the autofactura key generated at payment time. */
+    private Order paidOrder(String autofacturaKey) {
+        return Order.builder()
+                .idOrder(7L)
+                .orderNumber("ORD-7")
+                .orderType(OrderType.DINE_IN)
+                .status(OrderStatus.PAID)
+                .total(new BigDecimal("240.00"))
+                .paymentMethod(PaymentMethodType.CASH)
+                .createdAt(LocalDateTime.now())
+                .autofacturaKey(autofacturaKey)
+                .build();
+    }
+
+    /**
+     * Admin/gerente: un pedido PAGADO con la clave de autofactura (es decir, con facturación
+     * electrónica habilitada en el restaurante) debe ofrecer el botón morado que factura
+     * directo al cliente, igual que las cuentas divididas.
+     */
+    @Test
+    void adminListOffersTheAutofacturaButtonOnPaidOrdersWithInvoiceKey() {
+        AbstractContext ctx = webContext();
+        baseFlags(ctx, false);
+        ctx.setVariable("orders", List.of(paidOrder("clave-admin-7")));
+
+        String html = templateEngine.process("admin/orders/list", ctx);
+        assertTrue(html.contains("/autofactura/clave-admin-7"),
+                "admin y gerente deben poder facturar al cliente desde la lista");
+        assertTrue(html.contains("title=\"Autofactura del pedido\""),
+                "el botón morado debe traer su título");
+    }
+
+    /**
+     * Sin clave de autofactura (facturación electrónica deshabilitada al cobrar) el pedido
+     * pagado conserva el ojo y el ticket, pero no pinta el botón morado.
+     */
+    @Test
+    void adminListKeepsTheActionsWithoutTheAutofacturaButtonWhenThereIsNoInvoiceKey() {
+        AbstractContext ctx = webContext();
+        baseFlags(ctx, false);
+        ctx.setVariable("orders", List.of(paidOrder(null)));
+
+        String html = templateEngine.process("admin/orders/list", ctx);
+        assertTrue(html.contains("/admin/orders/7/download-ticket\""),
+                "el ticket del pedido pagado sigue ahí");
+        assertFalse(html.contains("/autofactura/"),
+                "sin clave de autofactura no hay botón morado que ofrecer");
+    }
 }
