@@ -247,6 +247,42 @@
               </h3>
             </div>
 
+            <!-- Buscador: folio (007), nombre o teléfono del cliente. Enter = Filtrar. -->
+            <div class="mb-4">
+              <label
+                for="filterSearch"
+                class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                >Buscar</label
+              >
+              <div class="relative">
+                <div
+                  class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3"
+                >
+                  <span
+                    class="material-symbols-outlined text-gray-400 dark:text-gray-500 text-lg"
+                    >search</span
+                  >
+                </div>
+                <input
+                  type="text"
+                  id="filterSearch"
+                  th:value="${searchTerm}"
+                  onkeydown="if (event.key === 'Enter') applyFilters()"
+                  placeholder="Nº de pedido (007), nombre o teléfono del cliente..."
+                  class="w-full px-4 py-2.5 pl-10 pr-10 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                />
+                <button
+                  type="button"
+                  th:if="${searchTerm != null}"
+                  onclick="clearSearchFilter()"
+                  title="Limpiar búsqueda"
+                  class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                >
+                  <span class="material-symbols-outlined text-lg">close</span>
+                </button>
+              </div>
+            </div>
+
             <div
               class="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-4"
             >
@@ -366,6 +402,43 @@
                 </button>
               </div>
             </div>
+          </div>
+
+          <!-- Resultado de la búsqueda: cuántos pedidos coinciden y, cuando es el
+               filtro de fecha lo que esconde el pedido, un clic para ver todos los días. -->
+          <div
+            th:if="${searchTerm != null}"
+            class="mb-6 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl border border-primary/30 bg-primary/5 px-4 py-3"
+          >
+            <span class="material-symbols-outlined text-primary">manage_search</span>
+            <p class="text-sm text-gray-700 dark:text-gray-200">
+              <span class="font-semibold" th:text="${searchResultCount}">0</span>
+              <span
+                th:text="${searchResultCount == 1 ? 'resultado' : 'resultados'}"
+                >resultados</span
+              >
+              para
+              <span class="font-semibold" th:text="${'«' + searchTerm + '»'}"
+                >«007»</span
+              >
+              <span th:if="${selectedDateValue != null}">
+                del
+                <span
+                  class="font-semibold"
+                  th:text="${#temporals.format(selectedDateValue, 'dd/MM/yyyy')}"
+                  >01/01/2026</span
+                >
+              </span>
+            </p>
+            <button
+              type="button"
+              th:if="${searchResultCount == 0 && selectedDateValue != null}"
+              onclick="clearDateFilter()"
+              class="ml-auto inline-flex items-center gap-1.5 rounded-lg border border-primary/40 px-3 py-1.5 text-sm font-semibold text-primary hover:bg-primary/10 transition-all"
+            >
+              <span class="material-symbols-outlined text-lg">event_busy</span>
+              Buscar en todos los días
+            </button>
           </div>
 
           <!-- ORDERS TABLE -->
@@ -972,6 +1045,9 @@
         const paymentMethod = document.getElementById("filterPaymentMethod")
           ? document.getElementById("filterPaymentMethod").value
           : "";
+        const search = document.getElementById("filterSearch")
+          ? document.getElementById("filterSearch").value.trim()
+          : "";
 
         let url = `/${currentRole}/orders?`;
         if (tableId) url += `tableId=${tableId}&`;
@@ -979,12 +1055,29 @@
         if (orderType) url += `orderType=${orderType}&`;
         if (date) url += `date=${date}&`;
         if (paymentMethod) url += `paymentMethod=${paymentMethod}&`;
+        if (search) url += `search=${encodeURIComponent(search)}&`;
 
         window.location.href = url;
       }
 
       function clearFilters() {
         window.location.href = `/${currentRole}/orders`;
+      }
+
+      // Quita solo la búsqueda y conserva los demás filtros.
+      function clearSearchFilter() {
+        const params = new URLSearchParams(window.location.search);
+        params.delete("search");
+        params.delete("page");
+        window.location.href = `/${currentRole}/orders?${params.toString()}`;
+      }
+
+      // Quita solo el filtro de fecha, para ver el pedido buscado en cualquier día.
+      function clearDateFilter() {
+        const params = new URLSearchParams(window.location.search);
+        params.delete("date");
+        params.delete("page");
+        window.location.href = `/${currentRole}/orders?${params.toString()}`;
       }
 
       // Helper function to get SweetAlert dark mode classes

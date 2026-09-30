@@ -5,6 +5,7 @@ import com.aatechsolutions.elgransazon.domain.entity.*;
 import com.aatechsolutions.elgransazon.infrastructure.context.CompanyContext;
 import com.aatechsolutions.elgransazon.util.CashRegisterAlertSupport;
 import com.aatechsolutions.elgransazon.util.DeliveryStatusSupport;
+import com.aatechsolutions.elgransazon.util.OrderSearchSupport;
 import jakarta.servlet.http.HttpSession;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -113,6 +114,7 @@ public class CashierController {
             @RequestParam(required = false) OrderType orderType,
             @RequestParam(required = false) String date,
             @RequestParam(required = false) PaymentMethodType paymentMethod,
+            @RequestParam(required = false) String search,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "1") int globalPage,
             Authentication authentication,
@@ -120,15 +122,23 @@ public class CashierController {
             Model model) {
         
         String username = authentication.getName();
-        log.debug("Cashier {} displaying orders list with filters - table: {}, status: {}, type: {}, date: {}", 
-                  username, tableId, status, orderType, date);
+        log.debug("Cashier {} displaying orders list with filters - table: {}, status: {}, type: {}, date: {}, search: {}",
+                  username, tableId, status, orderType, date, search);
 
         // ========== Resolve date range for table filter (optional) ==========
+        // A term that carries the folio day (ORD-20260929-007 / 20260929) pins the Fecha
+        // filter to that day, so pasting a folio from another day is not hidden by the date
+        // filter that was already set. The pinned day is exposed through selectedDate, so the
+        // field always shows what is really being filtered.
+        LocalDate effectiveDate = OrderSearchSupport.dateHint(search);
+        if (effectiveDate == null && date != null && !date.isEmpty()) {
+            effectiveDate = LocalDate.parse(date);
+        }
         LocalDateTime filterStartDate = null;
         LocalDateTime filterEndDate = null;
-        if (date != null && !date.isEmpty()) {
-            filterStartDate = dateTimeService.startOfDayUtc(LocalDate.parse(date));
-            filterEndDate = dateTimeService.endOfDayUtc(LocalDate.parse(date));
+        if (effectiveDate != null) {
+            filterStartDate = dateTimeService.startOfDayUtc(effectiveDate);
+            filterEndDate = dateTimeService.endOfDayUtc(effectiveDate);
         }
         final LocalDateTime fStart = filterStartDate;
         final LocalDateTime fEnd = filterEndDate;
@@ -162,6 +172,9 @@ public class CashierController {
                 .filter(o -> o.usesPaymentMethod(paymentMethod))
                 .collect(Collectors.toList());
         }
+        // Free-text search (folio, day sequence, customer name or phone). Shared rules with
+        // every other order list, so the term means the same for all roles.
+        myOrders = OrderSearchSupport.filter(myOrders, search);
         myOrders = myOrders.stream()
             .sorted((o1, o2) -> o2.getCreatedAt().compareTo(o1.getCreatedAt()))
             .collect(Collectors.toList());
@@ -219,6 +232,8 @@ public class CashierController {
                 .filter(o -> o.usesPaymentMethod(paymentMethod))
                 .collect(Collectors.toList());
         }
+        // The search box is shared by both boards: the global one is narrowed the same way.
+        unpaidOrders = OrderSearchSupport.filter(unpaidOrders, search);
 
         // ========== Stats date range (always applies; defaults to today) ==========
         LocalDateTime statsStartDate;
@@ -316,7 +331,11 @@ public class CashierController {
         model.addAttribute("selectedStatus", status);
         model.addAttribute("selectedOrderType", orderType);
         model.addAttribute("selectedPaymentMethod", paymentMethod);
-        model.addAttribute("selectedDate", date);
+        model.addAttribute("selectedDate", effectiveDate != null ? effectiveDate.toString() : null);
+        model.addAttribute("selectedDateValue", effectiveDate);
+        model.addAttribute("searchTerm", OrderSearchSupport.trimToNull(search));
+        // One box feeds both boards (Mine + Globals), so the counter adds them up.
+        model.addAttribute("searchResultCount", myTotalElements + globalTotalElements);
 
         model.addAttribute("currentRole", "cashier");
         addStaffPermissionFlags(model);
@@ -1006,6 +1025,26 @@ public class CashierController {
         model.addAttribute("currentRole", "cashier");
         addStaffPermissionFlags(model);
         return "fragments/order-actions :: actionsFromModel";
+    }
+
+    /**
+     * Renders the DETAIL PANEL of ONE order (fragments/order-detail-panel).
+     *
+     * The list opens it as a modal when a card is clicked and re-fetches it in place while the
+     * modal stays open and the order changes (locally or over WebSocket). It carries what does
+     * not fit in the row: the consumed items - with their notes, complements and already
+     * collected units - and the per-person accounts when the bill was split. The action buttons
+     * are the same fragment the row uses (fragments/order-actions), so the rules of which
+     * button shows up for which status keep living on the server.
+     */
+    @GetMapping("/orders/{id}/detail-panel")
+    public String orderDetailPanel(@PathVariable Long id, Model model) {
+        Order order = cashierOrderService.findByIdWithDetails(id)
+                .orElseThrow(() -> new IllegalArgumentException("Pedido no encontrado: " + id));
+        model.addAttribute("order", order);
+        model.addAttribute("currentRole", "cashier");
+        addStaffPermissionFlags(model);
+        return "fragments/order-detail-panel :: panelFromModel";
     }
 
     /**

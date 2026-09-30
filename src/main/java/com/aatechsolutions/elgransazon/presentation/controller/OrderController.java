@@ -5,6 +5,7 @@ import com.aatechsolutions.elgransazon.domain.entity.*;
 import com.aatechsolutions.elgransazon.infrastructure.context.CompanyContext;
 import com.aatechsolutions.elgransazon.util.CashRegisterAlertSupport;
 import com.aatechsolutions.elgransazon.util.DeliveryStatusSupport;
+import com.aatechsolutions.elgransazon.util.OrderSearchSupport;
 import jakarta.servlet.http.HttpSession;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -226,13 +227,14 @@ public class OrderController {
             @RequestParam(required = false) OrderType orderType,
             @RequestParam(required = false) String date,
             @RequestParam(required = false) PaymentMethodType paymentMethod,
+            @RequestParam(required = false) String search,
             @RequestParam(defaultValue = "1") int page,
             Authentication authentication,
             HttpSession session,
             Model model) {
         
-        log.debug("Displaying orders list with filters - role: {}, table: {}, status: {}, type: {}, date: {}, paymentMethod: {}", 
-                  role, tableId, status, orderType, date, paymentMethod);
+        log.debug("Displaying orders list with filters - role: {}, table: {}, status: {}, type: {}, date: {}, paymentMethod: {}, search: {}",
+                  role, tableId, status, orderType, date, paymentMethod, search);
 
         // Validate role
         validateRole(role, authentication);
@@ -242,10 +244,19 @@ public class OrderController {
 
         List<Order> orders;
 
+        // A term that carries the folio day (ORD-20260929-007 / 20260929) pins the Fecha
+        // filter to that day: pasting a folio from another day must never come back empty
+        // because the date filter was still set to today. The pinned day is exposed to the
+        // view through selectedDate, so the field always shows what is being filtered.
+        LocalDate effectiveDate = OrderSearchSupport.dateHint(search);
+        if (effectiveDate == null && date != null && !date.isEmpty()) {
+            effectiveDate = LocalDate.parse(date);
+        }
+
         // Apply filters
-        if (date != null && !date.isEmpty()) {
-            LocalDateTime startDate = dateTimeService.startOfDayUtc(LocalDate.parse(date));
-            LocalDateTime endDate = dateTimeService.endOfDayUtc(LocalDate.parse(date));
+        if (effectiveDate != null) {
+            LocalDateTime startDate = dateTimeService.startOfDayUtc(effectiveDate);
+            LocalDateTime endDate = dateTimeService.endOfDayUtc(effectiveDate);
             orders = orderService.findByDateRange(startDate, endDate);
         } else {
             orders = orderService.findAll(); // Already filtered by role in service implementation
@@ -279,6 +290,10 @@ public class OrderController {
                 .collect(Collectors.toList());
         }
 
+        // Free-text search (folio, day sequence, customer name or phone). Shared rules with
+        // the cashier board so every role finds the same orders with the same term.
+        orders = OrderSearchSupport.filter(orders, search);
+
         // Sort by creation date (most recent first)
         orders = orders.stream()
             .sorted((o1, o2) -> o2.getCreatedAt().compareTo(o1.getCreatedAt()))
@@ -288,9 +303,9 @@ public class OrderController {
         // If date filter is applied, use that date; otherwise use today
         LocalDateTime statsStartDate;
         LocalDateTime statsEndDate;
-        if (date != null && !date.isEmpty()) {
-            statsStartDate = dateTimeService.startOfDayUtc(LocalDate.parse(date));
-            statsEndDate = dateTimeService.endOfDayUtc(LocalDate.parse(date));
+        if (effectiveDate != null) {
+            statsStartDate = dateTimeService.startOfDayUtc(effectiveDate);
+            statsEndDate = dateTimeService.endOfDayUtc(effectiveDate);
         } else {
             statsStartDate = dateTimeService.startOfDayUtc(dateTimeService.todayLocal());
             statsEndDate = dateTimeService.endOfDayUtc(dateTimeService.todayLocal());
@@ -390,7 +405,10 @@ public class OrderController {
         model.addAttribute("selectedStatus", status);
         model.addAttribute("selectedOrderType", orderType);
         model.addAttribute("selectedPaymentMethod", paymentMethod);
-        model.addAttribute("selectedDate", date);
+        model.addAttribute("selectedDate", effectiveDate != null ? effectiveDate.toString() : null);
+        model.addAttribute("selectedDateValue", effectiveDate);
+        model.addAttribute("searchTerm", OrderSearchSupport.trimToNull(search));
+        model.addAttribute("searchResultCount", totalElements);
         model.addAttribute("currentRole", role);
         model.addAttribute("currentUsername", currentUsername);
 

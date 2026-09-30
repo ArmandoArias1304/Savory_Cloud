@@ -77,6 +77,31 @@
       .table-responsive::-webkit-scrollbar-thumb:hover {
         background: #2bc866;
       }
+
+      /* Acciones de la tarjeta: para el dedo, algo más grandes y más separadas que en la fila
+         de la tabla (donde el espacio es el de una celda), sin llegar al tamaño del panel de
+         detalle. La clase vive en el pie de la tarjeta; los botones son los mismos del
+         fragmento de acciones, así que se ajustan aquí y no en el fragmento compartido. */
+      .order-card-actions > div {
+        flex-wrap: wrap;
+        gap: 0.5rem;
+      }
+      .order-card-actions > div > a,
+      .order-card-actions > div > button {
+        padding: 0.625rem;
+        border-radius: 0.75rem;
+        font-size: 1.0625rem;
+      }
+      @media (min-width: 640px) {
+        .order-card-actions > div {
+          gap: 0.75rem;
+        }
+        .order-card-actions > div > a,
+        .order-card-actions > div > button {
+          padding: 0.75rem;
+          font-size: 1.125rem;
+        }
+      }
     </style>
   </head>
   <body
@@ -246,6 +271,43 @@
               </h3>
             </div>
 
+            <!-- Buscador: folio (007), nombre o teléfono del cliente. Aplica a los dos
+                 tableros (Mis pedidos y Globales). Enter = Filtrar. -->
+            <div class="mb-4">
+              <label
+                for="filterSearch"
+                class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                >Buscar</label
+              >
+              <div class="relative">
+                <div
+                  class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3"
+                >
+                  <span
+                    class="material-symbols-outlined text-gray-400 dark:text-gray-500 text-lg"
+                    >search</span
+                  >
+                </div>
+                <input
+                  type="text"
+                  id="filterSearch"
+                  th:value="${searchTerm}"
+                  onkeydown="if (event.key === 'Enter') applyFilters()"
+                  placeholder="Nº de pedido (007), nombre o teléfono del cliente..."
+                  class="w-full px-4 py-2.5 pl-10 pr-10 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                />
+                <button
+                  type="button"
+                  th:if="${searchTerm != null}"
+                  onclick="clearSearchFilter()"
+                  title="Limpiar búsqueda"
+                  class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                >
+                  <span class="material-symbols-outlined text-lg">close</span>
+                </button>
+              </div>
+            </div>
+
             <div
               class="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-4"
             >
@@ -368,24 +430,70 @@
             </div>
           </div>
 
+          <!-- Resultado de la búsqueda: cuántos pedidos coinciden y, cuando es el
+               filtro de fecha lo que esconde el pedido, un clic para ver todos los días. -->
+          <div
+            th:if="${searchTerm != null}"
+            class="mb-6 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl border border-primary/30 bg-primary/5 px-4 py-3"
+          >
+            <span class="material-symbols-outlined text-primary">manage_search</span>
+            <p class="text-sm text-gray-700 dark:text-gray-200">
+              <span class="font-semibold" th:text="${searchResultCount}">0</span>
+              <span
+                th:text="${searchResultCount == 1 ? 'resultado' : 'resultados'}"
+                >resultados</span
+              >
+              para
+              <span class="font-semibold" th:text="${'«' + searchTerm + '»'}"
+                >«007»</span
+              >
+              <span th:if="${selectedDateValue != null}">
+                del
+                <span
+                  class="font-semibold"
+                  th:text="${#temporals.format(selectedDateValue, 'dd/MM/yyyy')}"
+                  >01/01/2026</span
+                >
+              </span>
+            </p>
+            <button
+              type="button"
+              th:if="${searchResultCount == 0 && selectedDateValue != null}"
+              onclick="clearDateFilter()"
+              class="ml-auto inline-flex items-center gap-1.5 rounded-lg border border-primary/40 px-3 py-1.5 text-sm font-semibold text-primary hover:bg-primary/10 transition-all"
+            >
+              <span class="material-symbols-outlined text-lg">event_busy</span>
+              Buscar en todos los días
+            </button>
+          </div>
+
           <!-- ORDERS TABLE -->
           <div
             class="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-lg overflow-hidden"
           >
             <div
               class="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-800"
-            >
-              <div class="flex items-center gap-2">
-                <span class="material-symbols-outlined text-primary text-2xl"
-                  >receipt_long</span
-                >
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
-                  Lista de Pedidos
-                </h3>
+            >              <div class="flex flex-wrap items-center justify-between gap-3">
+                <div class="flex items-center gap-2">
+                  <span
+                    class="material-symbols-outlined text-primary text-2xl"
+                    >receipt_long</span
+                  >
+                  <h3
+                    class="text-lg font-semibold text-gray-900 dark:text-white"
+                  >
+                    Lista de Pedidos
+                  </h3>
+                </div>
+                <!-- Vista de tabla / tarjetas: la elección se recuerda y la aplica el
+                     script de la página (switchOrdersView). -->
+                <div
+                  th:replace="~{fragments/orders-view-toggle :: toggle('my')}"
+                ></div>
               </div>
             </div>
 
-            <div class="table-responsive">
+            <div id="myOrdersTableView" class="table-responsive">
               <table class="w-full text-sm text-left">
                 <thead
                   class="text-xs uppercase bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300"
@@ -423,6 +531,7 @@
                   <th:block th:each="order : ${myOrders}">
                   <tr
                     th:data-order-id="${order.idOrder}"
+                    th:data-order-type="${order.orderType.name()}"
                     class="border-b border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
                   >
                     <!-- Order Number -->
@@ -551,6 +660,22 @@
               </table>
             </div>
 
+            <!-- VISTA DE TARJETAS (Mis Pedidos): mismo contenido que la tabla, construida
+                 desde sus filas por renderOrderCards(), para no duplicar la información ni
+                 las reglas de los botones. -->
+            <div id="myOrdersGridView" class="hidden p-4 sm:p-6">
+              <p
+                id="myOrdersGridEmpty"
+                class="hidden py-10 text-center text-sm text-gray-500 dark:text-gray-400"
+              >
+                No hay pedidos que coincidan con los filtros.
+              </p>
+              <div
+                id="myOrdersGridContainer"
+                class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4"
+              ></div>
+            </div>
+
             <!-- Pagination Controls for My Orders -->
             <div
               id="paginationControlsMyOrders"
@@ -601,7 +726,7 @@
             <div
               class="p-4 sm:p-6 border-b border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-900/20"
             >
-              <div class="flex items-center justify-between">
+              <div class="flex flex-wrap items-center justify-between gap-3">
                 <div class="flex items-center gap-2">
                   <span
                     class="material-symbols-outlined text-orange-500 text-2xl"
@@ -627,6 +752,9 @@
                     </p>
                   </div>
                 </div>
+                <div
+                  th:replace="~{fragments/orders-view-toggle :: toggle('global')}"
+                ></div>
                 <div class="text-right">
                   <p class="text-sm text-gray-600 dark:text-gray-400">
                     Total por cobrar
@@ -641,7 +769,7 @@
               </div>
             </div>
 
-            <div class="table-responsive">
+            <div id="globalOrdersTableView" class="table-responsive">
               <table class="w-full text-sm text-left">
                 <thead
                   class="text-xs uppercase bg-orange-50 dark:bg-orange-900/20 text-gray-700 dark:text-gray-300"
@@ -679,6 +807,7 @@
                   <th:block th:each="order : ${unpaidOrders}">
                   <tr
                     th:data-order-id="${order.idOrder}"
+                    th:data-order-type="${order.orderType.name()}"
                     class="border-b border-gray-200 dark:border-gray-800 hover:bg-orange-50/50 dark:hover:bg-orange-900/10 transition-colors"
                   >
                     <!-- Order Number -->
@@ -805,6 +934,20 @@
                   </th:block>
                 </tbody>
               </table>
+            </div>
+
+            <!-- VISTA DE TARJETAS (Pedidos Globales): misma tabla, otra presentación. -->
+            <div id="globalOrdersGridView" class="hidden p-4 sm:p-6">
+              <p
+                id="globalOrdersGridEmpty"
+                class="hidden py-10 text-center text-sm text-gray-500 dark:text-gray-400"
+              >
+                No hay pedidos que coincidan con los filtros.
+              </p>
+              <div
+                id="globalOrdersGridContainer"
+                class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4"
+              ></div>
             </div>
 
             <!-- Pagination Controls for Global Orders -->
@@ -963,6 +1106,11 @@
           : "";
         if (paymentMethod) params.set("paymentMethod", paymentMethod);
         else params.delete("paymentMethod");
+        const search = document.getElementById("filterSearch")
+          ? document.getElementById("filterSearch").value.trim()
+          : "";
+        if (search) params.set("search", search);
+        else params.delete("search");
 
         window.location.href = `/${currentRole}/orders?${params.toString()}#mainFiltersSection`;
       }
@@ -974,6 +1122,25 @@
         params.delete("orderType");
         params.delete("date");
         params.delete("paymentMethod");
+        params.delete("search");
+        window.location.href = `/${currentRole}/orders?${params.toString()}#mainFiltersSection`;
+      }
+
+      // Quita solo la búsqueda y conserva los demás filtros (aplica a los dos tableros).
+      function clearSearchFilter() {
+        const params = new URLSearchParams(window.location.search);
+        params.delete("search");
+        params.delete("page");
+        params.delete("globalPage");
+        window.location.href = `/${currentRole}/orders?${params.toString()}#mainFiltersSection`;
+      }
+
+      // Quita solo el filtro de fecha, para ver el pedido buscado en cualquier día.
+      function clearDateFilter() {
+        const params = new URLSearchParams(window.location.search);
+        params.delete("date");
+        params.delete("page");
+        params.delete("globalPage");
         window.location.href = `/${currentRole}/orders?${params.toString()}#mainFiltersSection`;
       }
 
@@ -1341,6 +1508,10 @@
               cell.innerHTML = html;
               bindOrderActionButtons(cell);
             });
+            // Los botones también viajan a las tarjetas y al modal: ambos se reconstruyen
+            // para no quedar mostrando los de antes del cambio.
+            renderOrderCards();
+            refreshOpenOrderDetailPanel(orderId);
             return true;
           })
           .catch((error) => {
@@ -1355,6 +1526,8 @@
         document
           .querySelectorAll(`tr[data-order-id="${orderId}"] .status-badge`)
           .forEach((badge) => updateStatusBadge(badge, status));
+        // Las tarjetas copian el badge de la fila: se reconstruyen con el estado nuevo.
+        renderOrderCards();
       }
 
       document.addEventListener("DOMContentLoaded", function () {
@@ -1738,7 +1911,429 @@
         }
       }
 
+      // =====================================================================
+      // VISTA DE TABLA / TARJETAS Y MODAL DE DETALLE DEL PEDIDO
+      // =====================================================================
+      //
+      // La tabla sigue siendo la única fuente de verdad: cada tarjeta se construye leyendo las
+      // celdas de su fila, así que los filtros, la paginación del servidor, el refresco en vivo
+      // de las acciones y los badges de estado no se duplican ni se pueden desincronizar. Cada
+      // vez que una fila cambia, las tarjetas se reconstruyen (renderOrderCards).
+      //
+      // Las cuentas divididas son filas <tr> hermanas del pedido, así que en la vista de
+      // tarjetas se resumen como "N cuentas" y el detalle completo (ítems y cuentas, con su
+      // ticket y autofactura) se ve en el modal del pedido.
+      const ORDERS_VIEW_KEY = "cashierOrdersView";
+      const ORDERS_VIEW_SECTIONS = {
+        my: {
+          table: "myOrdersTableView",
+          wrapper: "myOrdersGridView",
+          container: "myOrdersGridContainer",
+          empty: "myOrdersGridEmpty",
+        },
+        global: {
+          table: "globalOrdersTableView",
+          wrapper: "globalOrdersGridView",
+          container: "globalOrdersGridContainer",
+          empty: "globalOrdersGridEmpty",
+        },
+      };
+
+      function currentOrdersView() {
+        try {
+          return localStorage.getItem(ORDERS_VIEW_KEY) === "grid"
+            ? "grid"
+            : "table";
+        } catch (error) {
+          return "table";
+        }
+      }
+
+      function switchOrdersView(view) {
+        try {
+          localStorage.setItem(
+            ORDERS_VIEW_KEY,
+            view === "grid" ? "grid" : "table",
+          );
+        } catch (error) {
+          // Sin almacenamiento (modo privado): la elección vive solo en memoria.
+        }
+        applyOrdersView();
+      }
+
+      function applyOrdersView() {
+        const view = currentOrdersView();
+
+        Object.keys(ORDERS_VIEW_SECTIONS).forEach(function (scope) {
+          const elements = ORDERS_VIEW_SECTIONS[scope];
+          const table = document.getElementById(elements.table);
+          const wrapper = document.getElementById(elements.wrapper);
+          if (table) table.classList.toggle("hidden", view === "grid");
+          if (wrapper) wrapper.classList.toggle("hidden", view !== "grid");
+        });
+
+        // La preferencia es una sola para las dos listas, pero el interruptor existe en las
+        // dos cabeceras: se marcan los dos juegos de botones.
+        document
+          .querySelectorAll(".orders-view-btn")
+          .forEach(function (button) {
+            const isActive = button.getAttribute("data-orders-view") === view;
+            button.classList.toggle("bg-white", isActive);
+            button.classList.toggle("dark:bg-gray-700", isActive);
+            button.classList.toggle("text-primary", isActive);
+            button.classList.toggle("shadow-sm", isActive);
+            button.classList.toggle("text-gray-600", !isActive);
+            button.classList.toggle("dark:text-gray-400", !isActive);
+            button.setAttribute("aria-pressed", isActive ? "true" : "false");
+          });
+
+        if (view === "grid") renderOrderCards();
+      }
+
+      // Cuentas por persona de un pedido: son las filas .payments-detail que el fragmento de
+      // tickets por persona deja debajo de la fila del pedido, después de la fila del botón
+      // "Ver N ticket(s) por persona" (que solo aparece cuando hay más de una).
+      function splitAccountCount(row) {
+        let count = 0;
+        let sibling = row.nextElementSibling;
+        while (sibling && sibling.tagName === "TR") {
+          if (sibling.classList.contains("payments-detail")) {
+            count++;
+          } else if (!sibling.querySelector(".payments-toggle")) {
+            break;
+          }
+          sibling = sibling.nextElementSibling;
+        }
+        return count;
+      }
+
+      // Caja del encabezado de la tarjeta para los pedidos que NO tienen mesa: se pinta el TIPO
+      // de pedido con su icono y su color (los mismos del detalle del pedido), porque un pedido a
+      // domicilio o para recoger no tiene mesa y un "N/A" no dice nada.
+      const ORDER_TYPE_BOX = {
+        DINE_IN: {
+          caption: "",
+          icon: "table_restaurant",
+          style: "bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500",
+        },
+        DELIVERY: {
+          caption: "Domicilio",
+          icon: "local_shipping",
+          style: "bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400",
+        },
+        TAKEOUT: {
+          caption: "Recoger",
+          icon: "shopping_bag",
+          style: "bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400",
+        },
+      };
+
+      function buildOrderCard(row) {
+        const cells = row.querySelectorAll("td");
+        if (cells.length < 9) return null;
+
+        const orderId = row.getAttribute("data-order-id");
+        const cellText = function (index) {
+          return cells[index] ? cells[index].textContent.trim() : "";
+        };
+
+        const card = document.createElement("article");
+        card.className =
+          "order-card group cursor-pointer rounded-2xl border border-gray-200 dark:border-gray-800 " +
+          "bg-white dark:bg-gray-900 shadow-md transition-all hover:-translate-y-0.5 hover:shadow-lg overflow-hidden";
+        card.setAttribute("data-order-id", orderId);
+        card.setAttribute("tabindex", "0");
+        card.setAttribute("role", "button");
+        card.setAttribute("aria-label", "Ver el detalle del pedido " + cellText(0));
+
+        // Cabecera: la mesa y el número de pedido son lo primero que se ve, igual que en el panel
+        // de detalle. La mesa se lee de la celda de la tabla (que la pinta como "Mesa #3"); si el
+        // pedido no tiene mesa (domicilio, para llevar) la caja queda muda, sin un "N/A" que
+        // distraiga. El estado y la fecha bajan a una línea secundaria para dejarle todo el ancho
+        // al número: en dos columnas (tablet) no cabrían los tres en la misma fila.
+        const header = document.createElement("div");
+        header.className = "flex items-start gap-3 px-4 pt-4";
+
+        const tableNumber = cellText(2).replace(/[^0-9]/g, "");
+        const typeBox = ORDER_TYPE_BOX[row.getAttribute("data-order-type")] || ORDER_TYPE_BOX.DINE_IN;
+
+        const tableBox = document.createElement("div");
+        tableBox.className =
+          "h-14 w-14 shrink-0 rounded-xl flex flex-col items-center justify-center " +
+          (tableNumber ? "bg-primary/10 dark:bg-primary/20 text-primary" : typeBox.style);
+        // Con mesa la caja se lee "MESA 7"; sin mesa, el tipo de pedido ("DOMICILIO" con la moto,
+        // "RECOGER" con la bolsa) y el nombre completo en el tooltip.
+        tableBox.title = tableNumber ? "Mesa " + tableNumber : cellText(3);
+
+        const boxCaption = tableNumber ? "Mesa" : typeBox.caption;
+        if (boxCaption) {
+          const caption = document.createElement("span");
+          caption.className = "text-[8px] uppercase tracking-wide font-bold";
+          caption.textContent = boxCaption;
+          tableBox.appendChild(caption);
+        }
+        if (tableNumber) {
+          const tableValue = document.createElement("span");
+          tableValue.className = "text-xl font-extrabold leading-none tabular-nums";
+          tableValue.textContent = tableNumber;
+          tableBox.appendChild(tableValue);
+        } else {
+          const typeIcon = document.createElement("span");
+          typeIcon.className = "material-symbols-outlined text-xl leading-none";
+          typeIcon.textContent = typeBox.icon;
+          tableBox.appendChild(typeIcon);
+        }
+
+        const heading = document.createElement("div");
+        heading.className = "min-w-0 flex-1";
+        const number = document.createElement("p");
+        number.className =
+          "font-mono text-lg sm:text-xl font-extrabold leading-tight text-gray-900 dark:text-white break-all";
+        number.textContent = cellText(0);
+        const when = document.createElement("p");
+        when.className =
+          "mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-gray-500 dark:text-gray-400";
+        const whenText = document.createElement("span");
+        // La celda de fecha trae dos divs (día y hora): su textContent los pega con un salto de
+        // línea de la plantilla, así que se normaliza a un solo espacio.
+        whenText.textContent = cellText(1).replace(/\s+/g, " ");
+        when.appendChild(whenText);
+        heading.appendChild(number);
+        heading.appendChild(when);
+
+        const statusBadge = cells[7]
+          ? cells[7].querySelector(".status-badge")
+          : null;
+        if (statusBadge) {
+          const badge = statusBadge.cloneNode(true);
+          badge.classList.remove("px-3", "py-1", "text-xs");
+          badge.classList.add("px-2", "py-0.5", "text-[10px]");
+          when.appendChild(badge);
+        }
+        header.appendChild(tableBox);
+        header.appendChild(heading);
+
+        // Tipo, cliente y total.
+        const middle = document.createElement("div");
+        middle.className = "px-4 pt-3 flex items-end justify-between gap-3";
+        const meta = document.createElement("div");
+        meta.className = "min-w-0 text-xs text-gray-600 dark:text-gray-400";
+        const typeLine = document.createElement("p");
+        typeLine.className = "truncate";
+        typeLine.textContent =
+          cellText(3) + " · " + (cellText(4) || "Público general");
+        meta.appendChild(typeLine);
+        const paymentPillSource = cells[6] ? cells[6].querySelector("span") : null;
+        if (paymentPillSource) {
+          const paymentPill = paymentPillSource.cloneNode(true);
+          paymentPill.classList.remove("px-3", "py-1");
+          paymentPill.classList.add("mt-1", "inline-flex", "text-[11px]");
+          meta.appendChild(paymentPill);
+        }
+        const total = document.createElement("p");
+        total.className =
+          "text-lg font-bold text-gray-900 dark:text-white whitespace-nowrap";
+        total.textContent = cellText(5);
+        middle.appendChild(meta);
+        middle.appendChild(total);
+
+        // Pie de datos: cobrado por, cuentas divididas y el aviso de que hay detalle.
+        const info = document.createElement("div");
+        info.className =
+          "px-4 pt-2 pb-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-gray-500 dark:text-gray-400";
+        if (cellText(9)) {
+          const paidBy = document.createElement("span");
+          paidBy.textContent = "Cobrado por: " + cellText(9);
+          info.appendChild(paidBy);
+        }
+        const accounts = splitAccountCount(row);
+        if (accounts > 0) {
+          const accountsChip = document.createElement("span");
+          accountsChip.className =
+            "inline-flex items-center gap-1 rounded-full bg-teal-50 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300 px-2 py-0.5 font-semibold";
+          const accountsIcon = document.createElement("span");
+          accountsIcon.className = "material-symbols-outlined !text-xs";
+          accountsIcon.textContent = "group";
+          accountsChip.appendChild(accountsIcon);
+          const accountsText = document.createElement("span");
+          accountsText.textContent =
+            accounts === 1
+              ? "1 cuenta por persona"
+              : accounts + " cuentas por persona";
+          accountsChip.appendChild(accountsText);
+          info.appendChild(accountsChip);
+        }
+        const detailHint = document.createElement("span");
+        detailHint.className = "ml-auto font-semibold text-primary";
+        detailHint.textContent = "Ver detalle";
+        info.appendChild(detailHint);
+
+        // Acciones: los MISMOS botones de la fila (copiados del fragmento del servidor).
+        const footer = document.createElement("div");
+        footer.className =
+          "order-card-actions border-t border-gray-100 dark:border-gray-800 px-2 py-2 flex flex-wrap items-center justify-center gap-y-1";
+        const actionsCell = row.querySelector(".order-actions-cell");
+        const actionsRow = actionsCell
+          ? actionsCell.querySelector("div")
+          : null;
+        if (actionsRow) footer.appendChild(actionsRow.cloneNode(true));
+
+        card.appendChild(header);
+        card.appendChild(middle);
+        card.appendChild(info);
+        card.appendChild(footer);
+
+        // Los botones clonados no traen listeners: se enganchan igual que los de una fila
+        // recién re-renderizada.
+        bindOrderActionButtons(card);
+
+        // La tarjeta abre el detalle, salvo cuando el clic fue sobre un botón o un enlace
+        // (esos siguen su propio camino).
+        card.addEventListener("click", function (event) {
+          if (event.target.closest("a, button")) return;
+          openOrderDetailPanel(orderId);
+        });
+        card.addEventListener("keydown", function (event) {
+          if (event.key !== "Enter" && event.key !== " ") return;
+          event.preventDefault();
+          openOrderDetailPanel(orderId);
+        });
+
+        return card;
+      }
+
+      function renderOrderCards() {
+        // En vista de tabla no hay nada que construir: al cambiar de vista (applyOrdersView)
+        // las tarjetas se generan con las filas ya actualizadas.
+        if (currentOrdersView() !== "grid") return;
+
+        Object.keys(ORDERS_VIEW_SECTIONS).forEach(function (scope) {
+          const elements = ORDERS_VIEW_SECTIONS[scope];
+          const table = document.getElementById(elements.table);
+          const container = document.getElementById(elements.container);
+          const emptyState = document.getElementById(elements.empty);
+          if (!table || !container) return;
+
+          const cards = [];
+          table.querySelectorAll("tr[data-order-id]").forEach(function (row) {
+            const card = buildOrderCard(row);
+            if (card) cards.push(card);
+          });
+
+          container.replaceChildren(...cards);
+          if (emptyState) emptyState.classList.toggle("hidden", cards.length > 0);
+        });
+      }
+
+      // El cuerpo del modal lo sirve el servidor (fragments/order-detail-panel): cabecera,
+      // ítems consumidos, cuentas por persona y las mismas acciones de la fila.
+      let openOrderDetailId = null;
+
+      function orderDetailSpinner() {
+        return (
+          '<div class="flex items-center justify-center py-12 text-gray-400">' +
+          '<span class="material-symbols-outlined animate-spin text-3xl">progress_activity</span>' +
+          "</div>"
+        );
+      }
+
+      function openOrderDetailPanel(orderId) {
+        const modal = document.getElementById("orderDetailModal");
+        if (!modal) return;
+
+        openOrderDetailId = String(orderId);
+        const fullLink = document.getElementById("orderDetailFullLink");
+        if (fullLink) {
+          fullLink.setAttribute("href", `/cashier/orders/view/${orderId}`);
+        }
+        modal.classList.remove("hidden");
+        document.body.classList.add("overflow-hidden");
+        loadOrderDetailPanel(orderId);
+      }
+
+      function closeOrderDetailPanel() {
+        const modal = document.getElementById("orderDetailModal");
+        if (modal) modal.classList.add("hidden");
+        document.body.classList.remove("overflow-hidden");
+        openOrderDetailId = null;
+      }
+
+      function loadOrderDetailPanel(orderId) {
+        const body = document.getElementById("orderDetailModalBody");
+        if (!body) return Promise.resolve(false);
+
+        body.innerHTML = orderDetailSpinner();
+        return fetch(`/cashier/orders/${orderId}/detail-panel`, {
+          headers: { "X-Requested-With": "XMLHttpRequest" },
+        })
+          .then(function (response) {
+            if (!response.ok) throw new Error("HTTP " + response.status);
+            return response.text();
+          })
+          .then(function (html) {
+            body.innerHTML = html;
+            // Los botones del panel son los mismos del fragmento de acciones.
+            bindOrderActionButtons(body);
+            return true;
+          })
+          .catch(function (error) {
+            console.error("No se pudo cargar el detalle del pedido:", error);
+            body.replaceChildren(orderDetailError(error));
+            return false;
+          });
+      }
+
+      // Error del panel con el motivo a la vista: un 404 (el endpoint no existe en el proceso
+      // que está corriendo), un 500 (el fragmento no se pudo pintar) o un fallo de red se
+      // distinguen de un vistazo, sin abrir la consola.
+      function orderDetailError(error) {
+        const container = document.createElement("div");
+        container.className = "py-10 text-center";
+
+        const title = document.createElement("p");
+        title.className = "text-sm font-semibold text-gray-700 dark:text-gray-200";
+        title.textContent = "No se pudo cargar el detalle del pedido";
+
+        const detail = document.createElement("p");
+        detail.className = "mt-1 text-xs text-gray-500 dark:text-gray-400";
+        detail.textContent =
+          (error && error.message ? error.message : "error desconocido") +
+          " · el enlace \"Ver pedido completo\" sigue disponible";
+
+        container.appendChild(title);
+        container.appendChild(detail);
+        return container;
+      }
+
+      // El pedido puede cambiar mientras el panel está abierto (cocina, otro cajero): solo se
+      // vuelve a pedir al servidor si el detalle abierto es el de ESE pedido.
+      function refreshOpenOrderDetailPanel(orderId) {
+        if (openOrderDetailId === null) return;
+        if (String(orderId) !== openOrderDetailId) return;
+        loadOrderDetailPanel(orderId);
+      }
+
+      document.addEventListener("click", function (event) {
+        if (!event.target.closest) return;
+
+        const viewButton = event.target.closest(".orders-view-btn");
+        if (viewButton) {
+          switchOrdersView(viewButton.getAttribute("data-orders-view"));
+          return;
+        }
+        if (event.target.closest("[data-order-detail-close]")) {
+          closeOrderDetailPanel();
+        }
+      });
+
+      document.addEventListener("keydown", function (event) {
+        if (event.key === "Escape" && openOrderDetailId !== null) {
+          closeOrderDetailPanel();
+        }
+      });
+
       document.addEventListener("DOMContentLoaded", function () {
+        applyOrdersView();
         connectOrderListWebSocket();
       });
 
@@ -1750,6 +2345,74 @@
         }
       });
     </script>
+
+    <!-- Modal de detalle del pedido: se abre al pulsar una tarjeta (y con Enter o espacio,
+         porque la tarjeta es accesible por teclado). El cuerpo lo sirve el servidor
+         (fragments/order-detail-panel vía GET /cashier/orders/{id}/detail-panel): mesa y
+         pedido, ítems consumidos con sus notas y complementos, cuentas por persona con su
+         ticket y autofactura, y las MISMAS acciones de la fila de la tabla. -->
+    <div
+      id="orderDetailModal"
+      class="hidden fixed inset-0 z-50 overflow-y-auto"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="orderDetailModalTitle"
+    >
+      <div
+        class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm"
+        data-order-detail-close
+      ></div>
+
+      <div class="relative flex min-h-full items-start justify-center p-3 sm:p-6">
+        <div
+          class="relative w-full max-w-2xl rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-2xl"
+        >
+          <div
+            class="flex items-center justify-between gap-3 px-4 sm:px-5 py-3 border-b border-gray-200 dark:border-gray-800"
+          >
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-primary"
+                >receipt_long</span
+              >
+              <h3
+                id="orderDetailModalTitle"
+                class="text-base font-semibold text-gray-900 dark:text-white"
+              >
+                Detalle del pedido
+              </h3>
+            </div>
+            <button
+              type="button"
+              class="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all"
+              data-order-detail-close
+              aria-label="Cerrar"
+              title="Cerrar"
+            >
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </div>
+
+          <div id="orderDetailModalBody" class="px-4 sm:px-5 py-4"></div>
+
+          <!-- flex-wrap: en un celular angosto el enlace baja a su propia línea completa en vez
+               de partirse en dos renglones apretados contra el aviso. -->
+          <div
+            class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 px-4 sm:px-5 py-3 border-t border-gray-200 dark:border-gray-800"
+          >
+            <p class="text-[11px] text-gray-400 dark:text-gray-500">
+              El detalle se actualiza cuando el pedido cambia.
+            </p>
+            <a
+              id="orderDetailFullLink"
+              href="#"
+              class="text-sm font-semibold text-primary hover:underline whitespace-nowrap"
+            >
+              Ver pedido completo
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <!-- Acordeón de tickets (cuentas divididas) en la lista -->
     <script>

@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+  <body>
+    <!-- ========================================
+         FRAGMENTO - INTERRUPTOR TABLA / TARJETAS
+         ========================================
+
+         Dos botones (tabla y tarjetas) para una lista de pedidos. La
+         preferencia se guarda en localStorage y la aplica el script de
+         la página (switchOrdersView / applyOrdersView), que reconstruye
+         las tarjetas desde las filas de la tabla.
+
+         USO, en la cabecera de la sección:
+
+         <div th:replace="~{fragments/orders-view-toggle :: toggle(my)}"></div>
+
+         El parámetro es el ámbito ("my" = mis pedidos, "global" = la
+         lista global): identifica qué tabla y qué contenedor de tarjetas
+         se muestran u ocultan.
+    ======================================== -->
+
+    <th:block th:fragment="toggle(scope)">
+      <div
+        class="flex rounded-xl bg-gray-100 dark:bg-gray-800 p-1"
+        role="group"
+        aria-label="Cambiar entre vista de tabla y de tarjetas"
+      >
+        <button
+          type="button"
+          class="orders-view-btn flex items-center gap-2 px-3 py-2 rounded-lg transition-all cursor-pointer bg-white dark:bg-gray-700 text-primary shadow-sm"
+          th:attr="data-orders-view='table', data-orders-view-scope=${scope}"
+          aria-pressed="true"
+          title="Vista de tabla"
+        >
+          <span class="material-symbols-outlined text-lg">table_rows</span>
+        </button>
+        <button
+          type="button"
+          class="orders-view-btn flex items-center gap-2 px-3 py-2 rounded-lg transition-all cursor-pointer text-gray-600 dark:text-gray-400"
+          th:attr="data-orders-view='grid', data-orders-view-scope=${scope}"
+          aria-pressed="false"
+          title="Vista de tarjetas"
+        >
+          <span class="material-symbols-outlined text-lg">grid_view</span>
+        </button>
+      </div>
+    </th:block>
+  </body>
+</html>

@@ -1,0 +1,379 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+  <body>
+    <!-- ========================================
+         FRAGMENTO - PANEL DE DETALLE DE UN PEDIDO
+         ========================================
+
+         Cuerpo del modal que abre la lista de pedidos del cajero al
+         pulsar una tarjeta (vista de tarjetas) y que también se
+         re-consulta en vivo cuando el pedido cambia de estado.
+
+         Contiene lo que no cabe en la fila de la tabla:
+           · cabecera (mesa, número, estado, total, tipo)
+           · datos del pedido (cliente, pago, atendido por, cobrado por)
+           · ítems consumidos, con su estado, notas y complementos
+           · cuentas por persona, cuando el cobro se dividió
+           · las MISMAS acciones de la fila (fragments/order-actions)
+
+         USO: GET /cashier/orders/{id}/detail-panel devuelve
+         "fragments/order-detail-panel :: panelFromModel".
+    ======================================== -->
+
+    <th:block
+      th:fragment="panel(order, role, staffOrderStatusEnabled, staffChefEnabled, staffBaristaEnabled, staffParrilleroEnabled, staffDeliveryEnabled)"
+    >
+      <!-- Los colores del badge de estado son los mismos de la fila de la lista, para que el
+           modal y la tabla no se lean distinto. -->
+      <div
+        th:with="statusClass=${order.status.name() == 'TO_ACCEPT' ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 ring-2 ring-amber-400/40' : (order.status.name() == 'PENDING' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' : (order.status.name() == 'IN_PREPARATION' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400' : (order.status.name() == 'READY' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' : (order.status.name() == 'ON_THE_WAY' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400' : (order.status.name() == 'DELIVERED' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : (order.status.name() == 'PAID' ? 'bg-primary/20 text-primary' : (order.status.name() == 'CANCELLED' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' : 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400')))))))}"
+        class="space-y-5"
+      >
+        <!-- Los botones de acción del panel son para el dedo y para leerlos de un vistazo: van
+             más grandes y más separados que en la fila de la tabla (donde el espacio es el de una
+             celda con 10 columnas) y crecen un poco en pantallas anchas. OJO: la clase va en el
+             contenedor porque el fragmento de acciones reemplaza al div interno. -->
+        <style>
+          .order-detail-actions-box > div {
+            flex-wrap: wrap;
+            gap: 0.625rem;
+          }
+          .order-detail-actions-box > div > a,
+          .order-detail-actions-box > div > button {
+            padding: 0.625rem;
+            border-radius: 0.75rem;
+            font-size: 1.0625rem;
+          }
+          @media (min-width: 640px) {
+            .order-detail-actions-box > div {
+              gap: 0.875rem;
+            }
+            .order-detail-actions-box > div > a,
+            .order-detail-actions-box > div > button {
+              padding: 0.8125rem;
+              font-size: 1.1875rem;
+            }
+          }
+        </style>
+
+        <!-- ========== Cabecera: la mesa y el número de pedido son lo primero que se ve ========== -->
+        <div class="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
+          <div class="flex items-center gap-3 sm:gap-4 min-w-0">
+            <!-- Mesa en grande: es lo que el cajero canta en voz alta al buscar el pedido. En
+                 celular la caja se encoge para que el número de pedido no tenga que partirse. -->
+            <div
+              class="h-16 w-16 sm:h-24 sm:w-24 shrink-0 rounded-2xl bg-primary/10 dark:bg-primary/20 text-primary flex flex-col items-center justify-center"
+              title="Mesa del pedido"
+            >
+              <span
+                class="text-[9px] sm:text-[10px] uppercase tracking-wide font-bold"
+                th:if="${order.table != null}"
+                >Mesa</span
+              >
+              <span
+                class="text-2xl sm:text-4xl font-extrabold leading-none tabular-nums"
+                th:if="${order.table != null}"
+                th:text="${order.table.tableNumber}"
+              ></span>
+              <th:block th:unless="${order.table != null}">
+                <span class="material-symbols-outlined text-3xl leading-none"
+                  >table_restaurant</span
+                >
+                <span class="text-[10px] font-semibold">Sin mesa</span>
+              </th:block>
+            </div>
+          </div>
+
+          <!-- El número de pedido es lo que el cajero confirma en voz alta. En celular baja a su
+               propia línea y ocupa todo el ancho (order-last + w-full), para que se vea completo
+               y grande sin partirse; de sm en adelante vuelve al lado de la mesa. -->
+          <div class="order-last w-full min-w-0 sm:order-none sm:w-auto sm:flex-1">
+            <p
+              class="text-[11px] uppercase tracking-wide font-semibold text-gray-400 dark:text-gray-500"
+            >
+              Pedido
+            </p>
+            <!-- break-all: si el número es más largo que la pantalla, se parte antes que recortarse -->
+            <p
+              class="font-mono text-2xl sm:text-3xl font-extrabold leading-tight text-gray-900 dark:text-white break-all"
+              th:text="${order.orderNumber}"
+            >
+              ORD-20260929-001
+            </p>
+            <p class="mt-1 text-xs text-gray-600 dark:text-gray-400">
+              <span th:text="${#tz.format(order.createdAt, 'dd/MM/yyyy HH:mm')}"
+              ></span>
+            </p>
+          </div>
+          <!-- En celular el estado y el total van en una sola línea, a la izquierda; de sm en
+               adelante se apilan a la derecha, como en la fila de la tabla. -->
+          <div class="shrink-0 text-left sm:text-right">
+            <div class="flex items-center gap-3 sm:block">
+              <span
+                class="status-badge inline-flex items-center px-2.5 py-1 text-[11px] rounded-full font-semibold"
+                th:classappend="${statusClass}"
+                th:text="${order.status.displayName}"
+              ></span>
+              <p
+                class="text-2xl sm:mt-2 sm:text-3xl font-bold text-gray-900 dark:text-white"
+                th:text="${'$' + #numbers.formatDecimal(order.total, 1, 2)}"
+              >
+                $0.00
+              </p>
+            </div>
+            <p class="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
+              <span th:text="${order.orderType.displayName}"></span>
+              ·
+              <span th:text="${order.paymentMethodsDisplay}"></span>
+            </p>
+          </div>
+        </div>
+
+        <!-- ========== Datos del pedido ========== -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div class="rounded-xl bg-gray-50 dark:bg-gray-800/60 px-3 py-2">
+            <p
+              class="text-[10px] uppercase tracking-wide font-semibold text-gray-400 dark:text-gray-500"
+            >
+              Cliente
+            </p>
+            <p
+              class="text-sm font-semibold text-gray-900 dark:text-white truncate"
+              th:text="${order.customerName != null and !order.customerName.isEmpty() ? order.customerName : 'Público general'}"
+            ></p>
+          </div>
+          <div class="rounded-xl bg-gray-50 dark:bg-gray-800/60 px-3 py-2">
+            <p
+              class="text-[10px] uppercase tracking-wide font-semibold text-gray-400 dark:text-gray-500"
+            >
+              Ítems
+            </p>
+            <p
+              class="text-sm font-semibold text-gray-900 dark:text-white"
+              th:text="${#lists.size(order.orderDetails)}"
+            >
+              0
+            </p>
+          </div>
+          <div class="rounded-xl bg-gray-50 dark:bg-gray-800/60 px-3 py-2">
+            <p
+              class="text-[10px] uppercase tracking-wide font-semibold text-gray-400 dark:text-gray-500"
+            >
+              Atendido por
+            </p>
+            <p
+              class="text-sm font-semibold text-gray-900 dark:text-white truncate"
+              th:text="${order.employee != null ? order.ownerName : 'Sin asignar'}"
+            ></p>
+          </div>
+          <div class="rounded-xl bg-gray-50 dark:bg-gray-800/60 px-3 py-2">
+            <p
+              class="text-[10px] uppercase tracking-wide font-semibold text-gray-400 dark:text-gray-500"
+            >
+              Cobrado por
+            </p>
+            <p
+              class="text-sm font-semibold text-gray-900 dark:text-white truncate"
+              th:text="${order.paidBy != null ? (order.paidBy.nombre + ' ' + order.paidBy.apellido) : 'Pendiente de cobro'}"
+            ></p>
+          </div>
+        </div>
+
+        <!-- ========== Cobro parcial: lo cobrado y lo que falta ========== -->
+        <div
+          th:if="${order.hasPartialCollections()}"
+          class="rounded-xl border border-teal-200 dark:border-teal-800 bg-teal-50 dark:bg-teal-900/20 px-3 py-2 flex flex-wrap items-center gap-x-4 gap-y-1"
+        >
+          <span
+            class="inline-flex items-center gap-1 text-xs font-semibold text-teal-700 dark:text-teal-300"
+          >
+            <span class="material-symbols-outlined !text-sm">groups</span>
+            Cobro parcial por persona
+          </span>
+          <span class="text-xs text-gray-600 dark:text-gray-400">
+            Cobrado:
+            <span
+              class="font-semibold text-gray-900 dark:text-white"
+              th:text="${'$' + #numbers.formatDecimal(order.collectedAmount, 1, 2)}"
+            ></span>
+          </span>
+          <span class="text-xs text-gray-600 dark:text-gray-400">
+            Falta:
+            <span
+              class="font-semibold text-gray-900 dark:text-white"
+              th:text="${'$' + #numbers.formatDecimal(order.remainingTotal, 1, 2)}"
+            ></span>
+          </span>
+        </div>
+
+        <!-- ========== Ítems consumidos ========== -->
+        <div>
+          <div class="flex items-center gap-2 mb-2">
+            <span class="material-symbols-outlined text-primary text-lg"
+              >restaurant_menu</span
+            >
+            <p
+              class="text-sm font-semibold text-gray-900 dark:text-white"
+            >
+              Ítems consumidos
+            </p>
+          </div>
+
+          <p
+            th:if="${order.orderDetails == null or order.orderDetails.isEmpty()}"
+            class="text-sm text-gray-500 dark:text-gray-400 italic"
+          >
+            Este pedido no tiene ítems registrados.
+          </p>
+
+          <ul
+            th:unless="${order.orderDetails == null or order.orderDetails.isEmpty()}"
+            class="divide-y divide-gray-100 dark:divide-gray-800 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden"
+          >
+            <li
+              th:each="detail : ${order.orderDetails}"
+              class="px-3 py-2.5 bg-white dark:bg-gray-900"
+              th:classappend="${detail.comboChild} ? 'pl-8 bg-gray-50/60 dark:bg-gray-800/40' : ''"
+            >
+              <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                  <p class="text-sm text-gray-900 dark:text-white">
+                    <span
+                      class="font-bold"
+                      th:text="${detail.quantity}"
+                    ></span
+                    >×
+                    <span th:text="${detail.displayName}"></span>
+                  </p>
+                  <p
+                    class="text-[11px] text-gray-500 dark:text-gray-400"
+                    th:if="${detail.quantity != null and detail.quantity > 1}"
+                    th:text="${detail.formattedUnitPrice + ' c/u'}"
+                  ></p>
+
+                  <!-- Nota del comensal: es lo que se imprime en cocina -->
+                  <p
+                    th:if="${detail.displayComments != null}"
+                    class="mt-1 inline-flex items-start gap-1 text-xs rounded-lg bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 px-2 py-0.5"
+                  >
+                    <span class="material-symbols-outlined !text-xs"
+                      >sticky_note_2</span
+                    >
+                    <span th:text="${detail.displayComments}"></span>
+                  </p>
+
+                  <!-- Complementos elegidos -->
+                  <p
+                    th:if="${detail.hasComplements()}"
+                    class="mt-1 flex flex-wrap gap-x-3 gap-y-0.5"
+                  >
+                    <span
+                      th:each="comp : ${detail.selectedComplements}"
+                      class="text-[11px] text-gray-600 dark:text-gray-400 whitespace-nowrap"
+                    >
+                      +<span th:text="${' ' + comp.quantity + '× ' + comp.complementName}"></span>
+                    </span>
+                  </p>
+
+                  <!-- Unidades ya cobradas (cobro parcial por persona) -->
+                  <p
+                    th:if="${detail.hasPaidUnits()}"
+                    class="mt-1 text-[11px] font-semibold text-teal-600 dark:text-teal-400"
+                    th:text="${'Cobradas ' + detail.formattedPaidQuantity + ' de ' + detail.quantity}"
+                  ></p>
+                </div>
+
+                <div class="text-right shrink-0">
+                  <p
+                    class="text-sm font-semibold text-gray-900 dark:text-white"
+                    th:text="${'$' + #numbers.formatDecimal(detail.totalWithComplements, 1, 2)}"
+                  ></p>
+                  <p
+                    th:if="${detail.hasPromotionApplied()}"
+                    class="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400"
+                    th:text="${'Promo -$' + #numbers.formatDecimal(detail.savings, 1, 2)}"
+                  ></p>
+                  <p
+                    th:if="${detail.courtesy}"
+                    class="text-[11px] font-semibold text-purple-600 dark:text-purple-400"
+                  >
+                    Cortesía
+                  </p>
+                  <p
+                    th:if="${detail.isNewItem != null and detail.isNewItem}"
+                    class="text-[10px] font-bold text-amber-600 dark:text-amber-400"
+                  >
+                    NUEVO
+                  </p>
+                </div>
+              </div>
+
+              <!-- Estado del ítem (chico: esto es un resumen, no el detalle de cocina) -->
+              <div class="mt-1.5 flex items-center gap-1 text-[11px]">
+                <span
+                  class="h-2 w-2 rounded-full"
+                  th:classappend="${detail.itemStatus != null and detail.itemStatus.name() == 'DELIVERED'} ? 'bg-green-500' :
+                                  (${detail.itemStatus != null and detail.itemStatus.name() == 'READY'} ? 'bg-blue-500' :
+                                  (${detail.itemStatus != null and detail.itemStatus.name() == 'IN_PREPARATION'} ? 'bg-orange-500' :
+                                  (${detail.itemStatus != null and detail.itemStatus.name() == 'TO_ACCEPT'} ? 'bg-amber-500' : 'bg-gray-400')))"
+                ></span>
+                <span
+                  class="text-gray-500 dark:text-gray-400"
+                  th:text="${detail.itemStatus != null ? detail.itemStatus.displayName : ''}"
+                ></span>
+              </div>
+            </li>
+          </ul>
+        </div>
+
+        <!-- ========== Cuentas por persona (cobro dividido) ========== -->
+        <div th:if="${order.payments != null and !order.payments.isEmpty()}">
+          <div class="flex items-center gap-2 mb-2">
+            <span class="material-symbols-outlined text-teal-600 dark:text-teal-400 text-lg"
+              >group</span
+            >
+            <p class="text-sm font-semibold text-gray-900 dark:text-white">
+              Cuentas por persona
+            </p>
+            <span
+              class="text-[11px] font-bold rounded-full bg-teal-100 dark:bg-teal-900/40 text-teal-700 dark:text-teal-300 px-2 py-0.5"
+              th:text="${#lists.size(order.payments)}"
+            ></span>
+          </div>
+
+          <div class="space-y-2">
+            <div
+              th:each="payment : ${order.payments}"
+              class="rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50/60 dark:bg-gray-800/30 px-3 py-2.5"
+            >
+              <th:block
+                th:replace="~{fragments/split-tickets :: accountInfo(${payment}, ${order}, ${role})}"
+              ></th:block>
+            </div>
+          </div>
+        </div>
+
+        <!-- ========== Acciones: las mismas de la fila de la tabla ========== -->
+        <div
+          class="order-detail-actions-box rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50/60 dark:bg-gray-800/30 px-3 py-3 sm:px-4 sm:py-4"
+        >
+          <p
+            class="text-[11px] uppercase tracking-wide font-semibold text-gray-400 dark:text-gray-500 mb-3"
+          >
+            Acciones del pedido
+          </p>
+          <div
+            th:replace="~{fragments/order-actions :: actions(${order}, ${role}, ${staffOrderStatusEnabled}, ${staffChefEnabled}, ${staffBaristaEnabled}, ${staffParrilleroEnabled}, ${staffDeliveryEnabled})}"
+          ></div>
+        </div>
+      </div>
+    </th:block>
+
+    <!-- Mismo panel, con los valores tomados del modelo: es lo que devuelve el endpoint. -->
+    <th:block th:fragment="panelFromModel">
+      <th:block
+        th:replace="~{fragments/order-detail-panel :: panel(${order}, ${currentRole}, ${staffOrderStatusEnabled}, ${staffChefEnabled}, ${staffBaristaEnabled}, ${staffParrilleroEnabled}, ${staffDeliveryEnabled})}"
+      ></th:block>
+    </th:block>
+  </body>
+</html>

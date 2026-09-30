@@ -185,8 +185,10 @@ class CashierOrdersListSplitTicketsTest {
     void splitOrderDeploysItsTicketsInBothTables() {
         String html = render(paidOrder(true));
 
-        // One "Ver N ticket(s) por persona" toggle per table (own + global)
-        assertEquals(2, count(html, "ticket(s) por persona"),
+        // One "Ver N ticket(s) por persona" toggle per table (own + global). Se cuenta el botón
+        // (su clase) y no la frase visible: los comentarios HTML del fragmento de acciones y del
+        // script de la página también la mencionan, así que contar la frase daba falsos positivos.
+        assertEquals(2, count(html, "payments-toggle flex items-center gap-2"),
                 "el acordeón de tickets por persona debe salir en la tabla propia y en la global");
         // Each account offers its ticket once per table (own + global)
         assertEquals(2, count(html, "/cashier/orders/76/download-ticket/100"),
@@ -210,7 +212,7 @@ class CashierOrdersListSplitTicketsTest {
     void regularOrderStillOffersTheWholeOrderTicket() {
         String html = render(paidOrder(false));
 
-        assertFalse(html.contains("ticket(s) por persona"),
+        assertFalse(html.contains("payments-toggle flex items-center gap-2"),
                 "sin cuentas no hay acordeón de tickets por persona");
         assertTrue(html.contains("/cashier/orders/76/download-ticket\""),
                 "un cobro normal sí ofrece el ticket del pedido completo");
