@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title th:text="${globalSystemConfig.systemName + ' - Inventario'}">
+      SavoryCloud - Inventario
+    </title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@300;400;500;600;700"
+      rel="stylesheet"
+    />
+
+    <!-- Sistema de Temas (Modo Claro/Oscuro) -->
+    <div th:replace="~{fragments/theme :: themeResources}"></div>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#38e07b",
+              "primary-dark": "#2bc866",
+              "background-light": "#f8faf9",
+              "background-dark": "#0f1713",
+            },
+            fontFamily: {
+              display: ["Work Sans"],
+            },
+          },
+        },
+      };
+    </script>
+    <!-- Sidebar Styles Fragment -->
+    <div th:replace="~{fragments/sidebar :: sidebarStyles}"></div>
+  </head>
+  <body
+    class="bg-gradient-to-br from-background-light to-gray-50 dark:from-background-dark dark:to-gray-900 font-display text-gray-800 dark:text-gray-200 overflow-hidden"
+  >
+    <!-- Menu Controls Fragment -->
+    <div th:replace="~{fragments/sidebar :: menuControls}"></div>
+
+    <div class="flex h-screen overflow-hidden">
+      <!-- SIDEBAR -->
+      <div th:replace="~{fragments/sidebar :: sidebar(activeMenu='inventory')}"></div>
+
+      <!-- MAIN CONTENT -->
+      <main class="flex-1 overflow-y-auto h-screen">
+        <div class="min-h-screen pb-32">
+          <!-- Header -->
+          <header
+            class="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 shadow-lg"
+          >
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+              <div class="flex items-center gap-3 sm:gap-4">
+                <div
+                  class="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-primary to-primary-dark rounded-xl flex items-center justify-center shadow-lg shadow-primary/30"
+                >
+                  <span
+                    class="material-symbols-outlined text-white text-xl sm:text-2xl"
+                    >inventory_2</span
+                  >
+                </div>
+                <div>
+                  <h1
+                    class="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white"
+                  >
+                    Inventario
+                  </h1>
+                  <p class="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+                    ¿Qué inventario quieres revisar?
+                  </p>
+                </div>
+              </div>
+            </div>
+          </header>
+
+          <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10">
+            <!-- Alerts -->
+            <div
+              th:if="${successMessage}"
+              class="bg-green-50 border-l-4 border-green-500 text-green-800 px-4 sm:px-6 py-4 rounded-lg mb-6 flex items-start gap-3 shadow-sm"
+            >
+              <span
+                class="material-symbols-outlined text-green-500 text-xl flex-shrink-0 mt-0.5"
+                >check_circle</span
+              >
+              <span class="text-sm sm:text-base" th:text="${successMessage}"></span>
+            </div>
+            <div
+              th:if="${errorMessage}"
+              class="bg-red-50 border-l-4 border-red-500 text-red-800 px-4 sm:px-6 py-4 rounded-lg mb-6 flex items-start gap-3 shadow-sm"
+            >
+              <span
+                class="material-symbols-outlined text-red-500 text-xl flex-shrink-0 mt-0.5"
+                >error</span
+              >
+              <span class="text-sm sm:text-base" th:text="${errorMessage}"></span>
+            </div>
+
+            <!-- DOS INVENTARIOS -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
+              <!-- INGREDIENTES -->
+              <a
+                th:href="@{/admin/ingredients}"
+                class="group bg-white dark:bg-gray-900 rounded-3xl shadow-lg border-2 border-gray-100 dark:border-gray-800 hover:border-primary hover:shadow-2xl hover:shadow-primary/20 transition-all overflow-hidden flex flex-col"
+              >
+                <div
+                  class="bg-gradient-to-r from-primary to-primary-dark p-6 sm:p-8 flex items-center gap-4"
+                >
+                  <div
+                    class="w-14 h-14 sm:w-16 sm:h-16 bg-white/20 rounded-2xl flex items-center justify-center flex-shrink-0"
+                  >
+                    <span
+                      class="material-symbols-outlined text-white text-3xl sm:text-4xl"
+                      >nutrition</span
+                    >
+                  </div>
+                  <div>
+                    <h2 class="text-xl sm:text-2xl font-bold text-white">
+                      Inventario de Ingredientes
+                    </h2>
+                    <p class="text-white/90 text-sm sm:text-base">
+                      Materias primas, stock y costos de compra
+                    </p>
+                  </div>
+                </div>
+
+                <div class="p-6 sm:p-8 flex-1 flex flex-col">
+                  <div class="grid grid-cols-3 gap-3 sm:gap-4 mb-6">
+                    <div
+                      class="bg-gray-50 dark:bg-gray-800 rounded-2xl p-3 sm:p-4 text-center"
+                    >
+                      <p
+                        class="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white"
+                        th:text="${ingredientActiveCount}"
+                      >
+                        0
+                      </p>
+                      <p class="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+                        Activos
+                      </p>
+                    </div>
+                    <div
+                      class="bg-yellow-50 dark:bg-yellow-900/20 rounded-2xl p-3 sm:p-4 text-center"
+                    >
+                      <p
+                        class="text-2xl sm:text-3xl font-bold text-yellow-600 dark:text-yellow-400"
+                        th:text="${ingredientLowStockCount}"
+                      >
+                        0
+                      </p>
+                      <p class="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+                        Stock bajo
+                      </p>
+                    </div>
+                    <div
+                      class="bg-red-50 dark:bg-red-900/20 rounded-2xl p-3 sm:p-4 text-center"
+                    >
+                      <p
+                        class="text-2xl sm:text-3xl font-bold text-red-600 dark:text-red-400"
+                        th:text="${ingredientOutOfStockCount}"
+                      >
+                        0
+                      </p>
+                      <p class="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+                        Agotados
+                      </p>
+                    </div>
+                  </div>
+
+                  <div
+                    class="mt-auto flex items-center justify-between gap-3 text-gray-700 dark:text-gray-300"
+                  >
+                    <span class="font-semibold text-sm sm:text-base"
+                      >Gestionar ingredientes</span
+                    >
+                    <span
+                      class="material-symbols-outlined text-primary text-3xl group-hover:translate-x-1 transition-transform"
+                      >arrow_forward</span
+                    >
+                  </div>
+                </div>
+              </a>
+
+              <!-- OBJETOS -->
+              <a
+                th:href="@{/admin/inventory/objects}"
+                class="group bg-white dark:bg-gray-900 rounded-3xl shadow-lg border-2 border-gray-100 dark:border-gray-800 hover:border-blue-500 hover:shadow-2xl hover:shadow-blue-500/20 transition-all overflow-hidden flex flex-col"
+              >
+                <div
+                  class="bg-gradient-to-r from-blue-500 to-blue-700 p-6 sm:p-8 flex items-center gap-4"
+                >
+                  <div
+                    class="w-14 h-14 sm:w-16 sm:h-16 bg-white/20 rounded-2xl flex items-center justify-center flex-shrink-0"
+                  >
+                    <span
+                      class="material-symbols-outlined text-white text-3xl sm:text-4xl"
+                      >chair</span
+                    >
+                  </div>
+                  <div>
+                    <h2 class="text-xl sm:text-2xl font-bold text-white">
+                      Inventario de Objetos
+                    </h2>
+                    <p class="text-white/90 text-sm sm:text-base">
+                      Mesas, televisiones, ollas, controles y más
+                    </p>
+                  </div>
+                </div>
+
+                <div class="p-6 sm:p-8 flex-1 flex flex-col">
+                  <div class="grid grid-cols-3 gap-3 sm:gap-4 mb-6">
+                    <div
+                      class="bg-gray-50 dark:bg-gray-800 rounded-2xl p-3 sm:p-4 text-center"
+                    >
+                      <p
+                        class="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white"
+                        th:text="${objectTotalCount}"
+                      >
+                        0
+                      </p>
+                      <p class="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+                        Registrados
+                      </p>
+                    </div>
+                    <div
+                      class="bg-blue-50 dark:bg-blue-900/20 rounded-2xl p-3 sm:p-4 text-center"
+                    >
+                      <p
+                        class="text-2xl sm:text-3xl font-bold text-blue-600 dark:text-blue-400"
+                        th:text="${objectActiveCount}"
+                      >
+                        0
+                      </p>
+                      <p class="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+                        Activos
+                      </p>
+                    </div>
+                    <div
+                      class="bg-red-50 dark:bg-red-900/20 rounded-2xl p-3 sm:p-4 text-center"
+                    >
+                      <p
+                        class="text-2xl sm:text-3xl font-bold text-red-600 dark:text-red-400"
+                        th:text="${objectDamagedCount}"
+                      >
+                        0
+                      </p>
+                      <p class="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+                        Dañados
+                      </p>
+                    </div>
+                  </div>
+
+                  <div
+                    class="mb-6 bg-gradient-to-r from-blue-50 to-transparent dark:from-blue-900/20 dark:to-transparent rounded-2xl px-4 py-3 flex items-center justify-between gap-3"
+                  >
+                    <span class="text-sm text-gray-600 dark:text-gray-400"
+                      >Valor del inventario</span
+                    >
+                    <span
+                      class="text-lg sm:text-xl font-bold text-gray-900 dark:text-white"
+                      th:text="'$ ' + ${#numbers.formatDecimal(objectInventoryValue, 1, 'COMMA', 2, 'POINT')}"
+                      >$ 0.00</span
+                    >
+                  </div>
+
+                  <div
+                    class="mt-auto flex items-center justify-between gap-3 text-gray-700 dark:text-gray-300"
+                  >
+                    <span class="font-semibold text-sm sm:text-base"
+                      >Gestionar objetos</span
+                    >
+                    <span
+                      class="material-symbols-outlined text-blue-500 text-3xl group-hover:translate-x-1 transition-transform"
+                      >arrow_forward</span
+                    >
+                  </div>
+                </div>
+              </a>
+            </div>
+
+            <!-- CATEGORÍAS DE OBJETOS -->
+            <div
+              class="mt-6 sm:mt-8 bg-white dark:bg-gray-900 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-800 p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+            >
+              <div class="flex items-center gap-4">
+                <div
+                  class="w-12 h-12 bg-blue-500/10 dark:bg-blue-500/20 rounded-xl flex items-center justify-center flex-shrink-0"
+                >
+                  <span class="material-symbols-outlined text-blue-500 text-2xl"
+                    >category</span
+                  >
+                </div>
+                <div>
+                  <h3 class="font-bold text-gray-900 dark:text-white">
+                    Categorías de objetos
+                  </h3>
+                  <p class="text-sm text-gray-600 dark:text-gray-400">
+                    Clasifica los objetos por tipo: mesas, electrónica, menaje,
+                    limpieza…
+                  </p>
+                </div>
+              </div>
+              <a
+                th:href="@{/admin/inventory/object-categories}"
+                class="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 font-semibold hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+              >
+                <span class="material-symbols-outlined">settings</span>
+                Administrar categorías
+              </a>
+            </div>
+          </main>
+        </div>
+      </main>
+    </div>
+
+    <!-- Sidebar Scripts Fragment -->
+    <div th:replace="~{fragments/sidebar :: sidebarScripts}"></div>
+    <!-- Script del Sistema de Temas -->
+    <div th:replace="~{fragments/theme :: themeScript}"></div>
+  </body>
+</html>

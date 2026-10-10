@@ -1,0 +1,602 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title
+      th:text="${globalSystemConfig.systemName + ' - ' + (object.idObject != null ? 'Editar Objeto' : 'Nuevo Objeto')}"
+    >
+      SavoryCloud - Objeto
+    </title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@300;400;500;600;700"
+      rel="stylesheet"
+    />
+
+    <!-- Sistema de Temas (Modo Claro/Oscuro) -->
+    <div th:replace="~{fragments/theme :: themeResources}"></div>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#38e07b",
+              "primary-dark": "#2bc866",
+              "background-light": "#f8faf9",
+              "background-dark": "#0f1713",
+            },
+            fontFamily: {
+              display: ["Work Sans"],
+            },
+          },
+        },
+      };
+    </script>
+    <!-- Sidebar Styles Fragment -->
+    <div th:replace="~{fragments/sidebar :: sidebarStyles}"></div>
+  </head>
+  <body
+    class="bg-gradient-to-br from-background-light to-gray-50 dark:from-background-dark dark:to-gray-900 font-display text-gray-800 dark:text-gray-200 overflow-hidden"
+  >
+    <!-- Menu Controls Fragment -->
+    <div th:replace="~{fragments/sidebar :: menuControls}"></div>
+
+    <div class="flex h-screen overflow-hidden">
+      <!-- SIDEBAR -->
+      <div th:replace="~{fragments/sidebar :: sidebar(activeMenu='inventory')}"></div>
+
+      <!-- MAIN CONTENT -->
+      <main class="flex-1 overflow-y-auto h-screen">
+        <div class="min-h-screen p-4 sm:p-6 lg:p-8 pb-32">
+          <div class="max-w-5xl mx-auto">
+            <!-- HEADER -->
+            <div class="mb-6">
+              <a
+                th:href="@{/admin/inventory/objects}"
+                class="inline-flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-primary transition-colors mb-4"
+              >
+                <span class="material-symbols-outlined">arrow_back</span>
+                <span class="font-semibold">Volver al inventario de objetos</span>
+              </a>
+              <h1
+                class="text-3xl font-bold text-gray-900 dark:text-white"
+                th:text="${object.idObject != null ? 'Editar Objeto' : 'Nuevo Objeto'}"
+              >
+                Nuevo Objeto
+              </h1>
+              <p class="text-gray-600 dark:text-gray-400 mt-2">
+                Registra los datos del objeto para llevar el control del inventario
+              </p>
+            </div>
+
+            <!-- ALERTS -->
+            <div
+              th:if="${successMessage}"
+              class="mb-6 p-4 bg-green-100 dark:bg-green-900/30 border border-green-400 dark:border-green-700 text-green-700 dark:text-green-400 rounded-xl"
+            >
+              <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined">check_circle</span>
+                <span th:text="${successMessage}"></span>
+              </div>
+            </div>
+
+            <div
+              th:if="${errorMessage}"
+              class="mb-6 p-4 bg-red-100 dark:bg-red-900/30 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-400 rounded-xl"
+            >
+              <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined">error</span>
+                <span th:text="${errorMessage}"></span>
+              </div>
+            </div>
+
+            <!-- FORM -->
+            <form
+              th:action="${object.idObject != null ? '/admin/inventory/objects/' + object.idObject : '/admin/inventory/objects'}"
+              method="post"
+              th:object="${object}"
+              class="bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800 overflow-hidden"
+            >
+              <!-- INFORMACIÓN DEL OBJETO -->
+              <div class="p-6 border-b border-gray-200 dark:border-gray-800">
+                <h2
+                  class="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2 mb-6"
+                >
+                  <span class="material-symbols-outlined text-primary">info</span>
+                  Información del Objeto
+                </h2>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <!-- Nombre -->
+                  <div>
+                    <label
+                      for="name"
+                      class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+                    >
+                      Nombre <span class="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      id="name"
+                      th:field="*{name}"
+                      required
+                      maxlength="100"
+                      class="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-primary focus:outline-none"
+                      placeholder="Ej: Televisión Samsung 50'', Olla express, Mesa 4"
+                    />
+                    <p
+                      th:if="${#fields.hasErrors('name')}"
+                      th:errors="*{name}"
+                      class="mt-1 text-sm text-red-600 dark:text-red-400"
+                    ></p>
+                  </div>
+
+                  <!-- Categoría -->
+                  <div>
+                    <label
+                      for="categoryId"
+                      class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+                    >
+                      Categoría <span class="text-red-500">*</span>
+                    </label>
+                    <select
+                      id="categoryId"
+                      name="categoryId"
+                      required
+                      class="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-primary focus:outline-none"
+                    >
+                      <option value="">Selecciona una categoría</option>
+                      <option
+                        th:each="category : ${allCategories}"
+                        th:value="${category.idCategory}"
+                        th:text="${category.name}"
+                        th:selected="${object.category != null && object.category.idCategory == category.idCategory}"
+                      ></option>
+                    </select>
+                    <p
+                      th:if="${#fields.hasErrors('category')}"
+                      th:errors="*{category}"
+                      class="mt-1 text-sm text-red-600 dark:text-red-400"
+                    ></p>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                      ¿Falta una categoría?
+                      <a
+                        th:href="@{/admin/inventory/object-categories/new}"
+                        class="text-primary hover:underline"
+                        >Créala aquí</a
+                      >
+                    </p>
+                  </div>
+                </div>
+
+                <!-- Descripción -->
+                <div class="mt-6">
+                  <label
+                    for="description"
+                    class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+                  >
+                    Descripción
+                  </label>
+                  <textarea
+                    id="description"
+                    th:field="*{description}"
+                    rows="3"
+                    class="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-primary focus:outline-none resize-none"
+                    placeholder="Detalles del objeto, características, etc."
+                  ></textarea>
+                  <p
+                    th:if="${#fields.hasErrors('description')}"
+                    th:errors="*{description}"
+                    class="mt-1 text-sm text-red-600 dark:text-red-400"
+                  ></p>
+                </div>
+              </div>
+
+              <!-- CONTEO Y ESTADO -->
+              <div class="p-6 border-b border-gray-200 dark:border-gray-800">
+                <h2
+                  class="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2 mb-6"
+                >
+                  <span class="material-symbols-outlined text-primary">numbers</span>
+                  Conteo y Estado
+                </h2>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <!-- Cantidad -->
+                  <div>
+                    <label
+                      for="quantity"
+                      class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+                    >
+                      Cantidad <span class="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      id="quantity"
+                      th:field="*{quantity}"
+                      required
+                      min="0"
+                      step="0.01"
+                      class="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-primary focus:outline-none"
+                      placeholder="Ej: 4"
+                    />
+                    <p
+                      th:if="${#fields.hasErrors('quantity')}"
+                      th:errors="*{quantity}"
+                      class="mt-1 text-sm text-red-600 dark:text-red-400"
+                    ></p>
+                  </div>
+
+                  <!-- Unidad -->
+                  <div>
+                    <label
+                      for="unit"
+                      class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+                    >
+                      Unidad <span class="text-red-500">*</span>
+                    </label>
+                    <select
+                      id="unit"
+                      th:field="*{unit}"
+                      class="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-primary focus:outline-none"
+                    >
+                      <option
+                        th:each="u : ${units}"
+                        th:value="${u}"
+                        th:text="${u.displayName}"
+                      ></option>
+                    </select>
+                    <p
+                      th:if="${#fields.hasErrors('unit')}"
+                      th:errors="*{unit}"
+                      class="mt-1 text-sm text-red-600 dark:text-red-400"
+                    ></p>
+                  </div>
+
+                  <!-- Condición -->
+                  <div>
+                    <label
+                      for="condition"
+                      class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+                    >
+                      Condición <span class="text-red-500">*</span>
+                    </label>
+                    <select
+                      id="condition"
+                      th:field="*{condition}"
+                      class="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-primary focus:outline-none"
+                    >
+                      <option
+                        th:each="c : ${conditions}"
+                        th:value="${c}"
+                        th:text="${c.displayName}"
+                      ></option>
+                    </select>
+                    <p
+                      th:if="${#fields.hasErrors('condition')}"
+                      th:errors="*{condition}"
+                      class="mt-1 text-sm text-red-600 dark:text-red-400"
+                    ></p>
+                  </div>
+                </div>
+
+                <!-- Estado activo -->
+                <div class="mt-6 flex items-center">
+                  <label class="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      th:field="*{active}"
+                      class="sr-only peer"
+                    />
+                    <div
+                      class="w-14 h-7 bg-gray-300 dark:bg-gray-700 rounded-full peer peer-checked:bg-primary transition-colors"
+                    ></div>
+                    <div
+                      class="absolute left-1 top-1 w-5 h-5 bg-white rounded-full transition-transform peer-checked:translate-x-7"
+                    ></div>
+                    <span
+                      class="ml-3 text-sm font-semibold text-gray-700 dark:text-gray-300"
+                      >Objeto activo (cuenta en el inventario)</span
+                    >
+                  </label>
+                </div>
+              </div>
+
+              <!-- UBICACIÓN Y RESPONSABLE -->
+              <div class="p-6 border-b border-gray-200 dark:border-gray-800">
+                <h2
+                  class="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2 mb-6"
+                >
+                  <span class="material-symbols-outlined text-primary">location_on</span>
+                  Ubicación y Responsable
+                </h2>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <!-- Ubicación -->
+                  <div>
+                    <label
+                      for="location"
+                      class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+                    >
+                      Ubicación / Área
+                    </label>
+                    <input
+                      type="text"
+                      id="location"
+                      th:field="*{location}"
+                      maxlength="100"
+                      list="locationSuggestions"
+                      class="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-primary focus:outline-none"
+                      placeholder="Ej: Cocina, Salón, Barra, Almacén, Oficina"
+                    />
+                    <datalist id="locationSuggestions">
+                      <option value="Cocina"></option>
+                      <option value="Salón"></option>
+                      <option value="Barra"></option>
+                      <option value="Almacén"></option>
+                      <option value="Oficina"></option>
+                      <option value="Baños"></option>
+                      <option value="Terraza"></option>
+                      <option value="Bodega"></option>
+                    </datalist>
+                    <p
+                      th:if="${#fields.hasErrors('location')}"
+                      th:errors="*{location}"
+                      class="mt-1 text-sm text-red-600 dark:text-red-400"
+                    ></p>
+                  </div>
+
+                  <!-- Responsable -->
+                  <div>
+                    <label
+                      for="responsible"
+                      class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+                    >
+                      Responsable
+                    </label>
+                    <input
+                      type="text"
+                      id="responsible"
+                      th:field="*{responsible}"
+                      maxlength="120"
+                      class="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-primary focus:outline-none"
+                      placeholder="Persona o puesto a quien se le asignó"
+                    />
+                    <p
+                      th:if="${#fields.hasErrors('responsible')}"
+                      th:errors="*{responsible}"
+                      class="mt-1 text-sm text-red-600 dark:text-red-400"
+                    ></p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- COMPRA E IDENTIFICACIÓN -->
+              <div class="p-6 border-b border-gray-200 dark:border-gray-800">
+                <h2
+                  class="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2 mb-6"
+                >
+                  <span class="material-symbols-outlined text-primary">receipt_long</span>
+                  Compra e Identificación
+                </h2>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <!-- Costo -->
+                  <div>
+                    <label
+                      for="purchaseCost"
+                      class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+                    >
+                      Costo unitario
+                    </label>
+                    <div class="relative">
+                      <span
+                        class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                        >attach_money</span
+                      >
+                      <input
+                        type="number"
+                        id="purchaseCost"
+                        th:field="*{purchaseCost}"
+                        min="0"
+                        step="0.01"
+                        class="w-full pl-12 pr-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-primary focus:outline-none"
+                        placeholder="Ej: 8500.00"
+                      />
+                    </div>
+                    <p
+                      th:if="${#fields.hasErrors('purchaseCost')}"
+                      th:errors="*{purchaseCost}"
+                      class="mt-1 text-sm text-red-600 dark:text-red-400"
+                    ></p>
+                  </div>
+
+                  <!-- Moneda -->
+                  <div>
+                    <label
+                      for="currency"
+                      class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+                    >
+                      Moneda
+                    </label>
+                    <input
+                      type="text"
+                      id="currency"
+                      th:field="*{currency}"
+                      maxlength="3"
+                      class="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-primary focus:outline-none uppercase"
+                      placeholder="MXN"
+                    />
+                    <p
+                      th:if="${#fields.hasErrors('currency')}"
+                      th:errors="*{currency}"
+                      class="mt-1 text-sm text-red-600 dark:text-red-400"
+                    ></p>
+                  </div>
+
+                  <!-- Fecha de compra -->
+                  <div>
+                    <label
+                      for="purchaseDate"
+                      class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+                    >
+                      Fecha de compra
+                    </label>
+                    <input
+                      type="date"
+                      id="purchaseDate"
+                      th:field="*{purchaseDate}"
+                      class="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-primary focus:outline-none"
+                    />
+                    <p
+                      th:if="${#fields.hasErrors('purchaseDate')}"
+                      th:errors="*{purchaseDate}"
+                      class="mt-1 text-sm text-red-600 dark:text-red-400"
+                    ></p>
+                  </div>
+
+                  <!-- Marca -->
+                  <div>
+                    <label
+                      for="brand"
+                      class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+                    >
+                      Marca
+                    </label>
+                    <input
+                      type="text"
+                      id="brand"
+                      th:field="*{brand}"
+                      maxlength="100"
+                      class="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-primary focus:outline-none"
+                      placeholder="Ej: Samsung, Tramontina"
+                    />
+                    <p
+                      th:if="${#fields.hasErrors('brand')}"
+                      th:errors="*{brand}"
+                      class="mt-1 text-sm text-red-600 dark:text-red-400"
+                    ></p>
+                  </div>
+
+                  <!-- Modelo -->
+                  <div>
+                    <label
+                      for="model"
+                      class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+                    >
+                      Modelo
+                    </label>
+                    <input
+                      type="text"
+                      id="model"
+                      th:field="*{model}"
+                      maxlength="100"
+                      class="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-primary focus:outline-none"
+                      placeholder="Ej: UN50CU7000"
+                    />
+                    <p
+                      th:if="${#fields.hasErrors('model')}"
+                      th:errors="*{model}"
+                      class="mt-1 text-sm text-red-600 dark:text-red-400"
+                    ></p>
+                  </div>
+
+                  <!-- Número de serie -->
+                  <div>
+                    <label
+                      for="serialNumber"
+                      class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+                    >
+                      Número de serie / Inventario
+                    </label>
+                    <input
+                      type="text"
+                      id="serialNumber"
+                      th:field="*{serialNumber}"
+                      maxlength="100"
+                      class="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-primary focus:outline-none"
+                      placeholder="Ej: SN-0012345"
+                    />
+                    <p
+                      th:if="${#fields.hasErrors('serialNumber')}"
+                      th:errors="*{serialNumber}"
+                      class="mt-1 text-sm text-red-600 dark:text-red-400"
+                    ></p>
+                  </div>
+                </div>
+
+                <!-- Notas -->
+                <div class="mt-6">
+                  <label
+                    for="notes"
+                    class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+                  >
+                    Notas
+                  </label>
+                  <textarea
+                    id="notes"
+                    th:field="*{notes}"
+                    rows="2"
+                    maxlength="500"
+                    class="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-primary focus:outline-none resize-none"
+                    placeholder="Observaciones, garantía, mantenimiento, etc."
+                  ></textarea>
+                  <p
+                    th:if="${#fields.hasErrors('notes')}"
+                    th:errors="*{notes}"
+                    class="mt-1 text-sm text-red-600 dark:text-red-400"
+                  ></p>
+                </div>
+              </div>
+
+              <!-- ACTIONS -->
+              <div
+                class="p-6 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 flex flex-col sm:flex-row gap-3 justify-end"
+              >
+                <a
+                  th:href="@{/admin/inventory/objects}"
+                  class="px-6 py-3 rounded-xl bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-semibold hover:bg-gray-300 dark:hover:bg-gray-700 transition-colors text-center"
+                >
+                  Cancelar
+                </a>
+                <button
+                  type="submit"
+                  class="px-6 py-3 rounded-xl bg-gradient-to-r from-blue-500 to-blue-700 text-white font-semibold hover:shadow-lg hover:shadow-blue-500/30 transition-all"
+                >
+                  <span
+                    th:text="${object.idObject != null ? 'Actualizar Objeto' : 'Crear Objeto'}"
+                    >Crear Objeto</span
+                  >
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <script>
+      document.querySelector("form").addEventListener("submit", function () {
+        this.querySelectorAll('input[type="text"], textarea').forEach(
+          function (el) {
+            el.value = el.value.trim();
+          }
+        );
+      });
+    </script>
+
+    <!-- Sidebar Scripts Fragment -->
+    <div th:replace="~{fragments/sidebar :: sidebarScripts}"></div>
+    <!-- Script del Sistema de Temas -->
+    <div th:replace="~{fragments/theme :: themeScript}"></div>
+  </body>
+</html>

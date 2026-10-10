@@ -1,6 +1,7 @@
 package com.aatechsolutions.elgransazon.presentation.controller;
 
 import com.aatechsolutions.elgransazon.application.dto.MenuStyle;
+import com.aatechsolutions.elgransazon.application.dto.RecipeIngredientDTO;
 import com.aatechsolutions.elgransazon.application.service.BusinessHoursService;
 import com.aatechsolutions.elgransazon.application.service.CategoryService;
 import com.aatechsolutions.elgransazon.application.service.ComplementService;
@@ -12,6 +13,9 @@ import com.aatechsolutions.elgransazon.application.service.MenuPdfService;
 import com.aatechsolutions.elgransazon.application.service.SystemConfigurationService;
 import com.aatechsolutions.elgransazon.domain.entity.*;
 import com.aatechsolutions.elgransazon.infrastructure.context.CompanyContext;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import com.aatechsolutions.elgransazon.domain.repository.ItemMenuComplementRepository;
 import jakarta.validation.Valid;
@@ -65,6 +69,7 @@ public class ItemMenuController {
     private final SystemConfigurationService systemConfigurationService;
     private final MenuPdfService menuPdfService;
     private final DateTimeService dateTimeService;
+    private final ObjectMapper objectMapper;
 
     /**
      * Show list of menu items with server-side pagination (20 per page) and filters.
@@ -369,6 +374,7 @@ public class ItemMenuController {
         model.addAttribute("ingredients", ingredients);
         model.addAttribute("ingredientsDTO", ingredientsDTO);
         model.addAttribute("recipe", new ArrayList<ItemIngredient>());
+        model.addAttribute("recipeJson", recipeJsonOf(null));
         model.addAttribute("formAction", "/admin/menu-items");
         
         // Add combo data for new items
@@ -423,6 +429,9 @@ public class ItemMenuController {
                     model.addAttribute("ingredients", ingredients);
                     model.addAttribute("ingredientsDTO", ingredientsDTO);
                     model.addAttribute("recipe", recipe);
+                    // La receta actual viaja en el campo oculto: si el JavaScript no corre, el
+                    // formulario se guarda con lo que ya tenía el platillo.
+                    model.addAttribute("recipeJson", recipeJsonOf(recipe));
                     model.addAttribute("formAction", "/admin/menu-items/" + id);
                     
                     // Add combo items data if this item is a combo
@@ -469,6 +478,7 @@ public class ItemMenuController {
             @RequestParam(value = "ingredientIds", required = false) List<Long> ingredientIds,
             @RequestParam(value = "quantities", required = false) List<BigDecimal> quantities,
             @RequestParam(value = "units", required = false) List<String> units,
+            @RequestParam(value = "recipeJson", required = false) String recipeJson,
             @RequestParam(value = "requiresPreparation", required = false) Boolean requiresPreparationParam,
             @RequestParam(value = "requiresBaristaPreparation", required = false) Boolean requiresBaristaPreparationParam,
             @RequestParam(value = "requiresParrilleroPreparation", required = false) Boolean requiresParrilleroPreparationParam,
@@ -533,7 +543,7 @@ public class ItemMenuController {
         if (Boolean.TRUE.equals(itemMenu.getIsCombo())) selectedOptions++;
         if (selectedOptions > 1) {
              model.addAttribute("errorMessage", "Solo puede seleccionar una opción: preparación por Chef, Barista, Parrillero o Combo.");
-             List<ItemIngredient> recipe = buildRecipe(ingredientIds, quantities, units);
+             List<ItemIngredient> recipe = submittedRecipeOrEmpty(recipeJson, ingredientIds, quantities, units);
              loadFormData(model, itemMenu, recipe);
              loadAvailabilityFormData(model, itemMenu);
              return "admin/menu-items/form";
@@ -551,7 +561,7 @@ public class ItemMenuController {
             model.addAttribute("errorMessage",
                     "Un artículo con precio $0.00 es una cortesía: marca '¿Solo para consumo en establecimiento?' " +
                     "para que solo se pueda vender dentro del restaurante.");
-            loadFormData(model, itemMenu, buildRecipe(ingredientIds, quantities, units));
+            loadFormData(model, itemMenu, submittedRecipeOrEmpty(recipeJson, ingredientIds, quantities, units));
             loadAvailabilityFormData(model, itemMenu);
             return "admin/menu-items/form";
         }
@@ -561,7 +571,7 @@ public class ItemMenuController {
             if (imageFile != null && !imageFile.isEmpty()) {
                 if (!imageStorageService.isValidImage(imageFile)) {
                     model.addAttribute("errorMessage", "Imagen inválida. Solo se permiten imágenes JPG, PNG, GIF o WEBP de máximo 5MB");
-                    List<ItemIngredient> recipe = buildRecipe(ingredientIds, quantities, units);
+                    List<ItemIngredient> recipe = submittedRecipeOrEmpty(recipeJson, ingredientIds, quantities, units);
                     loadFormData(model, itemMenu, recipe);
                     loadAvailabilityFormData(model, itemMenu);
                     return "admin/menu-items/form";
@@ -570,8 +580,18 @@ public class ItemMenuController {
                 itemMenu.setImageUrl(imagePath);
             }
 
-            // Build recipe from form data
-            List<ItemIngredient> recipe = buildRecipe(ingredientIds, quantities, units);
+            // Build recipe from form data: normal form sends it as a single JSON field
+            // (recipeJson), an older form still open would send the three parallel lists
+            // ingredientIds / quantities / units.
+            List<ItemIngredient> recipe;
+            try {
+                recipe = recipeFromRequest(recipeJson, ingredientIds, quantities, units);
+            } catch (IllegalArgumentException e) {
+                model.addAttribute("errorMessage", e.getMessage());
+                loadFormData(model, itemMenu, new ArrayList<>());
+                loadAvailabilityFormData(model, itemMenu);
+                return "admin/menu-items/form";
+            }
 
             // Validate ingredients based on requiresIngredients flag
             if (!Boolean.TRUE.equals(itemMenu.getRequiresIngredients()) || Boolean.TRUE.equals(itemMenu.getIsCombo())) {
@@ -664,7 +684,7 @@ public class ItemMenuController {
         } catch (IllegalArgumentException e) {
             log.error("Validation error creating menu item: {}", e.getMessage());
             model.addAttribute("errorMessage", e.getMessage());
-            List<ItemIngredient> recipe = buildRecipe(ingredientIds, quantities, units);
+            List<ItemIngredient> recipe = submittedRecipeOrEmpty(recipeJson, ingredientIds, quantities, units);
             loadFormData(model, itemMenu, recipe);
             loadAvailabilityFormData(model, itemMenu);
             return "admin/menu-items/form";
@@ -675,7 +695,7 @@ public class ItemMenuController {
             model.addAttribute("errorMessage", friendlyMessage != null
                     ? friendlyMessage
                     : "Error al crear el item del menú: " + e.getMessage());
-            List<ItemIngredient> recipe = buildRecipe(ingredientIds, quantities, units);
+            List<ItemIngredient> recipe = submittedRecipeOrEmpty(recipeJson, ingredientIds, quantities, units);
             loadFormData(model, itemMenu, recipe);
             loadAvailabilityFormData(model, itemMenu);
             return "admin/menu-items/form";
@@ -694,6 +714,7 @@ public class ItemMenuController {
             @RequestParam(value = "ingredientIds", required = false) List<Long> ingredientIds,
             @RequestParam(value = "quantities", required = false) List<String> quantities,
             @RequestParam(value = "units", required = false) List<String> units,
+            @RequestParam(value = "recipeJson", required = false) String recipeJson,
             @RequestParam(value = "requiresPreparation", required = false) Boolean requiresPreparationParam,
             @RequestParam(value = "requiresBaristaPreparation", required = false) Boolean requiresBaristaPreparationParam,
             @RequestParam(value = "requiresParrilleroPreparation", required = false) Boolean requiresParrilleroPreparationParam,
@@ -764,7 +785,7 @@ public class ItemMenuController {
         if (selectedOptions > 1) {
              model.addAttribute("errorMessage", "Solo puede seleccionar una opción: preparación por Chef, Barista, Parrillero o Combo.");
              List<BigDecimal> quantitiesBD = convertQuantities(quantities);
-             List<ItemIngredient> recipe = buildRecipe(ingredientIds, quantitiesBD, units);
+             List<ItemIngredient> recipe = submittedRecipeOrEmpty(recipeJson, ingredientIds, quantitiesBD, units);
              loadFormData(model, itemMenu, recipe);
              loadAvailabilityFormData(model, itemMenu);
              model.addAttribute("formAction", "/admin/menu-items/" + id);
@@ -784,7 +805,7 @@ public class ItemMenuController {
             model.addAttribute("errorMessage",
                     "Un artículo con precio $0.00 es una cortesía: marca '¿Solo para consumo en establecimiento?' " +
                     "para que solo se pueda vender dentro del restaurante.");
-            loadFormData(model, itemMenu, buildRecipe(ingredientIds, convertQuantities(quantities), units));
+            loadFormData(model, itemMenu, submittedRecipeOrEmpty(recipeJson, ingredientIds, convertQuantities(quantities), units));
             loadAvailabilityFormData(model, itemMenu);
             model.addAttribute("formAction", "/admin/menu-items/" + id);
             return "admin/menu-items/form";
@@ -836,12 +857,16 @@ public class ItemMenuController {
                 }
             }
 
-            // Build recipe from form data
+            // Build recipe from form data: normal form sends it as a single JSON field
+            // (recipeJson), an older form still open would send the three parallel lists
+            // ingredientIds / quantities / units. When neither arrives, the stored recipe
+            // is left untouched.
             List<ItemIngredient> recipe = null;
-            if (ingredientIds != null && !ingredientIds.isEmpty()) {
+            boolean jsonRecipe = recipeJson != null && !recipeJson.isBlank();
+            if (jsonRecipe || (ingredientIds != null && !ingredientIds.isEmpty())) {
                 // Convert String quantities to BigDecimal safely
                 List<BigDecimal> quantitiesBD = convertQuantities(quantities);
-                recipe = buildRecipe(ingredientIds, quantitiesBD, units);
+                recipe = recipeFromRequest(recipeJson, ingredientIds, quantitiesBD, units);
             }
 
             // Validate ingredients based on requiresIngredients flag
@@ -1258,7 +1283,9 @@ public class ItemMenuController {
         for (int i = 0; i < ingredientIds.size(); i++) {
             Long ingredientId = ingredientIds.get(i);
             BigDecimal quantity = quantities != null && i < quantities.size() ? quantities.get(i) : BigDecimal.ZERO;
-            String unit = units != null && i < units.size() ? units.get(i) : "";
+            String unit = units != null && i < units.size() && units.get(i) != null && !units.get(i).isBlank()
+                    ? units.get(i)
+                    : null;
             
             if (ingredientId != null && quantity.compareTo(BigDecimal.ZERO) > 0) {
                 // Check for duplicate ingredient
@@ -1291,6 +1318,96 @@ public class ItemMenuController {
     }
 
     /**
+     * Receta enviada por el formulario: normalmente llega completa en un solo campo JSON
+     * ({@code recipeJson}, ver {@code form.html}), porque el formulario es multipart y Tomcat
+     * limita el número de partes por petición ({@code Connector.maxPartCount}): antes cada
+     * ingrediente añadía tres partes ({@code ingredientIds}, {@code quantities} y {@code units})
+     * y una receta larga hacía fallar el guardado con un 500.
+     *
+     * <p>Si el campo JSON no viene (por ejemplo un formulario viejo que quedó abierto en el
+     * navegador), se leen las tres listas paralelas de siempre: el comportamiento anterior se
+     * mantiene intacto.</p>
+     */
+    private List<ItemIngredient> recipeFromRequest(String recipeJson, List<Long> ingredientIds,
+                                                   List<BigDecimal> quantities, List<String> units) {
+        if (recipeJson != null && !recipeJson.isBlank()) {
+            return buildRecipeFromJson(recipeJson);
+        }
+        return buildRecipe(ingredientIds, quantities, units);
+    }
+
+    /**
+     * Igual que {@link #recipeFromRequest} pero nunca falla: se usa sólo para volver a pintar el
+     * formulario cuando algo salió mal, para que el usuario no pierda las filas que escribió.
+     */
+    private List<ItemIngredient> submittedRecipeOrEmpty(String recipeJson, List<Long> ingredientIds,
+                                                        List<BigDecimal> quantities, List<String> units) {
+        try {
+            return recipeFromRequest(recipeJson, ingredientIds, quantities, units);
+        } catch (RuntimeException e) {
+            log.warn("No se pudo reconstruir la receta enviada para volver a mostrarla: {}", e.getMessage());
+            return new ArrayList<>();
+        }
+    }
+
+    /**
+     * Receta del campo JSON: [{ "ingredientId": 12, "quantity": 50 }, ...].
+     *
+     * <p>La unidad de medida no viaja en el JSON a propósito: la toma siempre el servicio del
+     * propio ingrediente ({@code ItemMenuServiceImpl}), así el formulario no puede desincronizarla
+     * del inventario. Las filas sin ingrediente o sin cantidad mayor a 0 se ignoran, igual que en
+     * el formato viejo, y los duplicados se rechazan con el mismo mensaje de siempre.</p>
+     */
+    private List<ItemIngredient> buildRecipeFromJson(String recipeJson) {
+        List<RecipeIngredientDTO> rows;
+        try {
+            rows = objectMapper.readValue(recipeJson, new TypeReference<List<RecipeIngredientDTO>>() {});
+        } catch (JsonProcessingException e) {
+            log.warn("Receta con formato inválido: {}", e.getMessage());
+            throw new IllegalArgumentException(
+                    "La receta enviada no tiene un formato válido. Recargue la página e intente de nuevo.");
+        }
+
+        List<Long> ingredientIds = new ArrayList<>();
+        List<BigDecimal> quantities = new ArrayList<>();
+        for (RecipeIngredientDTO row : rows) {
+            if (row == null || row.ingredientId() == null) {
+                continue;
+            }
+            ingredientIds.add(row.ingredientId());
+            quantities.add(row.quantity() != null ? row.quantity() : BigDecimal.ZERO);
+        }
+        return buildRecipe(ingredientIds, quantities, null);
+    }
+
+    /**
+     * Receta serializada para el campo oculto {@code recipeJson} del formulario: si el JavaScript
+     * no llegara a ejecutarse, el formulario guarda la receta que el platillo ya tenía en lugar de
+     * enviarla vacía.
+     */
+    private String recipeJsonOf(List<ItemIngredient> recipe) {
+        List<Map<String, Object>> rows = new ArrayList<>();
+        if (recipe != null) {
+            for (ItemIngredient itemIngredient : recipe) {
+                if (itemIngredient == null || itemIngredient.getIngredient() == null
+                        || itemIngredient.getIngredient().getIdIngredient() == null) {
+                    continue;
+                }
+                Map<String, Object> row = new LinkedHashMap<>();
+                row.put("ingredientId", itemIngredient.getIngredient().getIdIngredient());
+                row.put("quantity", itemIngredient.getQuantity());
+                rows.add(row);
+            }
+        }
+        try {
+            return objectMapper.writeValueAsString(rows);
+        } catch (JsonProcessingException e) {
+            log.warn("No se pudo serializar la receta para el formulario: {}", e.getMessage());
+            return "[]";
+        }
+    }
+
+    /**
      * Load common form data
      */
     private void loadFormData(Model model, ItemMenu itemMenu, List<ItemIngredient> recipe) {
@@ -1315,6 +1432,7 @@ public class ItemMenuController {
         model.addAttribute("ingredients", ingredients);
         model.addAttribute("ingredientsDTO", ingredientsDTO);
         model.addAttribute("recipe", recipe);
+        model.addAttribute("recipeJson", recipeJsonOf(recipe));
         model.addAttribute("formAction", itemMenu.getIdItemMenu() != null ? 
                 "/admin/menu-items/" + itemMenu.getIdItemMenu() : "/admin/menu-items");
         

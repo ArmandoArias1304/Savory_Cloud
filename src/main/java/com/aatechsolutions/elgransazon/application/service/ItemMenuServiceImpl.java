@@ -67,6 +67,29 @@ public class ItemMenuServiceImpl implements ItemMenuService {
         }
     }
 
+    /**
+     * La unidad de una fila de la receta sale siempre del ingrediente.
+     *
+     * <p>El formulario de platillos ya no la envía (la receta viaja como JSON con sólo el id del
+     * ingrediente y la cantidad), así que aquí se completa; y si un ingrediente cambió de unidad
+     * (por ejemplo de G a KG) la receta se guarda con la unidad vigente en vez de quedarse con la
+     * vieja y fallar al validar.</p>
+     */
+    private void applyIngredientUnit(ItemIngredient itemIngredient, Ingredient ingredient) {
+        String recipeUnit = itemIngredient.getUnit();
+        String ingredientUnit = ingredient.getUnitOfMeasure();
+        if (ingredientUnit == null || ingredientUnit.isBlank()) {
+            return;
+        }
+        if (recipeUnit == null || !recipeUnit.equalsIgnoreCase(ingredientUnit)) {
+            if (recipeUnit != null && !recipeUnit.isBlank()) {
+                log.info("Unidad '{}' de la receta reemplazada por la del ingrediente '{}' ({})",
+                        recipeUnit, ingredient.getName(), ingredientUnit);
+            }
+            itemIngredient.setUnit(ingredientUnit);
+        }
+    }
+
     @Override
     public List<ItemMenu> findAll() {
         log.debug("Fetching all menu items");
@@ -266,6 +289,7 @@ public class ItemMenuServiceImpl implements ItemMenuService {
                             "Ingrediente no encontrado con ID: " + ingredient.getIngredient().getIdIngredient()));
                 
                 ingredient.setIngredient(ing);
+                applyIngredientUnit(ingredient, ing);
                 ingredient.setItemMenu(saved);
                 ingredient.setCreatedAt(LocalDateTime.now());
                 
@@ -454,6 +478,7 @@ public class ItemMenuServiceImpl implements ItemMenuService {
 
         ingredient.setItemMenu(item);
         ingredient.setIngredient(ing);
+        applyIngredientUnit(ingredient, ing);
         ingredient.setCreatedAt(LocalDateTime.now());
 
         ItemIngredient saved = itemIngredientRepository.save(ingredient);
@@ -506,6 +531,7 @@ public class ItemMenuServiceImpl implements ItemMenuService {
                             "Ingrediente no encontrado con ID: " + ingredient.getIngredient().getIdIngredient()));
                 
                 ingredient.setIngredient(ing);
+                applyIngredientUnit(ingredient, ing);
                 ingredient.setItemMenu(item);
                 ingredient.setCreatedAt(LocalDateTime.now());
                 

@@ -17,6 +17,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.mock.web.MockHttpServletRequest;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.util.Map;
 
@@ -51,7 +52,8 @@ class MenuPdfFileNameTest {
                 mock(BusinessHoursService.class),
                 systemConfigurationService,
                 menuPdfService,
-                mock(DateTimeService.class));
+                mock(DateTimeService.class),
+                new ObjectMapper());
     }
 
     @Test

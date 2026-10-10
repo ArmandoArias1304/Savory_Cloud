@@ -1592,10 +1592,9 @@
                       class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1"
                       >Ingrediente</label
                     >
+                    <!-- Sin name: la receta viaja completa en el campo recipeJson -->
                     <select
-                      name="ingredientIds"
-                      required
-                      class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500"
+                      class="ingredient-select w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500"
                     >
                       <option value="">Seleccionar...</option>
                       <option
@@ -1613,13 +1612,11 @@
                     >
                     <input
                       type="number"
-                      name="quantities"
+                      class="ingredient-quantity w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500"
                       th:value="${recipeItem.quantity}"
                       step="0.01"
                       min="0"
-                      required
                       placeholder="0.00"
-                      class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
                   <div class="w-full sm:w-28">
@@ -1629,12 +1626,10 @@
                     >
                     <input
                       type="text"
-                      name="units"
+                      class="ingredient-unit w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-600 text-gray-700 dark:text-gray-300 text-sm cursor-not-allowed"
                       th:value="${recipeItem.unit}"
-                      required
                       readonly
                       placeholder="Automático"
-                      class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-600 text-gray-700 dark:text-gray-300 text-sm cursor-not-allowed"
                     />
                   </div>
                   <div class="flex items-end">
@@ -1659,10 +1654,9 @@
                     class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1"
                     >Ingrediente</label
                   >
-                  <!-- Hidden input for ingredient ID -->
+                  <!-- Hidden input for ingredient ID (sin name: viaja en recipeJson) -->
                   <input
                     type="hidden"
-                    name="ingredientIds"
                     class="ingredient-id-input"
                   />
 
@@ -1696,11 +1690,10 @@
                   >
                   <input
                     type="number"
-                    name="quantities"
+                    class="ingredient-quantity w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
                     step="0.01"
                     min="0.01"
                     placeholder="0.00"
-                    class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
                   />
                 </div>
 
@@ -1711,10 +1704,9 @@
                   >
                   <input
                     type="text"
-                    name="units"
+                    class="ingredient-unit w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm"
                     readonly
                     placeholder="kg, L, pz"
-                    class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm"
                   />
                 </div>
 
@@ -1733,6 +1725,20 @@
                 </div>
               </div>
             </div>
+
+            <!--
+              Receta completa en UN solo campo (una sola parte del multipart).
+              El formulario es multipart y Tomcat limita el número de partes por petición
+              (Connector.maxPartCount), así que no puede enviar tres campos por ingrediente.
+              El JavaScript rellena este campo al enviar; si no llegara a correr, se guarda el
+              valor que pinta el servidor, que es la receta que el platillo ya tenía.
+            -->
+            <input
+              type="hidden"
+              id="recipeJson"
+              name="recipeJson"
+              th:value="${recipeJson}"
+            />
           </div>
 
           <!-- Botones de Acción -->
@@ -2868,7 +2874,7 @@
         const searchInput = row.querySelector(".ingredient-search");
         const hiddenInput = row.querySelector(".ingredient-id-input");
         const dropdown = row.querySelector(".ingredient-dropdown");
-        const unitInput = row.querySelector('input[name="units"]');
+        const unitInput = row.querySelector(".ingredient-unit");
 
         let searchTimeout;
 
@@ -2927,10 +2933,10 @@
                     if (existingRow) {
                       // Mostrar SweetAlert pidiendo confirmar actualización de cantidad
                       const existingQuantity = existingRow.querySelector(
-                        'input[name="quantities"]',
+                        ".ingredient-quantity",
                       ).value;
                       const existingUnit = existingRow.querySelector(
-                        'input[name="units"]',
+                        ".ingredient-unit",
                       ).value;
 
                       Swal.fire({
@@ -3031,7 +3037,7 @@
       function loadIngredientUnit(selectElement) {
         const ingredientId = selectElement.value;
         const row = selectElement.closest(".ingredient-row");
-        const unitInput = row.querySelector('input[name="units"]');
+        const unitInput = row.querySelector(".ingredient-unit");
 
         if (!ingredientId) {
           unitInput.value = "";
@@ -3072,8 +3078,8 @@
             return row;
           }
 
-          // Verificar en ingredientes existentes (select con name="ingredientIds")
-          const selectInput = row.querySelector('select[name="ingredientIds"]');
+          // Verificar en ingredientes existentes (select con clase ingredient-select)
+          const selectInput = row.querySelector(".ingredient-select");
           if (selectInput && selectInput.value == ingredientId) {
             return row;
           }
@@ -3083,7 +3089,7 @@
 
       // Función para actualizar la cantidad de un ingrediente existente
       function updateIngredientQuantity(row, newQuantity) {
-        const quantityInput = row.querySelector('input[name="quantities"]');
+        const quantityInput = row.querySelector(".ingredient-quantity");
         if (quantityInput) {
           const currentQuantity = parseFloat(quantityInput.value) || 0;
           const totalQuantity = currentQuantity + parseFloat(newQuantity);
@@ -3094,6 +3100,88 @@
           setTimeout(() => {
             row.classList.remove("bg-yellow-50", "dark:bg-yellow-900/20");
           }, 2000);
+        }
+      }
+
+      // ========== Receta → un solo campo (recipeJson) ==========
+
+      /**
+       * Lee las filas de la receta tal como están en pantalla.
+       *
+       * La receta viaja al servidor en UN solo campo (recipeJson) en vez de tres campos
+       * (ingredientIds / quantities / units) por ingrediente: el formulario es multipart y Tomcat
+       * limita el número de partes por petición (Connector.maxPartCount), así que con tres campos
+       * por fila una receta larga rompía el guardado con un 500.
+       */
+      function collectRecipeRows() {
+        const container = document.getElementById("ingredientsContainer");
+        if (!container) return [];
+
+        const rows = container.querySelectorAll(
+          ".ingredient-row:not(#ingredientTemplate)",
+        );
+        const recipe = [];
+
+        rows.forEach((row) => {
+          const ingredientField = row.querySelector(
+            ".ingredient-select, .ingredient-id-input",
+          );
+          const quantityField = row.querySelector(".ingredient-quantity");
+          const ingredientId =
+            ingredientField && ingredientField.value
+              ? parseInt(ingredientField.value, 10)
+              : null;
+          const quantity = quantityField ? parseFloat(quantityField.value) : NaN;
+
+          if (ingredientId && !isNaN(quantity) && quantity > 0) {
+            recipe.push({ ingredientId: ingredientId, quantity: quantity });
+          }
+        });
+
+        return recipe;
+      }
+
+      /** Nombre visible del ingrediente de una fila (select o buscador). */
+      function ingredientNameOf(row) {
+        const select = row.querySelector(".ingredient-select");
+        if (select && select.value && select.selectedIndex >= 0) {
+          const option = select.options[select.selectedIndex];
+          return option ? option.text.split(" (Stock:")[0].trim() : "";
+        }
+        const search = row.querySelector(".ingredient-search");
+        return search ? search.value.trim() : "";
+      }
+
+      /** Primera fila sin ingrediente elegido o sin cantidad mayor a 0. */
+      function findIncompleteRecipeRow() {
+        const container = document.getElementById("ingredientsContainer");
+        if (!container) return null;
+
+        const rows = container.querySelectorAll(
+          ".ingredient-row:not(#ingredientTemplate)",
+        );
+
+        for (const row of rows) {
+          const ingredientField = row.querySelector(
+            ".ingredient-select, .ingredient-id-input",
+          );
+          const quantityField = row.querySelector(".ingredient-quantity");
+          const ingredientId = ingredientField ? ingredientField.value : "";
+          const quantity = quantityField ? parseFloat(quantityField.value) : NaN;
+
+          if (!ingredientId || isNaN(quantity) || quantity <= 0) {
+            return row;
+          }
+        }
+
+        return null;
+      }
+
+      /** Vuelca la receta en el campo oculto, que es el único que se envía. */
+      function syncRecipeJson() {
+        const field = document.getElementById("recipeJson");
+        if (field) {
+          field.value = JSON.stringify(collectRecipeRows());
         }
       }
 
@@ -3117,8 +3205,8 @@
 
         // Agregar atributo required a los campos clonados
         const hiddenInput = newRow.querySelector(".ingredient-id-input");
-        const quantityInput = newRow.querySelector('input[name="quantities"]');
-        const unitInput = newRow.querySelector('input[name="units"]');
+        const quantityInput = newRow.querySelector(".ingredient-quantity");
+        const unitInput = newRow.querySelector(".ingredient-unit");
 
         if (hiddenInput) {
           hiddenInput.setAttribute("required", "required");
@@ -3144,8 +3232,7 @@
         // Obtener información del ingrediente para mostrar en el modal
         const ingredientName =
           row.querySelector(".ingredient-search")?.value ||
-          row.querySelector('select[name="ingredientIds"] option:checked')
-            ?.text ||
+          row.querySelector(".ingredient-select option:checked")?.text ||
           "este ingrediente";
 
         // Detectar si está en modo oscuro
@@ -3588,9 +3675,7 @@
 
         // Agregar eventos a filas existentes (modo edición)
         existingRows.forEach((row) => {
-          const ingredientSelect = row.querySelector(
-            'select[name="ingredientIds"]',
-          );
+          const ingredientSelect = row.querySelector(".ingredient-select");
           if (ingredientSelect) {
             ingredientSelect.addEventListener("change", function () {
               loadIngredientUnit(this);
@@ -3866,19 +3951,41 @@
           return false;
         }
 
+        // Cada fila necesita ingrediente y cantidad: sus campos ya no viajan por separado con
+        // name (la receta completa va en recipeJson), así que la validación es aquí.
+        const incompleteRow = findIncompleteRecipeRow();
+        if (incompleteRow) {
+          e.preventDefault();
+          Swal.fire({
+            icon: "error",
+            title: "❌ Receta Incompleta",
+            text: "Cada ingrediente de la receta necesita estar seleccionado y con una cantidad mayor a 0.",
+            confirmButtonColor: "#3B82F6",
+            customClass: {
+              popup: "dark:bg-gray-800 dark:text-white",
+            },
+          });
+          const focusable = incompleteRow.querySelector(
+            ".ingredient-search, .ingredient-select, .ingredient-quantity",
+          );
+          if (focusable) focusable.focus();
+          return false;
+        }
+
         // Validar ingredientes duplicados antes de enviar
         const ingredientIds = [];
         let hasDuplicates = false;
         let duplicateIngredient = null;
 
         ingredientRows.forEach((row) => {
-          const hiddenInput = row.querySelector(".ingredient-id-input");
-          const searchInput = row.querySelector(".ingredient-search");
-          if (hiddenInput && hiddenInput.value) {
-            const ingredientId = hiddenInput.value;
+          const ingredientField = row.querySelector(
+            ".ingredient-select, .ingredient-id-input",
+          );
+          if (ingredientField && ingredientField.value) {
+            const ingredientId = ingredientField.value;
             if (ingredientIds.includes(ingredientId)) {
               hasDuplicates = true;
-              duplicateIngredient = searchInput.value;
+              duplicateIngredient = ingredientNameOf(row) || "este ingrediente";
             } else {
               ingredientIds.push(ingredientId);
             }
@@ -3910,6 +4017,12 @@
             },
           });
           return false;
+        }
+
+        // La receta viaja en un único campo (una sola parte del multipart). Si alguna validación
+        // bloqueó el envío no hace falta serializar nada.
+        if (!e.defaultPrevented) {
+          syncRecipeJson();
         }
       });
 
