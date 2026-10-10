@@ -87,8 +87,12 @@
       }
 
       .payment-method-btn {
-        border: 2px solid #38e07b;
+        border: 2px solid #d1d5db;
         transition: all 0.2s ease;
+      }
+
+      .dark .payment-method-btn {
+        border-color: #4b5563;
       }
 
       .payment-method-btn:hover {
@@ -335,7 +339,7 @@
                         type="button"
                         th:each="method, iterStat : ${enabledPaymentMethods}"
                         th:data-method="${method.name()}"
-                        th:class="${order.paymentMethod != null && order.paymentMethod == method} ? 'payment-method-btn active flex flex-col items-center justify-center gap-2 rounded-xl p-4' : 'payment-method-btn flex flex-col items-center justify-center gap-2 rounded-xl p-4 text-gray-600 dark:text-gray-400'"
+                        class="payment-method-btn flex flex-col items-center justify-center gap-2 rounded-xl p-4 text-gray-600 dark:text-gray-400"
                         onclick="togglePaymentMethod(this)"
                       >
                         <span class="material-symbols-outlined text-3xl">

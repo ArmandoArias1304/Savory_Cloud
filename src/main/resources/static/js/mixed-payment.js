@@ -372,4 +372,13 @@
   global.togglePaymentMethod = function (button) {
     toggle(button);
   };
+
+  // Auto-inicialización cuando el DOM está listo
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", function () {
+      global.MIXED_PAYMENT.init();
+    });
+  } else {
+    global.MIXED_PAYMENT.init();
+  }
 })(window);
