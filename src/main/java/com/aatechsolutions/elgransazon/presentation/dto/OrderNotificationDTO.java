@@ -23,6 +23,17 @@ public class OrderNotificationDTO {
     private String orderNumber;
     private OrderStatus status;
     private OrderType orderType;
+
+    /**
+     * El tipo de pedido ya rotulado como lo muestra el sistema ("Para comer aquí", "Para pasar a
+     * recoger", "Entrega a domicilio").
+     *
+     * <p>Viaja rotulado para que las pantallas que avisan NO tengan que repetir la traducción: los
+     * rótulos de negocio viven en {@code OrderType} y desde aquí se leen tal cual. Un pedido sin
+     * mesa se anuncia por su tipo, que es lo único que lo identifica en el salón.</p>
+     */
+    private String orderTypeLabel;
+
     private Integer tableNumber;
     private BigDecimal total;
     private LocalDateTime createdAt;
@@ -31,6 +42,26 @@ public class OrderNotificationDTO {
     private String notificationType; // "NEW_ORDER", "STATUS_CHANGE", "CHEF_ASSIGNED", "ORDER_DETAIL"
     private String message;
     private String chefName;
+
+    /**
+     * Usuario que capturó el pedido. Nunca se reescribe, ni con un traspaso: es la bitácora de
+     * quién lo levantó.
+     *
+     * <p>Es lo que cada pantalla compara con su propio usuario para decidir si un aviso es suyo
+     * (por ejemplo el de "pedido listo"), sin necesidad de una cola por usuario ni de un segundo
+     * canal.</p>
+     */
+    private String createdBy;
+
+    /**
+     * Usuario responsable AHORA del pedido (el mesero al que se transfirió, si hubo traspaso), o
+     * {@code null} si nadie lo tiene asignado.
+     *
+     * <p>Espeja {@code Order.isOperatedBy}: cuando viene null, el responsable es
+     * {@link #createdBy}. Así quien atiende un pedido traspasado recibe sus avisos y quien lo
+     * levantó y ya no lo atiende no los recibe.</p>
+     */
+    private String operatedBy;
     
     @Data
     @Builder

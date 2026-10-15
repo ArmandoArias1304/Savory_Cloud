@@ -426,25 +426,10 @@ public class OrderController {
         log.debug("Restaurant is currently: {}", isRestaurantOpen ? "open" : "closed");
 
         // Expose the "staff can advance preparation items" permission flags so the list view
-        // can decide whether to render the "Avanzar preparación" button per order row.
+        // can decide whether to render the "Avanzar preparación" button per order row. Los
+        // mismos que necesita el panel de detalle del pedido.
         SystemConfiguration listCfg = systemConfigurationService.getConfiguration();
-        boolean staffOrderStatusEnabled = listCfg != null
-            && Boolean.TRUE.equals(listCfg.getEnableOrderStatusPermission());
-        boolean staffChefEnabled = staffOrderStatusEnabled
-            && listCfg != null && Boolean.TRUE.equals(listCfg.getStaffCanManageChefItems());
-        boolean staffBaristaEnabled = staffOrderStatusEnabled
-            && listCfg != null && Boolean.TRUE.equals(listCfg.getStaffCanManageBaristaItems());
-        boolean staffParrilleroEnabled = staffOrderStatusEnabled
-            && listCfg != null && Boolean.TRUE.equals(listCfg.getStaffCanManageParrilleroItems());
-        // Delivery orders can only be advanced by admin/manager/cashier (never the waiter).
-        boolean staffDeliveryEnabled = staffOrderStatusEnabled
-            && listCfg != null && Boolean.TRUE.equals(listCfg.getStaffCanManageDeliveryOrders())
-            && DeliveryStatusSupport.isStaffRoleAllowed(role);
-        model.addAttribute("staffOrderStatusEnabled", staffOrderStatusEnabled);
-        model.addAttribute("staffChefEnabled", staffChefEnabled);
-        model.addAttribute("staffBaristaEnabled", staffBaristaEnabled);
-        model.addAttribute("staffParrilleroEnabled", staffParrilleroEnabled);
-        model.addAttribute("staffDeliveryEnabled", staffDeliveryEnabled);
+        addStaffPermissionFlags(model, role, listCfg);
 
         // Expose whether waiters are allowed to collect payments, so the list view
         // can hide the charge button when disabled in system configuration.
@@ -457,6 +442,66 @@ public class OrderController {
         }
 
         return role + "/orders/list";
+    }
+
+    /**
+     * Sirve el panel de detalle de UN pedido ({@code fragments/order-detail-panel}), que la lista
+     * abre en un modal al pulsar una tarjeta: lo que no cabe en la fila de la tabla —los ítems
+     * consumidos con sus notas y complementos, y las cuentas por persona con su ticket— sin
+     * obligar a salir de la lista y volver.
+     *
+     * <p>La ruta lleva el rol ({@code /{role}/orders/{id}/detail-panel}) porque es el servicio de
+     * ESE rol el que resuelve el pedido: el mesero solo obtiene los suyos, así que un pedido
+     * ajeno no se puede abrir ni sabiendo su id.</p>
+     *
+     * <p>Se devuelve la variante SIN bloque de acciones ({@code panelInfoFromModel}): los botones
+     * que van dentro del modal son los de la fila de cada rol, y los pone la página, que es la
+     * que conoce sus reglas (la transferencia y el "solo consulta" del mesero, por ejemplo).</p>
+     */
+    @GetMapping("/{id}/detail-panel")
+    public String orderDetailPanel(
+            @PathVariable String role,
+            @PathVariable Long id,
+            Authentication authentication,
+            Model model) {
+        validateRole(role, authentication);
+
+        Order order = getOrderService(role).findByIdWithDetails(id)
+                .orElseThrow(() -> new IllegalArgumentException("Pedido no encontrado: " + id));
+
+        model.addAttribute("order", order);
+        model.addAttribute("currentRole", role);
+        addStaffPermissionFlags(model, role, systemConfigurationService.getConfiguration());
+
+        return "fragments/order-detail-panel :: panelInfoFromModel";
+    }
+
+    /**
+     * Deja en el modelo los permisos de staff que deciden qué botones de preparación y de reparto
+     * se pueden ofrecer. Lo comparten la lista de pedidos y el panel de detalle, para que los dos
+     * ofrezcan exactamente las mismas acciones.
+     *
+     * @param cfg la configuración ya leída, para no consultarla dos veces en la misma petición
+     */
+    private void addStaffPermissionFlags(Model model, String role, SystemConfiguration cfg) {
+        boolean staffOrderStatusEnabled = cfg != null
+            && Boolean.TRUE.equals(cfg.getEnableOrderStatusPermission());
+        boolean staffChefEnabled = staffOrderStatusEnabled
+            && Boolean.TRUE.equals(cfg.getStaffCanManageChefItems());
+        boolean staffBaristaEnabled = staffOrderStatusEnabled
+            && Boolean.TRUE.equals(cfg.getStaffCanManageBaristaItems());
+        boolean staffParrilleroEnabled = staffOrderStatusEnabled
+            && Boolean.TRUE.equals(cfg.getStaffCanManageParrilleroItems());
+        // Delivery orders can only be advanced by admin/manager/cashier (never the waiter).
+        boolean staffDeliveryEnabled = staffOrderStatusEnabled
+            && Boolean.TRUE.equals(cfg.getStaffCanManageDeliveryOrders())
+            && DeliveryStatusSupport.isStaffRoleAllowed(role);
+
+        model.addAttribute("staffOrderStatusEnabled", staffOrderStatusEnabled);
+        model.addAttribute("staffChefEnabled", staffChefEnabled);
+        model.addAttribute("staffBaristaEnabled", staffBaristaEnabled);
+        model.addAttribute("staffParrilleroEnabled", staffParrilleroEnabled);
+        model.addAttribute("staffDeliveryEnabled", staffDeliveryEnabled);
     }
 
     /**

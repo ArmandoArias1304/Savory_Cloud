@@ -1,0 +1,423 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <title>Diálogo del platillo con sus tamaños — verificación</title>
+    <!--
+      Página de verificación, NO forma parte de la aplicación.
+
+      Las cinco pantallas de carta (menú público del local y menús visuales de
+      mesero, cajero, cocina y reparto) no decían nada de los tamaños: al pulsar un
+      platillo con tamaños se veía sólo el item padre, sin forma de llegar a los
+      demás.
+
+      Esta página NO copia el código: lee cada plantilla REAL
+      (templates/*/menu/view.html) y el guion compartido REAL
+      (static/js/menu-item-dialog.js), los ejecuta dentro de un iframe por plantilla
+      —con el SweetAlert2 de verdad— y prueba a pulsar las tarjetas.
+
+      El guion compartido sólo se carga si la plantilla lo incluye: así una
+      plantilla vieja se comporta como se comportaba, y sirve para comparar.
+
+      Lo único que se sustituye es el mapa de tamaños, que en la app lo escribe el
+      servidor a partir de la base de datos y aquí no existe.
+
+      Uso:  tools/menu-item-dialog-demo.html
+            tools/menu-item-dialog-demo.html?base=…   (otro directorio de plantillas)
+    -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+      body { font-family: system-ui, sans-serif; margin: 0; padding: 24px; background: #f8faf9; }
+      pre { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; font-size: 12px; white-space: pre-wrap; }
+      #Marcos { display: flex; gap: 16px; flex-wrap: wrap; }
+      #Marcos figure { margin: 0; }
+      #Marcos figcaption { font-size: 12px; font-weight: 700; margin-bottom: 6px; }
+      iframe { width: 420px; height: 620px; border: 1px solid #e5e7eb; border-radius: 12px; background: #fff; }
+      .ok { color: #15803d; font-weight: 700; }
+      .falla { color: #b91c1c; font-weight: 700; }
+    </style>
+  </head>
+  <body>
+    <h1>Diálogo del platillo con sus tamaños</h1>
+    <p id="estado">Cargando…</p>
+    <pre id="log">(cargando)</pre>
+    <div id="Marcos"></div>
+
+    <script>
+      var BASE =
+        new URLSearchParams(location.search).get("base") ||
+        "../src/main/resources/templates/";
+
+      var PLANTILLAS = [
+        "home/menu/view.html",
+        "waiter/menu/view.html",
+        "cashier/menu/view.html",
+        "chef/menu/view.html",
+        "delivery/menu/view.html",
+      ];
+
+      var COMPARTIDO = "../src/main/resources/static/js/menu-item-dialog.js";
+
+      // El mapa que en la app arma el servidor: padre (id 1) → sus tamaños por
+      // precio. El padre es el más caro, para que se vea que el diálogo ordena por
+      // precio pero arranca en la forma que anuncia la tarjeta.
+      var TAMANOS = {
+        1: [
+          {
+            id: 3,
+            name: "Pizza mediana",
+            sizeName: "Mediana",
+            price: 199.0,
+            available: true,
+            imageUrl: "",
+            description: "Pizza mediana de pepperoni",
+          },
+          {
+            id: 2,
+            name: "Pizza grande",
+            sizeName: "Grande",
+            price: 249.0,
+            available: false,
+            imageUrl: "",
+            description: "Pizza grande de pepperoni",
+          },
+        ],
+      };
+
+      var resultados = [];
+      var errores = [];
+
+      function registrar(plantilla, caso, condicion, detalle) {
+        resultados.push({
+          plantilla: plantilla,
+          caso: caso,
+          pasa: !!condicion,
+          detalle: detalle === undefined ? "" : detalle,
+        });
+      }
+
+      function esperar(condicion, limite) {
+        return new Promise(function (resolve, reject) {
+          var esperado = 0;
+          (function mirar() {
+            if (condicion()) return resolve(true);
+            esperado += 50;
+            if (esperado > (limite || 3000)) return reject(new Error("se agotó el tiempo de espera"));
+            setTimeout(mirar, 50);
+          })();
+        });
+      }
+
+      /** Los bloques <script> en línea de la plantilla, en orden. */
+      function bloquesDe(html) {
+        var bloques = [];
+        var re = /<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi;
+        var m;
+        while ((m = re.exec(html)) !== null) {
+          bloques.push(m[1]);
+        }
+        return bloques;
+      }
+
+      function escapar(codigo) {
+        return codigo.replace(/<\/script/gi, "<\\/script");
+      }
+
+      /** Una tarjeta igual a la que escribe el servidor, con sus atributos data-*. */
+      function tarjeta(win, datos) {
+        var card = win.document.createElement("div");
+        card.className = "menu-item-card";
+        card.setAttribute("data-item-id", datos.id);
+        card.setAttribute("data-item-name", datos.name);
+        card.setAttribute("data-item-price", datos.price);
+        card.setAttribute("data-item-description", datos.description);
+        card.setAttribute("data-item-image", "");
+        card.setAttribute("data-item-available", String(datos.available));
+        card.setAttribute("data-has-sizes", String(!!datos.hasSizes));
+        card.setAttribute("data-size-name", datos.sizeName || "");
+        card.setAttribute("onclick", "openItemModal(this)");
+        card.textContent = datos.name;
+        win.document.getElementById("tarjetas").appendChild(card);
+        return card;
+      }
+
+      function texto(win, selector) {
+        var nodo = win.document.querySelector(selector);
+        return nodo ? nodo.textContent.replace(/\s+/g, " ").trim() : null;
+      }
+
+      /**
+       * Monta la plantilla en un iframe propio, con SweetAlert2 dentro: el diálogo
+       * se dibuja en el documento de su ventana, así que la librería tiene que
+       * vivir ahí y no en la página de prueba.
+       */
+      async function memoria(plantilla, compartido, swal, html) {
+        var bloques = bloquesDe(html).map(function (codigo) {
+          return codigo.replace(
+            /const sizeItemsMapping = \/\*\[\[\$\{sizeItemsDto\}\]\]\*\/ \{\};/,
+            "const sizeItemsMapping = " + JSON.stringify(TAMANOS) + ";",
+          );
+        });
+
+        var usaCompartido = html.indexOf("menu-item-dialog.js") >= 0;
+        var guiones = bloques
+          .map(function (codigo) {
+            return "<script>" + escapar(codigo) + "<\/script>";
+          })
+          .join("");
+        if (usaCompartido) {
+          guiones += "<script>" + escapar(compartido) + "<\/script>";
+        }
+
+        var figura = document.createElement("figure");
+        var pieDeFoto = document.createElement("figcaption");
+        pieDeFoto.textContent = plantilla;
+        var marco = document.createElement("iframe");
+        figura.appendChild(pieDeFoto);
+        figura.appendChild(marco);
+        document.getElementById("Marcos").appendChild(figura);
+        var doc = marco.contentDocument;
+        doc.open();
+        doc.write(
+          '<!doctype html><html><head><meta charset="utf-8" /></head><body>' +
+            '<div id="buscador"><input type="text" id="searchInput" oninput="searchItems(this.value)" />' +
+            '<button id="clearSearch" class="hidden">x</button>' +
+            '<p id="searchResults" class="hidden">Se encontraron <span id="resultCount">0</span> platillos</p></div>' +
+            '<div id="tarjetas"></div>' +
+            "<script>window.tailwind = { config: {} };<\/script>" +
+            "<script>" + escapar(swal) + "<\/script>" +
+            guiones +
+            "</body></html>",
+        );
+        doc.close();
+
+        var win = marco.contentWindow;
+        await esperar(function () {
+          return win.Swal && win.openItemModal;
+        }, 8000);
+        return { marco: marco, win: win, usaCompartido: usaCompartido };
+      }
+
+      async function probar(plantilla, compartido, swal, html) {
+        var sesion = await memoria(plantilla, compartido, swal, html);
+        var win = sesion.win;
+        win.addEventListener("error", function (evento) {
+          errores.push(plantilla + ": " + String(evento.message));
+        });
+
+        var pizza = tarjeta(win, {
+          id: 1,
+          name: "Pizza",
+          price: 299.0,
+          description: "Pizza de pepperoni",
+          available: true,
+          hasSizes: true,
+        });
+        var refresco = tarjeta(win, {
+          id: 9,
+          name: "Refresco",
+          price: 35.0,
+          description: "Refresco de cola",
+          available: true,
+          hasSizes: false,
+        });
+
+        registrar(
+          plantilla,
+          "la plantilla incluye la pieza compartida",
+          sesion.usaCompartido,
+        );
+
+        // 1. Pulsar un platillo con tamaños abre su diálogo sin errores.
+        win.openItemModal(pizza);
+        await esperar(function () {
+          return win.document.querySelector(".swal2-html-container");
+        });
+        registrar(
+          plantilla,
+          "pulsar un platillo con tamaños abre su diálogo",
+          !!win.document.querySelector(".swal2-html-container"),
+        );
+        var haySelector = await esperar(function () {
+          return win.document.querySelector("[data-variant-index]");
+        }, 1500)
+          .then(function () {
+            return true;
+          })
+          .catch(function () {
+            return false;
+          });
+        registrar(
+          plantilla,
+          "el diálogo ofrece los tamaños del platillo",
+          haySelector,
+          haySelector ? "" : "el diálogo no menciona ningún tamaño",
+        );
+        if (!haySelector) {
+          return;
+        }
+
+        registrar(
+          plantilla,
+          "el diálogo arranca en la forma que anuncia la tarjeta",
+          (texto(win, ".swal2-html-container") || "").indexOf("$299.00") >= 0,
+          texto(win, ".swal2-html-container"),
+        );
+        registrar(
+          plantilla,
+          "se ven los tres tamaños para elegir",
+          win.document.querySelectorAll("[data-variant-index]").length === 3,
+          win.document.querySelectorAll("[data-variant-index]").length + " botones",
+        );
+        registrar(
+          plantilla,
+          "cada tamaño lleva su nombre y su precio",
+          (texto(win, '[data-variant-index="0"]') || "").indexOf("Mediana · $199.00") >= 0,
+          texto(win, '[data-variant-index="0"]'),
+        );
+        registrar(
+          plantilla,
+          "el contador dice en cuál vamos",
+          (texto(win, ".swal2-html-container") || "").indexOf("3 de 3") >= 0,
+        );
+
+        // 2. La flecha de siguiente salta al tamaño más barato (y da la vuelta).
+        win.document.querySelector('[data-variant-step="1"]').click();
+        registrar(
+          plantilla,
+          "la flecha siguiente cambia de tamaño",
+          (texto(win, ".swal2-html-container") || "").indexOf("Pizza mediana") >= 0 &&
+            (texto(win, ".swal2-html-container") || "").indexOf("$199.00") >= 0,
+          texto(win, ".swal2-html-container"),
+        );
+
+        // 3. Un atajo directo salta al tamaño que se quiere ver.
+        win.document.querySelector('[data-variant-index="1"]').click();
+        registrar(
+          plantilla,
+          "el atajo directo lleva al tamaño elegido",
+          (texto(win, ".swal2-html-container") || "").indexOf("Pizza grande") >= 0 &&
+            (texto(win, ".swal2-html-container") || "").indexOf("$249.00") >= 0,
+          texto(win, ".swal2-html-container"),
+        );
+        registrar(
+          plantilla,
+          "un tamaño sin stock se anuncia agotado",
+          (texto(win, ".swal2-html-container") || "").indexOf("AGOTADO") >= 0,
+        );
+
+        // 4. La flecha de anterior vuelve atrás.
+        win.document.querySelector('[data-variant-step="-1"]').click();
+        registrar(
+          plantilla,
+          "la flecha anterior vuelve al tamaño de antes",
+          (texto(win, ".swal2-html-container") || "").indexOf("Pizza mediana") >= 0,
+        );
+
+        // 5. Un platillo sin tamaños se sigue viendo como siempre.
+        win.Swal.close();
+        await esperar(function () {
+          return !win.document.querySelector(".swal2-container");
+        });
+        win.openItemModal(refresco);
+        await esperar(function () {
+          return win.document.querySelector(".swal2-html-container");
+        });
+        registrar(
+          plantilla,
+          "sin tamaños el diálogo no ofrece ningún selector",
+          win.document.querySelectorAll("[data-variant-index]").length === 0 &&
+            win.document.querySelectorAll("[data-variant-step]").length === 0,
+        );
+        registrar(
+          plantilla,
+          "sin tamaños el diálogo sigue mostrando el platillo",
+          (texto(win, ".swal2-html-container") || "").indexOf("$35.00") >= 0,
+          texto(win, ".swal2-html-container"),
+        );
+
+        // 6. Buscar por el nombre de un tamaño encuentra el platillo.
+        win.Swal.close();
+        await esperar(function () {
+          return !win.document.querySelector(".swal2-container");
+        });
+        win.searchItems("grande");
+        registrar(
+          plantilla,
+          "buscar por un tamaño encuentra el platillo",
+          pizza.style.display !== "none" && refresco.style.display === "none",
+        );
+        win.searchItems("");
+
+        // Se deja el diálogo abierto para poder mirarlo (y pulsarlo) a mano.
+        win.openItemModal(pizza);
+        await esperar(function () {
+          return win.document.querySelector("[data-variant-index]");
+        });
+      }
+
+      function pintar(compartido, disponibles) {
+        var total = resultados.filter(function (r) {
+          return r.pasa;
+        }).length;
+        var porPlantilla = disponibles
+          .map(function (p) {
+            var casos = resultados.filter(function (r) {
+              return r.plantilla === p;
+            });
+            var bien = casos.filter(function (r) {
+              return r.pasa;
+            }).length;
+            var detalle = casos
+              .filter(function (r) {
+                return !r.pasa;
+              })
+              .map(function (r) {
+                return "      FALLA " + r.caso + (r.detalle ? "  →  " + r.detalle : "");
+              })
+              .join("\n");
+            return "  " + p + ": " + bien + "/" + casos.length + (detalle ? "\n" + detalle : "");
+          })
+          .join("\n");
+        document.getElementById("log").textContent =
+          "pieza compartida: " + COMPARTIDO +
+          "\ncasos: " + total + "/" + resultados.length +
+          "\n\n" + porPlantilla +
+          (errores.length ? "\n\nerrores de JS: " + JSON.stringify(errores) : "");
+        document.getElementById("estado").textContent =
+          total + " de " + resultados.length + " casos correctos" +
+          (errores.length ? " (con errores de JS)" : "");
+      }
+
+      (async function () {
+        var disponibles = [];
+        try {
+          // Todo se lee antes de montar nada: el servidor de archivos atiende de
+          // una en una y montar un iframe lo bloquea un instante.
+          var compartido = await (await fetch(COMPARTIDO)).text();
+          var swal = await (
+            await fetch("https://cdn.jsdelivr.net/npm/sweetalert2@11")
+          ).text();
+          var plantillas = {};
+          for (var i = 0; i < PLANTILLAS.length; i++) {
+            plantillas[PLANTILLAS[i]] = await (await fetch(BASE + PLANTILLAS[i])).text();
+          }
+
+          for (var j = 0; j < PLANTILLAS.length; j++) {
+            try {
+              await probar(PLANTILLAS[j], compartido, swal, plantillas[PLANTILLAS[j]]);
+              disponibles.push(PLANTILLAS[j]);
+            } catch (error) {
+              errores.push(PLANTILLAS[j] + ": " + String(error && error.message ? error.message : error));
+              registrar(PLANTILLAS[j], "la prueba llegó al final", false, String(error));
+            }
+          }
+          pintar(compartido, disponibles);
+        } catch (error) {
+          errores.push("carga inicial: " + String(error && error.message ? error.message : error));
+        }
+        window.__resultado = { resultados: resultados, errores: errores };
+      })();
+    </script>
+  </body>
+</html>

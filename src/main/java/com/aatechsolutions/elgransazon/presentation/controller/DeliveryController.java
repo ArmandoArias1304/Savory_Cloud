@@ -11,6 +11,7 @@ import com.aatechsolutions.elgransazon.application.service.SplitPaymentService;
 import com.aatechsolutions.elgransazon.application.service.SystemConfigurationService;
 import com.aatechsolutions.elgransazon.domain.repository.OrderRepository;
 import com.aatechsolutions.elgransazon.presentation.dto.SplitAccountDTO;
+import com.aatechsolutions.elgransazon.util.MenuSizeVariants;
 import com.aatechsolutions.elgransazon.util.PaymentTenderSupport;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -814,7 +815,12 @@ public class DeliveryController {
             SystemConfiguration config = configurationService.getConfiguration();
             List<ItemMenu> availableItems = itemMenuService.findAvailableItems();
 
-            Map<Long, List<ItemMenu>> itemsByCategory = availableItems.stream()
+            // El grid muestra un solo recuadro por platillo: los hijos (tamaños) no son
+            // tarjetas aparte, se ven dentro del diálogo de su item padre (MenuSizeVariants,
+            // compartido con los demás menús visuales).
+            List<ItemMenu> rootItems = MenuSizeVariants.roots(availableItems);
+
+            Map<Long, List<ItemMenu>> itemsByCategory = rootItems.stream()
                     .collect(Collectors.groupingBy(item -> item.getCategory().getIdCategory()));
 
             List<Category> categories = categoryService.getAllActiveCategories().stream()
@@ -824,6 +830,7 @@ public class DeliveryController {
             model.addAttribute("config", config);
             model.addAttribute("categories", categories);
             model.addAttribute("itemsByCategory", itemsByCategory);
+            model.addAttribute("sizeItemsDto", MenuSizeVariants.byParentItem(availableItems));
 
             return "delivery/menu/view";
         } catch (Exception e) {

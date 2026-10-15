@@ -1871,6 +1871,15 @@
         const orderId = notification.orderId;
         const status = notification.status;
         const type = notification.notificationType;
+
+        // ¿Es un pedido que levantó ESTE cajero y acaba de quedar listo? Entonces alerta: suena y
+        // parpadea hasta que le den "Entendido". Los pedidos del tablero GLOBAL no suenan: no son
+        // suyos, y son los que llenarían la pantalla de avisos. Va antes del "if (row)" porque el
+        // aviso es del PEDIDO, no de la fila.
+        const readyAlertShown = window.OrderReadyAlert
+          ? OrderReadyAlert.handle(notification)
+          : false;
+
         const row = document.querySelector(`tr[data-order-id="${orderId}"]`);
 
         if (row) {
@@ -1886,11 +1895,16 @@
             // Los botones dependen del estado (p. ej. "Cobrar pedido" aparece al quedar
             // ENTREGADO): el servidor re-renderiza esa columna en vivo, sin recargar.
             refreshOrderActions(orderId);
-            showStatusToast(
-              "📊 Estado Actualizado",
-              `Pedido #${notification.orderNumber} - ${notification.message || ""}`,
-              "info",
-            );
+
+            // Si ya salió la alerta del centro (pedido propio que quedó listo), no se repite la
+            // noticia en el aviso pequeño de la esquina.
+            if (!readyAlertShown) {
+              showStatusToast(
+                "📊 Estado Actualizado",
+                `Pedido #${notification.orderNumber} - ${notification.message || ""}`,
+                "info",
+              );
+            }
           } else if (type === "ORDER_CANCELLED") {
             showStatusToast(
               "⚠️ Pedido Cancelado",
@@ -2350,69 +2364,9 @@
          porque la tarjeta es accesible por teclado). El cuerpo lo sirve el servidor
          (fragments/order-detail-panel vía GET /cashier/orders/{id}/detail-panel): mesa y
          pedido, ítems consumidos con sus notas y complementos, cuentas por persona con su
-         ticket y autofactura, y las MISMAS acciones de la fila de la tabla. -->
-    <div
-      id="orderDetailModal"
-      class="hidden fixed inset-0 z-50 overflow-y-auto"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="orderDetailModalTitle"
-    >
-      <div
-        class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm"
-        data-order-detail-close
-      ></div>
-
-      <div class="relative flex min-h-full items-start justify-center p-3 sm:p-6">
-        <div
-          class="relative w-full max-w-2xl rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-2xl"
-        >
-          <div
-            class="flex items-center justify-between gap-3 px-4 sm:px-5 py-3 border-b border-gray-200 dark:border-gray-800"
-          >
-            <div class="flex items-center gap-2">
-              <span class="material-symbols-outlined text-primary"
-                >receipt_long</span
-              >
-              <h3
-                id="orderDetailModalTitle"
-                class="text-base font-semibold text-gray-900 dark:text-white"
-              >
-                Detalle del pedido
-              </h3>
-            </div>
-            <button
-              type="button"
-              class="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all"
-              data-order-detail-close
-              aria-label="Cerrar"
-              title="Cerrar"
-            >
-              <span class="material-symbols-outlined">close</span>
-            </button>
-          </div>
-
-          <div id="orderDetailModalBody" class="px-4 sm:px-5 py-4"></div>
-
-          <!-- flex-wrap: en un celular angosto el enlace baja a su propia línea completa en vez
-               de partirse en dos renglones apretados contra el aviso. -->
-          <div
-            class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 px-4 sm:px-5 py-3 border-t border-gray-200 dark:border-gray-800"
-          >
-            <p class="text-[11px] text-gray-400 dark:text-gray-500">
-              El detalle se actualiza cuando el pedido cambia.
-            </p>
-            <a
-              id="orderDetailFullLink"
-              href="#"
-              class="text-sm font-semibold text-primary hover:underline whitespace-nowrap"
-            >
-              Ver pedido completo
-            </a>
-          </div>
-        </div>
-      </div>
-    </div>
+         ticket y autofactura, y las MISMAS acciones de la fila de la tabla. El cascarón del
+         modal es el fragmento compartido, el mismo que usan admin/gerente y mesero. -->
+    <div th:replace="~{fragments/order-detail-modal :: modal}"></div>
 
     <!-- Acordeón de tickets (cuentas divididas) en la lista -->
     <script>
@@ -2429,6 +2383,16 @@
           sib.style.display = open ? "none" : "";
           sib = sib.nextElementSibling;
         }
+      });
+    </script>
+
+    <!-- Aviso de "pedido listo para recoger": solo para los pedidos de ESTE cajero, nunca para
+         los del tablero global que él no levantó. -->
+    <script th:src="@{/js/order-ready-alert.js}"></script>
+    <script th:inline="javascript">
+      OrderReadyAlert.init({
+        username: /*[[${currentUsername}]]*/ "",
+        role: "cashier",
       });
     </script>
 

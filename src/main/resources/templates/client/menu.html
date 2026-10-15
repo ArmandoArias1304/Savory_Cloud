@@ -328,51 +328,6 @@
         }
       }
 
-      /* ===== FLY TO CART ===== */
-      .fly-clone {
-        position: fixed;
-        border-radius: 50%;
-        object-fit: cover;
-        pointer-events: none;
-        z-index: 99998;
-        box-shadow: 0 4px 20px rgba(56, 224, 123, 0.5);
-        transition: none;
-      }
-
-      /* ===== BOUNCE CONTADOR CARRITO ===== */
-      @keyframes cartBounce {
-        0% {
-          transform: scale(1);
-        }
-        35% {
-          transform: scale(1.55);
-        }
-        65% {
-          transform: scale(0.88);
-        }
-        100% {
-          transform: scale(1);
-        }
-      }
-      .cart-bounce {
-        animation: cartBounce 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
-      }
-
-      /* ===== PULSE VERDE EN CARD AL AGREGAR ===== */
-      @keyframes cardAddPulse {
-        0% {
-          box-shadow: 0 0 0 0 rgba(56, 224, 123, 0.7);
-        }
-        70% {
-          box-shadow: 0 0 0 12px rgba(56, 224, 123, 0);
-        }
-        100% {
-          box-shadow: 0 0 0 0 rgba(56, 224, 123, 0);
-        }
-      }
-      .card-add-pulse {
-        animation: cardAddPulse 0.5s ease forwards;
-      }
     </style>
   </head>
   <body
@@ -928,87 +883,6 @@
     <div th:replace="~{fragments/sidebar :: sidebarScripts}"></div>
 
     <script th:inline="javascript">
-      // ===== FLY TO CART ANIMATION =====
-      function flyToCart(sourceCard) {
-        const img = sourceCard?.querySelector("img");
-        if (!img) return;
-
-        const cartBtn =
-          document.getElementById("floatingCartCount")?.parentElement ||
-          document.querySelector("#cart-sidebar");
-        const floatingBtn = document.querySelector(
-          ".lg\\:hidden.fixed.bottom-6.right-6",
-        );
-
-        const srcRect = img.getBoundingClientRect();
-
-        // Destino: botón flotante del carrito (móvil) o header del sidebar (desktop)
-        let destRect;
-        if (floatingBtn && window.innerWidth < 1024) {
-          destRect = floatingBtn.getBoundingClientRect();
-        } else {
-          const cartHeader = document.querySelector("#cart-sidebar .sticky");
-          destRect = cartHeader
-            ? cartHeader.getBoundingClientRect()
-            : { left: window.innerWidth - 60, top: 20, width: 40, height: 40 };
-        }
-
-        // Clonar imagen
-        const clone = img.cloneNode();
-        const size = Math.min(srcRect.width, srcRect.height, 70);
-        clone.className = "fly-clone";
-        clone.style.cssText = `
-    width: ${size}px;
-    height: ${size}px;
-    left: ${srcRect.left + srcRect.width / 2 - size / 2}px;
-    top: ${srcRect.top + srcRect.height / 2 - size / 2}px;
-    border-radius: 50%;
-  `;
-        document.body.appendChild(clone);
-
-        // Calcular destino
-        const destX = destRect.left + destRect.width / 2 - size / 2;
-        const destY = destRect.top + destRect.height / 2 - size / 2;
-
-        // Animación en dos fases con requestAnimationFrame
-        requestAnimationFrame(() => {
-          clone.style.transition =
-            "all 0.65s cubic-bezier(0.25, 0.46, 0.45, 0.94)";
-          clone.style.left = destX + "px";
-          clone.style.top = destY + "px";
-          clone.style.width = "20px";
-          clone.style.height = "20px";
-          clone.style.opacity = "0.7";
-          clone.style.transform = "scale(0.2)";
-        });
-
-        // Bounce en el contador + pulse card
-        setTimeout(() => {
-          clone.remove();
-          // Bounce en ambos contadores
-          ["cartItemCount", "floatingCartCount"].forEach((id) => {
-            const el = document.getElementById(id);
-            if (!el) return;
-            el.classList.remove("cart-bounce");
-            void el.offsetWidth; // reflow para reiniciar animación
-            el.classList.add("cart-bounce");
-            el.addEventListener(
-              "animationend",
-              () => el.classList.remove("cart-bounce"),
-              { once: true },
-            );
-          });
-          // Pulse verde en la card origen
-          if (sourceCard) {
-            sourceCard.classList.add("card-add-pulse");
-            sourceCard.addEventListener(
-              "animationend",
-              () => sourceCard.classList.remove("card-add-pulse"),
-              { once: true },
-            );
-          }
-        }, 600);
-      }
       // ========== ORDER SUCCESS ANIMATION ==========
       (function () {
         const overlay = document.createElement("div");
@@ -5877,6 +5751,9 @@
         });
       }
     </script>
+
+    <!-- Vuelo del platillo al carrito (pieza compartida) -->
+    <script th:src="@{/js/fly-to-cart.js}"></script>
 
     <!-- Script del Sistema de Temas -->
     <div th:replace="~{fragments/theme :: themeScript}"></div>

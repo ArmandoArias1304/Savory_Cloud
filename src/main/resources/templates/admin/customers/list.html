@@ -493,7 +493,7 @@
                     </th>
                   </tr>
                 </thead>
-                <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                <tbody class="stagger-rows divide-y divide-gray-100 dark:divide-gray-800">
                   <!-- Empty State -->
                   <tr th:if="${#lists.isEmpty(customers)}">
                     <td colspan="9" class="py-16 text-center">
@@ -685,7 +685,7 @@
           </div>
 
           <!-- CUSTOMERS CARDS (Mobile/Tablet) -->
-          <div class="lg:hidden space-y-4">
+          <div class="stagger-rows lg:hidden space-y-4">
             <!-- Empty State -->
             <div
               th:if="${#lists.isEmpty(customers)}"

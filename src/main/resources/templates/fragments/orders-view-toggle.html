@@ -7,16 +7,25 @@
 
          Dos botones (tabla y tarjetas) para una lista de pedidos. La
          preferencia se guarda en localStorage y la aplica el script de
-         la página (switchOrdersView / applyOrdersView), que reconstruye
-         las tarjetas desde las filas de la tabla.
+         la página, que reconstruye las tarjetas desde las filas de la
+         tabla.
 
          USO, en la cabecera de la sección:
 
-         <div th:replace="~{fragments/orders-view-toggle :: toggle(my)}"></div>
+         <div th:replace="~{fragments/orders-view-toggle :: toggle('main')}"></div>
 
-         El parámetro es el ámbito ("my" = mis pedidos, "global" = la
-         lista global): identifica qué tabla y qué contenedor de tarjetas
-         se muestran u ocultan.
+         Lo usan dos implementaciones, según la pantalla:
+
+         - admin/gerente y mesero: la pieza compartida js/orders-view.js
+           (OrdersView.init) con el ámbito "main".
+         - cajero: su propio script de página (switchOrdersView /
+           applyOrdersView), con los ámbitos "my" (mis pedidos) y
+           "global" (la lista global).
+
+         El parámetro es el ámbito y solo lo usan los botones como
+         etiqueta (data-orders-view-scope); quien decide qué tabla y qué
+         contenedor de tarjetas se muestran u ocultan es el script de
+         cada página.
     ======================================== -->
 
     <th:block th:fragment="toggle(scope)">

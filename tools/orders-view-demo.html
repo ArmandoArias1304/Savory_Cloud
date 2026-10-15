@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <title>Vista de tarjetas — verificación</title>
+    <!--
+      Página de verificación, NO forma parte de la aplicación.
+      Carga el orders-view.js REAL sobre una tabla de ejemplo con los mismos
+      atributos data-order-* que escriben las plantillas de admin y mesero,
+      y el MISMO marcado del modal que sirve fragments/order-detail-modal, para
+      comprobar en un navegador que las tarjetas salen completas y que el clic
+      abre el detalle.
+
+      El cuerpo del panel (lo que en la aplicación sirve
+      GET /{role}/orders/{id}/detail-panel) se simula aquí con fetch para poder
+      probar el lado del navegador sin levantar la aplicación; el HTML real del
+      panel lo cubre OrderDetailPanelRenderTest.
+    -->
+    <link rel="stylesheet" href="../src/main/resources/static/css/theme.css" />
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        margin: 0;
+        padding: 24px;
+        background: #f8faf9;
+        color: #1f2937;
+      }
+      .hidden {
+        display: none !important;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        background: #fff;
+      }
+      th,
+      td {
+        text-align: left;
+        padding: 10px 14px;
+        border-bottom: 1px solid #e5e7eb;
+        font-size: 14px;
+      }
+      .orders-view-btn {
+        padding: 8px 12px;
+        border: 1px solid #d1d5db;
+        background: #f3f4f6;
+        border-radius: 8px;
+        cursor: pointer;
+      }
+      #ordersGridContainer {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 14px;
+        margin-top: 12px;
+      }
+      .status-badge {
+        background: #fef3c7;
+        color: #92400e;
+        border-radius: 999px;
+      }
+      .payment-pill {
+        background: #dcfce7;
+        color: #166534;
+        border-radius: 999px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Vista de tabla / tarjetas</h1>
+
+    <div style="display: flex; gap: 8px; margin-bottom: 12px">
+      <button type="button" class="orders-view-btn" data-orders-view="table" data-orders-view-scope="main" aria-pressed="true">
+        Tabla
+      </button>
+      <button type="button" class="orders-view-btn" data-orders-view="grid" data-orders-view-scope="main" aria-pressed="false">
+        Tarjetas
+      </button>
+    </div>
+
+    <div id="ordersTableView" class="table-responsive">
+      <table>
+        <thead>
+          <tr>
+            <th>Nº Pedido</th>
+            <th>Fecha/Hora</th>
+            <th>Mesa</th>
+            <th>Tipo</th>
+            <th>Cliente</th>
+            <th>Total</th>
+            <th>Pago</th>
+            <th>Estado</th>
+            <th>Acciones</th>
+            <th>Creado por</th>
+            <th>Cobrado por</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Pedido de salón, con mesa, con dos cuentas por persona y ya cobrado -->
+          <tr
+            data-order-id="101"
+            data-order-number="ORD-0101"
+            data-order-when="15/10/2026 14:32"
+            data-order-table="7"
+            data-order-type="DINE_IN"
+            data-order-type-label="En el restaurante"
+            data-order-customer="Ana Pérez"
+            data-order-payment="Efectivo"
+            data-order-total="$ 485.00"
+            data-order-created-by="Luis Mesero"
+            data-order-taken-by="Carla Cajera"
+            data-order-href="/admin/orders/view/101"
+            data-order-accounts="2"
+          >
+            <td>ORD-0101</td>
+            <td>15/10/2026<br />14:32</td>
+            <td>Mesa #7</td>
+            <td>En el restaurante</td>
+            <td>Ana Pérez</td>
+            <td>$ 485.00</td>
+            <td><span class="payment-pill">Efectivo</span></td>
+            <td><span class="status-badge">Pagado</span></td>
+            <td class="order-actions-cell">
+              <div>
+                <a href="/admin/orders/view/101" id="ver-101">Ver</a>
+                <!-- Igual que la fila real: el botón lleva el pedido al que pertenece, y es de
+                     ahí de donde lo lee el enganche (bindOrderActionButtons). -->
+                <button
+                  type="button"
+                  class="btn-cancel-order"
+                  data-order-id="101"
+                  data-order-number="ORD-0101"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </td>
+            <td>Luis Mesero</td>
+            <td>Carla Cajera</td>
+          </tr>
+          <!-- Pedido a domicilio: sin mesa, sin cobrar, con propina -->
+          <tr
+            data-order-id="102"
+            data-order-number="ORD-0102"
+            data-order-when="15/10/2026 15:05"
+            data-order-table=""
+            data-order-type="DELIVERY"
+            data-order-type-label="Domicilio"
+            data-order-customer=""
+            data-order-payment="Tarjeta"
+            data-order-total="$ 220.00"
+            data-order-taken-by=""
+            data-order-tip="$ 30.00"
+            data-order-href="/admin/orders/view/102"
+          >
+            <td>ORD-0102</td>
+            <td>15/10/2026<br />15:05</td>
+            <td>-</td>
+            <td>Domicilio</td>
+            <td></td>
+            <td>$ 220.00</td>
+            <td><span class="payment-pill">Tarjeta</span></td>
+            <td><span class="status-badge">En camino</span></td>
+            <td class="order-actions-cell">
+              <div>
+                <a href="/admin/orders/view/102" id="ver-102">Ver</a>
+              </div>
+            </td>
+            <td>Luis Mesero</td>
+            <td>-</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div id="ordersGridView" class="hidden">
+      <p id="ordersGridEmpty" class="hidden">No hay pedidos que coincidan.</p>
+      <div id="ordersGridContainer"></div>
+    </div>
+
+    <!-- ============================================================
+         Modal de detalle: el MISMO marcado de
+         fragments/order-detail-modal (los tres ids son el contrato con el
+         JavaScript).
+    ============================================================ -->
+    <div
+      id="orderDetailModal"
+      class="hidden fixed inset-0 z-50 overflow-y-auto"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="orderDetailModalTitle"
+    >
+      <div
+        class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm"
+        data-order-detail-close
+      ></div>
+
+      <div class="relative flex min-h-full items-start justify-center p-3 sm:p-6">
+        <div
+          class="relative w-full max-w-2xl rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-2xl"
+        >
+          <div
+            class="flex items-center justify-between gap-3 px-4 sm:px-5 py-3 border-b border-gray-200 dark:border-gray-800"
+          >
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-primary">receipt_long</span>
+              <h3
+                id="orderDetailModalTitle"
+                class="text-base font-semibold text-gray-900 dark:text-white"
+              >
+                Detalle del pedido
+              </h3>
+            </div>
+            <button
+              type="button"
+              class="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all"
+              data-order-detail-close
+              aria-label="Cerrar"
+              title="Cerrar"
+            >
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </div>
+
+          <div id="orderDetailModalBody" class="px-4 sm:px-5 py-4"></div>
+
+          <div
+            class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 px-4 sm:px-5 py-3 border-t border-gray-200 dark:border-gray-800"
+          >
+            <p class="text-[11px] text-gray-400 dark:text-gray-500">
+              El detalle se actualiza cuando el pedido cambia.
+            </p>
+            <a
+              id="orderDetailFullLink"
+              href="#"
+              class="text-sm font-semibold text-primary hover:underline whitespace-nowrap"
+            >
+              Ver pedido completo
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Bitácora para que la verificación pueda leer qué pasó.
+      window.__log = [];
+    </script>
+    <script src="../src/main/resources/static/js/orders-view.js"></script>
+    <script>
+      localStorage.removeItem("demoOrdersView");
+      window.__bindCount = 0;
+      window.__fetchedUrls = [];
+      window.__failNextFetch = false;
+
+      // ---- Cuerpo del panel, como lo sirve GET /{role}/orders/{id}/detail-panel ----
+      // Lleva el bloque de estilo de la caja de acciones (el panel lo emite siempre, incluso
+      // sin botones) para que los botones que añade la página se vean igual.
+      function panelHtml(orderId, number) {
+        return (
+          '<div class="space-y-5">' +
+          '<style>.order-detail-actions-box > div { flex-wrap: wrap; gap: 0.625rem; }' +
+          ".order-detail-actions-box > div > a," +
+          ".order-detail-actions-box > div > button { padding: 0.625rem; border-radius: 0.75rem; font-size: 1.0625rem; }</style>" +
+          '<div class="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">' +
+          '<p class="text-2xl font-extrabold">Pedido ' +
+          number +
+          "</p>" +
+          "</div>" +
+          '<div class="grid grid-cols-2 gap-3">' +
+          '<div class="rounded-xl bg-gray-50 px-3 py-2"><p class="text-[10px] uppercase font-semibold text-gray-400">Cliente</p>' +
+          '<p class="text-sm font-semibold">Ana Pérez</p></div>' +
+          '<div class="rounded-xl bg-gray-50 px-3 py-2"><p class="text-[10px] uppercase font-semibold text-gray-400">Ítems</p>' +
+          '<p class="text-sm font-semibold">2</p></div>' +
+          "</div>" +
+          '<div><p class="text-sm font-semibold">Ítems consumidos</p>' +
+          '<ul class="divide-y rounded-xl border"><li class="px-3 py-2">2× Tacos al pastor' +
+          '<p class="text-[11px] text-amber-700">sin cebolla</p></li>' +
+          '<li class="px-3 py-2">1× Coca-Cola</li></ul></div>' +
+          "</div>"
+        );
+      }
+
+      // El fetch real no puede responder en una página estática: se simula la respuesta del
+      // endpoint para poder probar el lado del navegador.
+      const realFetch = window.fetch;
+      window.fetch = function (url, options) {
+        window.__fetchedUrls.push(String(url));
+        if (window.__failNextFetch) {
+          window.__failNextFetch = false;
+          return Promise.resolve({ ok: false, status: 500, text: () => Promise.resolve("") });
+        }
+        const orderId = String(url).split("/")[4];
+        const number = orderId === "101" ? "ORD-0101" : "ORD-0102";
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          text: () => Promise.resolve(panelHtml(orderId, number)),
+        });
+      };
+
+      OrdersView.init({
+        viewKey: "demoOrdersView",
+        sections: {
+          main: {
+            table: "ordersTableView",
+            wrapper: "ordersGridView",
+            container: "ordersGridContainer",
+            empty: "ordersGridEmpty",
+          },
+        },
+        // El clic en la tarjeta abre el modal de detalle de SU rol.
+        detailPanel: { role: "admin" },
+        // Igual que las páginas (bindOrderActionButtons): el pedido se lee del propio botón,
+        // que lo trae en sus atributos, tanto en la fila como en la tarjeta y en el modal.
+        bindActions: function (root) {
+          window.__bindCount++;
+          root.querySelectorAll(".btn-cancel-order").forEach(function (b) {
+            b.addEventListener("click", function () {
+              window.__log.push("cancelar:" + b.getAttribute("data-order-id"));
+            });
+          });
+        },
+      });
+    </script>
+  </body>
+</html>

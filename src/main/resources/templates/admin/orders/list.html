@@ -480,10 +480,16 @@
                 <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
                   Lista de Pedidos
                 </h3>
+                <!-- Vista de tabla / tarjetas: la elección se recuerda y la aplica
+                     OrdersView (js/orders-view.js). -->
+                <div
+                  class="ml-auto"
+                  th:replace="~{fragments/orders-view-toggle :: toggle('main')}"
+                ></div>
               </div>
             </div>
 
-            <div class="table-responsive">
+            <div id="ordersTableView" class="table-responsive">
               <table class="w-full text-sm text-left">
                 <thead
                   class="text-xs uppercase bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300"
@@ -504,7 +510,7 @@
                     <th class="px-6 py-4 font-semibold">Cobrado por</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody class="stagger-rows">
                   <tr th:if="${orders.empty}">
                     <td
                       colspan="11"
@@ -522,6 +528,17 @@
                   <th:block th:each="order : ${orders}">
                   <tr
                     th:data-order-id="${order.idOrder}"
+                    th:data-order-number="${order.orderNumber}"
+                    th:data-order-when="${#tz.format(order.createdAt, 'dd/MM/yyyy') + ' ' + #tz.format(order.createdAt, 'HH:mm')}"
+                    th:data-order-table="${order.table != null ? order.table.tableNumber : ''}"
+                    th:data-order-type="${order.orderType != null ? order.orderType.name() : ''}"
+                    th:data-order-type-label="${order.orderType != null ? order.orderType.displayName : ''}"
+                    th:data-order-customer="${order.customerName}"
+                    th:data-order-payment="${order.paymentMethodsDisplay}"
+                    th:data-order-total="${'$ ' + #numbers.formatDecimal(order.total, 1, 2)}"
+                    th:data-order-created-by="${order.employee != null ? (order.employee.nombre + ' ' + order.employee.apellido) : ''}"
+                    th:data-order-taken-by="${order.paidBy != null ? (order.paidBy.nombre + ' ' + order.paidBy.apellido) : ''}"
+                    th:data-order-href="@{/admin/orders/view/{id}(id=${order.idOrder})}"
                     class="border-b border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
                   >
                     <!-- Order Number -->
@@ -607,7 +624,7 @@
                     <!-- Payment Method -->
                     <td class="px-6 py-4 whitespace-nowrap">
                       <span
-                        class="px-3 py-1 text-xs rounded-full font-medium"
+                        class="payment-pill px-3 py-1 text-xs rounded-full font-medium"
                         th:classappend="${order.hasMixedPaymentMethods()} ? 'bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-300' : (${order.paymentMethod != null and order.paymentMethod.name() == 'CASH'} ? 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400' : 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400')"
                         th:text="${order.paymentMethodsDisplay}"
                       >
@@ -631,7 +648,7 @@
                     </td>
 
                     <!-- Actions -->
-                    <td class="px-6 py-4 whitespace-nowrap text-center">
+                    <td class="order-actions-cell px-6 py-4 whitespace-nowrap text-center">
                       <div class="flex items-center justify-center gap-2">
                         <!-- View -->
                         <a
@@ -925,6 +942,22 @@
                   </th:block>
                 </tbody>
               </table>
+            </div>
+
+            <!-- VISTA DE TARJETAS: mismo contenido que la tabla, construida desde
+                 sus filas por OrdersView, para no duplicar la información ni las
+                 reglas de los botones. -->
+            <div id="ordersGridView" class="hidden p-4 sm:p-6">
+              <p
+                id="ordersGridEmpty"
+                class="hidden py-10 text-center text-sm text-gray-500 dark:text-gray-400"
+              >
+                No hay pedidos que coincidan con los filtros.
+              </p>
+              <div
+                id="ordersGridContainer"
+                class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4"
+              ></div>
             </div>
 
             <!-- Pagination Controls -->
@@ -1455,9 +1488,17 @@
       }
 
       // Event listeners for action buttons
-      document.addEventListener("DOMContentLoaded", function () {
+      /**
+       * Engancha los botones de acción de los pedidos que estén dentro de
+       * `root`. Se llama al cargar la página y otra vez sobre cada tarjeta:
+       * los botones clonados en la vista de tarjetas nacen sin listeners y
+       * quedarían muertos sin esta segunda pasada.
+       */
+      function bindOrderActionButtons(root) {
+        const scope = root || document;
+
         // Cancel order buttons
-        document.querySelectorAll(".btn-cancel-order").forEach((button) => {
+        scope.querySelectorAll(".btn-cancel-order").forEach((button) => {
           button.addEventListener("click", function () {
             const orderId = this.getAttribute("data-order-id");
             const orderNumber = this.getAttribute("data-order-number");
@@ -1466,7 +1507,7 @@
         });
 
         // Change status buttons
-        document.querySelectorAll(".btn-change-status").forEach((button) => {
+        scope.querySelectorAll(".btn-change-status").forEach((button) => {
           button.addEventListener("click", function () {
             const orderId = this.getAttribute("data-order-id");
             const orderNumber = this.getAttribute("data-order-number");
@@ -1476,7 +1517,7 @@
         });
 
         // Advance preparation items buttons (Staff one-click flow)
-        document
+        scope
           .querySelectorAll(".btn-advance-preparation")
           .forEach((button) => {
             button.addEventListener("click", function () {
@@ -1488,7 +1529,7 @@
           });
 
         // Advance delivery buttons (admin/gerente/cajero one-click repartidor flow)
-        document
+        scope
           .querySelectorAll(".btn-advance-delivery")
           .forEach((button) => {
             button.addEventListener("click", function () {
@@ -1500,13 +1541,17 @@
           });
 
         // Add items buttons
-        document.querySelectorAll(".btn-add-items").forEach((button) => {
+        scope.querySelectorAll(".btn-add-items").forEach((button) => {
           button.addEventListener("click", function () {
             const orderId = this.getAttribute("data-order-id");
             const orderNumber = this.getAttribute("data-order-number");
             openAddItemsModal(orderId, orderNumber);
           });
         });
+      }
+
+      document.addEventListener("DOMContentLoaded", function () {
+        bindOrderActionButtons(document);
       });
 
       // ========== ADD ITEMS MODAL FUNCTIONS ==========
@@ -1987,6 +2032,14 @@
         const orderId = notification.orderId;
         const newStatus = notification.status;
 
+        // ¿Es un pedido de este usuario que acaba de quedar listo? Entonces alerta: suena y
+        // parpadea hasta que le den "Entendido". Va aquí y no dentro del "if (orderRow)": el
+        // aviso es del PEDIDO, no de la fila, y el pedido puede estar fuera de esta página o
+        // escondido por un filtro.
+        if (window.OrderReadyAlert) {
+          OrderReadyAlert.handle(notification);
+        }
+
         // Immediately update the specific order row (no delay)
         const orderRow = document.querySelector(
           `tr[data-order-id="${orderId}"]`,
@@ -2022,6 +2075,15 @@
           setTimeout(() => {
             orderRow.classList.remove("bg-primary/5");
           }, 1500);
+
+          // La cocina (chef, barista o parrillero) pudo haber movido el estado del pedido: lo que
+          // está A LA VISTA tiene que enterarse. Aquí arriba solo se parchea la fila de la tabla,
+          // que en vista de tarjetas está oculta, así que hay que rehacer las tarjetas y volver a
+          // pedir el panel si su detalle es el que está abierto.
+          if (window.OrdersView) {
+            OrdersView.render();
+            OrdersView.refreshDetailPanel(orderId);
+          }
         }
 
         // Debounce stats update to avoid excessive requests
@@ -2256,6 +2318,42 @@
           sib.style.display = open ? "none" : "";
           sib = sib.nextElementSibling;
         }
+      });
+    </script>
+
+    <!-- Modal de detalle del pedido: al pulsar una tarjeta se abre aquí, sin salir de la lista.
+         El cascarón es el fragmento compartido y el cuerpo lo sirve el servidor
+         (GET /admin/orders/{id}/detail-panel, fragments/order-detail-panel). -->
+    <div th:replace="~{fragments/order-detail-modal :: modal}"></div>
+
+    <!-- Aviso de "pedido listo para recoger": solo para los pedidos que levantó este usuario
+         (el gerente entra por esta misma pantalla, así que hereda la misma regla). -->
+    <script th:src="@{/js/order-ready-alert.js}"></script>
+    <script th:inline="javascript">
+      OrderReadyAlert.init({
+        username: /*[[${currentUsername}]]*/ "",
+        role: "admin",
+      });
+    </script>
+
+    <!-- Vista de tabla / tarjetas de los pedidos (pieza compartida) -->
+    <script th:src="@{/js/orders-view.js}"></script>
+    <script>
+      OrdersView.init({
+        viewKey: "adminOrdersView",
+        sections: {
+          main: {
+            table: "ordersTableView",
+            wrapper: "ordersGridView",
+            container: "ordersGridContainer",
+            empty: "ordersGridEmpty",
+          },
+        },
+        // Los botones clonados en la tarjeta nacen sin listeners.
+        bindActions: bindOrderActionButtons,
+        // La tarjeta abre el detalle del pedido en el modal, con los MISMOS botones de la fila
+        // (los de admin/gerente), en vez de saltar a la vista del pedido.
+        detailPanel: { role: "admin" },
       });
     </script>
 

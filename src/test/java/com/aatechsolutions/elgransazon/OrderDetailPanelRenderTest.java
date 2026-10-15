@@ -53,6 +53,12 @@ class OrderDetailPanelRenderTest {
 
     private static final Set<String> PANEL_FROM_MODEL = Set.of("panelFromModel");
 
+    /**
+     * El mismo panel sin el bloque de acciones: es lo que devuelve el endpoint de admin/gerente y
+     * mesero, cuya página pone ahí los botones de SU fila.
+     */
+    private static final Set<String> PANEL_INFO_FROM_MODEL = Set.of("panelInfoFromModel");
+
     private TemplateEngine engine;
     private Company company;
 
@@ -225,6 +231,33 @@ class OrderDetailPanelRenderTest {
     }
 
     @Test
+    void elPanelSinAccionesConservaLaInformacionYOmiteSusBotones() {
+        Order order = orderedAtTable(7);
+        order.addOrderDetail(detail("Tacos al pastor", 2, "50.00"));
+
+        // Es la variante que se sirve para admin/gerente y mesero: los botones que van dentro del
+        // modal son los de la fila de cada rol (los del mesero traen reglas propias, como la
+        // transferencia, y el fragmento de acciones del cajero apunta a /cashier/payments, que un
+        // mesero no puede abrir). El panel, por tanto, no repite botones aquí.
+        String html = renderPanelInfo(order);
+
+        assertRenderedText(html, "Ítems consumidos");
+        assertRenderedText(html, "Cliente");
+        assertTrue(html.contains("ORD-20260929-001"), "el número del pedido sigue en la cabecera");
+        assertTrue(html.contains("Tacos al pastor"), "y los ítems consumidos");
+
+        assertFalse(flat(html).contains("Acciones del pedido </p>"), "sin bloque de acciones");
+        assertFalse(html.contains("order-detail-actions-box rounded-xl"), "sin la caja de acciones");
+        assertFalse(html.contains("/cashier/payments/form"),
+                "y sin los botones del cajero, que este rol no puede usar");
+
+        // El estilo de esa caja SÍ se emite: la página reutiliza la misma clase para meter los
+        // botones de su fila, así que el modal se ve igual que el del cajero.
+        assertTrue(html.contains(".order-detail-actions-box > div > a"),
+                "el estilo de la caja sigue disponible para los botones que añade la página");
+    }
+
+    @Test
     void lasAccionesDelPanelSonParaElDedo() {
         String html = renderPanel(orderedAtTable(7));
 
@@ -286,6 +319,19 @@ class OrderDetailPanelRenderTest {
         variables.put("staffParrilleroEnabled", false);
         variables.put("staffDeliveryEnabled", false);
         return process(PANEL, variables, PANEL_FROM_MODEL);
+    }
+
+    /** El mismo panel, tal como lo sirve el endpoint de admin/gerente y mesero (sin acciones). */
+    private String renderPanelInfo(Order order) {
+        Map<String, Object> variables = new LinkedHashMap<>();
+        variables.put("order", order);
+        variables.put("currentRole", "admin");
+        variables.put("staffOrderStatusEnabled", false);
+        variables.put("staffChefEnabled", false);
+        variables.put("staffBaristaEnabled", false);
+        variables.put("staffParrilleroEnabled", false);
+        variables.put("staffDeliveryEnabled", false);
+        return process(PANEL, variables, PANEL_INFO_FROM_MODEL);
     }
 
     /**

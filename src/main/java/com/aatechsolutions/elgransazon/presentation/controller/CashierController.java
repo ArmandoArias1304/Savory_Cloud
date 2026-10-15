@@ -5,6 +5,7 @@ import com.aatechsolutions.elgransazon.domain.entity.*;
 import com.aatechsolutions.elgransazon.infrastructure.context.CompanyContext;
 import com.aatechsolutions.elgransazon.util.CashRegisterAlertSupport;
 import com.aatechsolutions.elgransazon.util.DeliveryStatusSupport;
+import com.aatechsolutions.elgransazon.util.MenuSizeVariants;
 import com.aatechsolutions.elgransazon.util.OrderSearchSupport;
 import jakarta.servlet.http.HttpSession;
 import lombok.extern.slf4j.Slf4j;
@@ -336,6 +337,9 @@ public class CashierController {
         model.addAttribute("searchTerm", OrderSearchSupport.trimToNull(search));
         // One box feeds both boards (Mine + Globals), so the counter adds them up.
         model.addAttribute("searchResultCount", myTotalElements + globalTotalElements);
+        // El usuario de la sesión, para que la pantalla pueda distinguir SUS pedidos de los del
+        // tablero global (el aviso de "pedido listo" solo suena para los que él levantó).
+        model.addAttribute("currentUsername", username);
 
         model.addAttribute("currentRole", "cashier");
         addStaffPermissionFlags(model);
@@ -1373,9 +1377,14 @@ public class CashierController {
             
             // Get available menu items
             List<ItemMenu> availableItems = itemMenuService.findAvailableItems();
+
+            // El grid muestra un solo recuadro por platillo: los hijos (tamaños) no son
+            // recuadros aparte, se ven dentro del diálogo de su item padre, igual que en
+            // los demás menús visuales (MenuSizeVariants).
+            List<ItemMenu> rootItems = MenuSizeVariants.roots(availableItems);
             
             // Group items by category ID for easier display
-            Map<Long, List<ItemMenu>> itemsByCategory = availableItems.stream()
+            Map<Long, List<ItemMenu>> itemsByCategory = rootItems.stream()
                 .collect(Collectors.groupingBy(item -> item.getCategory().getIdCategory()));
             
             // Get all active categories - ONLY those with active items
@@ -1386,6 +1395,7 @@ public class CashierController {
             model.addAttribute("config", config);
             model.addAttribute("categories", categories);
             model.addAttribute("itemsByCategory", itemsByCategory);
+            model.addAttribute("sizeItemsDto", MenuSizeVariants.byParentItem(availableItems));
             
             return "cashier/menu/view";
             

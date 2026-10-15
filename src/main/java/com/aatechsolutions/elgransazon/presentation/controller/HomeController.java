@@ -23,6 +23,7 @@ import com.aatechsolutions.elgransazon.domain.entity.Review;
 import com.aatechsolutions.elgransazon.domain.entity.SocialNetwork;
 import com.aatechsolutions.elgransazon.domain.entity.SystemConfiguration;
 import com.aatechsolutions.elgransazon.infrastructure.context.CompanyContext;
+import com.aatechsolutions.elgransazon.util.MenuSizeVariants;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.ResourceLoader;
@@ -239,9 +240,14 @@ public class HomeController {
             
             // Get available items
             List<ItemMenu> availableItems = itemMenuService.findAvailableItems();
+
+            // El grid muestra un solo recuadro por platillo: los hijos (tamaños) no son
+            // tarjetas aparte, se ven dentro del diálogo de su item padre. El reparto vive
+            // en MenuSizeVariants, compartido con los demás menús visuales.
+            List<ItemMenu> rootItems = MenuSizeVariants.roots(availableItems);
             
             // Group items by category
-            Map<Long, List<ItemMenu>> itemsByCategory = availableItems.stream()
+            Map<Long, List<ItemMenu>> itemsByCategory = rootItems.stream()
                     .collect(Collectors.groupingBy(item -> item.getCategory().getIdCategory()));
             
             // Get active categories - ONLY those with active items
@@ -255,6 +261,7 @@ public class HomeController {
             model.addAttribute("config", config);
             model.addAttribute("categories", categories);
             model.addAttribute("itemsByCategory", itemsByCategory);
+            model.addAttribute("sizeItemsDto", MenuSizeVariants.byParentItem(availableItems));
             
             return "home/menu/view";
         } catch (Exception e) {

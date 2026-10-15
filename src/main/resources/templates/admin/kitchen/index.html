@@ -86,6 +86,25 @@
       ></div>
 
       <main class="flex-1 overflow-y-auto h-screen">
+        <!-- Aviso de pedidos recién llegados que aún no están en pantalla -->
+        <div
+          id="nuevosPedidosAviso"
+          style="display: none"
+          class="new-orders-banner fixed top-4 left-1/2 -translate-x-1/2 z-50 items-center gap-3 rounded-full bg-primary px-4 py-2.5 text-sm font-bold text-gray-900 shadow-lg"
+          role="status"
+          aria-live="polite"
+        >
+          <span class="material-symbols-outlined text-xl">notifications_active</span>
+          <span id="nuevosPedidosTexto">Pedidos nuevos</span>
+          <button
+            type="button"
+            onclick="window.location.reload()"
+            class="rounded-full bg-gray-900 px-3 py-1 text-xs font-bold text-white transition-colors hover:bg-gray-700"
+          >
+            Actualizar
+          </button>
+        </div>
+
         <div class="p-4 sm:p-6 lg:p-8 pt-20 md:pt-20 lg:pt-8 pb-32">
           <!-- Header -->
           <header
@@ -316,11 +335,13 @@
 
           <!-- Orders Grid -->
           <div
+            id="kitchenOrders"
             th:if="${allOrders != null and !allOrders.isEmpty()}"
             class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6"
           >
             <div
               th:each="order : ${allOrders}"
+              th:data-order-number="${order.orderNumber}"
               th:data-status="${order.status.name() == 'PENDING' ? 'pending' : 'in-preparation'}"
               th:classappend="${order.status.name() == 'PENDING' ? 'pending-glow' : ''}"
               class="order-card bg-white dark:bg-gray-800 rounded-2xl shadow-lg border-2 overflow-hidden"
@@ -808,6 +829,7 @@
             `Pedido #${notification.orderNumber} - ${notification.orderType} - ${notification.itemCount} items - Total: $${notification.total}`,
             "info",
           );
+          highlightNewOrder(notification.orderNumber);
         } else if (notification.notificationType === "STATUS_CHANGE") {
           showNotification(
             "📊 Estado Actualizado",
@@ -827,6 +849,62 @@
 
         // Don't reload - WebSocket updates are sufficient
         // Updates will be reflected on next navigation or manual refresh
+      }
+
+      /**
+       * Pulso de pedido nuevo.
+       *
+       * La cocina no mira la pantalla todo el tiempo: cuando entra un pedido
+       * por WebSocket, su tarjeta late con un anillo verde y se trae a la
+       * vista. Si el pedido todavía no está renderizado (llegó después de
+       * cargar la página), se avisa arriba para que el cocinero recargue
+       * cuando pueda, sin perder el scroll donde iba.
+       */
+      function highlightNewOrder(orderNumber) {
+        const objetivo = String(orderNumber);
+        let tarjeta = null;
+
+        document
+          .querySelectorAll("#kitchenOrders .order-card")
+          .forEach((card) => {
+            if (card.dataset.orderNumber === objetivo) {
+              tarjeta = card;
+            }
+          });
+
+        if (!tarjeta) {
+          marcarPedidosNuevos(1);
+          return;
+        }
+
+        tarjeta.classList.remove("kds-new-order");
+        void tarjeta.offsetWidth; // reflow: reinicia el pulso si se repite
+        tarjeta.classList.add("kds-new-order");
+        tarjeta.addEventListener(
+          "animationend",
+          () => tarjeta.classList.remove("kds-new-order"),
+          { once: true },
+        );
+        tarjeta.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+
+      /** Acumula los pedidos que no se pudieron mostrar en pantalla. */
+      let pedidosNuevosPendientes = 0;
+
+      function marcarPedidosNuevos(cantidad) {
+        pedidosNuevosPendientes += cantidad;
+
+        const aviso = document.getElementById("nuevosPedidosAviso");
+        const texto = document.getElementById("nuevosPedidosTexto");
+        if (!aviso || !texto) {
+          return;
+        }
+
+        texto.textContent =
+          pedidosNuevosPendientes === 1
+            ? "1 pedido nuevo"
+            : `${pedidosNuevosPendientes} pedidos nuevos`;
+        aviso.style.display = "flex";
       }
 
       function updateKitchenStats(stats) {

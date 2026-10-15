@@ -1128,6 +1128,9 @@ public class WebSocketNotificationService {
                 .orderNumber(order.getOrderNumber())
                 .status(order.getStatus())
                 .orderType(order.getOrderType())
+                // Rotulado en el servidor: el aviso de "pedido listo" nombra un pedido sin mesa por
+                // su tipo, y ahí nadie debe inventarse la traducción.
+                .orderTypeLabel(order.getOrderType() != null ? order.getOrderType().getDisplayName() : null)
                 .tableNumber(order.getTable() != null ? order.getTable().getTableNumber() : null)
                 .total(order.getTotal())
                 .createdAt(order.getCreatedAt())
@@ -1146,6 +1149,10 @@ public class WebSocketNotificationService {
                 .chefName(order.getPreparedBy() != null
                         ? order.getPreparedBy().getNombre() + " " + order.getPreparedBy().getApellido()
                         : null)
+                // Quién levantó el pedido y quién lo atiende ahora: sin esto, la pantalla no
+                // puede saber si un aviso es suyo (p. ej. el de "pedido listo para recoger").
+                .createdBy(order.getCreatedBy())
+                .operatedBy(order.getEmployee() != null ? order.getEmployee().getUsername() : null)
                 .build();
     }
 

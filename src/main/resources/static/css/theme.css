@@ -248,3 +248,160 @@ html.dark .swal2-validation-message {
   color: #fecaca !important;
 }
 
+
+/* ========================================
+   LIBRERÍA DE MOVIMIENTO - EL GRAN SAZÓN
+   ========================================
+   Animaciones compartidas por todo el sistema.
+   Reglas:
+   - Solo lo que comunica un cambio de estado.
+   - Duración 150-350 ms, salvo efectos de celebración.
+   - Todo se apaga con prefers-reduced-motion (bloque al final).
+======================================== */
+
+/* ---- Entrada escalonada de filas de lista ----
+   Uso: class="stagger-rows" en el <tbody> o en el contenedor de
+   tarjetas. Cada hijo entra 35 ms después del anterior y el retraso se
+   topa en el hijo 20, así una lista larga no tarda una eternidad en
+   aparecer. No hay que tocar las filas una por una.
+   animation-fill-mode: backwards deja visible lo que aún no entró. */
+@keyframes sc-row-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.stagger-rows > * {
+  animation: sc-row-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
+.stagger-rows > *:nth-child(2)  { animation-delay: 35ms; }
+.stagger-rows > *:nth-child(3)  { animation-delay: 70ms; }
+.stagger-rows > *:nth-child(4)  { animation-delay: 105ms; }
+.stagger-rows > *:nth-child(5)  { animation-delay: 140ms; }
+.stagger-rows > *:nth-child(6)  { animation-delay: 175ms; }
+.stagger-rows > *:nth-child(7)  { animation-delay: 210ms; }
+.stagger-rows > *:nth-child(8)  { animation-delay: 245ms; }
+.stagger-rows > *:nth-child(9)  { animation-delay: 280ms; }
+.stagger-rows > *:nth-child(10) { animation-delay: 315ms; }
+.stagger-rows > *:nth-child(11) { animation-delay: 350ms; }
+.stagger-rows > *:nth-child(12) { animation-delay: 385ms; }
+.stagger-rows > *:nth-child(13) { animation-delay: 420ms; }
+.stagger-rows > *:nth-child(14) { animation-delay: 455ms; }
+.stagger-rows > *:nth-child(15) { animation-delay: 490ms; }
+.stagger-rows > *:nth-child(16) { animation-delay: 525ms; }
+.stagger-rows > *:nth-child(17) { animation-delay: 560ms; }
+.stagger-rows > *:nth-child(18) { animation-delay: 595ms; }
+.stagger-rows > *:nth-child(19) { animation-delay: 630ms; }
+.stagger-rows > *:nth-child(n+20) { animation-delay: 665ms; }
+
+/* ---- Pulso de pedido nuevo (KDS / cocina) ----
+   Doble latido de anillo verde, repetido 3 veces, para que se note
+   aunque el cocinero no esté mirando la pantalla en ese momento. */
+/* Se anima outline + transform a propósito, nunca box-shadow: las tarjetas
+   PENDIENTES ya laten con un box-shadow ámbar y las animaciones sobre la
+   misma propiedad se pisarían entre sí. */
+@keyframes sc-new-order {
+  0%   { outline: 0 solid rgba(56, 224, 123, 0.9); outline-offset: 0; transform: scale(1); }
+  30%  { transform: scale(1.02); }
+  55%  { outline: 9px solid rgba(56, 224, 123, 0.5); outline-offset: 4px; }
+  100% { outline: 0 solid rgba(56, 224, 123, 0); outline-offset: 14px; transform: scale(1); }
+}
+
+.kds-new-order {
+  animation: sc-new-order 1.1s ease-out 3;
+  position: relative;
+  z-index: 1;
+}
+
+/* ---- Aviso flotante de pedidos nuevos (sin recargar la pantalla) ---- */
+@keyframes sc-banner-pulse {
+  0%, 100% { transform: translateY(0); box-shadow: 0 8px 20px -6px rgba(56, 224, 123, 0.45); }
+  50%      { transform: translateY(-2px); box-shadow: 0 14px 30px -6px rgba(56, 224, 123, 0.75); }
+}
+
+.new-orders-banner {
+  animation: sc-banner-pulse 1.6s ease-in-out infinite;
+}
+
+/* ---- Vuelo del platillo al carrito ----
+   Lo dispara static/js/fly-to-cart.js: el clon es una copia de la
+   imagen que viaja hasta el carrito y desaparece al llegar. */
+.fly-clone {
+  position: fixed;
+  border-radius: 50%;
+  object-fit: cover;
+  pointer-events: none;
+  z-index: 99998;
+  box-shadow: 0 4px 20px rgba(56, 224, 123, 0.5);
+  transition: none;
+}
+
+/* Rebote del contador del carrito al recibir el platillo */
+@keyframes cartBounce {
+  0%   { transform: scale(1); }
+  35%  { transform: scale(1.55); }
+  65%  { transform: scale(0.88); }
+  100% { transform: scale(1); }
+}
+
+.cart-bounce {
+  animation: cartBounce 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+/* Pulso verde en la tarjeta de origen, para confirmar cuál se agregó */
+@keyframes cardAddPulse {
+  0%   { box-shadow: 0 0 0 0 rgba(56, 224, 123, 0.7); }
+  70%  { box-shadow: 0 0 0 12px rgba(56, 224, 123, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(56, 224, 123, 0); }
+}
+
+.card-add-pulse {
+  animation: cardAddPulse 0.5s ease forwards;
+}
+
+/* ---- Accesibilidad: quien pida menos movimiento, no lo recibe ----
+   Las filas y tarjetas quedan visibles y solo se apagan los efectos
+   decorativos. Es la condición para que estas animaciones convivan
+   con usuarios sensibles al movimiento. */
+@media (prefers-reduced-motion: reduce) {
+  .stagger-rows > *,
+  .kds-new-order,
+  .new-orders-banner,
+  .cart-bounce,
+  .card-add-pulse {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+
+/* ========================================
+   TARJETAS DE PEDIDO (vista de tarjetas)
+   ========================================
+   Las acciones del pie son los MISMOS botones de la fila de la tabla, así
+   que aquí solo se les da el tamaño del dedo: en la tarjeta se toca con la
+   mano, no con el ratón. Vive en el CSS compartido porque las tres listas de
+   pedidos construyen sus tarjetas con este pie. */
+.order-card-actions > div {
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.order-card-actions > div > a,
+.order-card-actions > div > button {
+  padding: 0.625rem;
+  border-radius: 0.75rem;
+  font-size: 1.0625rem;
+}
+
+@media (min-width: 640px) {
+  .order-card-actions > div {
+    gap: 0.75rem;
+  }
+
+  .order-card-actions > div > a,
+  .order-card-actions > div > button {
+    padding: 0.75rem;
+    font-size: 1.125rem;
+  }
+}

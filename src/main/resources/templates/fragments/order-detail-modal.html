@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+  <body>
+    <!-- ========================================
+         FRAGMENTO - MODAL DE DETALLE DEL PEDIDO
+         ========================================
+
+         El cascarón del modal que las listas de pedidos abren al pulsar una
+         tarjeta: cabecera con el título y la X, un cuerpo vacío que rellena
+         el JavaScript con el panel que sirve el servidor
+         (fragments/order-detail-panel) y un pie con el enlace al pedido
+         completo.
+
+         Lo usan las tres listas (cajero, admin/gerente y mesero). El
+         contenido no cambia entre roles: lo que cambia es lo que cada
+         página pide y los botones que muestra, que son los de SU fila.
+
+         USO, antes de los scripts de la página:
+
+         <div th:replace="~{fragments/order-detail-modal :: modal}"></div>
+
+         Ids que el JavaScript espera encontrar (los tres son contrato):
+           #orderDetailModal       el modal, oculto con la clase "hidden"
+           #orderDetailModalBody   donde se inyecta el panel
+           #orderDetailFullLink    enlace al pedido completo, que cada
+                                   página apunta a su propia ruta
+         Los elementos con [data-order-detail-close] cierran el modal.
+    ======================================== -->
+
+    <div
+      th:fragment="modal"
+      id="orderDetailModal"
+      class="hidden fixed inset-0 z-50 overflow-y-auto"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="orderDetailModalTitle"
+    >
+      <div
+        class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm"
+        data-order-detail-close
+      ></div>
+
+      <div class="relative flex min-h-full items-start justify-center p-3 sm:p-6">
+        <div
+          class="relative w-full max-w-2xl rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-2xl"
+        >
+          <div
+            class="flex items-center justify-between gap-3 px-4 sm:px-5 py-3 border-b border-gray-200 dark:border-gray-800"
+          >
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-primary"
+                >receipt_long</span
+              >
+              <h3
+                id="orderDetailModalTitle"
+                class="text-base font-semibold text-gray-900 dark:text-white"
+              >
+                Detalle del pedido
+              </h3>
+            </div>
+            <button
+              type="button"
+              class="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all"
+              data-order-detail-close
+              aria-label="Cerrar"
+              title="Cerrar"
+            >
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </div>
+
+          <div id="orderDetailModalBody" class="px-4 sm:px-5 py-4"></div>
+
+          <!-- flex-wrap: en un celular angosto el enlace baja a su propia línea completa en vez
+               de partirse en dos renglones apretados contra el aviso. -->
+          <div
+            class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 px-4 sm:px-5 py-3 border-t border-gray-200 dark:border-gray-800"
+          >
+            <p class="text-[11px] text-gray-400 dark:text-gray-500">
+              El detalle se actualiza cuando el pedido cambia.
+            </p>
+            <a
+              id="orderDetailFullLink"
+              href="#"
+              class="text-sm font-semibold text-primary hover:underline whitespace-nowrap"
+            >
+              Ver pedido completo
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

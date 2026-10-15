@@ -16,12 +16,21 @@
            · cuentas por persona, cuando el cobro se dividió
            · las MISMAS acciones de la fila (fragments/order-actions)
 
-         USO: GET /cashier/orders/{id}/detail-panel devuelve
-         "fragments/order-detail-panel :: panelFromModel".
+         USO: hay dos puntos de entrada, según lo que muestre el modal:
+
+         - "fragments/order-detail-panel :: panelFromModel" — información
+           y acciones. Es lo que devuelve GET /cashier/orders/{id}/detail-panel,
+           cuyas acciones salen del fragmento de acciones del cajero.
+         - "fragments/order-detail-panel :: panelInfoFromModel" — solo la
+           información, sin el bloque de acciones. Lo devuelve
+           GET /{role}/orders/{id}/detail-panel para admin/gerente y mesero,
+           cuya página pone ahí los botones de SU fila (los del mesero traen
+           reglas propias, como la transferencia o el "solo consulta", que
+           este fragmento no conoce).
     ======================================== -->
 
     <th:block
-      th:fragment="panel(order, role, staffOrderStatusEnabled, staffChefEnabled, staffBaristaEnabled, staffParrilleroEnabled, staffDeliveryEnabled)"
+      th:fragment="panel(order, role, staffOrderStatusEnabled, staffChefEnabled, staffBaristaEnabled, staffParrilleroEnabled, staffDeliveryEnabled, showActions)"
     >
       <!-- Los colores del badge de estado son los mismos de la fila de la lista, para que el
            modal y la tabla no se lean distinto. -->
@@ -353,8 +362,12 @@
           </div>
         </div>
 
-        <!-- ========== Acciones: las mismas de la fila de la tabla ========== -->
+        <!-- ========== Acciones: las mismas de la fila de la tabla ==========
+             showActions=false las omite (admin/mesero): la página inyecta ahí los botones de su
+             propia fila, que son los que esa pantalla ya usa. El estilo de la caja se aplica
+             igual, porque el bloque de estilo de arriba no es condicional. -->
         <div
+          th:if="${showActions}"
           class="order-detail-actions-box rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50/60 dark:bg-gray-800/30 px-3 py-3 sm:px-4 sm:py-4"
         >
           <p
@@ -369,10 +382,19 @@
       </div>
     </th:block>
 
-    <!-- Mismo panel, con los valores tomados del modelo: es lo que devuelve el endpoint. -->
+    <!-- Mismo panel, con los valores tomados del modelo: es lo que devuelve el endpoint del
+         cajero (información + acciones del fragmento de acciones del cajero). -->
     <th:block th:fragment="panelFromModel">
       <th:block
-        th:replace="~{fragments/order-detail-panel :: panel(${order}, ${currentRole}, ${staffOrderStatusEnabled}, ${staffChefEnabled}, ${staffBaristaEnabled}, ${staffParrilleroEnabled}, ${staffDeliveryEnabled})}"
+        th:replace="~{fragments/order-detail-panel :: panel(${order}, ${currentRole}, ${staffOrderStatusEnabled}, ${staffChefEnabled}, ${staffBaristaEnabled}, ${staffParrilleroEnabled}, ${staffDeliveryEnabled}, true)}"
+      ></th:block>
+    </th:block>
+
+    <!-- El mismo panel SIN el bloque de acciones: lo devuelve el endpoint de admin/gerente y
+         mesero, cuya página pone ahí los botones de su propia fila. -->
+    <th:block th:fragment="panelInfoFromModel">
+      <th:block
+        th:replace="~{fragments/order-detail-panel :: panel(${order}, ${currentRole}, ${staffOrderStatusEnabled}, ${staffChefEnabled}, ${staffBaristaEnabled}, ${staffParrilleroEnabled}, ${staffDeliveryEnabled}, false)}"
       ></th:block>
     </th:block>
   </body>

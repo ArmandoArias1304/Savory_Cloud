@@ -2389,6 +2389,7 @@
       async function openItemModal(card, bypassSwalCheck = false) {
         // Guard: prevent double-click opening modal twice
         if (isModalOpening || (!bypassSwalCheck && Swal.isVisible())) return;
+        window._lastOpenedCard = card; // tarjeta de origen para el vuelo al carrito
         isModalOpening = true;
 
         // If this item has size variants, show the size selector first
@@ -3006,6 +3007,7 @@
         selectedComplements = [];
 
         updateCartUI();
+        flyToCart(window._lastOpenedCard); // vuelo del platillo al carrito
 
         // Show success message
         const complementsText =
@@ -4580,6 +4582,7 @@
 
         cart.push(cartItem);
         updateCartUI();
+        flyToCart(window._lastOpenedCard); // vuelo del platillo al carrito
 
         // Show success toast
         Swal.fire({
@@ -4745,6 +4748,9 @@
         }
       });
     </script>
+
+    <!-- Vuelo del platillo al carrito (pieza compartida) -->
+    <script th:src="@{/js/fly-to-cart.js}"></script>
 
     <!-- Script del Sistema de Temas -->
     <div th:replace="~{fragments/theme :: themeScript}"></div>

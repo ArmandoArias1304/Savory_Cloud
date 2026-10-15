@@ -263,6 +263,8 @@
                   th:data-item-description="${item.description}"
                   th:data-item-image="${@cloudinaryUrl.modal(item.imageUrl)}"
                   th:data-item-available="${item.available}"
+                  th:data-has-sizes="${sizeItemsDto != null and sizeItemsDto.containsKey(item.idItemMenu)}"
+                  th:data-size-name="${item.sizeName}"
                   th:classappend="${!item.available} ? 'opacity-75' : ''"
                   th:onclick="${item.available} ? 'openItemModal(this)' : ''"
                 >
@@ -336,13 +338,18 @@
                       </span>
                       <span
                         class="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-0.5"
+                        th:title="${sizeItemsDto != null and sizeItemsDto.containsKey(item.idItemMenu)} ? 'Ver los tamaños de este platillo' : 'Ver el platillo'"
                       >
                         <span
                           class="material-symbols-outlined"
                           style="font-size: 16px"
+                          th:text="${sizeItemsDto != null and sizeItemsDto.containsKey(item.idItemMenu)} ? 'straighten' : 'info'"
                           >info</span
                         >
-                        Ver
+                        <span
+                          th:text="${sizeItemsDto != null and sizeItemsDto.containsKey(item.idItemMenu)} ? 'Tamaños' : 'Ver'"
+                          >Ver</span
+                        >
                       </span>
                     </div>
                   </div>
@@ -354,9 +361,16 @@
       </div>
     </div>
 
+    <!-- Diálogo del platillo con sus tamaños (pieza compartida) -->
+    <script th:src="@{/js/menu-item-dialog.js}"></script>
+
     <script th:inline="javascript">
       /*<![CDATA[*/
       let currentItem = null;
+
+      // Tamaños por item padre: { idItemMenu: [ {id, name, sizeName, price, …} ] }.
+      // Lo escribe el servidor; aquí sólo se lee para armar las formas de un platillo.
+      const sizeItemsMapping = /*[[${sizeItemsDto}]]*/ {};
 
       // --- Scroll Spy para categorías ---
       document.addEventListener("DOMContentLoaded", function () {
@@ -454,8 +468,8 @@
         }
 
         cards.forEach((card) => {
-          const itemName = card.dataset.itemName.toLowerCase();
-          if (term === "" || itemName.includes(term)) {
+          const text = menuItemSearchText(card);
+          if (term === "" || text.includes(term)) {
             card.style.display = "";
             visibleCount++;
           } else {
@@ -538,61 +552,8 @@
         }
       }
 
-      function openItemModal(card) {
-        const isDark = document.documentElement.classList.contains("dark");
-        const isAvailable = card.dataset.itemAvailable === "true";
-
-        if (!isAvailable) {
-          Swal.fire({
-            icon: "error",
-            title: "Producto Agotado",
-            text: "Este producto no está disponible por el momento debido a falta de stock.",
-            confirmButtonColor: "#38e07b",
-            confirmButtonText: "Entendido",
-            background: isDark ? "#1f2937" : "#ffffff",
-            color: isDark ? "#f3f4f6" : "#1f2937",
-          });
-          return;
-        }
-
-        const itemName = card.dataset.itemName;
-        const itemPrice = parseFloat(card.dataset.itemPrice);
-        const itemDescription = card.dataset.itemDescription;
-        const itemImage = card.dataset.itemImage;
-
-        const imageUrl =
-          itemImage && itemImage !== "null" && itemImage !== ""
-            ? itemImage
-            : "https://placehold.co/400x300/f3f4f6/9ca3af?text=Sin+Imagen";
-
-        Swal.fire({
-          html: `
-            <div style="display:flex;flex-wrap:wrap;gap:24px;text-align:left;">
-                <div style="flex:1;min-width:200px;" class="rounded-xl">
-                    <img src="${imageUrl}" alt="${itemName}" style="width:100%;height:280px;object-fit:cover;border-radius:12px;" />
-                </div>
-                <div style="flex:1;min-width:200px;display:flex;flex-direction:column;">
-                    <h2 style="font-size:1.875rem;font-weight:900;color:${isDark ? "#f9fafb" : "#111827"};margin-bottom:8px;">${itemName}</h2>
-                    <p style="font-size:2.5rem;font-weight:900;color:#38e07b;margin-bottom:16px;">$${itemPrice.toFixed(2)}</p>
-                    <p style="color:${isDark ? "#9ca3af" : "#4b5563"};margin-bottom:24px;flex:1;">${itemDescription || "Sin descripción disponible"}</p>
-                </div>
-            </div>
-          `,
-          background: isDark ? "#1f2937" : "#ffffff",
-          color: isDark ? "#f3f4f6" : "#1f2937",
-          confirmButtonColor: "#38e07b",
-          confirmButtonText: "Cerrar",
-          width: "900px",
-          showCloseButton: true,
-          customClass: {
-            popup: "rounded-2xl",
-            htmlContainer: "p-0",
-            confirmButton: "rounded-xl px-6 py-3 font-bold",
-            actions: "mt-6",
-          },
-          backdrop: "rgba(0,0,0,0.6)",
-        });
-      }
+      // El diálogo del platillo (con sus tamaños) es la pieza compartida
+      // js/menu-item-dialog.js, que se incluye justo antes de este script.
 
       document.addEventListener("keydown", function (event) {
         if (event.key === "Escape") {

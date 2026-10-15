@@ -44,6 +44,9 @@ class CashierOrdersCardsViewTest {
     private static final Path TOGGLE_TEMPLATE =
             Path.of("src/main/resources/templates/fragments/orders-view-toggle.html");
 
+    private static final Path MODAL_TEMPLATE =
+            Path.of("src/main/resources/templates/fragments/order-detail-modal.html");
+
     private TemplateEngine engine;
 
     @BeforeEach
@@ -167,17 +170,23 @@ class CashierOrdersCardsViewTest {
     @Test
     void laTarjetaAbreElModalYElModalTraeElDetalleDelServidor() {
         String page = readTemplate(LIST_TEMPLATE);
+        String modal = readTemplate(MODAL_TEMPLATE);
 
-        assertTrue(page.contains("id=\"orderDetailModal\""), "el modal");
-        assertTrue(page.contains("id=\"orderDetailModalBody\""), "el cuerpo que se rellena");
-        assertTrue(page.contains("id=\"orderDetailFullLink\""), "el enlace al pedido completo");
+        // El cascarón del modal es un fragmento compartido (lo usan también admin/gerente y
+        // mesero): la página lo incluye, y el fragmento trae las tres piezas que el JavaScript
+        // necesita para rellenarlo, apuntar el enlace y cerrarlo.
+        assertTrue(page.contains("~{fragments/order-detail-modal :: modal}"),
+                "la lista incluye el modal compartido");
+        assertTrue(modal.contains("id=\"orderDetailModal\""), "el modal");
+        assertTrue(modal.contains("id=\"orderDetailModalBody\""), "el cuerpo que se rellena");
+        assertTrue(modal.contains("id=\"orderDetailFullLink\""), "el enlace al pedido completo");
+        assertTrue(modal.contains("data-order-detail-close"), "cerrar tocando el fondo o la X");
         assertTrue(page.contains("function openOrderDetailPanel(orderId)"), "abrir el detalle");
         assertTrue(page.contains("function closeOrderDetailPanel()"), "cerrarlo");
         assertTrue(page.contains("/cashier/orders/${orderId}/detail-panel"),
                 "el endpoint que sirve el panel (fragments/order-detail-panel)");
         assertTrue(page.contains("event.target.closest(\"a, button\")"),
                 "los botones de la tarjeta no abren el modal");
-        assertTrue(page.contains("data-order-detail-close"), "cerrar tocando el fondo o la X");
         assertTrue(page.contains("event.key === \"Escape\""), "y con Escape");
     }
 

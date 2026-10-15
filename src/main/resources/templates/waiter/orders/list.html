@@ -455,10 +455,16 @@
                 <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
                   Lista de Pedidos
                 </h3>
+                <!-- Vista de tabla / tarjetas: la elección se recuerda y la aplica
+                     OrdersView (js/orders-view.js). -->
+                <div
+                  class="ml-auto"
+                  th:replace="~{fragments/orders-view-toggle :: toggle('main')}"
+                ></div>
               </div>
             </div>
 
-            <div class="table-responsive">
+            <div id="ordersTableView" class="table-responsive">
               <table class="w-full text-sm text-left">
                 <thead
                   class="text-xs uppercase bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300"
@@ -497,6 +503,17 @@
                   <th:block th:each="order : ${orders}">
                   <tr
                     th:data-order-id="${order.idOrder}"
+                    th:data-order-number="${order.orderNumber}"
+                    th:data-order-when="${#tz.format(order.createdAt, 'dd/MM/yyyy') + ' ' + #tz.format(order.createdAt, 'HH:mm')}"
+                    th:data-order-table="${order.table != null ? order.table.tableNumber : ''}"
+                    th:data-order-type="${order.orderType != null ? order.orderType.name() : ''}"
+                    th:data-order-type-label="${order.orderType != null ? order.orderType.displayName : ''}"
+                    th:data-order-customer="${order.customerName}"
+                    th:data-order-payment="${order.paymentMethodsDisplay}"
+                    th:data-order-total="${'$ ' + #numbers.formatDecimal(order.total, 1, 2)}"
+                    th:data-order-taken-by="${order.paidBy != null ? (order.paidBy.nombre + ' ' + order.paidBy.apellido) : ''}"
+                    th:data-order-tip="${order.tip != null and order.tip.signum() > 0 ? '$ ' + #numbers.formatDecimal(order.tip, 1, 2) : ''}"
+                    th:data-order-href="@{/{role}/orders/view/{id}(role=${currentRole},id=${order.idOrder})}"
                     class="border-b border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
                   >
                     <!-- Order Number -->
@@ -636,7 +653,7 @@
                     <!-- Payment Method -->
                     <td class="px-6 py-4 whitespace-nowrap">
                       <span
-                        class="px-3 py-1 text-xs rounded-full font-medium"
+                        class="payment-pill px-3 py-1 text-xs rounded-full font-medium"
                         th:classappend="${order.hasMixedPaymentMethods()} ? 'bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-300' : (${order.paymentMethod != null and order.paymentMethod.name() == 'CASH'} ? 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400' : 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400')"
                         th:text="${order.paymentMethodsDisplay}"
                       >
@@ -659,7 +676,7 @@
                     </td>
 
                     <!-- Actions -->
-                    <td class="px-6 py-4 whitespace-nowrap text-center">
+                    <td class="order-actions-cell px-6 py-4 whitespace-nowrap text-center">
                       <div class="flex items-center justify-center gap-2">
                         <!-- View -->
                         <a
@@ -947,6 +964,22 @@
                   </th:block>
                 </tbody>
               </table>
+            </div>
+
+            <!-- VISTA DE TARJETAS: mismo contenido que la tabla, construida desde
+                 sus filas por OrdersView, para no duplicar la información ni las
+                 reglas de los botones. -->
+            <div id="ordersGridView" class="hidden p-4 sm:p-6">
+              <p
+                id="ordersGridEmpty"
+                class="hidden py-10 text-center text-sm text-gray-500 dark:text-gray-400"
+              >
+                No hay pedidos que coincidan con los filtros.
+              </p>
+              <div
+                id="ordersGridContainer"
+                class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4"
+              ></div>
             </div>
 
             <!-- Pagination Controls -->
@@ -1295,9 +1328,17 @@
       }
 
       // Event listeners for action buttons
-      document.addEventListener("DOMContentLoaded", function () {
+      /**
+       * Engancha los botones de acción de los pedidos que estén dentro de
+       * `root`. Se llama al cargar la página y otra vez sobre cada tarjeta:
+       * los botones clonados en la vista de tarjetas nacen sin listeners y
+       * quedarían muertos sin esta segunda pasada.
+       */
+      function bindOrderActionButtons(root) {
+        const scope = root || document;
+
         // Cancel order buttons
-        document.querySelectorAll(".btn-cancel-order").forEach((button) => {
+        scope.querySelectorAll(".btn-cancel-order").forEach((button) => {
           button.addEventListener("click", function () {
             const orderId = this.getAttribute("data-order-id");
             const orderNumber = this.getAttribute("data-order-number");
@@ -1306,7 +1347,7 @@
         });
 
         // Change status buttons
-        document.querySelectorAll(".btn-change-status").forEach((button) => {
+        scope.querySelectorAll(".btn-change-status").forEach((button) => {
           button.addEventListener("click", function () {
             const orderId = this.getAttribute("data-order-id");
             const orderNumber = this.getAttribute("data-order-number");
@@ -1317,7 +1358,7 @@
         });
 
         // Advance preparation items buttons (Staff one-click flow)
-        document
+        scope
           .querySelectorAll(".btn-advance-preparation")
           .forEach((button) => {
             button.addEventListener("click", function () {
@@ -1327,6 +1368,26 @@
               advancePreparationItems(this, orderId, orderNumber, nextStatus);
             });
           });
+
+        // Traspaso a otro mesero. Va AQUÍ, dentro de la función que engancha la fila, porque los
+        // botones de las tarjetas y del detalle son copias de los de la fila y nacen sin listeners:
+        // la página vuelve a engancharlos por aquí (OrdersView.bindActions). Engancharlo aparte, en
+        // el DOMContentLoaded, además no funcionaba: ahí "scope" no existe y el enganche se caía
+        // antes de llegar, así que el botón no hacía nada en ninguna de las dos vistas.
+        scope
+          .querySelectorAll(".btn-transfer-order")
+          .forEach((button) => {
+            button.addEventListener("click", function () {
+              showTransferModal(
+                this.getAttribute("data-order-id"),
+                this.getAttribute("data-order-number"),
+              );
+            });
+          });
+      }
+
+      document.addEventListener("DOMContentLoaded", function () {
+        bindOrderActionButtons(document);
       });
 
       // Format currency
@@ -1611,6 +1672,14 @@
         const orderId = notification.orderId;
         const status = notification.status;
         const type = notification.notificationType;
+
+        // ¿Es un pedido que atiende este mesero y acaba de quedar listo? Entonces alerta: suena y
+        // parpadea hasta que le den "Entendido". Va antes del "if (row)" porque el aviso es del
+        // PEDIDO: aunque su fila no esté en esta página, hay que ir a recogerlo.
+        const readyAlertShown = window.OrderReadyAlert
+          ? OrderReadyAlert.handle(notification)
+          : false;
+
         const row = document.querySelector(`tr[data-order-id="${orderId}"]`);
 
         if (row) {
@@ -1623,12 +1692,25 @@
             row.classList.remove("bg-primary/5");
           }, 1500);
 
+          // La cocina (chef, barista o parrillero) pudo haber movido el estado del pedido: lo que
+          // está A LA VISTA tiene que enterarse. Aquí arriba solo se parchea la fila de la tabla,
+          // que en vista de tarjetas está oculta, así que hay que rehacer las tarjetas y volver a
+          // pedir el panel si su detalle es el que está abierto.
+          if (window.OrdersView) {
+            OrdersView.render();
+            OrdersView.refreshDetailPanel(orderId);
+          }
+
           if (type === "STATUS_CHANGE") {
-            showStatusToast(
-              "📊 Estado Actualizado",
-              `Pedido #${notification.orderNumber} - ${notification.message || ""}`,
-              "info",
-            );
+            // Si ya salió la alerta del centro (su pedido quedó listo), no se repite la noticia en
+            // el aviso pequeño de la esquina: lo que hay que reconocer es la alerta.
+            if (!readyAlertShown) {
+              showStatusToast(
+                "📊 Estado Actualizado",
+                `Pedido #${notification.orderNumber} - ${notification.message || ""}`,
+                "info",
+              );
+            }
           } else if (type === "ORDER_CANCELLED") {
             showStatusToast(
               "⚠️ Pedido Cancelado",
@@ -1841,15 +1923,8 @@
       document.addEventListener("DOMContentLoaded", function () {
         connectOrderListWebSocket();
 
-        // Transferir pedido a otro mesero
-        document.querySelectorAll(".btn-transfer-order").forEach(function (button) {
-          button.addEventListener("click", function () {
-            showTransferModal(
-              this.getAttribute("data-order-id"),
-              this.getAttribute("data-order-number"),
-            );
-          });
-        });
+        // Los botones de la fila (incluido el traspaso) los engancha bindOrderActionButtons, que
+        // corre en su propio DOMContentLoaded de más arriba.
 
         // Solicitudes de transferencia que quedaron pendientes de respuesta
         setTimeout(function () {
@@ -1881,6 +1956,43 @@
           sib.style.display = open ? "none" : "";
           sib = sib.nextElementSibling;
         }
+      });
+    </script>
+
+    <!-- Modal de detalle del pedido: al pulsar una tarjeta se abre aquí, sin salir de la lista.
+         El cascarón es el fragmento compartido y el cuerpo lo sirve el servidor
+         (GET /waiter/orders/{id}/detail-panel, fragments/order-detail-panel), que para el
+         mesero solo resuelve SUS pedidos. -->
+    <div th:replace="~{fragments/order-detail-modal :: modal}"></div>
+
+    <!-- Aviso de "pedido listo para recoger": al mesero le suena el pedido que ATIENDE ahora,
+         así que si lo traspasó, el aviso le llega a quien lo va a recoger y no a él. -->
+    <script th:src="@{/js/order-ready-alert.js}"></script>
+    <script th:inline="javascript">
+      OrderReadyAlert.init({
+        username: /*[[${currentUsername}]]*/ "",
+        role: "waiter",
+      });
+    </script>
+
+    <!-- Vista de tabla / tarjetas de los pedidos (pieza compartida) -->
+    <script th:src="@{/js/orders-view.js}"></script>
+    <script>
+      OrdersView.init({
+        viewKey: "waiterOrdersView",
+        sections: {
+          main: {
+            table: "ordersTableView",
+            wrapper: "ordersGridView",
+            container: "ordersGridContainer",
+            empty: "ordersGridEmpty",
+          },
+        },
+        // Los botones clonados en la tarjeta nacen sin listeners.
+        bindActions: bindOrderActionButtons,
+        // La tarjeta abre el detalle del pedido en el modal, con los MISMOS botones de la fila
+        // (incluidas la transferencia y el "solo consulta", que son reglas del mesero).
+        detailPanel: { role: "waiter" },
       });
     </script>
 
