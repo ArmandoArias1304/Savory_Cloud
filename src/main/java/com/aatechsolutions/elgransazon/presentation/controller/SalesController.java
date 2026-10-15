@@ -7,6 +7,7 @@ import com.aatechsolutions.elgransazon.application.service.OrderService;
 import com.aatechsolutions.elgransazon.application.service.EmployeeService;
 import com.aatechsolutions.elgransazon.domain.entity.*;
 import com.aatechsolutions.elgransazon.infrastructure.context.CompanyContext;
+import com.aatechsolutions.elgransazon.util.PaymentTenderSupport;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -17,6 +18,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -134,10 +136,33 @@ public class SalesController {
             })
             .collect(Collectors.toList());
 
-        // Calculate statistics
-        BigDecimal totalSales = calculateTotalSales(paidOrders); // Total con propina
-        BigDecimal totalSalesWithoutTip = calculateTotalSalesWithoutTip(paidOrders); // Total sin propina
-        BigDecimal totalTips = calculateTotalTips(paidOrders); // Total de propinas
+        // Calculate statistics.
+        // With a payment-method filter the money must come from the tenders of that method only:
+        // a $600 sale paid $300 cash + $300 card contributes $300 to the card view, never its whole
+        // total. Summing order totals counted the same sale once per method it used, so every
+        // method reported the full amount and a mixed ticket was added up several times.
+        // `${paymentTenders}` is already the source of truth for this (same helper Reports uses).
+        boolean methodFilterActive = paymentMethod != null;
+        Map<Long, BigDecimal> methodAmounts = new LinkedHashMap<>();
+        BigDecimal filteredTotal = BigDecimal.ZERO;
+        if (methodFilterActive) {
+            for (Order order : paidOrders) {
+                BigDecimal amount = PaymentTenderSupport.amountOf(
+                        PaymentTenderSupport.collected(order), paymentMethod);
+                methodAmounts.put(order.getIdOrder(), amount);
+                filteredTotal = filteredTotal.add(amount);
+            }
+            filteredTotal = filteredTotal.setScale(2, RoundingMode.HALF_UP);
+        }
+        BigDecimal totalSales = methodFilterActive
+                ? filteredTotal                                  // solo lo cobrado con ese método
+                : calculateTotalSales(paidOrders);               // Total con propina
+        BigDecimal totalSalesWithoutTip = methodFilterActive
+                ? filteredTotal
+                : calculateTotalSalesWithoutTip(paidOrders);     // Total sin propina
+        // A tip is not attached to any payment method in the data model, so a method-filtered view
+        // cannot attribute it. Tips stay out of the filtered totals and the view states that.
+        BigDecimal totalTips = methodFilterActive ? BigDecimal.ZERO : calculateTotalTips(paidOrders);
         long totalCount = paidOrders.size();
 
         // Get all employees for filter - Only employees that handle payments
@@ -174,6 +199,9 @@ public class SalesController {
         model.addAttribute("totalCount", totalCount);
         model.addAttribute("selectedEmployeeId", employeeId);
         model.addAttribute("selectedPaymentMethod", paymentMethod);
+        // Tells the view whether the money columns show only the portion collected with one method.
+        model.addAttribute("methodFilterActive", methodFilterActive);
+        model.addAttribute("methodAmounts", methodAmounts);
         model.addAttribute("invoiceStatuses", InvoiceStatusFilter.values());
         model.addAttribute("selectedInvoiceStatus", invoiceStatus);
         model.addAttribute("startDate", startDate);

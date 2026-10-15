@@ -52,7 +52,7 @@
         <!-- HEADER -->
         <div class="mb-6">
           <a
-            th:href="@{/admin/ingredients}"
+            th:href="${volverA != null ? volverA : '/admin/ingredients'}"
             class="inline-flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-primary transition-colors mb-4"
           >
             <span class="material-symbols-outlined">arrow_back</span>
@@ -454,7 +454,7 @@
             class="p-6 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 flex flex-col sm:flex-row gap-3 justify-end"
           >
             <a
-              th:href="@{/admin/ingredients}"
+              th:href="${volverA != null ? volverA : '/admin/ingredients'}"
               class="px-6 py-3 rounded-xl bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-semibold hover:bg-gray-300 dark:hover:bg-gray-700 transition-colors text-center"
             >
               Cancelar

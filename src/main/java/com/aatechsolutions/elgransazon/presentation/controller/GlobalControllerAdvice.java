@@ -4,6 +4,8 @@ import com.aatechsolutions.elgransazon.domain.entity.GlobalSystemConfig;
 import com.aatechsolutions.elgransazon.domain.entity.SystemConfiguration;
 import com.aatechsolutions.elgransazon.application.service.GlobalSystemConfigService;
 import com.aatechsolutions.elgransazon.application.service.SystemConfigurationService;
+import com.aatechsolutions.elgransazon.infrastructure.web.ReturnToLastListInterceptor;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.propertyeditors.StringTrimmerEditor;
 import org.springframework.web.bind.WebDataBinder;
@@ -76,5 +78,15 @@ public class GlobalControllerAdvice {
     public SystemConfiguration addSystemConfiguration() {
         // Returns null when no company context - templates should handle null gracefully
         return systemConfigurationService.getConfiguration();
+    }
+
+    /**
+     * Pantalla a la que debe volver un botón "Volver": la lista desde la que el usuario abrió este
+     * formulario, con su búsqueda y su página. Es {@code null} cuando el navegador no manda un
+     * origen utilizable, y entonces la plantilla usa su destino habitual.
+     */
+    @ModelAttribute("volverA")
+    public String addReturnTo(HttpServletRequest request) {
+        return ReturnToLastListInterceptor.localReturnUrl(request);
     }
 }

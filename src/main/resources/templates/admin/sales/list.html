@@ -244,6 +244,23 @@
             </div>
           </div>
 
+          <!-- Aviso: con un método de pago filtrado los montos significan otra cosa -->
+          <div
+            th:if="${methodFilterActive}"
+            class="mb-6 flex items-start gap-3 rounded-2xl border border-blue-200 dark:border-blue-900 bg-blue-50 dark:bg-blue-900/20 p-4"
+          >
+            <span class="material-symbols-outlined text-blue-600 dark:text-blue-400"
+              >info</span
+            >
+            <p class="text-sm text-blue-800 dark:text-blue-300">
+              Estás filtrando por
+              <strong th:text="${selectedPaymentMethod.displayName}">este método</strong>. Los
+              montos muestran <strong>solo la parte cobrada con ese método</strong>, no el total del
+              pedido. Las propinas no se asignan a un método de pago, así que quedan fuera de este
+              filtro.
+            </p>
+          </div>
+
           <!-- STATS -->
           <div
             class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8"
@@ -270,6 +287,13 @@
                 <p class="text-gray-500 dark:text-gray-400 text-xs mt-1">
                   <span th:text="${totalCount}">0</span> ventas (sin propina)
                 </p>
+                <p
+                  th:if="${methodFilterActive}"
+                  class="text-blue-600 dark:text-blue-400 text-xs mt-1"
+                >
+                  solo lo cobrado con
+                  <span th:text="${selectedPaymentMethod.displayName}">este método</span>
+                </p>
               </div>
             </div>
 
@@ -292,6 +316,12 @@
                   <span th:text="${#numbers.formatCurrency(totalTips)}"
                     >$0.00</span
                   >
+                </p>
+                <p
+                  th:if="${methodFilterActive}"
+                  class="text-gray-500 dark:text-gray-400 text-xs mt-1"
+                >
+                  No aplica: la propina no se liga a un método de pago
                 </p>
               </div>
             </div>
@@ -318,6 +348,12 @@
                 </p>
                 <p class="text-gray-500 dark:text-gray-400 text-xs mt-1">
                   <span th:text="${totalCount}">0</span> ventas
+                </p>
+                <p
+                  th:if="${methodFilterActive}"
+                  class="text-gray-500 dark:text-gray-400 text-xs mt-1"
+                >
+                  sin propinas (no se reparten por método)
                 </p>
               </div>
             </div>
@@ -379,7 +415,8 @@
                     <th
                       class="px-6 py-4 font-semibold text-gray-700 dark:text-gray-300 text-right"
                     >
-                      Subtotal
+                      <span th:if="${methodFilterActive}">Monto del método</span>
+                      <span th:unless="${methodFilterActive}">Subtotal</span>
                     </th>
                     <th
                       class="px-6 py-4 font-semibold text-gray-700 dark:text-gray-300 text-right"
@@ -454,7 +491,15 @@
                     <td
                       class="px-6 py-4 whitespace-nowrap text-gray-600 dark:text-gray-400"
                     >
+                      <!-- Un cobro mixto muestra cuánto se pagó con cada método, para que el total
+                           del pedido no se confunda con el monto de un solo método. -->
                       <span
+                        th:if="${sale.hasMixedPaymentMethods()}"
+                        th:text="${sale.paymentMethodsDisplayWithAmounts}"
+                        >Efectivo</span
+                      >
+                      <span
+                        th:unless="${sale.hasMixedPaymentMethods()}"
                         th:text="${sale.paymentMethodsDisplay}"
                         >Efectivo</span
                       >
@@ -462,19 +507,42 @@
                     <td
                       class="px-6 py-4 whitespace-nowrap text-gray-600 dark:text-gray-400 text-right font-medium"
                     >
-                      <span th:text="${sale.formattedTotal}">$150.00</span>
+                      <span
+                        th:if="${methodFilterActive}"
+                        th:text="${#numbers.formatCurrency(methodAmounts.get(sale.idOrder))}"
+                        >$150.00</span
+                      >
+                      <span
+                        th:unless="${methodFilterActive}"
+                        th:text="${sale.formattedTotal}"
+                        >$150.00</span
+                      >
                     </td>
                     <td
                       class="px-6 py-4 whitespace-nowrap text-gray-600 dark:text-gray-400 text-right"
                     >
-                      <span th:text="${sale.formattedTip ?: '$0.00'}"
+                      <span
+                        th:if="${methodFilterActive}"
+                        title="La propina no está ligada a un método de pago, por eso no se reparte en este filtro"
+                        >—</span
+                      >
+                      <span
+                        th:unless="${methodFilterActive}"
+                        th:text="${sale.formattedTip ?: '$0.00'}"
                         >$0.00</span
                       >
                     </td>
                     <td
                       class="px-6 py-4 whitespace-nowrap text-primary text-right font-bold"
                     >
-                      <span th:text="${sale.formattedTotalWithTip}"
+                      <span
+                        th:if="${methodFilterActive}"
+                        th:text="${#numbers.formatCurrency(methodAmounts.get(sale.idOrder))}"
+                        >$0.00</span
+                      >
+                      <span
+                        th:unless="${methodFilterActive}"
+                        th:text="${sale.formattedTotalWithTip}"
                         >$150.00</span
                       >
                     </td>

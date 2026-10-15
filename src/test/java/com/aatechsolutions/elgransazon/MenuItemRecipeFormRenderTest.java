@@ -48,6 +48,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class MenuItemRecipeFormRenderTest {
 
     private static final Long ITEM_ID = 432L;
+    private static final Long PARENT_ID = 431L;
 
     @Autowired
     private WebApplicationContext webApplicationContext;
@@ -120,6 +121,42 @@ class MenuItemRecipeFormRenderTest {
         assertThat(recipe.get(1).get("ingredientId").asLong()).isEqualTo(12L);
     }
 
+    @Test
+    @DisplayName("en una variante sin receta el formulario ofrece adoptar la del item padre")
+    void variantFormOffersTheParentsRecipe() throws Exception {
+        when(itemMenuService.findById(ITEM_ID)).thenReturn(Optional.of(variant()));
+        when(itemMenuService.getRecipe(ITEM_ID)).thenReturn(List.of());
+        when(itemMenuService.getRecipe(PARENT_ID)).thenReturn(recipeOf(2));
+
+        String html = mockMvc.perform(get("/admin/menu-items/edit/" + ITEM_ID))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        assertThat(html).contains("VARIANT_PARENT_HAS_RECIPE = true");
+        assertThat(html).contains("offerAdoptingParentRecipe");
+        assertThat(html).contains("/recipe/adopt-from-parent");
+    }
+
+    @Test
+    @DisplayName("un item que no es variante no ofrece adoptar la receta de nadie")
+    void plainItemDoesNotOfferAdoption() throws Exception {
+        String html = renderForm(2);
+
+        assertThat(html).contains("VARIANT_PARENT_HAS_RECIPE = false");
+    }
+
+    @Test
+    @DisplayName("al crear un tamaño se pregunta si adopta la receta del item padre")
+    void theSizeQuestionIsWired() throws Exception {
+        String html = renderForm(2);
+
+        assertThat(html).contains("SIZE_PARENT_HAS_RECIPE = true");
+        assertThat(html).contains("askAdoptParentRecipe");
+        assertThat(html).contains("adoptRecipe:");
+    }
+
     private String renderForm(int recipeRows) throws Exception {
         List<ItemIngredient> recipe = recipeOf(recipeRows);
         when(itemMenuService.getRecipe(ITEM_ID)).thenReturn(recipe);
@@ -147,6 +184,26 @@ class MenuItemRecipeFormRenderTest {
                     .build());
         }
         return recipe;
+    }
+
+    /** Una variante de tamaño: su item padre existe y tiene receta propia. */
+    private ItemMenu variant() {
+        return ItemMenu.builder()
+                .idItemMenu(ITEM_ID)
+                .name("Parrillada Grande")
+                .sizeName("Grande")
+                .parentItem(ItemMenu.builder()
+                        .idItemMenu(PARENT_ID)
+                        .name("Parrillada")
+                        .price(new BigDecimal("450.00"))
+                        .active(true)
+                        .requiresIngredients(true)
+                        .build())
+                .price(new BigDecimal("550.00"))
+                .active(true)
+                .requiresIngredients(false)
+                .category(Category.builder().idCategory(1L).name("Carnes").active(true).build())
+                .build();
     }
 
     private ItemMenu itemMenu() {

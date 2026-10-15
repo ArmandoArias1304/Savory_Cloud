@@ -1144,7 +1144,8 @@ public class ItemMenuServiceImpl implements ItemMenuService {
 
     @Override
     @Transactional
-    public ItemMenu addSizeItem(Long parentId, String sizeName, java.math.BigDecimal price) {
+    public ItemMenu addSizeItem(Long parentId, String sizeName, java.math.BigDecimal price,
+                                boolean adoptParentRecipe) {
         log.info("Adding size variant '{}' (price={}) to parent item ID: {}", sizeName, price, parentId);
 
         Company company = CompanyContext.requireCurrentCompany();
@@ -1184,7 +1185,7 @@ public class ItemMenuServiceImpl implements ItemMenuService {
                 .requiresPreparation(parent.getRequiresPreparation())
                 .requiresBaristaPreparation(parent.getRequiresBaristaPreparation())
                 .requiresParrilleroPreparation(parent.getRequiresParrilleroPreparation())
-                .requiresIngredients(parent.getRequiresIngredients())
+                // requiresIngredients is decided together with the recipe, further down
                 .isCombo(parent.getIsCombo())
                 .dineInOnly(parent.getDineInOnly())
                 .maxSauces(parent.getMaxSauces())
@@ -1203,20 +1204,10 @@ public class ItemMenuServiceImpl implements ItemMenuService {
         child.setUpdatedAt(java.time.LocalDateTime.now());
         ItemMenu savedChild = itemMenuRepository.save(child);
 
-        // Copy recipe (ingredient list) from parent
-        List<com.aatechsolutions.elgransazon.domain.entity.ItemIngredient> parentRecipe =
-                itemIngredientRepository.findByItemMenuId(parentId);
-        for (com.aatechsolutions.elgransazon.domain.entity.ItemIngredient pi : parentRecipe) {
-            com.aatechsolutions.elgransazon.domain.entity.ItemIngredient ci =
-                    com.aatechsolutions.elgransazon.domain.entity.ItemIngredient.builder()
-                    .itemMenu(savedChild)
-                    .ingredient(pi.getIngredient())
-                    .quantity(pi.getQuantity())
-                    .unit(pi.getUnit())
-                    .build();
-            ci.setCreatedAt(java.time.LocalDateTime.now());
-            itemIngredientRepository.save(ci);
-        }
+        // Recipe of the variant. The form asks first, so a variant created as "sin receta" is left
+        // with none at all instead of silently getting the parent's.
+        applyRecipeAdoption(savedChild, itemIngredientRepository.findByItemMenuId(parentId),
+                adoptParentRecipe);
 
         // Copy complement associations from parent
         List<com.aatechsolutions.elgransazon.domain.entity.ItemMenuComplement> parentComplements =
@@ -1333,7 +1324,8 @@ public class ItemMenuServiceImpl implements ItemMenuService {
 
     @Override
     @Transactional
-    public ItemMenu linkExistingItemAsSize(Long parentId, Long childId, String sizeName) {
+    public ItemMenu linkExistingItemAsSize(Long parentId, Long childId, String sizeName,
+                                          boolean adoptParentRecipe) {
         log.info("Linking existing item ID: {} as size variant of parent ID: {} with sizeName='{}'", childId, parentId, sizeName);
 
         Company company = CompanyContext.requireCurrentCompany();
@@ -1380,7 +1372,147 @@ public class ItemMenuServiceImpl implements ItemMenuService {
         child.setUpdatedAt(java.time.LocalDateTime.now());
         ItemMenu saved = itemMenuRepository.save(child);
 
+        // Linking used to leave the recipe untouched. The admin is asked about it now, and when the
+        // answer is no the linked item keeps whatever recipe it already had.
+        applyRecipeAdoption(saved, itemIngredientRepository.findByItemMenuId(parentId), adoptParentRecipe);
+
         log.info("Item ID: {} linked as size '{}' of parent '{}' (ID: {})", childId, sizeName, parent.getName(), parentId);
         return saved;
+    }
+
+    @Override
+    @Transactional
+    public ItemMenu adoptParentRecipe(Long childId) {
+        Company company = CompanyContext.requireCurrentCompany();
+        ItemMenu child = itemMenuRepository.findByIdItemMenuAndCompany(childId, company)
+                .orElseThrow(() -> new IllegalArgumentException("Item no encontrado con ID: " + childId));
+
+        ItemMenu parent = child.getParentItem();
+        if (parent == null) {
+            throw new IllegalArgumentException(
+                "El item '" + child.getName() + "' no es una variante de tamaño de otro item.");
+        }
+
+        List<ItemIngredient> parentRecipe = itemIngredientRepository.findByItemMenuId(parent.getIdItemMenu());
+        if (parentRecipe.isEmpty()) {
+            throw new IllegalArgumentException(
+                "El item padre '" + parent.getName() + "' no tiene receta que adoptar.");
+        }
+
+        if (!itemIngredientRepository.findByItemMenuId(childId).isEmpty()) {
+            throw new IllegalArgumentException(
+                "La variante '" + child.getName() + "' ya tiene receta propia. Bórrala primero para "
+                + "reemplazarla por la del item padre.");
+        }
+
+        replaceRecipe(child, parentRecipe);
+        child.setRequiresIngredients(true);
+        child.setUpdatedAt(java.time.LocalDateTime.now());
+        ItemMenu saved = itemMenuRepository.save(child);
+        log.info("Variant '{}' (ID: {}) adopted the recipe of its parent '{}' ({} ingredients)",
+                child.getName(), childId, parent.getName(), parentRecipe.size());
+        return saved;
+    }
+
+    @Override
+    public int countSizeVariantsWithoutRecipe(Long parentId) {
+        return sizeVariantsWithoutRecipe(parentId).size();
+    }
+
+    @Override
+    @Transactional
+    public int propagateRecipeToSizeVariants(Long parentId) {
+        Company company = CompanyContext.requireCurrentCompany();
+        ItemMenu parent = itemMenuRepository.findByIdItemMenuAndCompany(parentId, company)
+                .orElseThrow(() -> new IllegalArgumentException("Item del menú no encontrado con ID: " + parentId));
+
+        List<ItemIngredient> parentRecipe = itemIngredientRepository.findByItemMenuId(parentId);
+        if (parentRecipe.isEmpty()) {
+            throw new IllegalArgumentException(
+                "El item '" + parent.getName() + "' no tiene receta que copiar a sus variantes.");
+        }
+
+        List<ItemMenu> variants = sizeVariantsWithoutRecipe(parentId);
+        for (ItemMenu variant : variants) {
+            replaceRecipe(variant, parentRecipe);
+            variant.setRequiresIngredients(true);
+            variant.setUpdatedAt(java.time.LocalDateTime.now());
+            itemMenuRepository.save(variant);
+        }
+
+        log.info("Recipe of parent '{}' (ID: {}) copied to {} size variant(s) that had none",
+                parent.getName(), parentId, variants.size());
+        return variants.size();
+    }
+
+    /**
+     * Size variants of a parent that still have no recipe of their own.
+     *
+     * <p>A variant with an empty ingredient list must gain one, and with it
+     * {@code requiresIngredients}; variants that already carry a recipe are skipped so their own
+     * quantities survive the copy.</p>
+     */
+    private List<ItemMenu> sizeVariantsWithoutRecipe(Long parentId) {
+        List<ItemMenu> variantsWithoutRecipe = new ArrayList<>();
+        for (ItemMenu variant : findSizeItems(parentId)) {
+            if (itemIngredientRepository.findByItemMenuId(variant.getIdItemMenu()).isEmpty()) {
+                variantsWithoutRecipe.add(variant);
+            }
+        }
+        return variantsWithoutRecipe;
+    }
+
+    /**
+     * Decide the recipe of a size variant: an independent copy of the parent's, or none at all.
+     *
+     * <p>A variant left without a recipe must not keep {@code requiresIngredients} on: with the flag
+     * up and an empty ingredient list the item would look like a recipe item while nothing could ever
+     * be discounted for it. The flag is only forced when the variant really ends up with no recipe,
+     * so a linked item that already had one and was not told to adopt keeps its own configuration.</p>
+     *
+     * @return true when the parent's recipe was copied onto the variant
+     */
+    private boolean applyRecipeAdoption(ItemMenu variant, List<ItemIngredient> parentRecipe,
+                                        boolean adoptParentRecipe) {
+        boolean parentHasRecipe = parentRecipe != null && !parentRecipe.isEmpty();
+        if (adoptParentRecipe && parentHasRecipe) {
+            replaceRecipe(variant, parentRecipe);
+            variant.setRequiresIngredients(true);
+            variant.setUpdatedAt(java.time.LocalDateTime.now());
+            itemMenuRepository.save(variant);
+            log.info("Variant '{}' adopted the parent's recipe ({} ingredients)",
+                    variant.getName(), parentRecipe.size());
+            return true;
+        }
+        if (itemIngredientRepository.findByItemMenuId(variant.getIdItemMenu()).isEmpty()) {
+            variant.setRequiresIngredients(false);
+            variant.setUpdatedAt(java.time.LocalDateTime.now());
+            itemMenuRepository.save(variant);
+            log.info("Variant '{}' left without a recipe: no stock will be discounted for it",
+                    variant.getName());
+        }
+        return false;
+    }
+
+    /** Replace the whole recipe of an item with independent copies of the given lines. */
+    private void replaceRecipe(ItemMenu item, List<ItemIngredient> lines) {
+        List<ItemIngredient> current = itemIngredientRepository.findByItemMenuId(item.getIdItemMenu());
+        if (!current.isEmpty()) {
+            itemIngredientRepository.deleteAll(current);
+            itemIngredientRepository.flush();
+        }
+        for (ItemIngredient line : lines) {
+            ItemIngredient copy = ItemIngredient.builder()
+                    .itemMenu(item)
+                    .ingredient(line.getIngredient())
+                    .quantity(line.getQuantity())
+                    .unit(line.getUnit())
+                    .build();
+            // La copia hereda la unidad vigente del ingrediente: si el ingrediente cambio
+            // de unidad, la del padre puede estar vieja y la validacion de la fila fallaria.
+            applyIngredientUnit(copy, line.getIngredient());
+            copy.setCreatedAt(java.time.LocalDateTime.now());
+            itemIngredientRepository.save(copy);
+        }
     }
 }

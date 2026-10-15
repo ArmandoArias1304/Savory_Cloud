@@ -1,15 +1,19 @@
 package com.aatechsolutions.elgransazon.application.service;
 
 import com.aatechsolutions.elgransazon.domain.entity.Company;
+import com.aatechsolutions.elgransazon.domain.entity.ComplementIngredient;
 import com.aatechsolutions.elgransazon.domain.entity.Employee;
 import com.aatechsolutions.elgransazon.domain.entity.Ingredient;
+import com.aatechsolutions.elgransazon.domain.entity.ItemIngredient;
 import com.aatechsolutions.elgransazon.infrastructure.context.CompanyContext;
 import com.aatechsolutions.elgransazon.domain.entity.IngredientCategory;
 import com.aatechsolutions.elgransazon.domain.entity.IngredientStockHistory;
 import com.aatechsolutions.elgransazon.domain.entity.Supplier;
+import com.aatechsolutions.elgransazon.domain.repository.ComplementIngredientRepository;
 import com.aatechsolutions.elgransazon.domain.repository.IngredientCategoryRepository;
 import com.aatechsolutions.elgransazon.domain.repository.IngredientRepository;
 import com.aatechsolutions.elgransazon.domain.repository.IngredientStockHistoryRepository;
+import com.aatechsolutions.elgransazon.domain.repository.ItemIngredientRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -37,6 +41,8 @@ public class IngredientServiceImpl implements IngredientService {
     private final IngredientRepository ingredientRepository;
     private final IngredientCategoryRepository categoryRepository;
     private final IngredientStockHistoryRepository stockHistoryRepository;
+    private final ItemIngredientRepository itemIngredientRepository;
+    private final ComplementIngredientRepository complementIngredientRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -175,6 +181,7 @@ public class IngredientServiceImpl implements IngredientService {
             }
         }
         
+        String previousUnit = ingredient.getUnitOfMeasure();
         ingredient.setUnitOfMeasure(ingredientDetails.getUnitOfMeasure());
         // costPerUnit is managed through addStock() method, preserve existing value
         // ingredient.setCostPerUnit(ingredientDetails.getCostPerUnit());
@@ -183,8 +190,68 @@ public class IngredientServiceImpl implements IngredientService {
         ingredient.setCategory(category);
 
         Ingredient updatedIngredient = ingredientRepository.save(ingredient);
+
+        String newUnit = updatedIngredient.getUnitOfMeasure();
+        int repairedRecipeRows = reconcileRecipeUnits(updatedIngredient);
+        if (previousUnit != null && !previousUnit.equalsIgnoreCase(newUnit)) {
+            log.info("Unidad de medida del ingrediente '{}' cambiada de '{}' a '{}'; "
+                            + "{} fila(s) de receta sincronizadas",
+                    updatedIngredient.getName(), previousUnit, newUnit, repairedRecipeRows);
+        } else if (repairedRecipeRows > 0) {
+            log.info("Se sincronizaron {} fila(s) de receta que seguian con la unidad vieja del "
+                            + "ingrediente '{}' ({})",
+                    repairedRecipeRows, updatedIngredient.getName(), newUnit);
+        }
+
         log.info("Ingredient updated successfully: {}", id);
         return updatedIngredient;
+    }
+
+    /**
+     * Deja las recetas en sincronía con la unidad vigente del ingrediente.
+     *
+     * <p>Cada fila de receta (platillos y complementos) guarda su propia copia de la unidad y se
+     * valida contra la del ingrediente al guardarse: si el ingrediente pasa de {@code UN} a
+     * {@code G} y las filas se quedan con {@code UN}, cualquier edición posterior de esa receta
+     * falla con "la unidad de medida no coincide". Este método corrige la copia de todas las filas
+     * que no coincidan, y se ejecuta en cada guardado del ingrediente para que además repare las
+     * recetas que quedaron desfasadas antes de que existiera este arreglo.</p>
+     *
+     * <p><strong>No convierte las cantidades.</strong> El sistema no conoce un factor de conversión
+     * (cuántos gramos pesa una unidad), así que solo cambia la unidad; el usuario debe revisar y
+     * ajustar las cantidades a mano.</p>
+     *
+     * @return cuántas filas de receta hubo que corregir
+     */
+    private int reconcileRecipeUnits(Ingredient ingredient) {
+        String currentUnit = ingredient.getUnitOfMeasure();
+        if (currentUnit == null || currentUnit.isBlank()) {
+            // Sin unidad vigente no hay nada que sincronizar: la unidad de la fila es obligatoria.
+            return 0;
+        }
+
+        Long ingredientId = ingredient.getIdIngredient();
+
+        List<ItemIngredient> itemRecipeRows = itemIngredientRepository.findByIngredientId(ingredientId);
+        List<ItemIngredient> staleItemRows = itemRecipeRows.stream()
+                .filter(row -> !currentUnit.equalsIgnoreCase(row.getUnit()))
+                .collect(Collectors.toList());
+        if (!staleItemRows.isEmpty()) {
+            staleItemRows.forEach(row -> row.setUnit(currentUnit));
+            itemIngredientRepository.saveAll(staleItemRows);
+        }
+
+        List<ComplementIngredient> complementRecipeRows =
+                complementIngredientRepository.findByIngredientIdIngredient(ingredientId);
+        List<ComplementIngredient> staleComplementRows = complementRecipeRows.stream()
+                .filter(row -> !currentUnit.equalsIgnoreCase(row.getUnit()))
+                .collect(Collectors.toList());
+        if (!staleComplementRows.isEmpty()) {
+            staleComplementRows.forEach(row -> row.setUnit(currentUnit));
+            complementIngredientRepository.saveAll(staleComplementRows);
+        }
+
+        return staleItemRows.size() + staleComplementRows.size();
     }
 
     @Override
@@ -468,6 +535,13 @@ public class IngredientServiceImpl implements IngredientService {
         log.info("Getting expense details for category ID: {} (company: {})", categoryId, company.getIdCompany());
 
         return stockHistoryRepository.getExpensesByIngredient(categoryId, company);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public int countRecipeUsages(Long ingredientId) {
+        return itemIngredientRepository.findByIngredientId(ingredientId).size()
+                + complementIngredientRepository.findByIngredientIdIngredient(ingredientId).size();
     }
 
     @Override

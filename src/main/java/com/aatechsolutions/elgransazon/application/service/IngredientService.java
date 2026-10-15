@@ -35,6 +35,13 @@ public interface IngredientService {
     Ingredient update(Long id, Ingredient ingredient);
 
     /**
+     * Count how many recipe lines (menu items and complements) use the given ingredient.
+     * Used to warn the user when a unit change re-labels existing recipes whose quantities
+     * are not converted.
+     */
+    int countRecipeUsages(Long ingredientId);
+
+    /**
      * Soft delete (deactivate) an ingredient
      */
     void delete(Long id);

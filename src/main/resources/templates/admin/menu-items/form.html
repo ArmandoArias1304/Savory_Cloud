@@ -74,7 +74,7 @@
         <!-- Header -->
         <div class="text-center mb-8">
           <a
-            th:href="@{/admin/menu-items}"
+            th:href="${volverA != null ? volverA : '/admin/menu-items'}"
             class="inline-flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-primary dark:hover:text-primary transition-colors mb-4"
           >
             <span class="material-symbols-outlined">arrow_back</span>
@@ -1755,7 +1755,7 @@
             </button>
 
             <a
-              th:href="@{/admin/menu-items}"
+              th:href="${volverA != null ? volverA : '/admin/menu-items'}"
               class="flex-1 sm:flex-none px-8 py-3 bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-semibold rounded-xl transition-colors flex items-center justify-center gap-2"
             >
               <span class="material-symbols-outlined">cancel</span>
@@ -3185,7 +3185,116 @@
         }
       }
 
-      function addIngredientRow() {
+      const RECIPE_ITEM_ID = /*[[${itemMenu.idItemMenu}]]*/ null;
+      /** El item padre de esta variante tiene receta: hay algo que se puede adoptar. */
+      const VARIANT_PARENT_HAS_RECIPE = /*[[${parentHasRecipe}]]*/ false;
+
+      /** Ya se ofreció adoptar la receta del padre en esta visita al formulario. */
+      let parentRecipeOfferDone = false;
+      /** El formulario ya terminó de cargar: lo que venga después es una acción del usuario. */
+      let recipeFormReady = false;
+
+      document.addEventListener("DOMContentLoaded", function () {
+        // Los manejadores de carga inicial del formulario corren en este mismo evento, así que el
+        // ofrecimiento sólo se habilita después de que terminen: abrir una variante no pregunta nada.
+        setTimeout(function () {
+          recipeFormReady = true;
+        }, 0);
+      });
+
+      /** Filas de receta que ya tienen un ingrediente elegido. */
+      function chosenIngredientCount() {
+        const container = document.getElementById("ingredientsContainer");
+        if (!container) return 0;
+
+        let chosen = 0;
+        container
+          .querySelectorAll(".ingredient-row:not(#ingredientTemplate)")
+          .forEach(function (row) {
+            const field = row.querySelector(".ingredient-select, .ingredient-id-input");
+            if (field && field.value) chosen++;
+          });
+        return chosen;
+      }
+
+      /**
+       * Una variante sin receta cuyo item padre sí tiene: al querer capturarle una receta se ofrece
+       * adoptar la del padre. Aceptar copia la receta en el servidor y recarga el formulario, para no
+       * reconstruir filas de ingredientes en JavaScript.
+       *
+       * @returns true cuando el formulario se está recargando ya con la receta adoptada.
+       */
+      async function offerAdoptingParentRecipe() {
+        if (
+          !VARIANT_PARENT_HAS_RECIPE ||
+          !RECIPE_ITEM_ID ||
+          parentRecipeOfferDone ||
+          chosenIngredientCount() > 0
+        ) {
+          return false;
+        }
+
+        parentRecipeOfferDone = true;
+        const isDarkMode = document.documentElement.classList.contains("dark");
+        const theme = {
+          confirmButtonColor: "#6366f1",
+          background: isDarkMode ? "#1e293b" : "#fff",
+          color: isDarkMode ? "#f1f5f9" : "#111827",
+        };
+
+        const answer = await Swal.fire({
+          icon: "question",
+          title: "El item padre tiene receta",
+          html:
+            "Este item es una variante y su <b>item padre cuenta con receta</b>.<br>" +
+            "¿Quieres adoptarla para esta variante?",
+          showCancelButton: true,
+          confirmButtonText: "Sí, adoptar la del padre",
+          cancelButtonText: "No, la capturo yo",
+          ...theme,
+        });
+        if (!answer.isConfirmed) return false;
+
+        try {
+          const res = await fetch(
+            `/admin/menu-items/${RECIPE_ITEM_ID}/recipe/adopt-from-parent`,
+            { method: "POST" },
+          );
+          const data = await res.json();
+          if (data.success) {
+            await Swal.fire({
+              icon: "success",
+              title: "Receta adoptada",
+              text: data.message,
+              timer: 1800,
+              showConfirmButton: false,
+              ...theme,
+            });
+            window.location.reload();
+            return true;
+          }
+          Swal.fire({
+            icon: "error",
+            title: "No se pudo adoptar",
+            text: data.error || "Intenta de nuevo.",
+            ...theme,
+          });
+          return false;
+        } catch (err) {
+          Swal.fire({
+            icon: "error",
+            title: "Error de red",
+            text: "No se pudo adoptar la receta del item padre.",
+            ...theme,
+          });
+          return false;
+        }
+      }
+
+      async function addIngredientRow() {
+        // Antes de capturar la primera receta de una variante, se ofrece la del item padre.
+        if (recipeFormReady && (await offerAdoptingParentRecipe())) return;
+
         const container = document.getElementById("ingredientsContainer");
         const template = document.getElementById("ingredientTemplate");
         const noMessage = document.getElementById("noIngredientsMessage");
@@ -4109,6 +4218,37 @@
       const BASE_URL = `/admin/menu-items/${ITEM_ID}/size-items`;
       const isDark = () => document.documentElement.classList.contains('dark');
 
+      // El item padre puede tener receta: se pregunta si la variante nueva la adopta.
+      const SIZE_PARENT_HAS_RECIPE = /*[[${recipe != null and !#lists.isEmpty(recipe)}]]*/ false;
+
+      /**
+       * Pregunta si la variante que se va a crear o vincular adopta la receta del item padre.
+       * @returns true (adoptar), false (sin receta) o null si el admin cerró el aviso sin decidir.
+       */
+      async function askAdoptParentRecipe(variantLabel, detailHtml) {
+        if (!SIZE_PARENT_HAS_RECIPE) return false;
+        const answer = await Swal.fire({
+          icon: 'question',
+          title: '¿Heredar la receta del item padre?',
+          html: `El item padre tiene una receta. ¿Quieres que <b>${variantLabel}</b> la adopte?<br><small>${detailHtml}</small>`,
+          showCancelButton: true,
+          confirmButtonText: 'Sí, adoptar',
+          cancelButtonText: 'No, sin receta',
+          confirmButtonColor: '#6366f1',
+          background: isDark() ? '#1e293b' : '#fff',
+          color: isDark() ? '#f1f5f9' : '#111827',
+        });
+        if (answer.isDismissed) return null;
+        return answer.isConfirmed;
+      }
+
+      /** Texto del resultado para el aviso de éxito. */
+      function recipeAdoptionNote(data) {
+        return data.recipeAdopted
+          ? ` Heredó la receta del item padre (${data.recipeIngredients} ingredientes).`
+          : ' Se creó sin receta.';
+      }
+
       // ── ADD SIZE ──────────────────────────────────────────────────────────
       document.getElementById('btnAddSize')?.addEventListener('click', async function () {
         const nameInput = document.getElementById('newSizeName');
@@ -4129,16 +4269,22 @@
           return;
         }
 
+        const adoptRecipe = await askAdoptParentRecipe(
+          `el tamaño "${sizeName}"`,
+          'Si dices que no, la variante se crea <b>sin receta</b> y sin descuento de inventario; podrás capturarla después desde su propio formulario.',
+        );
+        if (adoptRecipe === null) return; // Cerró el aviso sin decidir: no se crea el tamaño.
+
         this.disabled = true;
         try {
-          const params = new URLSearchParams({ sizeName, price });
+          const params = new URLSearchParams({ sizeName, price, adoptRecipe: adoptRecipe ? 'true' : 'false' });
           const res = await fetch(BASE_URL, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: params.toString() });
           const data = await res.json();
           if (data.success) {
             nameInput.value = '';
             priceInput.value = '';
             appendSizeRow(data.id, data.sizeName, data.price, data.name);
-            Swal.fire({ icon: 'success', title: '¡Tamaño agregado!', text: data.message, timer: 2000, showConfirmButton: false, background: isDark() ? '#1e293b' : '#fff', color: isDark() ? '#f1f5f9' : '#111827' });
+            Swal.fire({ icon: 'success', title: '¡Tamaño agregado!', text: data.message + recipeAdoptionNote(data), timer: 3000, showConfirmButton: false, background: isDark() ? '#1e293b' : '#fff', color: isDark() ? '#f1f5f9' : '#111827' });
           } else {
             Swal.fire({ icon: 'error', title: 'Error', text: data.error || 'No se pudo agregar el tamaño.', confirmButtonColor: '#6366f1', background: isDark() ? '#1e293b' : '#fff', color: isDark() ? '#f1f5f9' : '#111827' });
           }
@@ -4378,15 +4524,21 @@
           return;
         }
 
+        const adoptRecipe = await askAdoptParentRecipe(
+          `el item "${selectedLinkItem.name}"`,
+          'Si dices que sí, la receta del padre <b>reemplazará</b> la que ese item tenga. Si dices que no, el item conserva la receta que ya tenía.',
+        );
+        if (adoptRecipe === null) return; // Cerró el aviso sin decidir: no se vincula.
+
         btnConfirm.disabled = true;
         try {
-          const params = new URLSearchParams({ childId: selectedLinkItem.id, sizeName });
+          const params = new URLSearchParams({ childId: selectedLinkItem.id, sizeName, adoptRecipe: adoptRecipe ? 'true' : 'false' });
           const res = await fetch(`${BASE_URL}/link`, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: params.toString() });
           const data = await res.json();
           if (data.success) {
             appendSizeRow(data.id, data.sizeName, data.price, data.name);
             hideLinkConfirm();
-            Swal.fire({ icon: 'success', title: '¡Vinculado!', text: data.message, timer: 2500, showConfirmButton: false, background: isDark() ? '#1e293b' : '#fff', color: isDark() ? '#f1f5f9' : '#111827' });
+            Swal.fire({ icon: 'success', title: '¡Vinculado!', text: data.message + recipeAdoptionNote(data), timer: 3000, showConfirmButton: false, background: isDark() ? '#1e293b' : '#fff', color: isDark() ? '#f1f5f9' : '#111827' });
           } else {
             Swal.fire({ icon: 'error', title: 'Error', text: data.error || 'No se pudo vincular.', confirmButtonColor: '#7c3aed', background: isDark() ? '#1e293b' : '#fff', color: isDark() ? '#f1f5f9' : '#111827' });
           }

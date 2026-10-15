@@ -392,8 +392,9 @@ public class ItemMenuController {
         // Add active specialities (parallel to sauces)
         loadSpecialitiesFormData(model, null);
 
-        // No size variants for a new item
+        // No size variants for a new item, and no parent whose recipe could be adopted
         model.addAttribute("sizeItems", new ArrayList<>());
+        model.addAttribute("parentHasRecipe", false);
 
         return "admin/menu-items/form";
     }
@@ -458,6 +459,12 @@ public class ItemMenuController {
 
                     // Add size variants for this item
                     model.addAttribute("sizeItems", itemMenuService.findSizeItems(id));
+
+                    // A variant with no recipe may adopt the one its parent already has. The form
+                    // uses this to offer it, and only when there really is something to adopt.
+                    ItemMenu parentOfItem = itemMenu.getParentItem();
+                    model.addAttribute("parentHasRecipe", parentOfItem != null
+                            && !itemMenuService.getRecipe(parentOfItem.getIdItemMenu()).isEmpty());
 
                     return "admin/menu-items/form";
                 })
@@ -915,6 +922,11 @@ public class ItemMenuController {
                 }
             }
             
+            // The admin may be giving this parent its first recipe right now. If the parent already
+            // has size variants with no recipe of their own, the list offers to copy it to them once
+            // the save is done and there really is something to copy.
+            boolean parentHadRecipeBeforeSave = !itemMenuService.getRecipe(id).isEmpty();
+
             ItemMenu updated = itemMenuService.update(id, itemMenu, recipe);
             
             // Update combo items if this is a combo
@@ -960,6 +972,8 @@ public class ItemMenuController {
                     specialitiesMessage = " (especialidades: +" + diff[0] + " / -" + diff[1] + ")";
                 }
             }
+
+            offerRecipeToSizeVariants(id, updated, parentHadRecipeBeforeSave, redirectAttributes);
 
             log.info("Menu item updated successfully: {}", updated.getIdItemMenu());
             redirectAttributes.addFlashAttribute("successMessage",
@@ -1100,6 +1114,97 @@ public class ItemMenuController {
         }
         
         return response;
+    }
+
+    /**
+     * Give a size variant its own copy of the recipe its parent already has (AJAX).
+     *
+     * <p>The variant's form offers this when the variant has no recipe and its parent does. The copy
+     * is made server-side so the form can simply reload with the recipe already rendered, instead of
+     * rebuilding ingredient rows in JavaScript.</p>
+     */
+    @PostMapping("/{id}/recipe/adopt-from-parent")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> adoptParentRecipe(@PathVariable Long id) {
+        log.info("Adopting the parent's recipe for menu item ID: {}", id);
+        Map<String, Object> response = new HashMap<>();
+        try {
+            ItemMenu variant = itemMenuService.adoptParentRecipe(id);
+            response.put("success", true);
+            response.put("message", "La receta del item padre se copió a '" + variant.getName() + "'.");
+            response.put("ingredients", itemMenuService.getRecipe(id).size());
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            log.error("Validation error adopting the parent's recipe: {}", e.getMessage());
+            response.put("success", false);
+            response.put("error", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        } catch (Exception e) {
+            log.error("Error adopting the parent's recipe: {}", e.getMessage());
+            response.put("success", false);
+            response.put("error", "No se pudo adoptar la receta: " + e.getMessage());
+            return ResponseEntity.internalServerError().body(response);
+        }
+    }
+
+    /**
+     * After saving a parent's first recipe, queue the offer to copy it to its size variants.
+     *
+     * <p>Only the step from "no recipe" to "has recipe" asks. Once the parent has a recipe, later
+     * edits are left alone: each variant holds an independent copy, and pushing the parent's recipe
+     * on every save would silently throw away the quantities the admin adjusted inside a variant.
+     * Nothing is offered either when all variants already have their own recipe or when the item
+     * has no variants at all.</p>
+     */
+    private void offerRecipeToSizeVariants(Long parentId, ItemMenu saved, boolean hadRecipeBeforeSave,
+                                          RedirectAttributes redirectAttributes) {
+        if (hadRecipeBeforeSave || Boolean.TRUE.equals(saved.getIsCombo())) {
+            return;
+        }
+        if (itemMenuService.getRecipe(parentId).isEmpty()) {
+            return;
+        }
+        int variantsWithoutRecipe = itemMenuService.countSizeVariantsWithoutRecipe(parentId);
+        if (variantsWithoutRecipe == 0) {
+            return;
+        }
+        redirectAttributes.addFlashAttribute("offerRecipeToSizeVariants", variantsWithoutRecipe);
+        redirectAttributes.addFlashAttribute("offerRecipeToSizeVariantsItemId", parentId);
+        redirectAttributes.addFlashAttribute("offerRecipeToSizeVariantsItemName", saved.getName());
+        log.info("Parent '{}' (ID: {}) got its first recipe: offering to copy it to {} variant(s)",
+                saved.getName(), parentId, variantsWithoutRecipe);
+    }
+
+    /**
+     * Copy a parent's recipe onto the size variants that have none (AJAX).
+     *
+     * <p>Offered from the item list right after a parent saved its first recipe. Variants that
+     * already have a recipe are skipped, and the copies are independent from then on.</p>
+     */
+    @PostMapping("/{id}/recipe/propagate-to-sizes")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> propagateRecipeToSizeVariants(@PathVariable Long id) {
+        log.info("Copying the recipe of menu item ID {} to its size variants without one", id);
+        Map<String, Object> response = new HashMap<>();
+        try {
+            int copied = itemMenuService.propagateRecipeToSizeVariants(id);
+            response.put("success", true);
+            response.put("copied", copied);
+            response.put("message", copied == 1
+                    ? "La receta se copió a 1 variante que no tenía la suya."
+                    : "La receta se copió a " + copied + " variantes que no tenían la suya.");
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            log.error("Validation error copying the recipe to the size variants: {}", e.getMessage());
+            response.put("success", false);
+            response.put("error", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        } catch (Exception e) {
+            log.error("Error copying the recipe to the size variants: {}", e.getMessage());
+            response.put("success", false);
+            response.put("error", "No se pudo copiar la receta: " + e.getMessage());
+            return ResponseEntity.internalServerError().body(response);
+        }
     }
 
     /**
@@ -1979,17 +2084,22 @@ public class ItemMenuController {
     public ResponseEntity<Map<String, Object>> addSizeItem(
             @PathVariable Long id,
             @RequestParam("sizeName") String sizeName,
-            @RequestParam("price") java.math.BigDecimal price) {
-        log.info("Adding size variant '{}' to item ID: {}", sizeName, id);
+            @RequestParam("price") java.math.BigDecimal price,
+            // The form asks whether the variant adopts the parent's recipe. Defaults to true so a
+            // form left open from before the question existed keeps the behaviour it used to have.
+            @RequestParam(value = "adoptRecipe", required = false, defaultValue = "true") boolean adoptRecipe) {
+        log.info("Adding size variant '{}' to item ID: {} (adopt parent recipe: {})", sizeName, id, adoptRecipe);
         Map<String, Object> response = new HashMap<>();
         try {
-            ItemMenu child = itemMenuService.addSizeItem(id, sizeName, price);
+            ItemMenu child = itemMenuService.addSizeItem(id, sizeName, price, adoptRecipe);
             response.put("success", true);
             response.put("message", "Tamaño '" + sizeName + "' agregado exitosamente");
             response.put("id", child.getIdItemMenu());
             response.put("name", child.getName());
             response.put("sizeName", child.getSizeName());
             response.put("price", child.getPrice());
+            response.put("recipeAdopted", Boolean.TRUE.equals(child.getRequiresIngredients()));
+            response.put("recipeIngredients", itemMenuService.getRecipe(child.getIdItemMenu()).size());
             return ResponseEntity.ok(response);
         } catch (IllegalArgumentException e) {
             log.error("Validation error adding size item: {}", e.getMessage());
@@ -2103,17 +2213,23 @@ public class ItemMenuController {
     public ResponseEntity<Map<String, Object>> linkExistingItemAsSize(
             @PathVariable Long id,
             @RequestParam("childId") Long childId,
-            @RequestParam("sizeName") String sizeName) {
-        log.info("Linking item ID: {} as size variant of parent ID: {} with sizeName='{}'", childId, id, sizeName);
+            @RequestParam("sizeName") String sizeName,
+            // Defaults to false: linking used to never touch the recipe, so an old request keeps
+            // that behaviour and only the form's explicit answer copies anything.
+            @RequestParam(value = "adoptRecipe", required = false, defaultValue = "false") boolean adoptRecipe) {
+        log.info("Linking item ID: {} as size variant of parent ID: {} with sizeName='{}' (adopt parent recipe: {})",
+                childId, id, sizeName, adoptRecipe);
         Map<String, Object> response = new HashMap<>();
         try {
-            ItemMenu linked = itemMenuService.linkExistingItemAsSize(id, childId, sizeName);
+            ItemMenu linked = itemMenuService.linkExistingItemAsSize(id, childId, sizeName, adoptRecipe);
             response.put("success", true);
             response.put("message", "Item vinculado como tamaño '" + sizeName + "' exitosamente.");
             response.put("id", linked.getIdItemMenu());
             response.put("sizeName", linked.getSizeName());
             response.put("name", linked.getName());
             response.put("price", linked.getPrice());
+            response.put("recipeAdopted", Boolean.TRUE.equals(linked.getRequiresIngredients()));
+            response.put("recipeIngredients", itemMenuService.getRecipe(linked.getIdItemMenu()).size());
             return ResponseEntity.ok(response);
         } catch (IllegalArgumentException e) {
             log.error("Validation error linking size item: {}", e.getMessage());

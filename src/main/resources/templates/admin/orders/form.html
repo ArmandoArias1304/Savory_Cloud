@@ -95,7 +95,7 @@
       <!-- HEADER -->
       <div class="mb-6 sm:mb-8">
         <a
-          th:href="@{/admin/orders}"
+          th:href="${volverA != null ? volverA : '/admin/orders'}"
           class="inline-flex items-center gap-2 text-primary hover:text-primary-dark font-semibold mb-4 transition-colors"
         >
           <span class="material-symbols-outlined">arrow_back</span>
@@ -416,7 +416,7 @@
               ></span>
             </button>
             <a
-              th:href="@{/admin/orders}"
+              th:href="${volverA != null ? volverA : '/admin/orders'}"
               class="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-8 py-3 rounded-xl bg-gray-600 dark:bg-gray-700 hover:bg-gray-700 dark:hover:bg-gray-600 text-white font-semibold whitespace-nowrap transition-all shadow-md hover:shadow-lg"
             >
               <span class="material-symbols-outlined">close</span>

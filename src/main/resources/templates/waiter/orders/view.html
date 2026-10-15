@@ -84,7 +84,7 @@
       <!-- HEADER -->
       <div class="mb-6 sm:mb-8 no-print">
         <a
-          th:href="@{/waiter/orders}"
+          th:href="${volverA != null ? volverA : '/waiter/orders'}"
           class="inline-flex items-center gap-2 text-primary hover:text-primary-dark font-semibold mb-4 transition-colors"
         >
           <span class="material-symbols-outlined">arrow_back</span>
@@ -1057,7 +1057,7 @@
 
               <!-- Back to List -->
               <a
-                th:href="@{/waiter/orders}"
+                th:href="${volverA != null ? volverA : '/waiter/orders'}"
                 class="flex items-center justify-center gap-2 w-full px-4 py-3 rounded-xl bg-gradient-to-r from-primary to-primary-dark text-white font-semibold hover:shadow-lg hover:shadow-primary/30 transition-all shadow-md"
               >
                 <span class="material-symbols-outlined">list</span>

@@ -371,12 +371,19 @@ public interface ItemMenuService {
 
     /**
      * Add a size variant to a parent item.
-     * Copies configuration (category, preparation flags, schedule, complements, recipe) from parent.
+     * Copies configuration (category, preparation flags, schedule, complements) from parent.
      * Sets item name to "parentName sizeName", sizeName field, parentItem reference, and the given price.
      * Validates that parent + existing children + new child does not exceed 10.
+     *
+     * <p>The recipe is NOT copied on its own: the form asks whether the variant adopts the parent's
+     * one, because variants often share it but sometimes carry their own quantities.</p>
+     *
+     * @param adoptParentRecipe when true and the parent has a recipe, the variant gets an independent
+     *        copy of it; when false the variant is created with no recipe and marked as not requiring
+     *        ingredients, so no stock is discounted for it.
      * @return the newly created child ItemMenu
      */
-    ItemMenu addSizeItem(Long parentId, String sizeName, java.math.BigDecimal price);
+    ItemMenu addSizeItem(Long parentId, String sizeName, java.math.BigDecimal price, boolean adoptParentRecipe);
 
     /**
      * Detach a size variant from its parent.
@@ -400,7 +407,41 @@ public interface ItemMenuService {
      * Link an existing free item as a size variant of the given parent.
      * Sets parentItem, sizeName, and updates the child's name to "parentName sizeName".
      * Validates: child has no parent, parent has fewer than 9 children, names are unique.
+     *
+     * @param adoptParentRecipe when true and the parent has a recipe, the linked item's own recipe
+     *        is replaced by an independent copy of the parent's; when false the linked item keeps
+     *        the recipe it already had, and if it has none it is left marked as not requiring
+     *        ingredients.
      * @return the updated child ItemMenu
      */
-    ItemMenu linkExistingItemAsSize(Long parentId, Long childId, String sizeName);
+    ItemMenu linkExistingItemAsSize(Long parentId, Long childId, String sizeName, boolean adoptParentRecipe);
+
+    /**
+     * Give a size variant its own copy of the recipe its parent already has ("adoptar la receta").
+     * Used from the variant's form when the variant has no recipe yet and its parent does.
+     * Refuses to touch a variant that already has a recipe of its own, so it can never overwrite
+     * one by accident.
+     * @return the updated child ItemMenu
+     */
+    ItemMenu adoptParentRecipe(Long childId);
+
+    /**
+     * Count the size variants of a parent that have no recipe of their own.
+     *
+     * <p>These are exactly the variants that a propagation would touch: a variant that already has
+     * its own copy (its own quantities, or one adopted earlier) is not counted, so copying can never
+     * overwrite adjusted work by surprise.</p>
+     */
+    int countSizeVariantsWithoutRecipe(Long parentId);
+
+    /**
+     * Copy the parent's recipe onto every size variant that still has none of its own.
+     *
+     * <p>Manual, on-demand synchronisation: the parent's recipe is written once and then lives
+     * independently in each variant. Variants that already have a recipe are left untouched.</p>
+     *
+     * @return how many variants received a copy of the parent's recipe
+     * @throws IllegalArgumentException when the parent does not exist or has no recipe to copy
+     */
+    int propagateRecipeToSizeVariants(Long parentId);
 }

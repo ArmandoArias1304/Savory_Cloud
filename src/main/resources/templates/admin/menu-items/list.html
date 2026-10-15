@@ -190,6 +190,20 @@
             ></span>
           </div>
 
+          <!--
+            Se acaba de estrenar la receta de un item padre que tiene variantes sin receta propia:
+            el servidor deja aquí los datos reales (cuántas variantes y de qué item) y el script del
+            final de la página ofrece copiarla. Si el admin dice que no, todo queda como está.
+          -->
+          <div
+            th:if="${offerRecipeToSizeVariants != null}"
+            id="offerRecipeToSizeVariants"
+            class="hidden"
+            th:data-item-id="${offerRecipeToSizeVariantsItemId}"
+            th:data-item-name="${offerRecipeToSizeVariantsItemName}"
+            th:data-variants="${offerRecipeToSizeVariants}"
+          ></div>
+
           <!-- STATS -->
           <div
             class="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8"
@@ -1531,6 +1545,82 @@
           window.open(previewUrl(), "_blank");
         });
       });
+    </script>
+
+    <!-- Copia de la receta del padre a sus variantes sin receta (a petición, tras guardar) -->
+    <script>
+      (function () {
+        const offer = document.getElementById("offerRecipeToSizeVariants");
+        if (!offer) return;
+
+        const itemId = offer.dataset.itemId;
+        const itemName = offer.dataset.itemName;
+        const variants = parseInt(offer.dataset.variants, 10) || 0;
+        if (!itemId || variants === 0) return;
+
+        const isDarkMode = document.documentElement.classList.contains("dark");
+        const theme = {
+          confirmButtonColor: "#3085d6",
+          cancelButtonColor: "#6b7280",
+          background: isDarkMode ? "#1F2937" : "#FFFFFF",
+          color: isDarkMode ? "#F3F4F6" : "#1F2937",
+          customClass: {
+            popup: "dark:bg-gray-800 dark:text-white",
+            title: "dark:text-white",
+            htmlContainer: "dark:text-gray-300",
+          },
+        };
+
+        const variantsLabel = variants === 1 ? "1 variante" : variants + " variantes";
+
+        Swal.fire({
+          icon: "question",
+          title: "¿Copiar la receta a las variantes?",
+          html:
+            `El item <b>${itemName}</b> ya tiene receta y hay <b>${variantsLabel}</b> que no tienen la suya.<br>` +
+            `<small>Se copia una sola vez: después cada variante conserva su propia receta. ` +
+            `Las variantes que ya tienen una no se tocan.</small>`,
+          showCancelButton: true,
+          confirmButtonText: "Sí, copiar a las variantes",
+          cancelButtonText: "No, solo el padre",
+          ...theme,
+        }).then(async (result) => {
+          if (!result.isConfirmed) return;
+
+          try {
+            const response = await fetch(
+              `/admin/menu-items/${itemId}/recipe/propagate-to-sizes`,
+              { method: "POST" }
+            );
+            const data = await response.json();
+
+            if (response.ok && data.success) {
+              Swal.fire({
+                icon: "success",
+                title: "Receta copiada",
+                text: data.message,
+                timer: 2600,
+                showConfirmButton: false,
+                ...theme,
+              });
+            } else {
+              Swal.fire({
+                icon: "error",
+                title: "No se pudo copiar",
+                text: data.error || "Intenta de nuevo.",
+                ...theme,
+              });
+            }
+          } catch (error) {
+            Swal.fire({
+              icon: "error",
+              title: "Error de red",
+              text: "No se pudo copiar la receta a las variantes.",
+              ...theme,
+            });
+          }
+        });
+      })();
     </script>
 
     <!-- Script del Sistema de Temas -->

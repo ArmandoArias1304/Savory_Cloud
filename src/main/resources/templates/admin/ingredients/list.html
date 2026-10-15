@@ -95,6 +95,10 @@
       <span class="material-symbols-outlined text-red-600 dark:text-red-400">error</span>
       <span class="text-red-800 dark:text-red-200" th:text="${errorMessage}"></span>
     </div>
+    <div th:if="${warningMessage}" class="mb-6 p-4 bg-amber-100 dark:bg-amber-900 border border-amber-200 dark:border-amber-800 rounded-xl flex items-center gap-3">
+      <span class="material-symbols-outlined text-amber-600 dark:text-amber-400">warning</span>
+      <span class="text-amber-800 dark:text-amber-200" th:text="${warningMessage}"></span>
+    </div>
 
     <!-- STATS -->
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
@@ -770,8 +774,25 @@
 
         if (totalItemsIngredients === 0) return;
 
+        // La página viaja en la URL (?page=N) para poder volver a ella tras guardar un cambio
+        const pageFromUrl = parseInt(new URLSearchParams(window.location.search).get("page"), 10);
+        if (Number.isFinite(pageFromUrl) && pageFromUrl > 0) {
+          currentPageIngredients = Math.min(pageFromUrl, Math.max(1, totalPagesIngredients));
+        }
+
         updateIngredientsPagination();
         updateIngredientsPageNumbers();
+      }
+
+      /** Refleja la página actual en la URL sin recargar, para que el navegador la recuerde. */
+      function syncIngredientsPageToUrl() {
+        const url = new URL(window.location.href);
+        if (currentPageIngredients > 1) {
+          url.searchParams.set("page", currentPageIngredients);
+        } else {
+          url.searchParams.delete("page");
+        }
+        window.history.replaceState({}, "", url);
       }
 
       function updateIngredientsPagination() {
@@ -809,6 +830,7 @@
             currentPageIngredients = i;
             updateIngredientsPagination();
             updateIngredientsPageNumbers();
+            syncIngredientsPageToUrl();
           };
           pageNumbersContainer.appendChild(pageBtn);
         }
@@ -819,6 +841,7 @@
           currentPageIngredients--;
           updateIngredientsPagination();
           updateIngredientsPageNumbers();
+          syncIngredientsPageToUrl();
         }
       });
 
@@ -827,6 +850,7 @@
           currentPageIngredients++;
           updateIngredientsPagination();
           updateIngredientsPageNumbers();
+          syncIngredientsPageToUrl();
         }
       });
 

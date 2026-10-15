@@ -5,6 +5,7 @@ import com.aatechsolutions.elgransazon.domain.entity.Order;
 import com.aatechsolutions.elgransazon.domain.entity.OrderStatus;
 import com.aatechsolutions.elgransazon.domain.entity.OrderType;
 import com.aatechsolutions.elgransazon.domain.entity.Payment;
+import com.aatechsolutions.elgransazon.domain.entity.PaymentTender;
 import com.aatechsolutions.elgransazon.domain.entity.PaymentMethodType;
 import com.aatechsolutions.elgransazon.presentation.controller.SalesController;
 import org.junit.jupiter.api.Test;
@@ -32,6 +33,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -280,5 +282,70 @@ class SalesListInvoiceLinkRenderTest {
         assertTrue(html.contains(BUTTON),
                 "a split bill with an account without link should still offer the action");
         assertTrue(html.contains("data-order-id=\"12\""), "the button must carry the sale id");
+    }
+
+    /**
+     * Amounts that cannot collide with a Tailwind colour class (300/400/500/600 are all over the
+     * markup), so "777" may only ever come from the sale total the filtered view must not show.
+     */
+    private static final String SALE_TOTAL = "777.77";
+    private static final String DEBIT_PORTION = "333.33";
+    private static final String CREDIT_PORTION = "444.44";
+
+    private Order mixedSale(long id, String orderNumber) {
+        Order mixed = sale(id, orderNumber);
+        mixed.setTotal(new BigDecimal(SALE_TOTAL));
+        mixed.setTip(BigDecimal.ZERO);
+        mixed.getPaymentTenders().add(PaymentTender.builder()
+                .order(mixed)
+                .payment(null)
+                .paymentMethod(PaymentMethodType.CREDIT_CARD)
+                .amount(new BigDecimal(CREDIT_PORTION))
+                .build());
+        mixed.getPaymentTenders().add(PaymentTender.builder()
+                .order(mixed)
+                .payment(null)
+                .paymentMethod(PaymentMethodType.DEBIT_CARD)
+                .amount(new BigDecimal(DEBIT_PORTION))
+                .build());
+        return mixed;
+    }
+
+    @Test
+    void paymentMethodFilterShowsOnlyTheFilteredPortion() {
+        AbstractContext ctx = webContext();
+        Order mixed = mixedSale(30L, "ORD-20260924-030");
+        baseModel(ctx, List.of(mixed), true);
+        // What the controller sets when a payment method is selected.
+        ctx.setVariable("selectedPaymentMethod", PaymentMethodType.DEBIT_CARD);
+        ctx.setVariable("methodFilterActive", true);
+        ctx.setVariable("methodAmounts", Map.of(30L, new BigDecimal(DEBIT_PORTION)));
+        ctx.setVariable("totalSales", new BigDecimal(DEBIT_PORTION));
+        ctx.setVariable("totalSalesWithoutTip", new BigDecimal(DEBIT_PORTION));
+        ctx.setVariable("totalTips", BigDecimal.ZERO);
+
+        String html = templateEngine.process("admin/sales/list", ctx);
+
+        assertTrue(html.contains("Monto del método"),
+                "the money column must say it holds only the filtered method");
+        assertTrue(html.contains("Las propinas no se asignan a un método de pago"),
+                "the notice must explain why tips are out of the filter");
+        assertTrue(html.contains(DEBIT_PORTION) && html.contains(CREDIT_PORTION),
+                "a mixed row must show how much went on each method");
+        assertFalse(html.contains(SALE_TOTAL),
+                "the sale total must never be reported as the amount of the filtered method");
+    }
+
+    @Test
+    void withoutMethodFilterTheRowStillShowsTheSaleTotal() {
+        AbstractContext ctx = webContext();
+        baseModel(ctx, List.of(mixedSale(31L, "ORD-20260924-031")), true);
+
+        String html = templateEngine.process("admin/sales/list", ctx);
+
+        assertFalse(html.contains("Monto del método"),
+                "the relabelled column and the notice only apply while filtering by method");
+        assertTrue(html.contains(SALE_TOTAL),
+                "without a filter the row keeps showing the whole sale amount");
     }
 }

@@ -324,9 +324,11 @@ public class IngredientController {
         log.info("Updating ingredient with id: {} and categoryId: {}", id, categoryId);
 
         // Validar que el ingrediente esté activo antes de actualizarlo
+        String previousUnit = null;
         try {
             Ingredient existingIngredient = ingredientService.findById(id)
                     .orElseThrow(() -> new IllegalArgumentException("Ingrediente no encontrado"));
+            previousUnit = existingIngredient.getUnitOfMeasure();
             
             if (!existingIngredient.getActive()) {
                 log.warn("Attempted to update inactive ingredient with id: {}", id);
@@ -373,6 +375,7 @@ public class IngredientController {
         try {
             ingredientService.update(id, ingredient);
             redirectAttributes.addFlashAttribute("successMessage", "Ingrediente actualizado exitosamente");
+            addUnitChangeWarning(redirectAttributes, id, previousUnit, ingredient.getUnitOfMeasure());
             return "redirect:/admin/ingredients";
         } catch (DataAccessException e) {
             // JPA wrapped validation errors (from @PrePersist/@PreUpdate)
@@ -399,6 +402,32 @@ public class IngredientController {
             model.addAttribute("allCategories", categoryService.findAllActive());
             return "admin/ingredients/form";
         }
+    }
+
+    /**
+     * Avisa al usuario cuando cambió la unidad de medida del ingrediente: las recetas que lo usan
+     * se re-etiquetan con la unidad nueva, pero sus cantidades NO se convierten (no existe un factor
+     * de conversión), así que hay que revisarlas a mano.
+     */
+    private void addUnitChangeWarning(RedirectAttributes redirectAttributes, Long ingredientId,
+                                      String previousUnit, String newUnit) {
+        boolean unitChanged = previousUnit != null
+                ? !previousUnit.equalsIgnoreCase(newUnit)
+                : newUnit != null;
+        if (!unitChanged) {
+            return;
+        }
+
+        int recipeUsages = ingredientService.countRecipeUsages(ingredientId);
+        if (recipeUsages <= 0) {
+            return;
+        }
+
+        redirectAttributes.addFlashAttribute("warningMessage",
+                "Cambiaste la unidad de medida. Se actualizó en " + recipeUsages
+                + (recipeUsages == 1 ? " receta" : " recetas")
+                + " que usan este ingrediente, pero las cantidades no se convierten: "
+                + "revisa cada receta y ajusta la cantidad a la nueva unidad.");
     }
 
     /**
