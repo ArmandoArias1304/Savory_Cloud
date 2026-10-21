@@ -31,6 +31,7 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -139,6 +140,46 @@ class SystemConfigurationTicketPreviewRenderTest {
                 "the QR / no QR switch should render");
         assertTrue(html.contains("data-system-name=\"Test\""),
                 "the system branding line comes from the page model");
+    }
+
+    @Test
+    void qrDownloadsOfferACustomizableCard() {
+        String html = render(configuration(null, null, null, 50));
+
+        assertTrue(html.contains("id=\"qrDesignBg\"") && html.contains("id=\"qrDesignText\""),
+                "the QR download must let the admin pick colors");
+        assertTrue(html.contains("id=\"qrDesignFont\"") && html.contains("Playfair Display")
+                        && html.contains("Montserrat") && html.contains("Lora"),
+                "the typography selector must offer the design fonts");
+        assertTrue(html.contains("id=\"qr-landing-card\"") && html.contains("id=\"qr-menu-card\""),
+                "each QR must render on a design canvas");
+        assertTrue(html.contains("width=\"1000\"") && html.contains("height=\"1500\""),
+                "the downloaded card must use the high-resolution canvas");
+        assertTrue(html.contains("by Savory Cloud"),
+                "the downloaded card must credit Savory Cloud");
+        assertTrue(html.contains("data-restaurant-name=\"El Gran Sazón\""),
+                "the card takes the restaurant name from this company's configuration");
+        assertFalse(html.contains("data-restaurant-logo="),
+                "without a configured logo the canvas falls back to a monogram");
+        assertTrue(html.contains("data-landing-url=\"/\"")
+                        && html.contains("data-menu-url=\"/home/menu\""),
+                "the QR must point at the real landing and public menu paths");
+        assertTrue(html.contains("downloadQR('qr-landing-card'")
+                        && html.contains("downloadQR('qr-menu-card'"),
+                "both download buttons must export the designed canvas");
+    }
+
+    @Test
+    void qrCardUsesTheRestaurantLogoNotThePlatformLogo() {
+        String html = render(configuration(null, null,
+                "https://cdn.example.com/restaurant-logo.webp", 50));
+
+        assertTrue(html.contains("data-restaurant-logo=\"/admin/system-configuration/qr-logo\""),
+                "the canvas loads the restricted same-origin proxy for the restaurant logo");
+        assertTrue(html.contains("data-restaurant-name=\"El Gran Sazón\""),
+                "the headline is the restaurant name, not the SavoryCloud platform name");
+        assertTrue(html.contains("by Savory Cloud"),
+                "Savory Cloud stays as the footer credit, separate from the restaurant logo");
     }
 
     @Test

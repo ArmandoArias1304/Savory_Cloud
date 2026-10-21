@@ -16,6 +16,7 @@ import com.itextpdf.layout.Document;
 import com.itextpdf.layout.borders.Border;
 import com.itextpdf.layout.borders.SolidBorder;
 import com.itextpdf.layout.element.*;
+import com.itextpdf.layout.properties.AreaBreakType;
 import com.itextpdf.layout.properties.TextAlignment;
 import com.itextpdf.layout.properties.UnitValue;
 import com.itextpdf.layout.properties.VerticalAlignment;
@@ -51,6 +52,10 @@ public class ReportPdfService {
     private static final DeviceRgb LIGHT_GRAY = new DeviceRgb(249, 250, 251);
     private static final DeviceRgb WHITE = new DeviceRgb(255, 255, 255);
 
+    /** Heading shared by the products annex and the executive closing block. */
+    private static final String INTERNAL_PRODUCTION_TITLE =
+            "Producción Interna (platillos consumo propio o buffet)";
+
     /**
      * Generate Executive Report (All-in-one summary)
      */
@@ -65,7 +70,8 @@ public class ReportPdfService {
             Map<String, Long> ordersByPaymentMethod,
             java.util.List<Map<String, Object>> topSellingItems,
             java.util.List<Map<String, Object>> topSellingComplements,
-            BigDecimal totalComplementsSales) throws Exception {
+            BigDecimal totalComplementsSales,
+            java.util.List<ItemPreparation> internalPreparations) throws Exception {
 
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         PdfWriter writer = new PdfWriter(baos);
@@ -308,6 +314,9 @@ public class ReportPdfService {
              */
         }
 
+        // Internal production: informational only, never part of the sales totals above.
+        addInternalProductionSection(document, boldFont, regularFont, internalPreparations);
+
         // Footer
         addFooter(document, regularFont);
 
@@ -324,7 +333,8 @@ public class ReportPdfService {
             String endDate,
             java.util.List<Map<String, Object>> topSellingItems,
             java.util.List<Map<String, Object>> allComplements,
-            BigDecimal totalComplementsSales) throws Exception {
+            BigDecimal totalComplementsSales,
+            java.util.List<ItemPreparation> internalPreparations) throws Exception {
 
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         PdfWriter writer = new PdfWriter(baos);
@@ -450,6 +460,13 @@ public class ReportPdfService {
                     .setTextAlignment(TextAlignment.RIGHT)
                     .setMarginTop(6);
             document.add(complementsLegend);
+        }
+
+        // Internal production: informational only, never part of the sales totals above. It gets
+        // its own page so the annex never lands split in half at the foot of the sales pages.
+        if (!summarizeInternalProduction(internalPreparations).isEmpty()) {
+            document.add(new AreaBreak(AreaBreakType.NEXT_PAGE));
+            addInternalProductionSection(document, boldFont, regularFont, internalPreparations);
         }
 
         // Footer
@@ -1258,6 +1275,115 @@ public class ReportPdfService {
                 .orElse(BigDecimal.ZERO);
     }
 
+    // ========== Internal production (never sold) ==========
+
+    /**
+     * Portions and batches grouped by dish. Cancelled batches do not count: they were undone and
+     * their ingredients returned to stock, so they were never really produced.
+     */
+    private java.util.List<Map<String, Object>> summarizeInternalProduction(
+            java.util.List<ItemPreparation> preparations) {
+        Map<Long, Map<String, Object>> byDish = new LinkedHashMap<>();
+        if (preparations == null) {
+            return new ArrayList<>();
+        }
+        for (ItemPreparation batch : preparations) {
+            if (batch == null || !batch.isPrepared()) {
+                continue;
+            }
+            String name = batch.getItemName();
+            String category = batch.getItemMenu() != null && batch.getItemMenu().getCategory() != null
+                    ? batch.getItemMenu().getCategory().getName()
+                    : "Sin categoría";
+            Long key = batch.getItemMenu() != null ? batch.getItemMenu().getIdItemMenu() : null;
+            if (key == null) {
+                key = (long) name.hashCode();
+            }
+            Map<String, Object> row = byDish.get(key);
+            if (row == null) {
+                row = new LinkedHashMap<>();
+                row.put("name", name);
+                row.put("category", category);
+                row.put("portions", 0);
+                row.put("batches", 0);
+                byDish.put(key, row);
+            }
+            row.put("portions", (Integer) row.get("portions") + batch.getActiveQuantity());
+            row.put("batches", (Integer) row.get("batches") + 1);
+        }
+        return byDish.values().stream()
+                .sorted((a, b) -> Integer.compare((Integer) b.get("portions"), (Integer) a.get("portions")))
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Internal production block, printed ONLY as extra information.
+     *
+     * <p>These dishes are never sold and carry no price, so the block never feeds total sales,
+     * ticket promedio, category totals or the product percentages. It exists to answer "how much
+     * was cooked" for the buffet or the staff meal.</p>
+     *
+     * <p>Both reports print the summary and the dish-by-dish table: "how much was cooked" is
+     * answered by the table, and the summary alone left the executive report unable to say which
+     * dishes were behind the total.</p>
+     */
+    private void addInternalProductionSection(Document document, PdfFont boldFont, PdfFont regularFont,
+                                             java.util.List<ItemPreparation> preparations)
+            throws Exception {
+        java.util.List<Map<String, Object>> rows = summarizeInternalProduction(preparations);
+        if (rows.isEmpty()) {
+            return;
+        }
+
+        int totalPortions = rows.stream().mapToInt(row -> (Integer) row.get("portions")).sum();
+        int totalBatches = rows.stream().mapToInt(row -> (Integer) row.get("batches")).sum();
+
+        // The whole block travels together: a summary stranded at the foot of a page, with the
+        // table on the next one, reads like a report from a different period.
+        Table titleTable = addSectionTitle(document, boldFont, INTERNAL_PRODUCTION_TITLE);
+        titleTable.setKeepWithNext(true);
+
+        Table summaryTable = new Table(new float[] { 1, 1, 1 });
+        summaryTable.setWidth(UnitValue.createPercentValue(100));
+        summaryTable.setKeepWithNext(true);
+        addSummaryCell(summaryTable, boldFont, regularFont, "Porciones Producidas",
+                String.valueOf(totalPortions));
+        addSummaryCell(summaryTable, boldFont, regularFont, "Platillos Diferentes",
+                String.valueOf(rows.size()));
+        addSummaryCell(summaryTable, boldFont, regularFont, "Lotes Registrados",
+                String.valueOf(totalBatches));
+        document.add(summaryTable);
+        document.add(new Paragraph("\n"));
+
+        Table table = new Table(new float[] { 0.5f, 3, 2, 1.2f, 1 });
+        table.setWidth(UnitValue.createPercentValue(100));
+        table.setKeepWithNext(true);
+        addTableHeader(table, boldFont, "#", "Platillo", "Categoría", "Porciones", "Lotes");
+
+        int rank = 1;
+        for (Map<String, Object> row : rows) {
+            addTableRow(table, regularFont,
+                    String.valueOf(rank++),
+                    row.get("name").toString(),
+                    row.get("category").toString(),
+                    String.valueOf(row.get("portions")),
+                    String.valueOf(row.get("batches")));
+        }
+        document.add(table);
+        document.add(new Paragraph("\n"));
+
+        Paragraph legend = new Paragraph(
+                "Estos platillos se producen para consumo propio o buffet y no se venden: las " +
+                "cantidades son informativas y no forman parte de las ventas del periodo.")
+                .setFont(regularFont)
+                .setFontSize(8)
+                .setFontColor(GRAY_COLOR)
+                .setItalic()
+                .setMarginTop(4);
+        document.add(legend);
+        document.add(new Paragraph("\n"));
+    }
+
     private void addHeader(Document document, PdfFont boldFont, PdfFont regularFont, String title) {
         SystemConfiguration config = systemConfigurationService.getConfiguration();
 
@@ -1328,7 +1454,12 @@ public class ReportPdfService {
         document.add(dateTable);
     }
 
-    private void addSectionTitle(Document document, PdfFont boldFont, String title) {
+    /**
+     * Section title with the green accent bar.
+     *
+     * @return the title block, so a caller can keep it glued to what follows ({@code setKeepWithNext})
+     */
+    private Table addSectionTitle(Document document, PdfFont boldFont, String title) {
         // Section title with left border accent
         Table sectionTable = new Table(new float[] { 0.05f, 0.95f });
         sectionTable.setWidth(UnitValue.createPercentValue(100));
@@ -1353,7 +1484,9 @@ public class ReportPdfService {
         sectionTable.addCell(accentCell);
         sectionTable.addCell(titleCell);
 
-        document.add(sectionTable.setMarginTop(10).setMarginBottom(10));
+        Table titleTable = sectionTable.setMarginTop(10).setMarginBottom(10);
+        document.add(titleTable);
+        return titleTable;
     }
 
     private void addSummaryCell(Table table, PdfFont boldFont, PdfFont regularFont, String label, String value) {

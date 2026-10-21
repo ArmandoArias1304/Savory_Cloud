@@ -58,6 +58,33 @@ public class IngredientStockHistory implements Serializable {
     @JoinColumn(name = "added_by")
     private Employee addedBy; // Quien agregó el stock
 
+    // ========== Correcciones ==========
+
+    @Column(name = "edited_at")
+    private LocalDateTime editedAt; // Última corrección de cantidad/costo
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "edited_by")
+    private Employee editedBy;
+
+    /**
+     * Una entrada anulada ya no cuenta para el stock ni para los gastos, pero se conserva
+     * para saber quién la anuló y por qué. {@code null} = entrada vigente.
+     */
+    @Column(name = "voided_at")
+    private LocalDateTime voidedAt;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "voided_by")
+    private Employee voidedBy;
+
+    @Column(name = "void_reason", length = 255)
+    private String voidReason;
+
+    public boolean isVoided() {
+        return voidedAt != null;
+    }
+
     @PrePersist
     @PreUpdate
     protected void calculateTotalCost() {

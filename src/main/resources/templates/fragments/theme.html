@@ -532,6 +532,9 @@
           };
         })();
       </script>
+
+      <!-- Modal de novedades: se incluye una sola vez en todas las páginas -->
+      <div th:replace="~{fragments/system-update :: systemUpdateModal}"></div>
         </th:block>
     <!-- ========================================
          BOTÓN DE TOGGLE DE TEMA

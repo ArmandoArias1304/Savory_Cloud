@@ -360,6 +360,7 @@
                   th:data-schedule-status="${item.scheduleStatus}"
                   th:data-schedule-info="${item.scheduleInfo}"
                   th:data-is-combo="${item.isCombo != null && item.isCombo}"
+                  th:data-prep-minutes="${item.effectivePreparationTimeMinutes != null ? item.effectivePreparationTimeMinutes : ''}"
                   th:data-dine-in-only="${item.dineInOnly != null && item.dineInOnly}"
                   th:data-has-sizes="${sizeItemsDto != null and sizeItemsDto.containsKey(item.idItemMenu)}"
                   th:data-size-name="${item.sizeName}"
@@ -541,6 +542,26 @@
               >
                 <span class="text-gray-900 dark:text-white">Total</span>
                 <span id="cartTotal" class="text-primary text-2xl">$0.00</span>
+              </div>
+
+              <!-- Tiempo aproximado de preparación de la comanda -->
+              <div
+                id="cartPrepTimeRow"
+                style="display: none"
+                class="flex-col gap-0.5 rounded-lg bg-indigo-50 p-3 text-sm font-bold text-indigo-700 dark:bg-indigo-900/20 dark:text-indigo-300"
+              >
+                <div class="flex items-center justify-between gap-2">
+                  <span class="flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-base">timer</span>
+                    Tiempo aprox. de preparación
+                  </span>
+                  <span id="cartPrepTime">≈ 0 min</span>
+                </div>
+                <span
+                  class="text-[11px] font-normal italic text-indigo-600/80 dark:text-indigo-300/80"
+                >
+                  Es un aproximado: puede durar más o durar menos.
+                </span>
               </div>
 
               <!-- Nota informativa de envío (incluido en subtotal e IVA) -->
@@ -2565,6 +2586,7 @@
             isCombo: String(chosen.isCombo),
             dineInOnly: String(chosen.dineInOnly),
             hasSizes: 'false',
+            prepMinutes: chosen.preparationTimeMinutes != null ? String(chosen.preparationTimeMinutes) : '',
           }
         };
 
@@ -2609,6 +2631,9 @@
             description: itemDescription,
             image: itemImage,
             isCombo: isCombo,
+            // Tiempo promedio de preparación del platillo (0 si no está configurado):
+            // el carrito lo suma para avisar el estimado antes de mandar la comanda.
+            prepMinutes: parseInt(card.dataset.prepMinutes || "", 10) || 0,
           };
 
           // If combo, open combo-specific modal
@@ -3345,6 +3370,7 @@
           promotionLabel: promotionLabel,
           complements: cartItemComplements,
           complementsTotal: complementsTotal,
+          prepMinutes: currentItem.prepMinutes || 0,
         };
 
         cart.push(cartItem);
@@ -3475,6 +3501,38 @@
           totalConEnvio === 0
             ? "GRATIS"
             : `$${round2(totalConEnvio).toFixed(2)}`;
+
+        // Tiempo aproximado de preparación: suma de los tiempos de los platillos
+        // del carrito. Cada platillo cuenta una vez (aunque se pidan 2), porque se
+        // preparan en paralelo. Los platillos sin tiempo configurado no suman.
+        const prepByItem = new Map();
+        cart.forEach((item) => {
+          const minutes = Number(item.prepMinutes) || 0;
+          const key = item.id != null ? String(item.id) : item.name;
+          if (minutes > 0) prepByItem.set(key, minutes);
+        });
+        let prepTotal = 0;
+        prepByItem.forEach((minutes) => {
+          prepTotal += minutes;
+        });
+        const prepRow = document.getElementById("cartPrepTimeRow");
+        const prepValue = document.getElementById("cartPrepTime");
+        if (prepRow && prepValue) {
+          if (prepTotal > 0) {
+            const prepHours = Math.floor(prepTotal / 60);
+            const prepRest = prepTotal % 60;
+            const prepLabel =
+              prepTotal < 60
+                ? prepTotal + " min"
+                : prepRest === 0
+                  ? prepHours + " h"
+                  : prepHours + " h " + prepRest + " min";
+            prepValue.textContent = "≈ " + prepLabel;
+            prepRow.style.display = "flex";
+          } else {
+            prepRow.style.display = "none";
+          }
+        }
 
         // Actualizar nota informativa de envío (debajo del Total)
         const envioNoteEl = document.getElementById("cartEnvioNote");
@@ -4976,6 +5034,7 @@
           promotionAppliedPrice: promotionAppliedPrice,
           appliedPromotionId: appliedPromotionId,
           promotionLabel: promotionLabel,
+          prepMinutes: currentItem.prepMinutes || 0,
           isCombo: true,
           comboChildren: comboItems.map((ci) => {
             const childData = comboChildSelectedComplements[ci.childItemId] || { specialities: [], sauces: [], regulars: [] };

@@ -41,6 +41,13 @@ public interface GlobalSystemConfigService {
     GlobalSystemConfig updateLogoUrl(String logoUrl);
 
     /**
+     * Update the WhatsApp number that receives shop requests from restaurants.
+     * @param shopWhatsappNumber number with country code, or blank to disable
+     * @return the updated configuration
+     */
+    GlobalSystemConfig updateShopWhatsappNumber(String shopWhatsappNumber);
+
+    /**
      * Check if the global configuration exists.
      * @return true if exists
      */

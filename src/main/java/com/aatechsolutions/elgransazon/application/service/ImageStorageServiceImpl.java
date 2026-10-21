@@ -46,6 +46,9 @@ public class ImageStorageServiceImpl implements ImageStorageService {
     /** Logical folder name reserved for the global system logo. */
     private static final String FOLDER_SYSTEM_LOGO = "system-logo";
 
+    /** Logical folder name for the global shop catalogue photos. */
+    private static final String FOLDER_SHOP_PRODUCTS = "shop-products";
+
     /** Map logical folder names to subpaths used inside the company's virtual folder. */
     private static String mapToSubfolder(String folderType) {
         return switch (folderType) {
@@ -133,6 +136,12 @@ public class ImageStorageServiceImpl implements ImageStorageService {
 
         if (FOLDER_SYSTEM_LOGO.equals(folder)) {
             return GLOBAL_SYSTEM_FOLDER + "/system-logo-" + ts;
+        }
+
+        // Shop products are global (sold by the programmer to every restaurant),
+        // so they do not belong to any company folder.
+        if (FOLDER_SHOP_PRODUCTS.equals(folder)) {
+            return GLOBAL_SYSTEM_FOLDER + "/shop/" + cleanName + "-" + ts;
         }
 
         Company company = CompanyContext.getCurrentCompany();

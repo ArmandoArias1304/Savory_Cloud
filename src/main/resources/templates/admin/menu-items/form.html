@@ -706,6 +706,60 @@
                 </div>
               </div>
 
+              <!-- Tiempo promedio de preparación (opcional) -->
+              <div class="md:col-span-2">
+                <div
+                  class="rounded-xl bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 p-4"
+                >
+                  <div class="flex items-start gap-3">
+                    <span class="material-symbols-outlined text-indigo-600 dark:text-indigo-400"
+                      >timer</span
+                    >
+                    <div class="flex-1">
+                      <label
+                        for="preparationTimeMinutes"
+                        class="text-sm font-semibold text-gray-900 dark:text-white block"
+                      >
+                        ⏱️ Tiempo promedio de preparación (opcional)
+                      </label>
+                      <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                        Minutos que tarda este platillo en estar listo. Se usa para
+                        calcular el <span class="font-semibold">tiempo estimado de la
+                        comanda</span> (la suma de los platillos del pedido) y se muestra
+                        al cliente, al mesero, al cajero, al repartidor y en cocina.
+                        <br />
+                        <span class="font-medium">Déjalo vacío</span> si no quieres
+                        comprometer un tiempo: los platillos sin tiempo simplemente no
+                        suman al estimado. En combos puede quedarse vacío y se usará la
+                        suma de sus platillos.
+                      </p>
+                      <div class="mt-3 flex items-center gap-2">
+                        <input
+                          type="number"
+                          id="preparationTimeMinutes"
+                          name="preparationTimeMinutes"
+                          min="1"
+                          max="600"
+                          step="1"
+                          inputmode="numeric"
+                          placeholder="Ej. 15"
+                          th:value="${itemMenu.preparationTimeMinutes}"
+                          class="w-32 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white font-semibold focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                        />
+                        <span class="text-sm font-medium text-gray-600 dark:text-gray-300"
+                          >minutos</span
+                        >
+                      </div>
+                      <p
+                        th:if="${#fields.hasErrors('preparationTimeMinutes')}"
+                        th:errors="*{preparationTimeMinutes}"
+                        class="text-xs text-red-600 dark:text-red-400 mt-1 font-medium"
+                      ></p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <!-- ¿Es Combo? -->
               <div class="md:col-span-2">
                 <div

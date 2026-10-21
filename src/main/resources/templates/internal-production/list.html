@@ -1,0 +1,613 @@
+<!doctype html>
+<html
+  lang="es"
+  xmlns:th="http://www.thymeleaf.org"
+  xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title th:text="${globalSystemConfig.systemName + ' - Producción interna'}">
+      Producción interna
+    </title>
+    <link crossorigin="" href="https://fonts.gstatic.com/" rel="preconnect" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@300;400;500;600;700"
+      rel="stylesheet"
+    />
+
+    <!-- Sistema de Temas (Modo Claro/Oscuro) -->
+    <div th:replace="~{fragments/theme :: themeResources}"></div>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <div th:replace="~{fragments/sidebar :: sidebarStyles}"></div>
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#38e07b",
+              "primary-dark": "#2bc866",
+              "background-light": "#f8faf9",
+              "background-dark": "#0f1713",
+            },
+            fontFamily: {
+              display: ["Work Sans"],
+            },
+          },
+        },
+      };
+    </script>
+  </head>
+  <body
+    class="bg-gradient-to-br from-background-light to-gray-50 dark:from-background-dark dark:to-gray-900 font-display text-gray-800 dark:text-gray-200 overflow-hidden"
+  >
+    <div th:replace="~{fragments/sidebar :: menuControls}"></div>
+
+    <div class="flex h-screen overflow-hidden">
+      <!-- El chef no entra a /admin/**, así que no ve el sidebar de administración. -->
+      <th:block sec:authorize="hasAnyRole('ROLE_ADMIN', 'ROLE_MANAGER')">
+        <div
+          th:replace="~{fragments/sidebar :: sidebar(activeMenu='menu')}"
+        ></div>
+      </th:block>
+
+      <main class="flex-1 overflow-y-auto h-screen">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <!-- Volver al Menú: admin y gerente llegan aquí desde el botón de la página de Menú. -->
+          <div sec:authorize="hasAnyRole('ROLE_ADMIN', 'ROLE_MANAGER')" class="mb-4">
+            <a
+              th:href="@{/admin/menu-items}"
+              class="inline-flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-primary transition-colors"
+            >
+              <span class="material-symbols-outlined">arrow_back</span>
+              <span class="font-medium">Volver al menú</span>
+            </a>
+          </div>
+
+          <!-- Volver al panel del chef -->
+          <div sec:authorize="hasRole('ROLE_CHEF')" class="mb-4">
+            <a
+              th:href="@{/chef/dashboard}"
+              class="inline-flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-primary transition-colors"
+            >
+              <span class="material-symbols-outlined">arrow_back</span>
+              <span class="font-medium">Volver al panel</span>
+            </a>
+          </div>
+
+          <!-- Header -->
+          <div
+            class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8"
+          >
+            <div>
+              <h1
+                class="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white flex items-center gap-3"
+              >
+                <span class="material-symbols-outlined text-4xl text-primary"
+                  >soup_kitchen</span
+                >
+                Producción interna
+              </h1>
+              <p class="text-sm sm:text-base text-gray-600 dark:text-gray-400 mt-2">
+                Platillos que se preparan pero no se venden (buffet, comida de
+                personal). No aparecen en la carta ni en los pedidos.
+              </p>
+            </div>
+            <a
+              th:href="@{/internal-production/new}"
+              class="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-primary hover:bg-primary-dark text-gray-900 font-bold shadow-lg transition-colors"
+            >
+              <span class="material-symbols-outlined">add</span>
+              Nuevo platillo interno
+            </a>
+          </div>
+
+          <!-- Alertas -->
+          <div
+            th:if="${successMessage}"
+            class="mb-6 p-4 rounded-xl bg-green-100 dark:bg-green-900/30 border border-green-200 dark:border-green-800 flex items-center gap-3"
+          >
+            <span class="material-symbols-outlined text-green-600 dark:text-green-400"
+              >check_circle</span
+            >
+            <p
+              class="text-green-800 dark:text-green-300 font-medium"
+              th:text="${successMessage}"
+            ></p>
+          </div>
+          <div
+            th:if="${errorMessage}"
+            class="mb-6 p-4 rounded-xl bg-red-100 dark:bg-red-900/30 border border-red-200 dark:border-red-800 flex items-center gap-3"
+          >
+            <span class="material-symbols-outlined text-red-600 dark:text-red-400"
+              >error</span
+            >
+            <p
+              class="text-red-800 dark:text-red-300 font-medium"
+              th:text="${errorMessage}"
+            ></p>
+          </div>
+
+          <!-- Resumen del día -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+            <div
+              class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5 shadow-sm"
+            >
+              <p class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                Lotes registrados hoy
+              </p>
+              <p
+                class="text-3xl font-bold text-gray-900 dark:text-white mt-1"
+                th:text="${#lists.size(todayPreparations)}"
+              >
+                0
+              </p>
+            </div>
+            <div
+              class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5 shadow-sm"
+            >
+              <p class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                Porciones preparadas hoy
+              </p>
+              <p
+                class="text-3xl font-bold text-gray-900 dark:text-white mt-1"
+                th:text="${todayQuantity}"
+              >
+                0
+              </p>
+            </div>
+            <div
+              class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5 shadow-sm"
+            >
+              <p class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                Platillo más preparado hoy
+              </p>
+              <p
+                class="text-2xl font-bold text-gray-900 dark:text-white mt-1 leading-tight"
+                th:text="${topItemName != null ? topItemName : 'Sin producción'}"
+              >
+                —
+              </p>
+              <p
+                th:if="${topItemName != null}"
+                class="text-sm text-gray-500 dark:text-gray-400 mt-1"
+                th:text="${topItemPortions} + (topItemPortions == 1 ? ' porción' : ' porciones')"
+              ></p>
+            </div>
+          </div>
+
+          <!-- Platillos internos -->
+          <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-4">
+            Platillos internos
+            <span
+              th:if="${itemQuery != ''}"
+              class="ml-2 text-sm font-normal text-gray-500 dark:text-gray-400"
+              th:text="'(' + ${#lists.size(items)} + ' de ' + ${allItemsCount} + ')'"
+            ></span>
+          </h2>
+
+          <!-- Filtro propio de los platillos internos (no toca el del historial) -->
+          <form th:action="@{/internal-production}" method="get" class="mb-5">
+            <input type="hidden" name="historyQuery" th:value="${historyQuery}" />
+            <input type="hidden" name="historyStatus" th:value="${historyStatus}" />
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+              <div class="relative flex-1">
+                <span
+                  class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                  >search</span
+                >
+                <input
+                  type="text"
+                  name="itemQuery"
+                  th:value="${itemQuery}"
+                  placeholder="Buscar platillo interno por nombre, descripción o categoría..."
+                  class="w-full h-12 pl-10 pr-4 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 focus:ring-2 focus:ring-primary focus:outline-none placeholder:text-gray-400 text-sm"
+                />
+              </div>
+              <button
+                type="submit"
+                class="h-12 px-6 inline-flex items-center justify-center gap-2 rounded-xl bg-primary text-gray-900 font-semibold hover:bg-primary-dark transition-colors whitespace-nowrap"
+              >
+                <span class="material-symbols-outlined">search</span>
+                Buscar
+              </button>
+              <a
+                th:if="${itemQuery != ''}"
+                th:href="@{/internal-production(historyQuery=${historyQuery}, historyStatus=${historyStatus})}"
+                class="h-12 px-4 inline-flex items-center justify-center gap-1 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors whitespace-nowrap"
+              >
+                <span class="material-symbols-outlined text-lg">close</span>
+                Limpiar
+              </a>
+            </div>
+          </form>
+
+          <div
+            th:if="${#lists.isEmpty(items) and allItemsCount == 0}"
+            class="bg-white dark:bg-gray-900 rounded-2xl border border-dashed border-gray-300 dark:border-gray-700 p-10 text-center mb-10"
+          >
+            <span class="material-symbols-outlined text-5xl text-gray-400"
+              >skillet</span
+            >
+            <p class="mt-3 font-semibold text-gray-700 dark:text-gray-300">
+              Aún no hay platillos internos
+            </p>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              Crea uno, agrega su receta y podrás registrar cuántas porciones se
+              prepararon para descontar los ingredientes.
+            </p>
+          </div>
+
+          <div
+            th:if="${#lists.isEmpty(items) and allItemsCount > 0}"
+            class="bg-white dark:bg-gray-900 rounded-2xl border border-dashed border-gray-300 dark:border-gray-700 p-10 text-center mb-10"
+          >
+            <span class="material-symbols-outlined text-5xl text-gray-400"
+              >search_off</span
+            >
+            <p class="mt-3 font-semibold text-gray-700 dark:text-gray-300">
+              Ningún platillo interno coincide con
+              <span th:text="'«' + ${itemQuery} + '»'"></span>
+            </p>
+            <a
+              th:href="@{/internal-production(historyQuery=${historyQuery}, historyStatus=${historyStatus})}"
+              class="inline-flex items-center gap-1 mt-3 text-primary hover:text-primary-dark font-semibold"
+            >
+              <span class="material-symbols-outlined text-lg">close</span>
+              Quitar búsqueda
+            </a>
+          </div>
+
+          <div
+            th:unless="${#lists.isEmpty(items)}"
+            class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-10"
+          >
+            <div
+              th:each="item : ${items}"
+              class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm p-5 flex flex-col gap-3"
+            >
+              <div class="flex items-start justify-between gap-3">
+                <div>
+                  <h3
+                    class="text-lg font-bold text-gray-900 dark:text-white"
+                    th:text="${item.name}"
+                  >
+                    Platillo
+                  </h3>
+                  <p
+                    class="text-xs text-gray-500 dark:text-gray-400 mt-1"
+                    th:text="${item.category != null ? item.category.name : 'Sin categoría'}"
+                  >
+                    Categoría
+                  </p>
+                  <p
+                    th:if="${item.description != null and !item.description.isEmpty()}"
+                    class="text-sm text-gray-600 dark:text-gray-400 mt-2"
+                    th:text="${item.description}"
+                  ></p>
+                </div>
+                <span
+                  class="px-2.5 py-1 rounded-full text-xs font-semibold bg-primary/15 text-primary-dark dark:text-primary whitespace-nowrap"
+                  th:text="${item.getTotalIngredientsCount()} + ' ingredientes'"
+                >
+                  0 ingredientes
+                </span>
+              </div>
+
+              <div class="flex items-center justify-between text-sm">
+                <span class="text-gray-600 dark:text-gray-400">
+                  Alcanza para
+                  <strong
+                    class="text-gray-900 dark:text-white"
+                    th:text="${maxPortions[item.idItemMenu] != null ? maxPortions[item.idItemMenu] : 0}"
+                    >0</strong
+                  >
+                  porciones con el stock actual
+                </span>
+                <a
+                  th:href="@{/internal-production/{id}/edit(id=${item.idItemMenu})}"
+                  class="inline-flex items-center gap-1 text-primary hover:text-primary-dark font-semibold"
+                >
+                  <span class="material-symbols-outlined text-lg">edit</span>
+                  Editar
+                </a>
+              </div>
+
+              <form
+                th:action="@{/internal-production/{id}/prepare(id=${item.idItemMenu})}"
+                method="post"
+                class="flex items-center gap-2 pt-2 border-t border-gray-200 dark:border-gray-800"
+                th:attr="data-item-name=${item.name}"
+                onsubmit="return confirmPreparation(this);"
+              >
+                <label class="sr-only" th:for="'qty-' + ${item.idItemMenu}"
+                  >Cantidad preparada</label
+                >
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  value="1"
+                  name="quantity"
+                  th:id="'qty-' + ${item.idItemMenu}"
+                  class="w-20 rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 text-center font-semibold"
+                />
+                <button
+                  type="submit"
+                  class="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gray-900 dark:bg-primary text-white dark:text-gray-900 font-semibold hover:opacity-90 transition-opacity"
+                >
+                  <span class="material-symbols-outlined text-lg">skillet</span>
+                  Registrar producción
+                </button>
+              </form>
+            </div>
+          </div>
+
+          <!-- Historial -->
+          <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-4">
+            Preparaciones recientes
+          </h2>
+
+          <!-- Filtro propio del historial (no toca el de los platillos internos) -->
+          <form th:action="@{/internal-production}" method="get" class="mb-5">
+            <input type="hidden" name="itemQuery" th:value="${itemQuery}" />
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+              <div class="relative flex-1">
+                <span
+                  class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                  >search</span
+                >
+                <input
+                  type="text"
+                  name="historyQuery"
+                  th:value="${historyQuery}"
+                  placeholder="Buscar por platillo o quién registró..."
+                  class="w-full h-12 pl-10 pr-4 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 focus:ring-2 focus:ring-primary focus:outline-none placeholder:text-gray-400 text-sm"
+                />
+              </div>
+              <select
+                name="historyStatus"
+                class="h-12 px-4 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 focus:ring-2 focus:ring-primary focus:outline-none text-sm"
+              >
+                <option value="" th:selected="${historyStatus == ''}">Todos los estados</option>
+                <option value="PREPARED" th:selected="${historyStatus == 'PREPARED'}">Preparadas</option>
+                <option value="CANCELLED" th:selected="${historyStatus == 'CANCELLED'}">Canceladas</option>
+              </select>
+              <button
+                type="submit"
+                class="h-12 px-6 inline-flex items-center justify-center gap-2 rounded-xl bg-primary text-gray-900 font-semibold hover:bg-primary-dark transition-colors whitespace-nowrap"
+              >
+                <span class="material-symbols-outlined">search</span>
+                Buscar
+              </button>
+              <a
+                th:if="${historyFiltersActive}"
+                th:href="@{/internal-production(itemQuery=${itemQuery})}"
+                class="h-12 px-4 inline-flex items-center justify-center gap-1 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors whitespace-nowrap"
+              >
+                <span class="material-symbols-outlined text-lg">close</span>
+                Limpiar
+              </a>
+            </div>
+          </form>
+
+          <div
+            th:if="${#lists.isEmpty(recentPreparations)}"
+            class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-6 text-sm text-gray-500 dark:text-gray-400 mb-10"
+          >
+            <span th:if="${historyFiltersActive}"
+              >Ninguna preparación coincide con los filtros.</span
+            >
+            <span th:unless="${historyFiltersActive}"
+              >Todavía no se ha registrado ninguna preparación.</span
+            >
+          </div>
+
+          <div
+            th:unless="${#lists.isEmpty(recentPreparations)}"
+            class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden mb-10"
+          >
+            <div class="overflow-x-auto">
+              <table class="min-w-full text-sm">
+                <thead class="bg-gray-50 dark:bg-gray-800/60">
+                  <tr class="text-left text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                    <th class="px-4 py-3">Fecha</th>
+                    <th class="px-4 py-3">Platillo</th>
+                    <th class="px-4 py-3 text-center">Cantidad</th>
+                    <th class="px-4 py-3">Registró</th>
+                    <th class="px-4 py-3 text-right">Costo est.</th>
+                    <th class="px-4 py-3">Estado</th>
+                    <th class="px-4 py-3 text-right">Acción</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                  <tr th:each="p : ${recentPreparations}">
+                    <td
+                      class="px-4 py-3 whitespace-nowrap text-gray-600 dark:text-gray-400"
+                      th:text="${#tz.format(p.preparedAt, 'dd/MM/yyyy HH:mm')}"
+                    >
+                      01/01/2026 12:00
+                    </td>
+                    <td
+                      class="px-4 py-3 font-semibold text-gray-900 dark:text-white"
+                      th:text="${p.itemName}"
+                    >
+                      Platillo
+                    </td>
+                    <td
+                      class="px-4 py-3 text-center font-bold"
+                      th:text="${p.quantity}"
+                    >
+                      1
+                    </td>
+                    <td
+                      class="px-4 py-3 text-gray-600 dark:text-gray-400"
+                      th:text="${p.preparedByName}"
+                    >
+                      —
+                    </td>
+                    <td
+                      class="px-4 py-3 text-right text-gray-600 dark:text-gray-400"
+                    >
+                      $<span
+                        th:text="${#numbers.formatDecimal(p.estimatedCost, 1, 'COMMA', 2, 'POINT')}"
+                        >0.00</span
+                      >
+                    </td>
+                    <td class="px-4 py-3">
+                      <span
+                        th:if="${p.prepared}"
+                        class="px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300"
+                        >Preparada</span
+                      >
+                      <span
+                        th:unless="${p.prepared}"
+                        class="px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300"
+                        >Cancelada</span
+                      >
+                      <p
+                        th:if="${p.cancelReason != null}"
+                        class="text-xs text-gray-500 dark:text-gray-400 mt-1"
+                        th:text="${p.cancelReason}"
+                      ></p>
+                    </td>
+                    <td class="px-4 py-3 text-right">
+                      <button
+                        th:if="${p.canBeCancelled()}"
+                        type="button"
+                        class="js-cancel inline-flex items-center gap-1 text-red-600 hover:text-red-700 font-semibold"
+                        th:attr="data-preparation-id=${p.idPreparation},data-item-name=${p.itemName},data-quantity=${p.quantity}"
+                      >
+                        <span class="material-symbols-outlined text-lg">undo</span>
+                        Cancelar
+                      </button>
+                      <span
+                        th:unless="${p.canBeCancelled()}"
+                        class="text-gray-400 dark:text-gray-600"
+                        >—</span
+                      >
+                      <form
+                        th:id="'cancelForm-' + ${p.idPreparation}"
+                        th:action="@{/internal-production/preparations/{id}/cancel(id=${p.idPreparation})}"
+                        method="post"
+                        class="hidden"
+                      >
+                        <input type="hidden" name="reason" value="" />
+                      </form>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <p class="text-xs text-gray-500 dark:text-gray-500">
+            Cancelar una preparación devuelve exactamente los ingredientes que se
+            descontaron. Una vez cancelada no se puede reactivar: registra la
+            producción correcta de nuevo.
+          </p>
+        </div>
+      </main>
+    </div>
+
+    <div th:replace="~{fragments/sidebar :: sidebarScripts}"></div>
+
+    <script>
+      function isDarkMode() {
+        return document.documentElement.classList.contains("dark");
+      }
+
+      function confirmPreparation(form) {
+        const name = form.dataset.itemName || "este platillo";
+        const quantity = parseInt(form.quantity.value, 10);
+
+        if (!quantity || quantity < 1) {
+          Swal.fire({
+            icon: "warning",
+            title: "Cantidad inválida",
+            text: "Indica cuántas porciones se prepararon (mínimo 1).",
+            background: isDarkMode() ? "#1f2937" : "#fff",
+            color: isDarkMode() ? "#f3f4f6" : "#1f2937",
+          });
+          return false;
+        }
+
+        Swal.fire({
+          icon: "question",
+          title: "¿Registrar producción?",
+          html:
+            "Se descontarán los ingredientes de <strong>" +
+            quantity +
+            "</strong> × <strong>" +
+            name +
+            "</strong> del inventario.",
+          showCancelButton: true,
+          confirmButtonText: "Sí, registrar",
+          cancelButtonText: "Cancelar",
+          confirmButtonColor: "#38e07b",
+          background: isDarkMode() ? "#1f2937" : "#fff",
+          color: isDarkMode() ? "#f3f4f6" : "#1f2937",
+          reverseButtons: true,
+        }).then((result) => {
+          if (result.isConfirmed) {
+            form.onsubmit = null;
+            form.submit();
+          }
+        });
+
+        return false;
+      }
+
+      document.addEventListener("DOMContentLoaded", function () {
+        document.querySelectorAll(".js-cancel").forEach(function (button) {
+          button.addEventListener("click", function () {
+            confirmCancel(
+              button.dataset.preparationId,
+              button.dataset.itemName,
+              button.dataset.quantity
+            );
+          });
+        });
+      });
+
+      function confirmCancel(preparationId, itemName, quantity) {
+        Swal.fire({
+          icon: "warning",
+          title: "¿Cancelar esta preparación?",
+          html:
+            "Devolverá al inventario los ingredientes de <strong>" +
+            quantity +
+            "</strong> × <strong>" +
+            itemName +
+            "</strong>.",
+          input: "text",
+          inputLabel: "Motivo (opcional)",
+          inputPlaceholder: "Ej. no se consumió, error de captura",
+          showCancelButton: true,
+          confirmButtonText: "Sí, cancelar",
+          cancelButtonText: "Volver",
+          confirmButtonColor: "#e53e3e",
+          background: isDarkMode() ? "#1f2937" : "#fff",
+          color: isDarkMode() ? "#f3f4f6" : "#1f2937",
+          reverseButtons: true,
+        }).then((result) => {
+          if (!result.isConfirmed) {
+            return;
+          }
+          const form = document.getElementById("cancelForm-" + preparationId);
+          if (!form) {
+            return;
+          }
+          form.querySelector('input[name="reason"]').value = result.value || "";
+          form.submit();
+        });
+      }
+    </script>
+  </body>
+</html>

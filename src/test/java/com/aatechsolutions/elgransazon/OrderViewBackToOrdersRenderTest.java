@@ -86,6 +86,18 @@ class OrderViewBackToOrdersRenderTest {
     }
 
     @Test
+    @DisplayName("El detalle muestra el tiempo estimado de preparación en mesero, cajero y admin/gerente")
+    void theOrderViewShowsTheEstimatedPreparationTime() {
+        for (String[] view : VIEWS) {
+            String html = renderView(view[0], null);
+            assertTrue(html.contains("Tiempo estimado de preparación"),
+                    view[0] + ": la vista del pedido explica el tiempo estimado");
+            assertTrue(html.contains("≈ 25 min"),
+                    view[0] + ": la suma de los platillos de la comanda");
+        }
+    }
+
+    @Test
     @DisplayName("Y sin origen (entrando directo por la URL) también llevan a la lista")
     void theBackButtonsGoToTheOrderListWithoutAnyOrigin() {
         for (String[] view : VIEWS) {
@@ -140,6 +152,29 @@ class OrderViewBackToOrdersRenderTest {
         order.setOrderType(OrderType.DINE_IN);
         order.setEmployee(employee("meseroA", "Juan", "Pérez"));
         order.setCreatedBy("meseroA");
+        // Dos platillos con tiempo configurado: la comanda estima 10 + 15 = 25 min.
+        com.aatechsolutions.elgransazon.domain.entity.ItemMenu soup =
+                com.aatechsolutions.elgransazon.domain.entity.ItemMenu.builder()
+                        .name("Sopa del día").preparationTimeMinutes(10).build();
+        soup.setIdItemMenu(1L);
+        com.aatechsolutions.elgransazon.domain.entity.ItemMenu steak =
+                com.aatechsolutions.elgransazon.domain.entity.ItemMenu.builder()
+                        .name("Corte a la parrilla").preparationTimeMinutes(15).build();
+        steak.setIdItemMenu(2L);
+        order.setOrderDetails(new java.util.ArrayList<>(List.of(
+                com.aatechsolutions.elgransazon.domain.entity.OrderDetail.builder()
+                        .itemMenu(soup).itemName("Sopa del día").quantity(1)
+                        .unitPrice(new java.math.BigDecimal("50.00"))
+                        .subtotal(new java.math.BigDecimal("50.00"))
+                        .itemStatus(OrderStatus.READY).build(),
+                com.aatechsolutions.elgransazon.domain.entity.OrderDetail.builder()
+                        .itemMenu(steak).itemName("Corte a la parrilla").quantity(2)
+                        .unitPrice(new java.math.BigDecimal("50.00"))
+                        .subtotal(new java.math.BigDecimal("100.00"))
+                        .itemStatus(OrderStatus.READY).build())));
+        order.setTotal(new java.math.BigDecimal("150.00"));
+        order.setSubtotal(new java.math.BigDecimal("129.31"));
+        order.setTaxRate(new java.math.BigDecimal("16"));
 
         SystemConfiguration config = new SystemConfiguration();
         config.setRestaurantName("El Gran Sazón");

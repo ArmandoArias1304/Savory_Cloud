@@ -11,19 +11,26 @@ import org.springframework.stereotype.Repository;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface IngredientStockHistoryRepository extends JpaRepository<IngredientStockHistory, Long> {
 
     /**
-     * Obtener historial de un ingrediente específico ordenado por fecha descendente
+     * Historial vigente de un ingrediente (sin las entradas anuladas), más reciente primero.
      */
-    List<IngredientStockHistory> findByIngredientOrderByAddedAtDesc(Ingredient ingredient);
+    List<IngredientStockHistory> findByIngredientAndVoidedAtIsNullOrderByAddedAtDesc(Ingredient ingredient);
+
+    /**
+     * Una entrada del historial, acotada a la empresa del ingrediente.
+     */
+    Optional<IngredientStockHistory> findByIdAndIngredient_Company(Long id, Company company);
 
     /**
      * Obtener historial por rango de fechas
      */
-    @Query("SELECT h FROM IngredientStockHistory h WHERE h.addedAt BETWEEN :startDate AND :endDate ORDER BY h.addedAt DESC")
+    @Query("SELECT h FROM IngredientStockHistory h WHERE h.voidedAt IS NULL " +
+            "AND h.addedAt BETWEEN :startDate AND :endDate ORDER BY h.addedAt DESC")
     List<IngredientStockHistory> findByDateRange(
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate
@@ -32,13 +39,15 @@ public interface IngredientStockHistoryRepository extends JpaRepository<Ingredie
     /**
      * Calcular gasto total por ingrediente
      */
-    @Query("SELECT SUM(h.totalCost) FROM IngredientStockHistory h WHERE h.ingredient.id = :ingredientId")
+    @Query("SELECT SUM(h.totalCost) FROM IngredientStockHistory h WHERE h.ingredient.id = :ingredientId " +
+            "AND h.voidedAt IS NULL")
     BigDecimal getTotalCostByIngredient(@Param("ingredientId") Long ingredientId);
 
     /**
      * Calcular gasto total por ingrediente en un rango de fechas
      */
     @Query("SELECT SUM(h.totalCost) FROM IngredientStockHistory h WHERE h.ingredient.id = :ingredientId " +
+            "AND h.voidedAt IS NULL " +
             "AND h.addedAt BETWEEN :startDate AND :endDate")
     BigDecimal getTotalCostByIngredientAndDateRange(
             @Param("ingredientId") Long ingredientId,
@@ -49,13 +58,15 @@ public interface IngredientStockHistoryRepository extends JpaRepository<Ingredie
     /**
      * Calcular gasto total de todos los ingredientes de una empresa (multi-tenant)
      */
-    @Query("SELECT SUM(h.totalCost) FROM IngredientStockHistory h WHERE h.ingredient.company = :company")
+    @Query("SELECT SUM(h.totalCost) FROM IngredientStockHistory h " +
+            "WHERE h.ingredient.company = :company AND h.voidedAt IS NULL")
     BigDecimal getTotalExpensesByCompany(@Param("company") Company company);
 
     /**
      * Calcular gasto total en un rango de fechas
      */
-    @Query("SELECT SUM(h.totalCost) FROM IngredientStockHistory h WHERE h.addedAt BETWEEN :startDate AND :endDate")
+    @Query("SELECT SUM(h.totalCost) FROM IngredientStockHistory h " +
+            "WHERE h.voidedAt IS NULL AND h.addedAt BETWEEN :startDate AND :endDate")
     BigDecimal getTotalExpensesByDateRange(
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate
@@ -65,7 +76,7 @@ public interface IngredientStockHistoryRepository extends JpaRepository<Ingredie
      * Obtener gastos agrupados por categoría para una empresa (multi-tenant)
      */
     @Query("SELECT h.ingredient.category.name, SUM(h.totalCost) FROM IngredientStockHistory h " +
-            "WHERE h.ingredient.company = :company " +
+            "WHERE h.ingredient.company = :company AND h.voidedAt IS NULL " +
             "GROUP BY h.ingredient.category.id, h.ingredient.category.name ORDER BY SUM(h.totalCost) DESC")
     List<Object[]> getExpensesByCategory(@Param("company") Company company);
 
@@ -73,7 +84,8 @@ public interface IngredientStockHistoryRepository extends JpaRepository<Ingredie
      * Obtener gastos agrupados por ingrediente (todos)
      */
     @Query("SELECT h.ingredient.name, SUM(h.totalCost), h.ingredient.unitOfMeasure " +
-            "FROM IngredientStockHistory h GROUP BY h.ingredient.id, h.ingredient.name, h.ingredient.unitOfMeasure " +
+            "FROM IngredientStockHistory h WHERE h.voidedAt IS NULL " +
+            "GROUP BY h.ingredient.id, h.ingredient.name, h.ingredient.unitOfMeasure " +
             "ORDER BY SUM(h.totalCost) DESC")
     List<Object[]> getAllExpensesByIngredient();
 
@@ -81,7 +93,8 @@ public interface IngredientStockHistoryRepository extends JpaRepository<Ingredie
      * Obtener gastos agrupados por ingrediente con rango de fechas
      */
     @Query("SELECT h.ingredient.name, SUM(h.totalCost), h.ingredient.unitOfMeasure, h.ingredient.category.name " +
-            "FROM IngredientStockHistory h WHERE h.addedAt BETWEEN :startDate AND :endDate " +
+            "FROM IngredientStockHistory h WHERE h.voidedAt IS NULL " +
+            "AND h.addedAt BETWEEN :startDate AND :endDate " +
             "GROUP BY h.ingredient.id, h.ingredient.name, h.ingredient.unitOfMeasure, h.ingredient.category.name " +
             "ORDER BY SUM(h.totalCost) DESC")
     List<Object[]> getExpensesByIngredientAndDateRange(
@@ -96,6 +109,7 @@ public interface IngredientStockHistoryRepository extends JpaRepository<Ingredie
     @Query("SELECT h.ingredient.name, SUM(h.quantityAdded), COALESCE(SUM(h.totalCost), 0) " +
             "FROM IngredientStockHistory h " +
             "WHERE h.ingredient.company = :company " +
+            "AND h.voidedAt IS NULL " +
             "AND h.ingredient.category.idCategory = :categoryId " +
             "GROUP BY h.ingredient.idIngredient, h.ingredient.name " +
             "ORDER BY SUM(h.totalCost) DESC")

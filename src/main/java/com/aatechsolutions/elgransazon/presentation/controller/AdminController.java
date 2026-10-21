@@ -2,6 +2,8 @@ package com.aatechsolutions.elgransazon.presentation.controller;
 
 import com.aatechsolutions.elgransazon.application.service.BusinessHoursService;
 import com.aatechsolutions.elgransazon.application.service.DashboardService;
+import com.aatechsolutions.elgransazon.application.service.EmployeeService;
+import com.aatechsolutions.elgransazon.domain.entity.Employee;
 import com.aatechsolutions.elgransazon.presentation.dto.DashboardStatsDTO;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -31,6 +33,7 @@ public class AdminController {
 
     private final DashboardService dashboardService;
     private final BusinessHoursService businessHoursService;
+    private final EmployeeService employeeService;
 
     /**
      * Display admin dashboard with real-time statistics
@@ -50,6 +53,7 @@ public class AdminController {
             DashboardStatsDTO stats = dashboardService.getDashboardStats();
             
             model.addAttribute("username", username);
+            model.addAttribute("displayName", resolveDisplayName(username));
             model.addAttribute("role", "Administrator");
             model.addAttribute("stats", stats);
             
@@ -75,6 +79,23 @@ public class AdminController {
         }
         
         return "admin/dashboard";
+    }
+
+    /**
+     * Greeting name for the dashboard header: the employee's full name when it
+     * is on file, falling back to the login username (e.g. a fresh install where
+     * no employee record exists yet).
+     */
+    private String resolveDisplayName(String username) {
+        try {
+            return employeeService.findByUsername(username)
+                    .map(Employee::getFullName)
+                    .filter(name -> name != null && !name.isBlank())
+                    .orElse(username);
+        } catch (Exception e) {
+            log.debug("No se pudo resolver el nombre completo de {}", username, e);
+            return username;
+        }
     }
     
     /**

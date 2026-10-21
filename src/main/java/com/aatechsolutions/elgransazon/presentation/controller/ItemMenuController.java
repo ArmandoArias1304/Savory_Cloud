@@ -406,6 +406,15 @@ public class ItemMenuController {
     public String editMenuItemForm(@PathVariable Long id, Model model, RedirectAttributes redirectAttributes) {
         log.debug("Displaying edit form for menu item ID: {}", id);
 
+        // Internal production items (buffet, staff meals) are never sold and have their own
+        // module: the sales form would let someone give them a price, a schedule or a kitchen
+        // station and quietly turn them into menu items.
+        if (isInternalProductionItem(id)) {
+            redirectAttributes.addFlashAttribute("errorMessage",
+                    "Este platillo es de producción interna: edítalo desde el módulo Producción interna.");
+            return "redirect:/internal-production/" + id + "/edit";
+        }
+
         return itemMenuService.findById(id)
                 .map(itemMenu -> {
                     List<Category> categories = categoryService.getAllCategories();
@@ -749,6 +758,12 @@ public class ItemMenuController {
         log.info("🔍 requiresIngredients: {}", requiresIngredientsParam);
         log.info("🔍 saucesSyncEnabled: {} | selectedSauceIds: {}", saucesSyncEnabled, selectedSauceIds);
         log.info("🔍 hasCustomSchedule: {}", hasCustomSchedule);
+
+        if (isInternalProductionItem(id)) {
+            redirectAttributes.addFlashAttribute("errorMessage",
+                    "Este platillo es de producción interna: edítalo desde el módulo Producción interna.");
+            return "redirect:/internal-production/" + id + "/edit";
+        }
         
         // Si el parámetro está presente, usarlo (para debug)
         if (requiresPreparationParam != null) {
@@ -1420,6 +1435,16 @@ public class ItemMenuController {
         }
         
         return recipe;
+    }
+
+    /**
+     * Whether the item belongs to internal production (buffet, staff meals) and therefore must
+     * be edited from its own module instead of the sales form.
+     */
+    private boolean isInternalProductionItem(Long id) {
+        return itemMenuService.findById(id)
+                .map(item -> Boolean.TRUE.equals(item.getInternalOnly()))
+                .orElse(false);
     }
 
     /**

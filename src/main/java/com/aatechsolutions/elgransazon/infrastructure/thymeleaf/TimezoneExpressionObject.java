@@ -53,6 +53,17 @@ public class TimezoneExpressionObject {
     }
 
     /**
+     * Epoch millis of a UTC-stored {@link LocalDateTime}, so the browser can compute
+     * elapsed time ("lleva 12 min") without caring about its own timezone.
+     *
+     * @return the epoch millis, or {@code 0} when the value is null
+     */
+    public long epochMillis(LocalDateTime utcDateTime) {
+        if (utcDateTime == null) return 0L;
+        return utcDateTime.atZone(UTC).withZoneSameInstant(getZone()).toInstant().toEpochMilli();
+    }
+
+    /**
      * Format a LocalDate (no timezone conversion — dates are timezone-unaware).
      */
     public String format(LocalDate date, String pattern) {

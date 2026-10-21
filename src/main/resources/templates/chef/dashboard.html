@@ -160,6 +160,7 @@
 
           <!-- User Info & Logout -->
           <div class="flex items-center gap-3 sm:gap-6">
+            <div th:replace="~{fragments/system-update :: versionChip('primary')}"></div>
             <div class="hidden sm:flex items-center gap-2 text-white">
               <span class="material-symbols-outlined">account_circle</span>
               <span class="text-sm font-medium">
@@ -464,6 +465,31 @@
             </h3>
             <p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
               Mi cuenta
+            </p>
+          </div>
+        </a>
+
+        <!-- CARD: Producción interna (buffet / comida de personal) -->
+        <a
+          th:if="${currentRole == 'chef'}"
+          th:href="@{/internal-production}"
+          class="dashboard-card block rounded-3xl bg-white dark:bg-gray-900 shadow-lg hover:shadow-2xl border border-gray-200 dark:border-gray-800 p-6 sm:p-8 text-center animate-fadeInUp"
+          style="animation-delay: 0.38s"
+        >
+          <div class="flex flex-col items-center">
+            <div class="mb-4">
+              <span
+                class="material-symbols-outlined text-6xl sm:text-7xl text-teal-500"
+                >soup_kitchen</span
+              >
+            </div>
+            <h3
+              class="text-lg sm:text-xl font-bold text-gray-900 dark:text-white mb-2"
+            >
+              Producción interna
+            </h3>
+            <p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+              Buffet: registra cuánto se preparó
             </p>
           </div>
         </a>

@@ -3,7 +3,9 @@ package com.aatechsolutions.elgransazon;
 import com.aatechsolutions.elgransazon.domain.entity.Company;
 import com.aatechsolutions.elgransazon.domain.entity.Employee;
 import com.aatechsolutions.elgransazon.domain.entity.GlobalSystemConfig;
+import com.aatechsolutions.elgransazon.domain.entity.ItemMenu;
 import com.aatechsolutions.elgransazon.domain.entity.Order;
+import com.aatechsolutions.elgransazon.domain.entity.OrderDetail;
 import com.aatechsolutions.elgransazon.domain.entity.OrderStatus;
 import com.aatechsolutions.elgransazon.domain.entity.OrderType;
 import com.aatechsolutions.elgransazon.domain.entity.PaymentMethodType;
@@ -180,6 +182,29 @@ class WaiterOrdersListTransferRenderTest {
                     template + ": la píldora usa el color de la transferencia");
             assertTrue(html.contains(CURRENT_USER), template + ": \"creado por\" se conserva");
         }
+    }
+
+    @Test
+    void theWaiterListShowsThePreparationTimeColumn() {
+        Order order = orderOwnedByMe(OrderStatus.READY);
+        ItemMenu soup = ItemMenu.builder().name("Sopa del día").preparationTimeMinutes(10).build();
+        soup.setIdItemMenu(1L);
+        ItemMenu steak = ItemMenu.builder().name("Corte a la parrilla").preparationTimeMinutes(15).build();
+        steak.setIdItemMenu(2L);
+        order.setOrderDetails(new ArrayList<>(List.of(
+                OrderDetail.builder().itemMenu(soup).quantity(1)
+                        .unitPrice(new BigDecimal("50.00"))
+                        .subtotal(new BigDecimal("50.00"))
+                        .itemStatus(OrderStatus.READY).build(),
+                OrderDetail.builder().itemMenu(steak).quantity(2)
+                        .unitPrice(new BigDecimal("50.00"))
+                        .subtotal(new BigDecimal("100.00"))
+                        .itemStatus(OrderStatus.READY).build())));
+
+        String html = render(List.of(order));
+
+        assertTrue(html.contains("Tiempo"), "la tabla del mesero tiene la columna de tiempo");
+        assertTrue(html.contains("≈ 25 min"), "la columna suma los platillos de la comanda");
     }
 
     @Test

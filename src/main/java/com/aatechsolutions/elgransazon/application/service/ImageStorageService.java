@@ -21,7 +21,7 @@ public interface ImageStorageService {
      *
      * @param file     image bytes
      * @param folder   logical folder type ("menu-items", "promotions", "logo",
-     *                 "restaurant-logo", "system-logo", "landing")
+     *                 "restaurant-logo", "system-logo", "landing", "shop-products")
      * @param fileName base name for the image (e.g. the menu item name); will be
      *                 sanitized and a timestamp appended for uniqueness
      * @return public delivery URL persisted in the database

@@ -1,17 +1,33 @@
 package com.aatechsolutions.elgransazon.presentation.controller;
 
+import com.aatechsolutions.elgransazon.domain.entity.Company;
+import com.aatechsolutions.elgransazon.domain.entity.Employee;
 import com.aatechsolutions.elgransazon.domain.entity.GlobalSystemConfig;
 import com.aatechsolutions.elgransazon.domain.entity.SystemConfiguration;
+import com.aatechsolutions.elgransazon.domain.entity.SystemUpdate;
+import com.aatechsolutions.elgransazon.domain.entity.SystemUpdateRole;
 import com.aatechsolutions.elgransazon.application.service.GlobalSystemConfigService;
 import com.aatechsolutions.elgransazon.application.service.SystemConfigurationService;
+import com.aatechsolutions.elgransazon.application.service.SystemUpdateService;
+import com.aatechsolutions.elgransazon.domain.repository.EmployeeRepository;
+import com.aatechsolutions.elgransazon.infrastructure.context.CompanyContext;
+import com.aatechsolutions.elgransazon.infrastructure.security.CustomEmployeeDetails;
 import com.aatechsolutions.elgransazon.infrastructure.web.ReturnToLastListInterceptor;
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.propertyeditors.StringTrimmerEditor;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.InitBinder;
 import org.springframework.web.bind.annotation.ModelAttribute;
+
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Global Controller Advice para añadir atributos comunes a todas las vistas.
@@ -25,6 +41,7 @@ import org.springframework.web.bind.annotation.ModelAttribute;
  * - systemConfig is specific to each company/tenant
  */
 @ControllerAdvice
+@Slf4j
 public class GlobalControllerAdvice {
 
     @Autowired
@@ -32,6 +49,12 @@ public class GlobalControllerAdvice {
 
     @Autowired
     private GlobalSystemConfigService globalSystemConfigService;
+
+    @Autowired
+    private SystemUpdateService systemUpdateService;
+
+    @Autowired
+    private EmployeeRepository employeeRepository;
 
     /**
      * Trim leading/trailing whitespace from all String fields across every controller.
@@ -63,6 +86,70 @@ public class GlobalControllerAdvice {
             .systemName("SavoryCloud")
             .systemSlogan("Sistema de Gestión Restaurantera")
             .build();
+    }
+
+    /**
+     * Latest published system update. Every version button reads it; it is only
+     * added for authenticated users because the modal never shows on public pages.
+     */
+    @ModelAttribute("latestSystemUpdate")
+    public SystemUpdate addLatestSystemUpdate(Authentication authentication) {
+        if (!isRealAuthenticatedUser(authentication)) {
+            return null;
+        }
+        try {
+            return systemUpdateService.findLatestPublished().orElse(null);
+        } catch (Exception e) {
+            log.warn("Could not load latest system update: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Update that must pop up automatically for the current employee. It is null
+     * when the employee already saw it, when the latest update targets other roles
+     * or when there is no published update.
+     */
+    @ModelAttribute("pendingSystemUpdate")
+    public SystemUpdate addPendingSystemUpdate(Authentication authentication) {
+        if (!isRealAuthenticatedUser(authentication)) {
+            return null;
+        }
+        Set<SystemUpdateRole> roles = authentication.getAuthorities().stream()
+                .map(authority -> SystemUpdateRole.fromAuthority(authority.getAuthority()))
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        if (roles.isEmpty()) {
+            return null;
+        }
+
+        Long employeeId = currentEmployeeId(authentication);
+        if (employeeId == null) {
+            return null;
+        }
+        try {
+            return systemUpdateService.findPendingFor(employeeId, roles).orElse(null);
+        } catch (Exception e) {
+            log.warn("Could not resolve pending system update: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    private boolean isRealAuthenticatedUser(Authentication authentication) {
+        return authentication != null
+                && authentication.isAuthenticated()
+                && !(authentication instanceof AnonymousAuthenticationToken);
+    }
+
+    private Long currentEmployeeId(Authentication authentication) {
+        if (authentication.getPrincipal() instanceof CustomEmployeeDetails details) {
+            return details.getEmployeeId();
+        }
+        Company company = CompanyContext.getCurrentCompany();
+        Optional<Employee> employee = company != null
+                ? employeeRepository.findByUsernameAndCompany(authentication.getName(), company)
+                : employeeRepository.findByUsername(authentication.getName());
+        return employee.map(Employee::getIdEmpleado).orElse(null);
     }
 
     /**

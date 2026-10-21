@@ -65,6 +65,14 @@ public class GlobalSystemConfig implements Serializable {
     private String systemLogoUrl;
 
     /**
+     * WhatsApp number (with country code) that receives the shop requests from
+     * restaurants. Managed from the programmer shop screen.
+     */
+    @Size(max = 30, message = "El número de WhatsApp no puede exceder 30 caracteres")
+    @Column(name = "shop_whatsapp_number", length = 30)
+    private String shopWhatsappNumber;
+
+    /**
      * Ensure the ID is always 1 (singleton pattern)
      */
     @PrePersist

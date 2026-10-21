@@ -1219,6 +1219,70 @@ public class Order implements Serializable {
         return String.format("$%.2f", getTotalWithTip());
     }
 
+    // ========== Tiempo estimado de preparación ==========
+
+    /**
+     * Minutos estimados para preparar esta comanda.
+     *
+     * <p>Es la suma de los tiempos configurados de cada platillo de la orden, sin
+     * multiplicar por la cantidad: los platillos se preparan en paralelo, así que dos
+     * hamburguesas del mismo tipo tardan lo mismo que una. Las líneas canceladas no
+     * cuentan.</p>
+     *
+     * <p>Los combos se cuentan una sola vez: si la orden trae las líneas de los hijos
+     * del combo, se suman esas y se ignora la línea del combo padre (evita duplicar el
+     * tiempo). Si solo viene la línea del combo padre, se usa el tiempo efectivo del
+     * combo, que ya incluye a sus hijos.</p>
+     *
+     * @return el total de minutos, o {@code null} si ningún platillo tiene tiempo
+     *         capturado (el campo es opcional y la pantalla debe omitirlo)
+     */
+    public Integer getEstimatedPreparationMinutes() {
+        if (orderDetails == null || orderDetails.isEmpty()) {
+            return null;
+        }
+        java.util.Set<String> comboGroupsWithChildren = new java.util.HashSet<>();
+        for (OrderDetail detail : orderDetails) {
+            if (detail.isComboChild() && detail.getComboGroupId() != null) {
+                comboGroupsWithChildren.add(detail.getComboGroupId());
+            }
+        }
+        int total = 0;
+        boolean any = false;
+        java.util.Set<Long> countedItems = new java.util.HashSet<>();
+        for (OrderDetail detail : orderDetails) {
+            if (detail.getItemStatus() == OrderStatus.CANCELLED || detail.getItemMenu() == null) {
+                continue;
+            }
+            if (detail.isComboParent()
+                    && detail.getComboGroupId() != null
+                    && comboGroupsWithChildren.contains(detail.getComboGroupId())) {
+                continue;
+            }
+            // El mismo platillo cuenta una sola vez aunque venga en varias líneas:
+            // dos hamburguesas se preparan al mismo tiempo, no una después de otra.
+            Long itemId = detail.getItemMenu().getIdItemMenu();
+            if (itemId != null && !countedItems.add(itemId)) {
+                continue;
+            }
+            Integer minutes = detail.getPreparationTimeMinutes();
+            if (minutes != null && minutes > 0) {
+                total += minutes;
+                any = true;
+            }
+        }
+        return any ? total : null;
+    }
+
+    /**
+     * Texto aproximado del tiempo de preparación de la comanda ("≈ 25 min"), o
+     * {@code null} cuando no hay ningún platillo con tiempo configurado.
+     */
+    public String getEstimatedPreparationLabel() {
+        return com.aatechsolutions.elgransazon.util.PreparationTimeFormatter
+                .formatApprox(getEstimatedPreparationMinutes());
+    }
+
     /**
      * Employee who earns the recorded (non-cash) tip.
      * Delivery goes to the rider ({@code deliveredBy}); dine-in and takeout go

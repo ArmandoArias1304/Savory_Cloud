@@ -488,7 +488,139 @@ public class IngredientServiceImpl implements IngredientService {
                     return new IllegalArgumentException("Ingrediente no encontrado con ID: " + ingredientId);
                 });
 
-        return stockHistoryRepository.findByIngredientOrderByAddedAtDesc(ingredient);
+        return stockHistoryRepository.findByIngredientAndVoidedAtIsNullOrderByAddedAtDesc(ingredient);
+    }
+
+    @Override
+    @Transactional
+    public IngredientStockHistory updateStockHistory(Long ingredientId, Long historyId,
+                                                     BigDecimal quantityAdded, BigDecimal costPerUnit,
+                                                     Employee editedBy) {
+        IngredientStockHistory record = requireHistoryEntry(ingredientId, historyId);
+        if (record.isVoided()) {
+            throw new IllegalStateException("Esta entrada ya fue anulada y no se puede editar.");
+        }
+
+        Ingredient ingredient = record.getIngredient();
+        validateHistoryValues(ingredient, quantityAdded, costPerUnit);
+
+        BigDecimal oldQuantity = record.getQuantityAdded();
+        BigDecimal oldCost = record.getCostPerUnit();
+        BigDecimal currentStock = ingredient.getCurrentStock() != null
+                ? ingredient.getCurrentStock()
+                : BigDecimal.ZERO;
+        BigDecimal delta = quantityAdded.subtract(oldQuantity);
+        BigDecimal newStock = currentStock.add(delta).setScale(2, RoundingMode.HALF_UP);
+        assertNotNegative(newStock, ingredient, "corregir la cantidad");
+
+        record.setQuantityAdded(quantityAdded);
+        record.setCostPerUnit(costPerUnit);
+        record.setTotalCost(quantityAdded.multiply(costPerUnit).setScale(2, RoundingMode.HALF_UP));
+        // La foto "stock después" se recalcula con la cantidad corregida; las filas posteriores
+        // conservan lo que se registró en su momento (el sistema no reescribe la cadena).
+        if (record.getPreviousStock() != null) {
+            record.setNewStock(record.getPreviousStock().add(quantityAdded)
+                    .setScale(2, RoundingMode.HALF_UP));
+        }
+        record.setEditedAt(LocalDateTime.now());
+        record.setEditedBy(editedBy);
+
+        ingredient.setCurrentStock(newStock);
+        ingredient.setUpdatedAt(LocalDateTime.now());
+        ingredientRepository.save(ingredient);
+        IngredientStockHistory saved = stockHistoryRepository.save(record);
+
+        log.info("Stock history entry {} of ingredient '{}' corrected: quantity {} -> {}, cost {} -> {} (total {}, stock {})",
+                historyId, ingredient.getName(), oldQuantity, quantityAdded,
+                oldCost, costPerUnit, saved.getTotalCost(), newStock);
+        return saved;
+    }
+
+    @Override
+    @Transactional
+    public IngredientStockHistory voidStockHistory(Long ingredientId, Long historyId,
+                                                   String reason, Employee voidedBy) {
+        IngredientStockHistory record = requireHistoryEntry(ingredientId, historyId);
+        if (record.isVoided()) {
+            throw new IllegalStateException("Esta entrada ya fue anulada.");
+        }
+
+        Ingredient ingredient = record.getIngredient();
+        BigDecimal currentStock = ingredient.getCurrentStock() != null
+                ? ingredient.getCurrentStock()
+                : BigDecimal.ZERO;
+        BigDecimal newStock = currentStock.subtract(record.getQuantityAdded())
+                .setScale(2, RoundingMode.HALF_UP);
+        assertNotNegative(newStock, ingredient, "anular esta entrada");
+
+        ingredient.setCurrentStock(newStock);
+        ingredient.setUpdatedAt(LocalDateTime.now());
+        ingredientRepository.save(ingredient);
+
+        record.setVoidedAt(LocalDateTime.now());
+        record.setVoidedBy(voidedBy);
+        record.setVoidReason(trimReason(reason));
+        IngredientStockHistory saved = stockHistoryRepository.save(record);
+
+        log.info("Stock history entry {} of ingredient '{}' voided: -{} {} (stock {})",
+                historyId, ingredient.getName(), record.getQuantityAdded(),
+                ingredient.getUnitOfMeasure(), newStock);
+        return saved;
+    }
+
+    /**
+     * Una entrada del historial de la empresa actual, validando que pertenezca al ingrediente
+     * de la ruta para que nadie edite el historial de otro ingrediente cambiando el id.
+     */
+    private IngredientStockHistory requireHistoryEntry(Long ingredientId, Long historyId) {
+        IngredientStockHistory record = stockHistoryRepository
+                .findByIdAndIngredient_Company(historyId, CompanyContext.requireCurrentCompany())
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Entrada del historial no encontrada: " + historyId));
+
+        if (ingredientId == null || record.getIngredient() == null
+                || !ingredientId.equals(record.getIngredient().getIdIngredient())) {
+            throw new IllegalArgumentException(
+                    "La entrada del historial no pertenece a este ingrediente.");
+        }
+        return record;
+    }
+
+    private void validateHistoryValues(Ingredient ingredient, BigDecimal quantity, BigDecimal costPerUnit) {
+        if (quantity == null || quantity.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("La cantidad debe ser mayor a 0");
+        }
+        if (costPerUnit == null || costPerUnit.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("El costo por unidad debe ser mayor o igual a 0");
+        }
+        if ("UN".equals(ingredient.getUnitOfMeasure()) && quantity.stripTrailingZeros().scale() > 0) {
+            throw new IllegalArgumentException(
+                    "Para unidades (UN), solo se permiten números enteros. No puede corregir a cantidades decimales de unidades.");
+        }
+    }
+
+    /**
+     * El inventario nunca puede quedar negativo: si la corrección lo dejaría así, la entrada ya
+     * tenía consumo encima y hay que arreglar el dato de otra forma.
+     */
+    private void assertNotNegative(BigDecimal newStock, Ingredient ingredient, String action) {
+        if (newStock.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalStateException(String.format(
+                    "No se puede %s: el stock actual es %s %s y el resultado sería %s %s. " +
+                            "Corrige la cantidad o registra la compra que falta.",
+                    action,
+                    ingredient.getCurrentStock() == null ? "0" : ingredient.getCurrentStock().toPlainString(),
+                    ingredient.getUnitOfMeasure(),
+                    newStock.toPlainString(), ingredient.getUnitOfMeasure()));
+        }
+    }
+
+    private String trimReason(String reason) {
+        if (reason == null || reason.isBlank()) {
+            return null;
+        }
+        String trimmed = reason.trim();
+        return trimmed.length() > 255 ? trimmed.substring(0, 255) : trimmed;
     }
 
     @Override

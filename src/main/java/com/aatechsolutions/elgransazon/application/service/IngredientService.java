@@ -102,9 +102,31 @@ public interface IngredientService {
     Ingredient addStock(Long ingredientId, BigDecimal quantityToAdd, BigDecimal costPerUnit, Employee addedBy);
 
     /**
-     * Obtiene el historial de stock de un ingrediente
+     * Obtiene el historial de stock de un ingrediente (sin las entradas anuladas)
      */
     List<IngredientStockHistory> getStockHistory(Long ingredientId);
+
+    /**
+     * Corrige la cantidad y/o el costo de una entrada del historial. El stock del ingrediente
+     * se ajusta por la diferencia entre la cantidad nueva y la original; nunca puede quedar
+     * negativo.
+     *
+     * @throws IllegalStateException    cuando la entrada ya fue anulada o el stock quedaría negativo
+     * @throws IllegalArgumentException cuando la cantidad o el costo no son válidos
+     */
+    IngredientStockHistory updateStockHistory(Long ingredientId, Long historyId,
+                                              BigDecimal quantityAdded, BigDecimal costPerUnit,
+                                              Employee editedBy);
+
+    /**
+     * Anula una entrada del historial: le resta al stock la cantidad completa que había sumado.
+     * La fila se conserva marcada (quién, cuándo y motivo) pero deja de contar en el historial
+     * y en los gastos.
+     *
+     * @throws IllegalStateException cuando ya estaba anulada o el stock quedaría negativo
+     */
+    IngredientStockHistory voidStockHistory(Long ingredientId, Long historyId,
+                                            String reason, Employee voidedBy);
 
     /**
      * Calcula el gasto total de un ingrediente

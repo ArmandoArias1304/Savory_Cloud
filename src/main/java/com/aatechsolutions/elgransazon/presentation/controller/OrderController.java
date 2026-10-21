@@ -817,6 +817,7 @@ public class OrderController {
                 dto.put("available", c.getAvailable());
                 dto.put("imageUrl", c.getImageUrl());
                 dto.put("description", c.getDescription());
+                dto.put("preparationTimeMinutes", c.getEffectivePreparationTimeMinutes());
                 dto.put("isCombo", Boolean.TRUE.equals(c.getIsCombo()));
                 dto.put("scheduleStatus", c.getScheduleStatus() != null ? c.getScheduleStatus().toString() : "available");
                 sizeItemsDto.computeIfAbsent(pid, k -> new ArrayList<>()).add(dto);
@@ -955,6 +956,7 @@ public class OrderController {
                 dto.put("available", c.getAvailable());
                 dto.put("imageUrl", c.getImageUrl());
                 dto.put("description", c.getDescription());
+                dto.put("preparationTimeMinutes", c.getEffectivePreparationTimeMinutes());
                 dto.put("isCombo", Boolean.TRUE.equals(c.getIsCombo()));
                 dto.put("scheduleStatus", c.getScheduleStatus() != null ? c.getScheduleStatus().toString() : "available");
                 sizeItemsDtoAdd.computeIfAbsent(pid, k -> new ArrayList<>()).add(dto);

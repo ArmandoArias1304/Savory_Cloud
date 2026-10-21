@@ -143,10 +143,13 @@ public class Ingredient implements Serializable {
     // ========== Stock Level Business Logic ==========
 
     /**
-     * Check if ingredient is completely out of stock (currentStock = 0)
+     * Check if ingredient is completely out of stock (currentStock <= 0).
+     *
+     * <p>Se usa {@code <= 0} y no {@code == 0} como red de seguridad: si algún dato viejo quedó
+     * en negativo, debe verse como agotado y no como "OK".</p>
      */
     public boolean isOutOfStock() {
-        return currentStock == null || currentStock.compareTo(BigDecimal.ZERO) == 0;
+        return currentStock == null || currentStock.compareTo(BigDecimal.ZERO) <= 0;
     }
 
     /**

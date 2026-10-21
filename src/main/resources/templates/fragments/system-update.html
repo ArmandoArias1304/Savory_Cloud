@@ -1,0 +1,290 @@
+<!doctype html>
+<html
+  lang="es"
+  xmlns:th="http://www.thymeleaf.org"
+  xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+>
+  <body>
+    <!--
+      Small version chip shown next to the employee name.
+      variant="primary" for colored top bars, "sidebar" for the light sidebar card.
+    -->
+    <th:block th:fragment="versionChip(variant)">
+      <button
+        th:if="${latestSystemUpdate != null}"
+        type="button"
+        onclick="openSystemUpdateModal()"
+        class="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg font-semibold text-xs sm:text-sm transition-colors border"
+        th:classappend="${variant == 'primary'}
+            ? 'bg-white/20 hover:bg-white/30 text-white border-white/30'
+            : 'bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700'"
+        th:title="'Ver novedades de la versión ' + ${latestSystemUpdate.version}"
+      >
+        <span class="material-symbols-outlined text-base">system_update_alt</span>
+        <span>
+          Versión
+          <span class="font-bold" th:text="${latestSystemUpdate.version}">1.1.1</span>
+        </span>
+      </button>
+    </th:block>
+
+    <!-- Admin: replaces the old thank-you box in the Appearance card -->
+    <th:block th:fragment="adminVersionCard">
+      <div
+        class="mt-6 p-5 rounded-xl bg-gradient-to-br from-primary/5 to-primary/10 dark:from-primary/10 dark:to-primary/20 border border-primary/20 dark:border-primary/30"
+      >
+        <div class="flex flex-col sm:flex-row sm:items-center gap-4 sm:justify-between">
+          <div class="flex items-center gap-3">
+            <div
+              class="w-12 h-12 rounded-xl bg-primary/15 dark:bg-primary/20 flex items-center justify-center flex-shrink-0"
+            >
+              <span class="material-symbols-outlined text-2xl text-primary">system_update_alt</span>
+            </div>
+            <div>
+              <p class="text-sm font-bold text-gray-900 dark:text-white">Actualizaciones del sistema</p>
+              <p
+                class="text-xs text-gray-600 dark:text-gray-400"
+                th:text="${latestSystemUpdate != null
+                    ? 'Consulta las novedades de la última versión publicada.'
+                    : 'Aún no hay actualizaciones publicadas.'}"
+              >
+                Consulta las novedades de la última versión publicada.
+              </p>
+            </div>
+          </div>
+
+          <button
+            th:if="${latestSystemUpdate != null}"
+            type="button"
+            onclick="openSystemUpdateModal()"
+            class="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-primary to-primary-dark text-white font-bold shadow-md hover:shadow-lg hover:shadow-primary/30 transition-all whitespace-nowrap"
+          >
+            <span>Versión</span>
+            <span class="font-extrabold" th:text="${latestSystemUpdate.version}">1.1.1</span>
+            <span class="material-symbols-outlined text-lg">arrow_forward</span>
+          </button>
+        </div>
+      </div>
+    </th:block>
+
+    <!-- Branded modal, included once by themeScript on every authenticated page -->
+    <th:block th:fragment="systemUpdateModal">
+      <style>
+        /* Barra de scroll del modal: delgada, redondeada y separada del borde */
+        .system-update-scroll {
+          scrollbar-width: thin;
+          scrollbar-color: #94a3b8 transparent;
+        }
+
+        .system-update-scroll::-webkit-scrollbar {
+          width: 8px;
+        }
+
+        .system-update-scroll::-webkit-scrollbar-track {
+          background: transparent;
+          margin: 10px 4px;
+        }
+
+        .system-update-scroll::-webkit-scrollbar-thumb {
+          background: linear-gradient(180deg, #cbd5e1 0%, #94a3b8 100%);
+          background-clip: padding-box;
+          border: 2px solid transparent;
+          border-radius: 9999px;
+        }
+
+        html.dark .system-update-scroll::-webkit-scrollbar-thumb {
+          background: linear-gradient(180deg, #475569 0%, #334155 100%);
+          background-clip: padding-box;
+          border: 2px solid transparent;
+        }
+
+        .system-update-scroll::-webkit-scrollbar-thumb:hover {
+          background: linear-gradient(180deg, #38e07b 0%, #2bc866 100%);
+          background-clip: padding-box;
+          border: 2px solid transparent;
+        }
+      </style>
+      <div
+        th:if="${latestSystemUpdate != null}"
+        sec:authorize="isAuthenticated()"
+        id="systemUpdateModal"
+        class="fixed inset-0 z-[10000] hidden items-center justify-center p-4"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="systemUpdateTitle"
+      >
+        <div
+          class="absolute inset-0 bg-black/60 backdrop-blur-sm"
+          onclick="closeSystemUpdateModal()"
+        ></div>
+
+        <div
+          class="relative flex w-full max-w-lg max-h-[90vh] flex-col overflow-hidden bg-white dark:bg-gray-900 rounded-3xl shadow-2xl border border-white/10"
+        >
+          <div class="min-h-0 overflow-y-auto system-update-scroll">
+          <!-- Header -->
+          <div class="relative bg-gradient-to-br from-primary to-primary-dark px-6 sm:px-8 pt-7 pb-8 text-white">
+            <button
+              type="button"
+              onclick="closeSystemUpdateModal()"
+              class="absolute top-4 right-4 w-9 h-9 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors"
+              aria-label="Cerrar"
+            >
+              <span class="material-symbols-outlined text-xl">close</span>
+            </button>
+
+            <div class="flex items-center gap-4">
+              <div
+                class="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center overflow-hidden flex-shrink-0"
+              >
+                <img
+                  th:if="${globalSystemConfig != null
+                      and globalSystemConfig.systemLogoUrl != null
+                      and !globalSystemConfig.systemLogoUrl.isEmpty()}"
+                  th:src="${@cloudinaryUrl.logoLarge(globalSystemConfig.systemLogoUrl)}"
+                  th:alt="${globalSystemConfig.systemName}"
+                  class="w-full h-full object-contain p-1"
+                />
+                <span
+                  th:if="${globalSystemConfig == null
+                      or globalSystemConfig.systemLogoUrl == null
+                      or globalSystemConfig.systemLogoUrl.isEmpty()}"
+                  class="material-symbols-outlined text-3xl"
+                  >cloud</span
+                >
+              </div>
+              <div>
+                <p class="text-white/75 text-xs font-semibold uppercase tracking-widest">
+                  Novedades de
+                  <span
+                    th:text="${globalSystemConfig != null ? globalSystemConfig.systemName : 'Savory Cloud'}"
+                    >Savory Cloud</span
+                  >
+                </p>
+                <div class="mt-1 inline-flex items-center gap-2">
+                  <span class="px-2.5 py-1 rounded-full bg-white text-primary-dark text-xs font-extrabold">
+                    Versión <span th:text="${latestSystemUpdate.version}">1.1.1</span>
+                  </span>
+                  <span
+                    th:if="${latestSystemUpdate.publishedAt != null}"
+                    class="text-white/70 text-xs"
+                    th:text="${#temporals.format(latestSystemUpdate.publishedAt, 'dd/MM/yyyy')}"
+                  >
+                    01/01/2026
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Body -->
+          <div class="px-6 sm:px-8 py-6">
+            <h2
+              id="systemUpdateTitle"
+              class="text-xl sm:text-2xl font-extrabold text-gray-900 dark:text-white leading-tight"
+              th:text="${latestSystemUpdate.title}"
+            >
+              Título de la actualización
+            </h2>
+
+            <ul class="mt-5 space-y-3">
+              <li th:each="line : ${latestSystemUpdate.changeLines}" class="flex items-start gap-3">
+                <span
+                  class="w-6 h-6 rounded-full bg-primary/15 dark:bg-primary/20 text-primary flex items-center justify-center flex-shrink-0 mt-0.5"
+                >
+                  <span class="material-symbols-outlined text-base">check</span>
+                </span>
+                <span class="text-sm sm:text-base text-gray-700 dark:text-gray-300" th:text="${line}">
+                  Cambio
+                </span>
+              </li>
+            </ul>
+          </div>
+
+          <!-- Footer -->
+          <div class="px-6 sm:px-8 pb-7">
+            <div
+              class="rounded-2xl bg-gray-50 dark:bg-gray-800/70 border border-gray-100 dark:border-gray-700 px-4 py-4 text-center"
+            >
+              <span class="material-symbols-outlined text-primary text-2xl">favorite</span>
+              <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">
+                Gracias por utilizar
+                <span
+                  class="text-primary"
+                  th:text="${globalSystemConfig != null ? globalSystemConfig.systemName : 'Savory Cloud'}"
+                  >Savory Cloud</span
+                >
+              </p>
+              <p class="text-xs text-gray-500 dark:text-gray-400">
+                Seguimos mejorando cada día para tu restaurante.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onclick="closeSystemUpdateModal()"
+              class="mt-4 w-full inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-primary to-primary-dark text-white font-bold hover:shadow-lg hover:shadow-primary/30 transition-all"
+            >
+              Entendido
+              <span class="material-symbols-outlined text-lg">check</span>
+            </button>
+          </div>
+          </div>
+        </div>
+      </div>
+
+      <script th:if="${latestSystemUpdate != null}" th:inline="javascript">
+        (function () {
+          const modal = document.getElementById("systemUpdateModal");
+          if (!modal) {
+            return;
+          }
+
+          const seenUrl = /*[[@{/system-updates/{id}/seen(id=${latestSystemUpdate.id})}]]*/ "";
+          const autoOpen = /*[[${pendingSystemUpdate != null}]]*/ false;
+          let marked = false;
+
+          function markSeen() {
+            if (marked) {
+              return;
+            }
+            marked = true;
+            if (!seenUrl) {
+              return;
+            }
+            fetch(seenUrl, { method: "POST", keepalive: true }).catch(function () {
+              // If the request fails, the modal is offered again on the next visit.
+            });
+          }
+
+          window.openSystemUpdateModal = function () {
+            modal.classList.remove("hidden");
+            modal.classList.add("flex");
+            document.body.style.overflow = "hidden";
+            const closeButton = modal.querySelector("button[aria-label='Cerrar']");
+            if (closeButton) {
+              closeButton.focus();
+            }
+          };
+
+          window.closeSystemUpdateModal = function () {
+            modal.classList.add("hidden");
+            modal.classList.remove("flex");
+            document.body.style.overflow = "";
+            markSeen();
+          };
+
+          document.addEventListener("keydown", function (event) {
+            if (event.key === "Escape" && !modal.classList.contains("hidden")) {
+              window.closeSystemUpdateModal();
+            }
+          });
+
+          if (autoOpen) {
+            window.setTimeout(window.openSystemUpdateModal, 450);
+          }
+        })();
+      </script>
+    </th:block>
+  </body>
+</html>

@@ -501,6 +501,9 @@
                     <th class="px-6 py-4 font-semibold">Tipo</th>
                     <th class="px-6 py-4 font-semibold">Cliente</th>
                     <th class="px-6 py-4 font-semibold">Total</th>
+                    <th class="px-6 py-4 font-semibold" title="Suma de los tiempos de preparación de los platillos de la comanda">
+                      Tiempo
+                    </th>
                     <th class="px-6 py-4 font-semibold">Pago</th>
                     <th class="px-6 py-4 font-semibold">Estado</th>
                     <th class="px-6 py-4 font-semibold text-center">
@@ -513,7 +516,7 @@
                 <tbody class="stagger-rows">
                   <tr th:if="${orders.empty}">
                     <td
-                      colspan="11"
+                      colspan="12"
                       class="px-6 py-12 text-center text-gray-500 dark:text-gray-400"
                     >
                       <span
@@ -619,6 +622,20 @@
                           th:text="${#numbers.formatDecimal(order.total, 1, 2)}"
                         ></span
                       ></span>
+                    </td>
+
+                    <!-- Tiempo estimado de preparación de la comanda -->
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <span
+                        th:if="${order.estimatedPreparationLabel != null}"
+                        th:replace="~{fragments/prep-time :: chip(${order.estimatedPreparationLabel})}"
+                      ></span>
+                      <span
+                        th:if="${order.estimatedPreparationLabel == null}"
+                        class="text-sm text-gray-400 dark:text-gray-600"
+                        title="Ningún platillo de este pedido tiene tiempo configurado"
+                        >—</span
+                      >
                     </td>
 
                     <!-- Payment Method -->
@@ -837,7 +854,7 @@
                     class="border-b border-gray-100 dark:border-gray-800/60 bg-gray-50/60 dark:bg-gray-900/40"
                   >
                     <td
-                      colspan="10"
+                      colspan="11"
                       class="px-6 py-2"
                     >
                       <button
@@ -866,7 +883,7 @@
                     th:style="${order.payments != null and order.payments.size() > 1 ? 'display:none' : ''}"
                   >
                     <td
-                      colspan="10"
+                      colspan="11"
                       class="px-6 py-3"
                     >
                       <div class="flex items-center justify-between gap-3">

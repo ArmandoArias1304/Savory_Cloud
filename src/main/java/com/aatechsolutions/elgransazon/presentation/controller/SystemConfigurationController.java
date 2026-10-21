@@ -1,6 +1,8 @@
 package com.aatechsolutions.elgransazon.presentation.controller;
 
 import com.aatechsolutions.elgransazon.application.service.BusinessHoursService;
+import com.aatechsolutions.elgransazon.application.service.CloudflareImagesUrlHelper;
+import com.aatechsolutions.elgransazon.application.service.GlobalSystemConfigService;
 import com.aatechsolutions.elgransazon.application.service.ImageStorageService;
 import com.aatechsolutions.elgransazon.application.service.LicenseService;
 import com.aatechsolutions.elgransazon.application.service.SocialNetworkService;
@@ -11,15 +13,21 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.propertyeditors.CustomNumberEditor;
 import org.springframework.beans.propertyeditors.StringTrimmerEditor;
+import org.springframework.http.CacheControl;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.time.Duration;
 import java.time.LocalTime;
 import java.util.*;
 
@@ -39,6 +47,9 @@ public class SystemConfigurationController {
     private final SocialNetworkService socialNetworkService;
     private final LicenseService licenseService;
     private final ImageStorageService imageStorageService;
+    private final GlobalSystemConfigService globalSystemConfigService;
+    private final CloudflareImagesUrlHelper cloudinaryUrl;
+    private final RestTemplate restTemplate;
 
     /**
      * Treat empty form inputs as null so the optional Double/Integer fields
@@ -51,6 +62,35 @@ public class SystemConfigurationController {
         // (restaurantLatitude / restaurantLongitude / deliveryMaxDistanceMeters).
         binder.registerCustomEditor(Double.class, new CustomNumberEditor(Double.class, true));
         binder.registerCustomEditor(Integer.class, new CustomNumberEditor(Integer.class, true));
+    }
+
+    /**
+     * Proxy del logo del restaurante para poder incrustarlo en el canvas del QR
+     * sin problemas de CORS. Solo sirve el logo configurado en esta empresa,
+     * nunca una URL arbitraria.
+     */
+    @GetMapping("/qr-logo")
+    public ResponseEntity<byte[]> qrLogo() {
+        SystemConfiguration config = configurationService.getConfiguration();
+        String logoUrl = config != null ? config.getRestaurantLogoUrl() : null;
+        if (logoUrl == null || logoUrl.isBlank()) {
+            return ResponseEntity.notFound().build();
+        }
+        try {
+            String optimizedUrl = cloudinaryUrl.logoHero(logoUrl);
+            ResponseEntity<byte[]> image = restTemplate.getForEntity(optimizedUrl, byte[].class);
+            if (!image.getStatusCode().is2xxSuccessful() || image.getBody() == null) {
+                return ResponseEntity.status(HttpStatus.BAD_GATEWAY).build();
+            }
+            MediaType contentType = image.getHeaders().getContentType();
+            return ResponseEntity.ok()
+                    .contentType(contentType != null ? contentType : MediaType.IMAGE_PNG)
+                    .cacheControl(CacheControl.maxAge(Duration.ofMinutes(30)).cachePrivate())
+                    .body(image.getBody());
+        } catch (Exception e) {
+            log.warn("No se pudo obtener el logo del restaurante para el QR: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_GATEWAY).build();
+        }
     }
 
     /**

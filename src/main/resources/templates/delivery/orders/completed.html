@@ -165,6 +165,15 @@
                   >
                     <span th:text="${order.orderNumber}">ORD-001</span>
                   </h3>
+                  <!-- Tiempo de preparación configurado (solo referencia histórica) -->
+                  <span
+                    th:if="${order.estimatedPreparationLabel != null}"
+                    class="inline-flex items-center gap-1 px-2 py-0.5 mb-1 rounded-full text-[11px] font-bold bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300"
+                    th:title="'Tiempo estimado de preparación: ' + ${order.estimatedPreparationLabel}"
+                  >
+                    <span class="material-symbols-outlined !text-[12px]">timer</span>
+                    <span th:text="${order.estimatedPreparationLabel}"></span>
+                  </span>
                   <p
                     class="text-xs text-gray-600 dark:text-gray-400 font-medium truncate"
                   >

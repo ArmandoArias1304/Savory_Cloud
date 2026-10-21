@@ -17,6 +17,10 @@
       href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Montserrat:wght@600;700&family=Lora:wght@600;700&display=swap"
+      rel="stylesheet"
+    />
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <link
@@ -232,25 +236,8 @@
                   </label>
                 </div>
 
-                <!-- Agradecimiento Savory Cloud -->
-                <div
-                  class="mt-6 p-5 rounded-xl bg-gradient-to-br from-primary/5 to-primary/10 dark:from-primary/10 dark:to-primary/20 border border-primary/20 dark:border-primary/30 text-center"
-                >
-                  <span
-                    class="material-symbols-outlined text-4xl text-primary mb-2"
-                    >cloud</span
-                  >
-                  <p
-                    class="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-1"
-                  >
-                    Gracias por usar
-                    <span class="text-primary">Savory Cloud</span>
-                  </p>
-                  <p class="text-xs text-gray-500 dark:text-gray-400">
-                    Tu plataforma de gestión restaurantera en la nube. Estamos
-                    comprometidos con el éxito de tu negocio.
-                  </p>
-                </div>
+                <!-- Última actualización: abre el modal de novedades -->
+                <div th:replace="~{fragments/system-update :: adminVersionCard}"></div>
               </div>
             </div>
 
@@ -2120,6 +2107,15 @@
           <div
             class="mb-6 bg-white dark:bg-gray-900 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800"
             id="qrCodesSection"
+            th:with="qrRestaurantName=${configuration != null and configuration.restaurantName != null and !#strings.isEmpty(configuration.restaurantName) ? configuration.restaurantName : (globalSystemConfig != null and globalSystemConfig.systemName != null ? globalSystemConfig.systemName : 'SavoryCloud')},
+                     qrHasLogo=${configuration != null and configuration.restaurantLogoUrl != null and !#strings.isEmpty(configuration.restaurantLogoUrl)},
+                     qrLogoUrl=@{/admin/system-configuration/qr-logo},
+                     qrLandingUrl=@{/},
+                     qrMenuUrl=@{/home/menu}"
+            th:attr="data-restaurant-name=${qrRestaurantName},
+                     data-restaurant-logo=${qrHasLogo ? qrLogoUrl : ''},
+                     data-landing-url=${qrLandingUrl},
+                     data-menu-url=${qrMenuUrl}"
           >
             <div
               class="p-6 border-b border-gray-200 dark:border-gray-800 flex items-center gap-3"
@@ -2131,8 +2127,75 @@
                 Códigos QR
               </h3>
               <span class="ml-auto text-xs text-gray-400 dark:text-gray-500"
-                >Generados en tiempo real · descargables en PNG</span
+                >Diseño personalizable · descargables en PNG</span
               >
+            </div>
+
+            <!-- Personalización del diseño de descarga -->
+            <div class="px-6 pt-6">
+              <div
+                class="rounded-2xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/40 p-4 sm:p-5"
+              >
+                <div class="flex items-center gap-2 mb-4">
+                  <span class="material-symbols-outlined text-primary"
+                    >palette</span
+                  >
+                  <h4 class="font-bold text-gray-900 dark:text-white">
+                    Diseño de la descarga
+                  </h4>
+                  <span class="ml-auto text-xs text-gray-400 dark:text-gray-500"
+                    >Se aplica a ambos QR</span
+                  >
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <label class="block">
+                    <span
+                      class="block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2"
+                      >Color de fondo</span
+                    >
+                    <input
+                      type="color"
+                      id="qrDesignBg"
+                      value="#f8faf9"
+                      class="h-11 w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 cursor-pointer"
+                    />
+                  </label>
+                  <label class="block">
+                    <span
+                      class="block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2"
+                      >Color de texto</span
+                    >
+                    <input
+                      type="color"
+                      id="qrDesignText"
+                      value="#111827"
+                      class="h-11 w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 cursor-pointer"
+                    />
+                  </label>
+                  <label class="block">
+                    <span
+                      class="block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2"
+                      >Tipografía</span
+                    >
+                    <select
+                      id="qrDesignFont"
+                      class="h-11 w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 text-sm text-gray-800 dark:text-gray-100"
+                    >
+                      <option value="Work Sans">Work Sans (moderna)</option>
+                      <option value="Playfair Display"
+                        >Playfair Display (elegante)</option
+                      >
+                      <option value="Montserrat">Montserrat (geométrica)</option>
+                      <option value="Lora">Lora (clásica)</option>
+                    </select>
+                  </label>
+                </div>
+                <p class="mt-3 text-xs text-gray-500 dark:text-gray-400">
+                  Elige colores y tipografía. La descarga incluye el logo y el
+                  nombre del restaurante, el QR sobre una tarjeta blanca y el
+                  crédito de Savory Cloud al pie.
+                </p>
+              </div>
             </div>
 
             <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -2154,17 +2217,21 @@
                   Redirige a la página web del restaurante mientras tenga el
                   plan Web o All In One.
                 </p>
-                <div
-                  id="qr-landing"
-                  class="bg-white rounded-xl p-3 shadow-md"
-                ></div>
+                <canvas
+                  id="qr-landing-card"
+                  width="1000"
+                  height="1500"
+                  class="w-full max-w-[240px] h-auto rounded-xl shadow-md"
+                  role="img"
+                  aria-label="Vista previa del QR de la página principal"
+                ></canvas>
                 <p
                   class="text-xs text-gray-400 dark:text-gray-500 break-all text-center"
                   id="qr-landing-url"
                 ></p>
                 <button
                   type="button"
-                  onclick="downloadQR('qr-landing', 'qr-pagina-principal.png')"
+                  onclick="downloadQR('qr-landing-card', 'qr-pagina-principal.png')"
                   class="mt-2 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary hover:bg-primary-dark text-white font-semibold text-sm shadow transition-colors"
                 >
                   <span class="material-symbols-outlined text-base"
@@ -2191,17 +2258,21 @@
                 >
                   Redirige directamente al menú público del restaurante.
                 </p>
-                <div
-                  id="qr-menu"
-                  class="bg-white rounded-xl p-3 shadow-md"
-                ></div>
+                <canvas
+                  id="qr-menu-card"
+                  width="1000"
+                  height="1500"
+                  class="w-full max-w-[240px] h-auto rounded-xl shadow-md"
+                  role="img"
+                  aria-label="Vista previa del QR del menú digital"
+                ></canvas>
                 <p
                   class="text-xs text-gray-400 dark:text-gray-500 break-all text-center"
                   id="qr-menu-url"
                 ></p>
                 <button
                   type="button"
-                  onclick="downloadQR('qr-menu', 'qr-menu-digital.png')"
+                  onclick="downloadQR('qr-menu-card', 'qr-menu-digital.png')"
                   class="mt-2 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary hover:bg-primary-dark text-white font-semibold text-sm shadow transition-colors"
                 >
                   <span class="material-symbols-outlined text-base"
@@ -2884,55 +2955,409 @@
     <!-- Script del Sistema de Temas -->
     <div th:replace="~{fragments/theme :: themeScript}"></div>
 
-    <!-- QR Code generation — qrcodejs (browser-native, sin módulos) -->
+    <!-- QR Code generation — qrcodejs + tarjeta de diseño -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script>
-      document.addEventListener("DOMContentLoaded", function () {
-        var base = window.location.protocol + "//" + window.location.host;
-        var landingUrl = base + "/";
-        var menuUrl = base + "/home/menu";
+      (function () {
+        "use strict";
 
-        document.getElementById("qr-landing-url").textContent = landingUrl;
-        document.getElementById("qr-menu-url").textContent = menuUrl;
-
-        var opts = {
-          width: 200,
-          height: 200,
-          colorDark: "#111827",
-          colorLight: "#ffffff",
-          correctLevel: QRCode.CorrectLevel.H,
+        var CARD_WIDTH = 1000;
+        var CARD_HEIGHT = 1500;
+        var STORAGE_KEY = "savorycloud-qr-design";
+        var FONTS = ["Work Sans", "Playfair Display", "Montserrat", "Lora"];
+        var DEFAULT_DESIGN = {
+          bg: "#f8faf9",
+          text: "#111827",
+          font: "Work Sans",
         };
 
-        new QRCode(
-          document.getElementById("qr-landing"),
-          Object.assign({}, opts, { text: landingUrl }),
-        );
-        new QRCode(
-          document.getElementById("qr-menu"),
-          Object.assign({}, opts, { text: menuUrl }),
-        );
-      });
+        var section = document.getElementById("qrCodesSection");
+        var brandName =
+          (section && section.dataset.restaurantName) || "SavoryCloud";
+        var brandLogo = (section && section.dataset.restaurantLogo) || "";
+        var logoImage = null;
+        var design = loadDesign();
 
-      function downloadQR(containerId, filename) {
-        var container = document.getElementById(containerId);
-        // qrcodejs genera un <canvas> dentro del contenedor
-        var canvas = container.querySelector("canvas");
-        if (!canvas) return;
+        var bgInput = document.getElementById("qrDesignBg");
+        var textInput = document.getElementById("qrDesignText");
+        var fontSelect = document.getElementById("qrDesignFont");
 
-        var padding = 24;
-        var out = document.createElement("canvas");
-        out.width = canvas.width + padding * 2;
-        out.height = canvas.height + padding * 2;
-        var ctx = out.getContext("2d");
-        ctx.fillStyle = "#ffffff";
-        ctx.fillRect(0, 0, out.width, out.height);
-        ctx.drawImage(canvas, padding, padding);
+        var base = window.location.protocol + "//" + window.location.host;
+        var landingUrl = (section && section.dataset.landingUrl) || base + "/";
+        var menuUrl = (section && section.dataset.menuUrl) || base + "/home/menu";
+        var targets = [
+          {
+            url: landingUrl,
+            title: "Página principal",
+            canvas: document.getElementById("qr-landing-card"),
+          },
+          {
+            url: menuUrl,
+            title: "Menú digital",
+            canvas: document.getElementById("qr-menu-card"),
+          },
+        ];
 
-        var link = document.createElement("a");
-        link.download = filename;
-        link.href = out.toDataURL("image/png");
-        link.click();
-      }
+        function loadDesign() {
+          try {
+            var raw = window.localStorage.getItem(STORAGE_KEY);
+            if (!raw) return Object.assign({}, DEFAULT_DESIGN);
+            var parsed = JSON.parse(raw);
+            return {
+              bg: isHex(parsed.bg) ? parsed.bg : DEFAULT_DESIGN.bg,
+              text: isHex(parsed.text) ? parsed.text : DEFAULT_DESIGN.text,
+              font:
+                FONTS.indexOf(parsed.font) !== -1
+                  ? parsed.font
+                  : DEFAULT_DESIGN.font,
+            };
+          } catch (e) {
+            return Object.assign({}, DEFAULT_DESIGN);
+          }
+        }
+
+        function isHex(value) {
+          return typeof value === "string" && /^#[0-9a-fA-F]{6}$/.test(value);
+        }
+
+        function saveDesign() {
+          try {
+            window.localStorage.setItem(STORAGE_KEY, JSON.stringify(design));
+          } catch (e) {
+            /* almacenamiento no disponible */
+          }
+        }
+
+        function rgb(hex) {
+          var value = hex.replace("#", "");
+          return [
+            parseInt(value.substring(0, 2), 16) / 255,
+            parseInt(value.substring(2, 4), 16) / 255,
+            parseInt(value.substring(4, 6), 16) / 255,
+          ];
+        }
+
+        function channel(value) {
+          return value <= 0.03928
+            ? value / 12.92
+            : Math.pow((value + 0.055) / 1.055, 2.4);
+        }
+
+        function luminance(hex) {
+          var c = rgb(hex);
+          return 0.2126 * channel(c[0]) + 0.7152 * channel(c[1]) + 0.0722 * channel(c[2]);
+        }
+
+        function contrast(a, b) {
+          var l1 = luminance(a);
+          var l2 = luminance(b);
+          var light = Math.max(l1, l2);
+          var dark = Math.min(l1, l2);
+          return (light + 0.05) / (dark + 0.05);
+        }
+
+        function qrInk() {
+          // El QR necesita contraste suficiente sobre el panel blanco.
+          return contrast(design.text, "#ffffff") >= 4.5
+            ? design.text
+            : "#111827";
+        }
+
+        function fontStack() {
+          return '"' + design.font + '", "Work Sans", sans-serif';
+        }
+
+        function loadFonts() {
+          if (!document.fonts || !document.fonts.load) return Promise.resolve();
+          var loads = [];
+          FONTS.forEach(function (font) {
+            loads.push(document.fonts.load('700 62px "' + font + '"').catch(function () {}));
+            loads.push(document.fonts.load('600 26px "' + font + '"').catch(function () {}));
+          });
+          return Promise.all(loads);
+        }
+
+        function loadLogo(url) {
+          if (!url) return Promise.resolve(null);
+          return new Promise(function (resolve) {
+            var img = new Image();
+            img.crossOrigin = "anonymous";
+            img.onload = function () {
+              resolve(img);
+            };
+            img.onerror = function () {
+              // Sin CORS o sin logo disponible: la tarjeta se genera sin logo.
+              resolve(null);
+            };
+            img.src = url;
+          });
+        }
+
+        function makeQrCanvas(url) {
+          if (typeof QRCode === "undefined") return null;
+          var holder = document.createElement("div");
+          new QRCode(holder, {
+            text: url,
+            width: 640,
+            height: 640,
+            colorDark: qrInk(),
+            colorLight: "#ffffff",
+            correctLevel: QRCode.CorrectLevel.H,
+          });
+          return holder.querySelector("canvas");
+        }
+
+        function roundRect(ctx, x, y, width, height, radius) {
+          if (typeof ctx.roundRect === "function") {
+            ctx.beginPath();
+            ctx.roundRect(x, y, width, height, radius);
+            return;
+          }
+          ctx.beginPath();
+          ctx.moveTo(x + radius, y);
+          ctx.lineTo(x + width - radius, y);
+          ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+          ctx.lineTo(x + width, y + height - radius);
+          ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+          ctx.lineTo(x + radius, y + height);
+          ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+          ctx.lineTo(x, y + radius);
+          ctx.quadraticCurveTo(x, y, x + radius, y);
+          ctx.closePath();
+        }
+
+        function wrapLines(ctx, text, maxWidth) {
+          var words = String(text || "").split(/\s+/);
+          var lines = [];
+          var current = "";
+          words.forEach(function (word) {
+            var candidate = current ? current + " " + word : word;
+            if (current && ctx.measureText(candidate).width > maxWidth) {
+              lines.push(current);
+              current = word;
+            } else {
+              current = candidate;
+            }
+          });
+          if (current) lines.push(current);
+          if (lines.length > 2) {
+            lines = lines.slice(0, 2);
+            lines[1] = lines[1].replace(/\s+\S*$/, "") + "…";
+          }
+          return lines;
+        }
+
+        function drawTracked(ctx, text, centerX, y, spacing) {
+          var chars = String(text).split("");
+          var widths = chars.map(function (ch) {
+            return ctx.measureText(ch).width;
+          });
+          var total =
+            widths.reduce(function (sum, w) {
+              return sum + w;
+            }, 0) +
+            spacing * (chars.length - 1);
+          var x = centerX - total / 2;
+          ctx.textAlign = "left";
+          chars.forEach(function (ch, index) {
+            ctx.fillText(ch, x, y);
+            x += widths[index] + spacing;
+          });
+          ctx.textAlign = "center";
+        }
+
+        function initial(name) {
+          var value = String(name || "S").trim();
+          return value ? value.charAt(0).toUpperCase() : "S";
+        }
+
+        function renderCard(canvas, qrCanvas, subtitle) {
+          if (!canvas) return;
+          canvas.width = CARD_WIDTH;
+          canvas.height = CARD_HEIGHT;
+          var ctx = canvas.getContext("2d");
+          var darkBg = luminance(design.bg) < 0.5;
+
+          ctx.fillStyle = design.bg;
+          ctx.fillRect(0, 0, CARD_WIDTH, CARD_HEIGHT);
+          ctx.textAlign = "center";
+          ctx.textBaseline = "alphabetic";
+
+          var y = 120;
+          if (logoImage) {
+            var maxLogo = 240;
+            var scale = Math.min(
+              maxLogo / logoImage.width,
+              maxLogo / logoImage.height,
+            );
+            var logoWidth = logoImage.width * scale;
+            var logoHeight = logoImage.height * scale;
+            if (darkBg) {
+              var plate = 330;
+              ctx.save();
+              ctx.shadowColor = "rgba(0,0,0,0.18)";
+              ctx.shadowBlur = 26;
+              ctx.shadowOffsetY = 12;
+              roundRect(ctx, (CARD_WIDTH - plate) / 2, y, plate, plate, 44);
+              ctx.fillStyle = "#ffffff";
+              ctx.fill();
+              ctx.restore();
+              ctx.drawImage(
+                logoImage,
+                (CARD_WIDTH - logoWidth) / 2,
+                y + (plate - logoHeight) / 2,
+                logoWidth,
+                logoHeight,
+              );
+              y += plate + 46;
+            } else {
+              ctx.drawImage(
+                logoImage,
+                (CARD_WIDTH - logoWidth) / 2,
+                y + (maxLogo - logoHeight) / 2,
+                logoWidth,
+                logoHeight,
+              );
+              y += maxLogo + 46;
+            }
+          } else {
+            var radius = 110;
+            ctx.beginPath();
+            ctx.arc(CARD_WIDTH / 2, y + radius, radius, 0, Math.PI * 2);
+            ctx.fillStyle = design.text;
+            ctx.fill();
+            ctx.fillStyle = design.bg;
+            ctx.font = '700 120px ' + fontStack();
+            ctx.textBaseline = "middle";
+            ctx.fillText(initial(brandName), CARD_WIDTH / 2, y + radius + 4);
+            ctx.textBaseline = "alphabetic";
+            y += radius * 2 + 46;
+          }
+
+          ctx.fillStyle = design.text;
+          ctx.font = '700 62px ' + fontStack();
+          var titleLines = wrapLines(ctx, brandName, 820);
+          var titleTop = y + 34;
+          titleLines.forEach(function (line, index) {
+            ctx.fillText(line, CARD_WIDTH / 2, titleTop + index * 72);
+          });
+          y = titleTop + (titleLines.length - 1) * 72;
+
+          ctx.save();
+          ctx.globalAlpha = 0.72;
+          ctx.font = '600 26px ' + fontStack();
+          drawTracked(ctx, subtitle.toUpperCase(), CARD_WIDTH / 2, y + 58, 7);
+          ctx.restore();
+
+          // El logo y el crédito al pie son grandes ahora, así que el panel del
+          // QR ocupa el espacio que queda en vez de una caja fija: nunca pisa el
+          // subtítulo ni el "by Savory Cloud".
+          var footerY = CARD_HEIGHT - 92;
+          var topLimit = y + 122;
+          var available = footerY - 74 - topLimit;
+          var panel = Math.max(520, Math.min(720, available));
+          var panelX = (CARD_WIDTH - panel) / 2;
+          var panelY = topLimit;
+
+          ctx.save();
+          ctx.shadowColor = "rgba(0,0,0,0.16)";
+          ctx.shadowBlur = 28;
+          ctx.shadowOffsetY = 12;
+          roundRect(ctx, panelX, panelY, panel, panel, 40);
+          ctx.fillStyle = "#ffffff";
+          ctx.fill();
+          ctx.restore();
+
+          if (qrCanvas) {
+            var qrSize = panel - 100;
+            ctx.drawImage(
+              qrCanvas,
+              panelX + (panel - qrSize) / 2,
+              panelY + (panel - qrSize) / 2,
+              qrSize,
+              qrSize,
+            );
+          }
+
+          ctx.globalAlpha = 0.9;
+          ctx.fillStyle = design.text;
+          ctx.font = '700 42px "Work Sans", sans-serif';
+          ctx.fillText("by Savory Cloud", CARD_WIDTH / 2, footerY);
+          ctx.globalAlpha = 1;
+        }
+
+        function renderAll() {
+          targets.forEach(function (target) {
+            renderCard(target.canvas, makeQrCanvas(target.url), target.title);
+          });
+        }
+
+        function syncControls() {
+          if (bgInput) bgInput.value = design.bg;
+          if (textInput) textInput.value = design.text;
+          if (fontSelect) fontSelect.value = design.font;
+        }
+
+        function downloadQR(canvasId, filename) {
+          var canvas = document.getElementById(canvasId);
+          if (!canvas) return;
+          var dataUrl;
+          try {
+            dataUrl = canvas.toDataURL("image/png");
+          } catch (e) {
+            if (window.Swal && window.Swal.fire) {
+              window.Swal.fire({
+                icon: "error",
+                title: "No se pudo generar el PNG",
+                text: "El logo del restaurante impide exportar la imagen. Intenta de nuevo.",
+              });
+            }
+            return;
+          }
+          var link = document.createElement("a");
+          link.download = filename;
+          link.href = dataUrl;
+          link.click();
+        }
+
+        window.downloadQR = downloadQR;
+
+        document.addEventListener("DOMContentLoaded", function () {
+          var landingUrlLabel = document.getElementById("qr-landing-url");
+          var menuUrlLabel = document.getElementById("qr-menu-url");
+          if (landingUrlLabel) landingUrlLabel.textContent = landingUrl;
+          if (menuUrlLabel) menuUrlLabel.textContent = menuUrl;
+
+          syncControls();
+
+          if (bgInput) {
+            bgInput.addEventListener("input", function () {
+              design.bg = bgInput.value;
+              saveDesign();
+              renderAll();
+            });
+          }
+          if (textInput) {
+            textInput.addEventListener("input", function () {
+              design.text = textInput.value;
+              saveDesign();
+              renderAll();
+            });
+          }
+          if (fontSelect) {
+            fontSelect.addEventListener("change", function () {
+              design.font = fontSelect.value;
+              saveDesign();
+              loadFonts().then(renderAll);
+            });
+          }
+
+          Promise.all([loadFonts(), loadLogo(brandLogo)]).then(function (result) {
+            logoImage = result[1];
+            renderAll();
+          });
+        });
+      })();
     </script>
     <!-- LIVE TICKET PREVIEW — regenerates the mock as you type. The sample
          order is fake; no order is created and nothing is saved from here. -->

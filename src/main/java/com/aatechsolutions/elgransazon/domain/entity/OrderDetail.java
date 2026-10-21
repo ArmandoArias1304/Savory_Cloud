@@ -419,6 +419,27 @@ public class OrderDetail implements Serializable {
     }
 
     /**
+     * Minutos de preparación que aporta esta línea a la comanda.
+     *
+     * <p>Se toma del platillo (o de la suma de sus hijos si es un combo). La cantidad
+     * de la línea no multiplica el tiempo: dos hamburguesas del mismo platillo se
+     * preparan en paralelo, no una tras otra.</p>
+     *
+     * @return los minutos configurados, o {@code null} si el platillo no tiene tiempo
+     */
+    public Integer getPreparationTimeMinutes() {
+        return itemMenu != null ? itemMenu.getEffectivePreparationTimeMinutes() : null;
+    }
+
+    /**
+     * Texto del tiempo de preparación del platillo ("15 min"), o {@code null}.
+     */
+    public String getPreparationTimeLabel() {
+        return com.aatechsolutions.elgransazon.util.PreparationTimeFormatter
+                .format(getPreparationTimeMinutes());
+    }
+
+    /**
      * Whether this line is a courtesy (cortesía): a $0.00 item given away for free
      * (e.g. the courtesy coffee). Stock is still deducted for it.
      */

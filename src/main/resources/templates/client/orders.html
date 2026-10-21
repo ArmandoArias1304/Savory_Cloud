@@ -458,6 +458,19 @@
                     >
                       12:00
                     </div>
+                    <!-- Tiempo aproximado de preparación de la comanda -->
+                    <div
+                      th:if="${order.estimatedPreparationLabel != null and order.status.name() != 'CANCELLED' and order.status.name() != 'PAID' and order.status.name() != 'DELIVERED'}"
+                      class="mt-1"
+                    >
+                      <span
+                        class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300"
+                        th:title="'Tiempo estimado de preparación: ' + ${order.estimatedPreparationLabel}"
+                      >
+                        <span class="material-symbols-outlined text-xs">timer</span>
+                        <span th:text="${order.estimatedPreparationLabel}">≈ 25 min</span>
+                      </span>
+                    </div>
                   </div>
                 </td>
 
@@ -850,6 +863,9 @@
         }
       });
     </script>
+
+    <!-- Reloj flotante con el tiempo de los pedidos activos -->
+    <div th:replace="~{fragments/prep-time :: clientClock(${trackedOrders})}"></div>
 
     <!-- Script del Sistema de Temas -->
     <div th:replace="~{fragments/theme :: themeScript}"></div>

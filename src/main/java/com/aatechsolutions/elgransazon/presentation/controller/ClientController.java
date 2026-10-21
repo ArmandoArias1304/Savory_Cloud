@@ -220,6 +220,7 @@ public class ClientController {
                         dto.put("available", c.getAvailable());
                         dto.put("imageUrl", c.getImageUrl());
                         dto.put("description", c.getDescription());
+                        dto.put("preparationTimeMinutes", c.getEffectivePreparationTimeMinutes());
                         dto.put("isCombo", Boolean.TRUE.equals(c.getIsCombo()));
                         dto.put("scheduleStatus", c.getScheduleStatus() != null ? c.getScheduleStatus().toString() : "available");
                         sizeItemsDto.computeIfAbsent(pid, k -> new ArrayList<>()).add(dto);
@@ -317,7 +318,17 @@ public class ClientController {
             int endIndex = Math.min(startIndex + pageSize, totalElements);
             List<Order> pagedOrders = totalElements > 0 ? orders.subList(startIndex, endIndex) : orders;
 
+            // Pedidos que el cliente todavía está esperando: alimentan el reloj flotante
+            // con el tiempo transcurrido y el estimado de preparación.
+            List<Order> trackedOrders = orders.stream()
+                    .filter(o -> o.getStatus() != OrderStatus.CANCELLED
+                            && o.getStatus() != OrderStatus.PAID
+                            && o.getStatus() != OrderStatus.DELIVERED)
+                    .limit(5)
+                    .toList();
+
             model.addAttribute("orders", pagedOrders);
+            model.addAttribute("trackedOrders", trackedOrders);
             model.addAttribute("currentPage", page);
             model.addAttribute("totalPages", totalPages);
             model.addAttribute("totalElements", totalElements);
@@ -350,6 +361,12 @@ public class ClientController {
             
             model.addAttribute("order", order);
             model.addAttribute("orderDetails", order.getOrderDetails());
+            model.addAttribute("trackedOrders",
+                    order.getStatus() != OrderStatus.CANCELLED
+                            && order.getStatus() != OrderStatus.PAID
+                            && order.getStatus() != OrderStatus.DELIVERED
+                            ? List.of(order)
+                            : List.of());
             
             return "client/order-detail";
             
@@ -929,6 +946,7 @@ public class ClientController {
                     dto.put("available", c.getAvailable());
                     dto.put("imageUrl", c.getImageUrl());
                     dto.put("description", c.getDescription());
+                    dto.put("preparationTimeMinutes", c.getEffectivePreparationTimeMinutes());
                     dto.put("isCombo", Boolean.TRUE.equals(c.getIsCombo()));
                     dto.put("scheduleStatus", c.getScheduleStatus() != null ? c.getScheduleStatus().toString() : "available");
                     sizeItemsDto.computeIfAbsent(pid, k -> new ArrayList<>()).add(dto);

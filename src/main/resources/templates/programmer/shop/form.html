@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title th:text="${globalSystemConfig.systemName + (isEdit ? ' - Editar producto' : ' - Nuevo producto')}">
+      SavoryCloud - Producto
+    </title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@300;400;500;600;700"
+      rel="stylesheet"
+    />
+    <div th:replace="~{fragments/theme :: themeResources}"></div>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#38e07b",
+              "primary-dark": "#2bc866",
+              "background-light": "#f8faf9",
+              "background-dark": "#0f1713",
+            },
+            fontFamily: { display: ["Work Sans"] },
+          },
+        },
+      };
+    </script>
+  </head>
+  <body
+    class="bg-gradient-to-br from-background-light to-gray-50 dark:from-background-dark dark:to-gray-900 font-display text-gray-800 dark:text-gray-200 min-h-screen"
+  >
+    <header class="bg-gradient-to-r from-primary to-primary-dark text-white shadow-lg sticky top-0 z-30">
+      <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-6">
+        <div class="flex items-center justify-between gap-4">
+          <div class="flex items-center gap-4">
+            <a
+              th:href="@{/programmer/shop}"
+              class="w-11 h-11 bg-white/20 hover:bg-white/30 rounded-xl flex items-center justify-center transition-colors"
+              title="Volver a la tienda"
+            >
+              <span class="material-symbols-outlined">arrow_back</span>
+            </a>
+            <div>
+              <h1 class="text-2xl sm:text-3xl font-bold" th:text="${isEdit ? 'Editar producto' : 'Nuevo producto'}">
+                Nuevo producto
+              </h1>
+              <p class="text-white/80 text-sm">Tienda para restaurantes</p>
+            </div>
+          </div>
+          <span class="material-symbols-outlined text-4xl hidden sm:block">storefront</span>
+        </div>
+      </div>
+    </header>
+
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div
+        th:if="${errorMessage}"
+        class="mb-6 bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 text-red-800 dark:text-red-300 px-6 py-4 rounded-xl shadow-sm flex items-start gap-3"
+      >
+        <span class="material-symbols-outlined text-red-500 text-2xl flex-shrink-0">error</span>
+        <span class="text-sm sm:text-base" th:text="${errorMessage}"></span>
+      </div>
+
+      <form
+        th:action="${isEdit} ? @{/programmer/shop/{id}(id=${product.idProduct})} : @{/programmer/shop}"
+        th:object="${product}"
+        method="post"
+        enctype="multipart/form-data"
+        class="space-y-6"
+      >
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <!-- Main fields -->
+          <div
+            class="lg:col-span-2 bg-white dark:bg-gray-900 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-800 p-5 sm:p-6 space-y-5"
+          >
+            <div>
+              <label for="name" class="block text-sm font-semibold mb-2">
+                Nombre del producto <span class="text-red-500">*</span>
+              </label>
+              <input
+                id="name"
+                type="text"
+                name="name"
+                th:value="*{name}"
+                maxlength="120"
+                required
+                placeholder="Ej. Tarjeta QR para mesa"
+                class="w-full h-12 px-4 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all"
+              />
+              <p th:if="${#fields.hasErrors('name')}" th:errors="*{name}" class="mt-1 text-sm text-red-600 dark:text-red-400"></p>
+            </div>
+
+            <div>
+              <label for="description" class="block text-sm font-semibold mb-2">Descripción</label>
+              <textarea
+                id="description"
+                name="description"
+                th:text="*{description}"
+                rows="5"
+                maxlength="2000"
+                placeholder="Material, medidas, qué incluye, tiempo de entrega..."
+                class="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all resize-y"
+              ></textarea>
+              <p th:if="${#fields.hasErrors('description')}" th:errors="*{description}" class="mt-1 text-sm text-red-600 dark:text-red-400"></p>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              <div>
+                <label for="price" class="block text-sm font-semibold mb-2">
+                  Precio (MXN) <span class="text-red-500">*</span>
+                </label>
+                <div class="relative">
+                  <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 font-semibold">$</span>
+                  <input
+                    id="price"
+                    type="number"
+                    name="price"
+                    th:value="*{price}"
+                    min="0"
+                    step="0.01"
+                    required
+                    placeholder="0.00"
+                    class="w-full h-12 pl-8 pr-4 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all"
+                  />
+                </div>
+                <p th:if="${#fields.hasErrors('price')}" th:errors="*{price}" class="mt-1 text-sm text-red-600 dark:text-red-400"></p>
+              </div>
+
+              <div>
+                <label for="category" class="block text-sm font-semibold mb-2">Categoría</label>
+                <input
+                  id="category"
+                  type="text"
+                  name="category"
+                  th:value="*{category}"
+                  list="categorySuggestions"
+                  maxlength="60"
+                  placeholder="Ej. Tarjetas QR"
+                  class="w-full h-12 px-4 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all"
+                />
+                <datalist id="categorySuggestions">
+                  <option th:each="c : ${categories}" th:value="${c}"></option>
+                </datalist>
+                <p th:if="${#fields.hasErrors('category')}" th:errors="*{category}" class="mt-1 text-sm text-red-600 dark:text-red-400"></p>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              <div>
+                <label for="sortOrder" class="block text-sm font-semibold mb-2">Orden</label>
+                <input
+                  id="sortOrder"
+                  type="number"
+                  name="sortOrder"
+                  th:value="*{sortOrder}"
+                  min="0"
+                  step="1"
+                  class="w-full h-12 px-4 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all"
+                />
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  Número menor aparece primero en la tienda.
+                </p>
+                <p th:if="${#fields.hasErrors('sortOrder')}" th:errors="*{sortOrder}" class="mt-1 text-sm text-red-600 dark:text-red-400"></p>
+              </div>
+
+              <div class="space-y-3">
+                <label class="flex items-start gap-3 p-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    name="active"
+                    value="true"
+                    th:checked="*{active}"
+                    class="mt-0.5 w-5 h-5 rounded border-gray-300 text-primary focus:ring-primary"
+                  />
+                  <span>
+                    <span class="block text-sm font-semibold">Publicado</span>
+                    <span class="block text-xs text-gray-500 dark:text-gray-400">
+                      Visible para administradores y gerentes.
+                    </span>
+                  </span>
+                </label>
+
+                <label class="flex items-start gap-3 p-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    name="featured"
+                    value="true"
+                    th:checked="*{featured}"
+                    class="mt-0.5 w-5 h-5 rounded border-gray-300 text-primary focus:ring-primary"
+                  />
+                  <span>
+                    <span class="block text-sm font-semibold">Destacado</span>
+                    <span class="block text-xs text-gray-500 dark:text-gray-400">
+                      Aparece primero y con distintivo.
+                    </span>
+                  </span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Image -->
+          <div>
+            <div
+              class="bg-white dark:bg-gray-900 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-800 p-5 sm:p-6"
+            >
+              <h2 class="text-sm font-semibold mb-3">
+                Foto del producto <span class="text-red-500" th:if="${!isEdit}">*</span>
+              </h2>
+
+              <div
+                class="relative w-full aspect-square rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800 border-2 border-dashed border-gray-200 dark:border-gray-700"
+              >
+                <img
+                  id="imagePreview"
+                  th:if="${product.imageUrl != null and !#strings.isEmpty(product.imageUrl)}"
+                  th:src="${product.imageUrl}"
+                  alt="Foto del producto"
+                  class="w-full h-full object-cover"
+                />
+                <div
+                  id="imagePlaceholder"
+                  th:if="${product.imageUrl == null or #strings.isEmpty(product.imageUrl)}"
+                  class="absolute inset-0 flex flex-col items-center justify-center text-gray-400 dark:text-gray-500 gap-2"
+                >
+                  <span class="material-symbols-outlined text-5xl">add_photo_alternate</span>
+                  <span class="text-xs">Sin foto</span>
+                </div>
+              </div>
+
+              <label
+                for="imageFile"
+                class="mt-4 flex items-center justify-center gap-2 w-full px-4 py-3 rounded-xl bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 font-semibold cursor-pointer transition-colors"
+              >
+                <span class="material-symbols-outlined text-lg">upload</span>
+                <span th:text="${isEdit ? 'Reemplazar foto' : 'Subir foto'}">Subir foto</span>
+              </label>
+              <input
+                id="imageFile"
+                type="file"
+                name="imageFile"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                class="hidden"
+              />
+              <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                JPG, PNG, WEBP o GIF · máximo 3 MB.
+                <span th:if="${isEdit}">Si no eliges archivo se conserva la foto actual.</span>
+              </p>
+              <p
+                th:if="${#fields.hasErrors('imageUrl')}"
+                th:errors="*{imageUrl}"
+                class="mt-2 text-sm text-red-600 dark:text-red-400"
+              ></p>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
+          <a
+            th:href="@{/programmer/shop}"
+            class="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 font-semibold hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+          >
+            <span class="material-symbols-outlined text-lg">close</span>
+            Cancelar
+          </a>
+          <button
+            type="submit"
+            class="inline-flex items-center justify-center gap-2 px-8 py-3 rounded-xl bg-gradient-to-r from-primary to-primary-dark text-white font-bold hover:shadow-lg hover:shadow-primary/30 transition-all"
+          >
+            <span class="material-symbols-outlined text-lg">save</span>
+            <span th:text="${isEdit ? 'Guardar cambios' : 'Crear producto'}">Guardar</span>
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <div th:replace="~{fragments/theme :: themeScript}"></div>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const input = document.getElementById("imageFile");
+        const preview = document.getElementById("imagePreview");
+        const placeholder = document.getElementById("imagePlaceholder");
+        if (!input) {
+          return;
+        }
+        input.addEventListener("change", function () {
+          const file = input.files && input.files[0];
+          if (!file) {
+            return;
+          }
+          const url = URL.createObjectURL(file);
+          if (preview) {
+            preview.src = url;
+            preview.classList.remove("hidden");
+          } else {
+            const img = document.createElement("img");
+            img.id = "imagePreview";
+            img.src = url;
+            img.alt = "Foto del producto";
+            img.className = "w-full h-full object-cover";
+            const container = placeholder ? placeholder.parentElement : null;
+            if (container) {
+              container.appendChild(img);
+            }
+          }
+          if (placeholder) {
+            placeholder.classList.add("hidden");
+          }
+        });
+      });
+    </script>
+  </body>
+</html>

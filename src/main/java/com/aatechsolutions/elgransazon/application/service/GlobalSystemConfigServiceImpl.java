@@ -99,6 +99,22 @@ public class GlobalSystemConfigServiceImpl implements GlobalSystemConfigService 
     }
 
     @Override
+    public GlobalSystemConfig updateShopWhatsappNumber(String shopWhatsappNumber) {
+        log.info("Updating shop WhatsApp number");
+
+        GlobalSystemConfig config = getConfiguration();
+        config.setShopWhatsappNumber(
+                shopWhatsappNumber == null || shopWhatsappNumber.isBlank()
+                        ? null
+                        : shopWhatsappNumber.trim());
+
+        GlobalSystemConfig saved = repository.save(config);
+        invalidateCache();
+
+        return saved;
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public boolean configurationExists() {
         return repository.configurationExists();

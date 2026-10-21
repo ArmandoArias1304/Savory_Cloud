@@ -83,7 +83,24 @@
                 <h1
                   class="text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white"
                 >
-                  📋 Historial de Pedidos
+                  <span class="inline-flex items-center gap-2">
+                    <svg
+                      class="w-7 h-7"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      aria-hidden="true"
+                    >
+                      <path d="M9 4h6a1 1 0 0 1 1 1v1H8V5a1 1 0 0 1 1-1Z" />
+                      <path d="M8 6H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-2" />
+                      <path d="M8 11h8" />
+                      <path d="M8 15h8" />
+                    </svg>
+                    Historial de Pedidos
+                  </span>
                 </h1>
                 <p class="text-sm text-gray-600 dark:text-gray-300">
                   <span th:if="${currentRole == 'barista'}"
@@ -200,26 +217,78 @@
                 >
                   Pedido <span th:text="${order.orderNumber}"></span>
                 </p>
+                <!-- Tiempo estimado de toda la comanda (suma de los platillos) -->
+                <span
+                  th:if="${order.estimatedPreparationLabel != null}"
+                  class="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300"
+                  th:title="'Tiempo estimado de toda la comanda: ' + ${order.estimatedPreparationLabel}"
+                >
+                  <span class="material-symbols-outlined !text-[12px]">timer</span>
+                  Comanda <span th:text="${order.estimatedPreparationLabel}"></span>
+                </span>
               </div>
               <div class="flex flex-col items-end gap-2">
                 <!-- Order Type Badge -->
                 <span
                   th:if="${order.orderType.name() == 'DINE_IN'}"
-                  class="px-4 py-2 rounded-full text-xs font-semibold bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300"
+                  class="px-4 py-2 rounded-full text-xs font-semibold inline-flex items-center gap-1.5 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300"
                 >
-                  🍽️ Mesa
+                  <svg
+                    class="w-4 h-4"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M3 2v7a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2V2" />
+                    <path d="M7 2v20" />
+                    <path d="M21 15V2a5 5 0 0 0-5 5v6a1 1 0 0 0 1 1h4Z" />
+                  </svg>
+                  Mesa
                 </span>
                 <span
                   th:if="${order.orderType.name() == 'TAKEOUT'}"
-                  class="px-4 py-2 rounded-full text-xs font-semibold bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300"
+                  class="px-4 py-2 rounded-full text-xs font-semibold inline-flex items-center gap-1.5 bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300"
                 >
-                  📦 Llevar
+                  <svg
+                    class="w-4 h-4"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" />
+                    <path d="M3 6h18" />
+                    <path d="M16 10a4 4 0 0 1-8 0" />
+                  </svg>
+                  Llevar
                 </span>
                 <span
                   th:if="${order.orderType.name() == 'DELIVERY'}"
-                  class="px-4 py-2 rounded-full text-xs font-semibold bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300"
+                  class="px-4 py-2 rounded-full text-xs font-semibold inline-flex items-center gap-1.5 bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300"
                 >
-                  🚗 Delivery
+                  <svg
+                    class="w-4 h-4"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M14 18V6a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h1" />
+                    <path d="M14 9h4l3 3v5a1 1 0 0 1-1 1h-1" />
+                    <circle cx="7" cy="18" r="2" />
+                    <circle cx="17" cy="18" r="2" />
+                  </svg>
+                  Delivery
                 </span>
 
                 <!-- Status Badge -->
@@ -293,6 +362,15 @@
                       >
                         <span th:text="${detail.displayName}"></span>
                         <span class="text-sm font-bold text-primary" th:text="'x' + ${detail.quantity}"></span>
+                        <!-- Tiempo promedio configurado para este platillo -->
+                        <span
+                          th:if="${detail.preparationTimeLabel != null}"
+                          class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300"
+                          title="Tiempo promedio de preparación del platillo"
+                        >
+                          <span class="material-symbols-outlined !text-[10px]">timer</span>
+                          <span th:text="${detail.preparationTimeLabel}"></span>
+                        </span>
                       </p>
                       <span
                         th:if="${detail.comboParent}"
@@ -369,7 +447,21 @@
                     th:if="${detail.displayComments != null}"
                     class="text-sm text-gray-600 dark:text-gray-300 pl-4"
                   >
-                    💬 <span th:text="${detail.displayComments}"></span>
+                    <svg
+                      class="w-4 h-4 inline-block align-text-bottom text-gray-400 dark:text-gray-500"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      aria-hidden="true"
+                    >
+                      <path
+                        d="M21 11.5a8.5 8.5 0 0 1-12.3 7.6L3 21l1.9-5.7A8.5 8.5 0 1 1 21 11.5Z"
+                      />
+                    </svg>
+                    <span th:text="${detail.displayComments}"></span>
                   </p>
                 </div>
               </div>
@@ -609,13 +701,13 @@
 
           // Request browser notification
           requestBrowserNotification(
-            "🔔 Nuevo Pedido",
+            "Nuevo Pedido",
             `Pedido #${notification.orderNumber} - ${notification.itemCount} items`,
           );
 
           Swal.fire({
             icon: "info",
-            title: "🔔 Nuevo Pedido",
+            title: "Nuevo Pedido",
             html: `<p>Pedido <strong>#${notification.orderNumber}</strong></p>
                    <p>${notification.orderType} - ${notification.itemCount} items</p>
                    <p class="text-sm text-gray-500">Ve a Pedidos Pendientes para gestionarlo</p>`,
@@ -638,7 +730,7 @@
         if (notification.notificationType === "ORDER_CANCELLED") {
           Swal.fire({
             icon: "warning",
-            title: "⚠️ Pedido Cancelado",
+            title: "Pedido Cancelado",
             text:
               notification.message ||
               `El pedido #${notification.orderNumber} ha sido cancelado`,
@@ -666,7 +758,7 @@
         if (notification.notificationType === "ITEM_DELETED") {
           Swal.fire({
             icon: "info",
-            title: "🗑️ Item Eliminado",
+            title: "Item Eliminado",
             text: `Pedido #${notification.orderNumber} - ${
               notification.message || "Un item fue eliminado"
             }`,
@@ -695,7 +787,7 @@
         if (notification.notificationType === "ITEMS_ADDED") {
           Swal.fire({
             icon: "info",
-            title: "➕ Items Agregados",
+            title: "Items Agregados",
             text: `Se agregaron nuevos items al Pedido #${notification.orderNumber}`,
             toast: true,
             position: "top-end",

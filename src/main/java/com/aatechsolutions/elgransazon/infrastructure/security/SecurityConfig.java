@@ -83,6 +83,10 @@ public class SecurityConfig {
                                                                 "/.well-known/**")
                                                 .permitAll()
                                                 .requestMatchers("/programmer/**").hasRole("PROGRAMMER")
+                                                // Producción interna (buffet, comida de personal): admin,
+                                                // gerente y chef. El chef no entra a /admin/**.
+                                                .requestMatchers("/internal-production/**")
+                                                .hasAnyRole("ADMIN", "MANAGER", "CHEF")
                                                 .requestMatchers("/admin/**").hasAnyRole("ADMIN", "MANAGER")
                                                 .requestMatchers("/waiter/**").hasRole("WAITER")
                                                 .requestMatchers("/chef/**", "/barista/**", "/parrillero/**")

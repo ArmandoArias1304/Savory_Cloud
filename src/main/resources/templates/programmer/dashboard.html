@@ -226,13 +226,22 @@
                 </p>
               </div>
             </div>
-            <a
-              href="/logout"
-              class="inline-flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-xl transition-all backdrop-blur-sm"
-            >
-              <span class="material-symbols-outlined">logout</span>
-              <span class="font-semibold">Salir</span>
-            </a>
+            <div class="flex items-center gap-3">
+              <a
+                th:href="@{/programmer/shop}"
+                class="inline-flex items-center gap-2 px-4 py-2 bg-white text-primary-dark hover:bg-gray-100 rounded-xl transition-all font-bold shadow-md"
+              >
+                <span class="material-symbols-outlined">storefront</span>
+                <span class="font-semibold">Tienda</span>
+              </a>
+              <a
+                href="/logout"
+                class="inline-flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-xl transition-all backdrop-blur-sm"
+              >
+                <span class="material-symbols-outlined">logout</span>
+                <span class="font-semibold">Salir</span>
+              </a>
+            </div>
           </div>
         </div>
       </header>
@@ -1385,6 +1394,50 @@
                     </p>
                   </div>
                 </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- System Updates / Actualizaciones -->
+          <div
+            class="bg-white dark:bg-gray-900 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 overflow-hidden mb-6 animate-slide-in"
+          >
+            <div class="bg-gradient-to-r from-violet-500 to-purple-600 px-6 py-4">
+              <div class="flex items-center gap-3 text-white">
+                <span class="material-symbols-outlined text-2xl">system_update_alt</span>
+                <h5 class="text-xl font-bold">Actualizaciones del Sistema</h5>
+              </div>
+            </div>
+            <div class="p-6">
+              <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                  <p class="text-sm text-gray-600 dark:text-gray-400 max-w-2xl">
+                    Publica la versión, describe lo que se actualizó y elige qué roles
+                    recibirán el modal de novedades al entrar al sistema.
+                  </p>
+                  <p
+                    th:if="${latestSystemUpdate != null}"
+                    class="mt-2 text-sm text-gray-700 dark:text-gray-300"
+                  >
+                    Versión vigente:
+                    <strong th:text="${latestSystemUpdate.version}">1.1.1</strong>
+                    <span class="text-gray-400">·</span>
+                    <span th:text="${latestSystemUpdate.title}">Título de la actualización</span>
+                  </p>
+                  <p
+                    th:unless="${latestSystemUpdate != null}"
+                    class="mt-2 text-sm text-gray-500 dark:text-gray-400"
+                  >
+                    Todavía no hay una actualización publicada.
+                  </p>
+                </div>
+                <a
+                  th:href="@{/programmer/updates}"
+                  class="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-violet-600 hover:bg-violet-700 text-white font-semibold rounded-xl transition-colors shadow-md whitespace-nowrap"
+                >
+                  <span class="material-symbols-outlined text-lg">edit_note</span>
+                  Gestionar actualizaciones
+                </a>
               </div>
             </div>
           </div>

@@ -120,7 +120,8 @@ class ExecutiveReportPaymentMethodPdfTest {
                 PaymentTenderSupport.orderCountsByMethod(paidOrders),
                 List.of(),
                 List.of(),
-                BigDecimal.ZERO);
+                BigDecimal.ZERO,
+                List.of());
 
         List<String> lines = linesOf(pdf);
 
@@ -153,7 +154,8 @@ class ExecutiveReportPaymentMethodPdfTest {
                 PaymentTenderSupport.orderCountsByMethod(paidOrders),
                 List.of(),
                 List.of(),
-                BigDecimal.ZERO);
+                BigDecimal.ZERO,
+                List.of());
 
         String text = String.join("\n", linesOf(pdf));
 

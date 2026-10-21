@@ -720,6 +720,72 @@ public class IngredientController {
     }
 
     /**
+     * Corrige una entrada del historial (cantidad y costo). El stock se ajusta por la diferencia
+     * entre la cantidad nueva y la que se había registrado.
+     */
+    @PostMapping("/{id}/stock-history/{historyId}/edit")
+    public String updateStockHistory(@PathVariable Long id,
+                                     @PathVariable Long historyId,
+                                     @RequestParam BigDecimal quantityAdded,
+                                     @RequestParam BigDecimal costPerUnit,
+                                     Authentication authentication,
+                                     RedirectAttributes redirectAttributes) {
+        log.info("Correcting stock history entry {} of ingredient {}: quantity={}, cost={}",
+                historyId, id, quantityAdded, costPerUnit);
+
+        try {
+            Employee employee = employeeService.findByUsername(authentication.getName())
+                    .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
+
+            ingredientService.updateStockHistory(id, historyId, quantityAdded, costPerUnit, employee);
+            redirectAttributes.addFlashAttribute("successMessage",
+                    "Entrada corregida. Stock actual: " + currentStockText(id));
+        } catch (Exception e) {
+            log.error("Error al corregir la entrada {} del historial del ingrediente {}: {}",
+                    historyId, id, e.getMessage());
+            redirectAttributes.addFlashAttribute("errorMessage",
+                    "No se pudo corregir la entrada: " + e.getMessage());
+        }
+
+        return "redirect:/admin/ingredients/" + id + "/stock-history";
+    }
+
+    /**
+     * Anula una entrada del historial: resta del stock la cantidad completa que había sumado.
+     */
+    @PostMapping("/{id}/stock-history/{historyId}/void")
+    public String voidStockHistory(@PathVariable Long id,
+                                   @PathVariable Long historyId,
+                                   @RequestParam(required = false) String reason,
+                                   Authentication authentication,
+                                   RedirectAttributes redirectAttributes) {
+        log.info("Voiding stock history entry {} of ingredient {} (reason: {})",
+                historyId, id, reason);
+
+        try {
+            Employee employee = employeeService.findByUsername(authentication.getName())
+                    .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
+
+            ingredientService.voidStockHistory(id, historyId, reason, employee);
+            redirectAttributes.addFlashAttribute("successMessage",
+                    "Entrada anulada. Stock actual: " + currentStockText(id));
+        } catch (Exception e) {
+            log.error("Error al anular la entrada {} del historial del ingrediente {}: {}",
+                    historyId, id, e.getMessage());
+            redirectAttributes.addFlashAttribute("errorMessage",
+                    "No se pudo anular la entrada: " + e.getMessage());
+        }
+
+        return "redirect:/admin/ingredients/" + id + "/stock-history";
+    }
+
+    private String currentStockText(Long ingredientId) {
+        return ingredientService.findById(ingredientId)
+                .map(ingredient -> ingredient.getCurrentStock() + " " + ingredient.getUnitOfMeasure())
+                .orElse("");
+    }
+
+    /**
      * Download PDF report of ingredients based on stock status
      */
     @GetMapping("/download-stock-pdf")

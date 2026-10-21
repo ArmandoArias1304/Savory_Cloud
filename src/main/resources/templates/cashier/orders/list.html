@@ -505,6 +505,9 @@
                     <th class="px-6 py-4 font-semibold">Tipo</th>
                     <th class="px-6 py-4 font-semibold">Cliente</th>
                     <th class="px-6 py-4 font-semibold">Total</th>
+                    <th class="px-6 py-4 font-semibold" title="Suma de los tiempos de preparación de los platillos">
+                      Tiempo
+                    </th>
                     <th class="px-6 py-4 font-semibold">Pago</th>
                     <th class="px-6 py-4 font-semibold">Estado</th>
                     <th class="px-6 py-4 font-semibold text-center">
@@ -599,6 +602,19 @@
                           th:text="${#numbers.formatDecimal(order.total, 1, 2)}"
                         ></span
                       ></span>
+                    </td>
+
+                    <!-- Tiempo estimado de preparación -->
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <span
+                        th:if="${order.estimatedPreparationLabel != null}"
+                        th:replace="~{fragments/prep-time :: chip(${order.estimatedPreparationLabel})}"
+                      ></span>
+                      <span
+                        th:if="${order.estimatedPreparationLabel == null}"
+                        class="text-sm text-gray-400 dark:text-gray-600"
+                        >—</span
+                      >
                     </td>
 
                     <!-- Payment Method -->
@@ -781,6 +797,9 @@
                     <th class="px-6 py-4 font-semibold">Tipo</th>
                     <th class="px-6 py-4 font-semibold">Cliente</th>
                     <th class="px-6 py-4 font-semibold">Total</th>
+                    <th class="px-6 py-4 font-semibold" title="Suma de los tiempos de preparación de los platillos">
+                      Tiempo
+                    </th>
                     <th class="px-6 py-4 font-semibold">Pago</th>
                     <th class="px-6 py-4 font-semibold">Estado</th>
                     <th class="px-6 py-4 font-semibold text-center">
@@ -875,6 +894,19 @@
                           th:text="${#numbers.formatDecimal(order.total, 1, 2)}"
                         ></span
                       ></span>
+                    </td>
+
+                    <!-- Tiempo estimado de preparación -->
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <span
+                        th:if="${order.estimatedPreparationLabel != null}"
+                        th:replace="~{fragments/prep-time :: chip(${order.estimatedPreparationLabel})}"
+                      ></span>
+                      <span
+                        th:if="${order.estimatedPreparationLabel == null}"
+                        class="text-sm text-gray-400 dark:text-gray-600"
+                        >—</span
+                      >
                     </td>
 
                     <!-- Payment Method -->

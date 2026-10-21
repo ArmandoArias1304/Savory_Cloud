@@ -124,6 +124,41 @@
         </div>
       </div>
 
+      <!-- Tiempo estimado de preparación de la comanda -->
+      <div
+        th:if="${order.estimatedPreparationLabel != null}"
+        class="mb-6 rounded-2xl border border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-900/20 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-4 shadow-sm"
+      >
+        <div
+          class="w-12 h-12 rounded-xl bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center flex-shrink-0"
+        >
+          <span class="material-symbols-outlined text-indigo-600 dark:text-indigo-300 text-2xl"
+            >timer</span
+          >
+        </div>
+        <div class="flex-1">
+          <p class="text-xs uppercase tracking-wide font-semibold text-indigo-700 dark:text-indigo-300">
+            Tiempo estimado de preparación
+          </p>
+          <p
+            class="text-2xl font-black text-indigo-800 dark:text-indigo-200"
+            th:text="${order.estimatedPreparationLabel}"
+          >
+            ≈ 25 min
+          </p>
+          <p class="text-xs text-indigo-700/80 dark:text-indigo-300/80">
+            Suma de los tiempos promedio de cada platillo de la comanda. Es un
+            aproximado: puede durar más o durar menos.
+          </p>
+        </div>
+        <span
+          th:if="${order.status.name() == 'CANCELLED' or order.status.name() == 'PAID' or order.status.name() == 'DELIVERED'}"
+          class="text-xs font-semibold text-indigo-700/70 dark:text-indigo-300/70 bg-white/60 dark:bg-gray-900/40 px-3 py-1.5 rounded-full"
+        >
+          Pedido cerrado: solo referencia
+        </span>
+      </div>
+
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <!-- LEFT COLUMN: Order Details -->
         <div class="lg:col-span-2 space-y-6">

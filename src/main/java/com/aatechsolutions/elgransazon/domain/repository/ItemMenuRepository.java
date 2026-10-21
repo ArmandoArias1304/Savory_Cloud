@@ -27,36 +27,37 @@ public interface ItemMenuRepository extends JpaRepository<ItemMenu, Long> {
     /**
      * Find all items by category ID
      */
-    @Query("SELECT i FROM ItemMenu i WHERE i.category.idCategory = :categoryId ORDER BY i.name ASC")
+    @Query("SELECT i FROM ItemMenu i WHERE i.category.idCategory = :categoryId AND i.internalOnly = false ORDER BY i.name ASC")
     List<ItemMenu> findByCategoryId(@Param("categoryId") Long categoryId);
 
     /**
      * Find all items by category ID and company
      */
-    @Query("SELECT i FROM ItemMenu i WHERE i.category.idCategory = :categoryId AND i.company = :company ORDER BY i.name ASC")
+    @Query("SELECT i FROM ItemMenu i WHERE i.category.idCategory = :categoryId AND i.company = :company AND i.internalOnly = false ORDER BY i.name ASC")
     List<ItemMenu> findByCategoryIdAndCompany(@Param("categoryId") Long categoryId, @Param("company") Company company);
 
     /**
      * Find all active items by category ID
      */
-    @Query("SELECT i FROM ItemMenu i WHERE i.category.idCategory = :categoryId AND i.active = true ORDER BY i.name ASC")
+    @Query("SELECT i FROM ItemMenu i WHERE i.category.idCategory = :categoryId AND i.active = true AND i.internalOnly = false ORDER BY i.name ASC")
     List<ItemMenu> findActiveByCategoryId(@Param("categoryId") Long categoryId);
 
     /**
      * Find all active items by category ID and company
      */
-    @Query("SELECT i FROM ItemMenu i WHERE i.category.idCategory = :categoryId AND i.active = true AND i.company = :company ORDER BY i.name ASC")
+    @Query("SELECT i FROM ItemMenu i WHERE i.category.idCategory = :categoryId AND i.active = true AND i.company = :company AND i.internalOnly = false ORDER BY i.name ASC")
     List<ItemMenu> findActiveByCategoryIdAndCompany(@Param("categoryId") Long categoryId, @Param("company") Company company);
 
     /**
-     * Find all active items
+     * Find all active sellable items (internal production items excluded).
      */
+    @Query("SELECT i FROM ItemMenu i WHERE i.active = true AND i.internalOnly = false ORDER BY i.name ASC")
     List<ItemMenu> findByActiveTrue();
 
     /**
      * Find all available items (active and available)
      */
-    @Query("SELECT i FROM ItemMenu i WHERE i.active = true AND i.available = true ORDER BY i.name ASC")
+    @Query("SELECT i FROM ItemMenu i WHERE i.active = true AND i.available = true AND i.internalOnly = false ORDER BY i.name ASC")
     List<ItemMenu> findAvailableItems();
 
     /**
@@ -86,49 +87,49 @@ public interface ItemMenuRepository extends JpaRepository<ItemMenu, Long> {
     /**
      * Count items by category
      */
-    @Query("SELECT COUNT(i) FROM ItemMenu i WHERE i.category.idCategory = :categoryId")
+    @Query("SELECT COUNT(i) FROM ItemMenu i WHERE i.category.idCategory = :categoryId AND i.internalOnly = false")
     long countByCategoryId(@Param("categoryId") Long categoryId);
 
     /**
      * Count active items by category
      */
-    @Query("SELECT COUNT(i) FROM ItemMenu i WHERE i.category.idCategory = :categoryId AND i.active = true")
+    @Query("SELECT COUNT(i) FROM ItemMenu i WHERE i.category.idCategory = :categoryId AND i.active = true AND i.internalOnly = false")
     long countActiveByCategoryId(@Param("categoryId") Long categoryId);
 
     /**
      * Count available items by category
      */
-    @Query("SELECT COUNT(i) FROM ItemMenu i WHERE i.category.idCategory = :categoryId AND i.active = true AND i.available = true")
+    @Query("SELECT COUNT(i) FROM ItemMenu i WHERE i.category.idCategory = :categoryId AND i.active = true AND i.available = true AND i.internalOnly = false")
     long countAvailableByCategoryId(@Param("categoryId") Long categoryId);
 
     /**
      * Count all available items
      */
-    @Query("SELECT COUNT(i) FROM ItemMenu i WHERE i.active = true AND i.available = true")
+    @Query("SELECT COUNT(i) FROM ItemMenu i WHERE i.active = true AND i.available = true AND i.internalOnly = false")
     long countAvailable();
 
     /**
      * Count all unavailable items (active but not available)
      */
-    @Query("SELECT COUNT(i) FROM ItemMenu i WHERE i.active = true AND i.available = false")
+    @Query("SELECT COUNT(i) FROM ItemMenu i WHERE i.active = true AND i.available = false AND i.internalOnly = false")
     long countUnavailable();
 
     /**
      * Find items with low stock (unavailable due to ingredient shortage)
      */
-    @Query("SELECT i FROM ItemMenu i WHERE i.active = true AND i.available = false ORDER BY i.name ASC")
+    @Query("SELECT i FROM ItemMenu i WHERE i.active = true AND i.available = false AND i.internalOnly = false ORDER BY i.name ASC")
     List<ItemMenu> findItemsWithLowStock();
 
     /**
      * Search items by name (case insensitive)
      */
-    @Query("SELECT i FROM ItemMenu i WHERE LOWER(i.name) LIKE LOWER(CONCAT('%', :searchTerm, '%')) ORDER BY i.name ASC")
+    @Query("SELECT i FROM ItemMenu i WHERE i.internalOnly = false AND LOWER(i.name) LIKE LOWER(CONCAT('%', :searchTerm, '%')) ORDER BY i.name ASC")
     List<ItemMenu> searchByName(@Param("searchTerm") String searchTerm);
 
     /**
      * Find items by category and availability
      */
-    @Query("SELECT i FROM ItemMenu i WHERE i.category.idCategory = :categoryId AND i.active = true AND i.available = :available ORDER BY i.name ASC")
+    @Query("SELECT i FROM ItemMenu i WHERE i.category.idCategory = :categoryId AND i.active = true AND i.available = :available AND i.internalOnly = false ORDER BY i.name ASC")
     List<ItemMenu> findByCategoryIdAndAvailability(@Param("categoryId") Long categoryId, 
                                                      @Param("available") Boolean available);
 
@@ -140,9 +141,13 @@ public interface ItemMenuRepository extends JpaRepository<ItemMenu, Long> {
     Optional<ItemMenu> findByNameAndCompany(String name, Company company);
 
     /**
-     * Find all items by company
+     * Find all sellable items of a company (internal production items excluded).
+     *
+     * <p>This is the selector source for combos, size variants and order lookups, so internal
+     * items must never appear here: they are not sold and cannot be part of a combo.</p>
      */
-    List<ItemMenu> findByCompany(Company company);
+    @Query("SELECT i FROM ItemMenu i WHERE i.company = :company AND i.internalOnly = false ORDER BY i.name ASC")
+    List<ItemMenu> findByCompany(@Param("company") Company company);
 
     /**
      * Find all items by company ordered by name
@@ -169,7 +174,7 @@ public interface ItemMenuRepository extends JpaRepository<ItemMenu, Long> {
      * which recalculates availability and writes). Used by the printed menu (carta)
      * generator, which applies its own filters and ordering in memory.
      */
-    @Query("SELECT i FROM ItemMenu i LEFT JOIN FETCH i.parentItem WHERE i.company = :company ORDER BY i.name ASC")
+    @Query("SELECT i FROM ItemMenu i LEFT JOIN FETCH i.parentItem WHERE i.company = :company AND i.internalOnly = false ORDER BY i.name ASC")
     List<ItemMenu> findAllByCompanyWithParentForMenu(@Param("company") Company company);
 
     /**
@@ -179,6 +184,7 @@ public interface ItemMenuRepository extends JpaRepository<ItemMenu, Long> {
     @Query(value = """
             SELECT i FROM ItemMenu i LEFT JOIN FETCH i.parentItem
             WHERE i.company = :company
+              AND i.internalOnly = false
               AND (:name IS NULL OR LOWER(i.name) LIKE LOWER(CONCAT('%', :name, '%')))
               AND (:categoryId IS NULL OR i.category.idCategory = :categoryId)
               AND (:minPrice IS NULL OR i.price >= :minPrice)
@@ -190,6 +196,7 @@ public interface ItemMenuRepository extends JpaRepository<ItemMenu, Long> {
             countQuery = """
             SELECT COUNT(i) FROM ItemMenu i
             WHERE i.company = :company
+              AND i.internalOnly = false
               AND (:name IS NULL OR LOWER(i.name) LIKE LOWER(CONCAT('%', :name, '%')))
               AND (:categoryId IS NULL OR i.category.idCategory = :categoryId)
               AND (:minPrice IS NULL OR i.price >= :minPrice)
@@ -209,13 +216,33 @@ public interface ItemMenuRepository extends JpaRepository<ItemMenu, Long> {
     /**
      * Find all available items by company
      */
-    @Query("SELECT i FROM ItemMenu i WHERE i.company = :company AND i.active = true AND i.available = true ORDER BY i.name ASC")
+    @Query("SELECT i FROM ItemMenu i WHERE i.company = :company AND i.active = true AND i.available = true AND i.internalOnly = false ORDER BY i.name ASC")
     List<ItemMenu> findAvailableItemsByCompany(@Param("company") Company company);
 
     /**
-     * Find all active items by company
+     * Find all active <b>sellable</b> items by company.
+     *
+     * <p>This is the single source of the operational menus (client, home, waiter, cashier,
+     * chef, delivery and order screens). Internal production items are filtered out here so
+     * they can never reach a menu, an order or a promotion picker.</p>
      */
-    List<ItemMenu> findByActiveTrueAndCompany(Company company);
+    @Query("SELECT i FROM ItemMenu i WHERE i.company = :company AND i.active = true " +
+           "AND i.internalOnly = false ORDER BY i.name ASC")
+    List<ItemMenu> findByActiveTrueAndCompany(@Param("company") Company company);
+
+    /**
+     * Internal production items of a company (buffet dishes, staff meals), ordered by name.
+     * These items are never sold: they only exist to discount their recipe when produced.
+     */
+    List<ItemMenu> findByCompanyAndInternalOnlyTrueOrderByNameAsc(Company company);
+
+    /**
+     * Internal production item by id, scoped to its company.
+     */
+    @Query("SELECT i FROM ItemMenu i WHERE i.idItemMenu = :id AND i.company = :company " +
+           "AND i.internalOnly = true")
+    Optional<ItemMenu> findInternalByIdAndCompany(@Param("id") Long id,
+                                                  @Param("company") Company company);
 
     /**
      * Check if item name exists for company
@@ -239,13 +266,13 @@ public interface ItemMenuRepository extends JpaRepository<ItemMenu, Long> {
     /**
      * Count available items by company
      */
-    @Query("SELECT COUNT(i) FROM ItemMenu i WHERE i.company = :company AND i.active = true AND i.available = true")
+    @Query("SELECT COUNT(i) FROM ItemMenu i WHERE i.company = :company AND i.active = true AND i.available = true AND i.internalOnly = false")
     long countAvailableByCompany(@Param("company") Company company);
 
     /**
      * Search items by name and company
      */
-    @Query("SELECT i FROM ItemMenu i WHERE i.company = :company AND LOWER(i.name) LIKE LOWER(CONCAT('%', :searchTerm, '%')) ORDER BY i.name ASC")
+    @Query("SELECT i FROM ItemMenu i WHERE i.company = :company AND i.internalOnly = false AND LOWER(i.name) LIKE LOWER(CONCAT('%', :searchTerm, '%')) ORDER BY i.name ASC")
     List<ItemMenu> searchByNameAndCompany(@Param("searchTerm") String searchTerm, @Param("company") Company company);
 
     /**
@@ -268,18 +295,19 @@ public interface ItemMenuRepository extends JpaRepository<ItemMenu, Long> {
     /**
      * Count all menu items by company
      */
-    long countByCompany(Company company);
+    @Query("SELECT COUNT(i) FROM ItemMenu i WHERE i.company = :company AND i.internalOnly = false")
+    long countByCompany(@Param("company") Company company);
 
     /**
      * Count active menu items by company
      */
-    @Query("SELECT COUNT(i) FROM ItemMenu i WHERE i.company = :company AND i.active = true")
+    @Query("SELECT COUNT(i) FROM ItemMenu i WHERE i.company = :company AND i.active = true AND i.internalOnly = false")
     long countActiveByCompany(@Param("company") Company company);
 
     /**
      * Count unavailable menu items by company (active but no stock)
      */
-    @Query("SELECT COUNT(i) FROM ItemMenu i WHERE i.company = :company AND i.active = true AND i.available = false")
+    @Query("SELECT COUNT(i) FROM ItemMenu i WHERE i.company = :company AND i.active = true AND i.available = false AND i.internalOnly = false")
     long countUnavailableByCompany(@Param("company") Company company);
 
     // ========== Size / Self-Reference Queries ==========

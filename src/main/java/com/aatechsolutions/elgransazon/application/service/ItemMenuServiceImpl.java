@@ -347,6 +347,7 @@ public class ItemMenuServiceImpl implements ItemMenuService {
         existing.setRequiresPreparation(item.getRequiresPreparation());
         existing.setRequiresBaristaPreparation(item.getRequiresBaristaPreparation());
         existing.setRequiresParrilleroPreparation(item.getRequiresParrilleroPreparation());
+        existing.setPreparationTimeMinutes(item.getPreparationTimeMinutes());
         existing.setRequiresIngredients(item.getRequiresIngredients());
         existing.setIsCombo(item.getIsCombo());
         existing.setDineInOnly(item.getDineInOnly());

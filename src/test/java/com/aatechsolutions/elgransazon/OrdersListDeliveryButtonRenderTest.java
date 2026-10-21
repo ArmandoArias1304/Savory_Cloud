@@ -1,7 +1,9 @@
 package com.aatechsolutions.elgransazon;
 
 import com.aatechsolutions.elgransazon.domain.entity.GlobalSystemConfig;
+import com.aatechsolutions.elgransazon.domain.entity.ItemMenu;
 import com.aatechsolutions.elgransazon.domain.entity.Order;
+import com.aatechsolutions.elgransazon.domain.entity.OrderDetail;
 import com.aatechsolutions.elgransazon.domain.entity.OrderStatus;
 import com.aatechsolutions.elgransazon.domain.entity.OrderType;
 import com.aatechsolutions.elgransazon.domain.entity.PaymentMethodType;
@@ -162,6 +164,26 @@ class OrdersListDeliveryButtonRenderTest {
         assertNotNull(html);
         assertTrue(html.contains("btn-advance-delivery p-2"), "delivery advance button should render");
         assertTrue(html.contains("ON_THE_WAY"), "next status should be ON_THE_WAY for a READY delivery order");
+    }
+
+    @Test
+    void adminListShowsThePreparationTimeColumnAndEstimate() {
+        AbstractContext ctx = webContext();
+        baseFlags(ctx, false);
+        Order order = deliveryOrder();
+        ItemMenu soup = ItemMenu.builder().name("Sopa del día").preparationTimeMinutes(10).build();
+        soup.setIdItemMenu(1L);
+        ItemMenu steak = ItemMenu.builder().name("Corte a la parrilla").preparationTimeMinutes(15).build();
+        steak.setIdItemMenu(2L);
+        order.setOrderDetails(new java.util.ArrayList<>(List.of(
+                OrderDetail.builder().itemMenu(soup).quantity(1).itemStatus(OrderStatus.READY).build(),
+                OrderDetail.builder().itemMenu(steak).quantity(2).itemStatus(OrderStatus.READY).build())));
+        ctx.setVariable("orders", List.of(order));
+
+        String html = templateEngine.process("admin/orders/list", ctx);
+
+        assertTrue(html.contains("Tiempo"), "la tabla de admin/gerente tiene la columna de tiempo");
+        assertTrue(html.contains("≈ 25 min"), "la columna suma los platillos de la comanda");
     }
 
     @Test

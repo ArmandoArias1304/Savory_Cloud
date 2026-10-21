@@ -122,6 +122,39 @@ class MenuItemRecipeFormRenderTest {
     }
 
     @Test
+    @DisplayName("el formulario captura el tiempo promedio de preparación, que es opcional")
+    void theFormCarriesTheOptionalPreparationTime() throws Exception {
+        ItemMenu timed = itemMenu();
+        timed.setPreparationTimeMinutes(15);
+        when(itemMenuService.findById(ITEM_ID)).thenReturn(Optional.of(timed));
+
+        String html = renderForm(0);
+
+        assertThat(html).contains("name=\"preparationTimeMinutes\"");
+        assertThat(html).contains("value=\"15\"");
+        assertThat(html).contains("Tiempo promedio de preparación");
+        assertThat(html).contains("opcional");
+    }
+
+    @Test
+    @DisplayName("el listado del menú muestra el tiempo de preparación de cada platillo")
+    void theListShowsThePreparationTimeColumn() throws Exception {
+        ItemMenu timed = itemMenu();
+        timed.setPreparationTimeMinutes(15);
+        when(itemMenuService.searchMenuItemsPage(any(), any(), any(), any(), any(), any(), any()))
+                .thenReturn(new org.springframework.data.domain.PageImpl<>(List.of(timed)));
+
+        String html = mockMvc.perform(get("/admin/menu-items"))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        assertThat(html).contains("Tiempo prep.");
+        assertThat(html).contains("15 min");
+    }
+
+    @Test
     @DisplayName("en una variante sin receta el formulario ofrece adoptar la del item padre")
     void variantFormOffersTheParentsRecipe() throws Exception {
         when(itemMenuService.findById(ITEM_ID)).thenReturn(Optional.of(variant()));

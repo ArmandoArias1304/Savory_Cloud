@@ -2520,6 +2520,16 @@ public class OrderServiceImpl implements OrderService {
                     "El item '" + item.getName() + "' está desactivado y no puede ser incluido en el pedido."
                 );
             }
+
+            // Internal production items (buffet dishes, staff meals) are never sold. They are
+            // already filtered out of every menu query; this is the last line of defence so a
+            // direct POST can never turn one into a real order.
+            if (Boolean.TRUE.equals(item.getInternalOnly())) {
+                log.warn("Blocking order with internal production item: {}", item.getName());
+                throw new IllegalStateException(
+                    "El item '" + item.getName() + "' es de producción interna y no se puede vender."
+                );
+            }
         }
     }
     

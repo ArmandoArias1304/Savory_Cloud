@@ -119,12 +119,27 @@ public class ItemMenu implements Serializable {
     private Boolean requiresParrilleroPreparation = false;
 
     /**
+     * Tiempo promedio de preparación del platillo, en minutos.
+     *
+     * <p>Es <b>opcional</b>: los platillos que no lo tengan capturado simplemente no
+     * suman al tiempo estimado de la comanda. Se usa para avisar al cliente cuánto
+     * puede tardar su pedido, sumando el tiempo de cada platillo de la orden.</p>
+     *
+     * <p>En los combos el dato puede dejarse vacío: el tiempo efectivo se calcula
+     * con la suma de los tiempos de sus hijos (ver
+     * {@link #getEffectivePreparationTimeMinutes()}).</p>
+     */
+    @Min(value = 1, message = "El tiempo de preparación debe ser al menos 1 minuto")
+    @Max(value = 600, message = "El tiempo de preparación no puede exceder 600 minutos")
+    @Column(name = "preparation_time_minutes")
+    private Integer preparationTimeMinutes;
+
+    /**
      * Indicates if this item requires a recipe (ingredient list) for stock management.
-     * TRUE: Item has at least one ingredient; stock is discounted on order accept.
-     * FALSE: Item has no ingredients (e.g., buffet plates, bread, items with no stock tracking).
-     *        No stock discount happens on accept.
-     * Independent of {@link #dineInOnly}: a "buffet" item is modeled as
-     * requiresIngredients=false AND dineInOnly=true.
+     * TRUE: Item has at least one ingredient; stock is discounted when its production is
+     *       registered (orders for sellable items, {@link ItemPreparation} for internal ones).
+     * FALSE: Item has no ingredients (e.g., bread, items with no stock tracking).
+     *        No stock discount happens.
      * For combos this flag is always forced to false (combos use child items, not ingredients).
      */
     @Column(name = "requires_ingredients", nullable = false)
@@ -142,6 +157,22 @@ public class ItemMenu implements Serializable {
     @Column(name = "is_combo", nullable = false)
     @Builder.Default
     private Boolean isCombo = false;
+
+    /**
+     * Indicates if this item is produced internally and never sold to a customer.
+     *
+     * <p>Internal items (buffet dishes, staff meals) keep a full recipe so their production
+     * discounts ingredient stock, but they are <b>excluded from every menu</b>: the public
+     * menu, the waiter/cashier/chef order screens and the printed carta. They never travel
+     * through an {@link Order}; their production is recorded with {@link ItemPreparation}.
+     *
+     * <p>Filtering happens in the repository queries, so any new query that lists items for
+     * sale must keep excluding {@code internalOnly = true}. Order creation rejects them as a
+     * last line of defence.</p>
+     */
+    @Column(name = "internal_only", nullable = false)
+    @Builder.Default
+    private Boolean internalOnly = false;
 
     /**
      * Indicates if this item is only available for dine-in consumption.
@@ -405,6 +436,13 @@ public class ItemMenu implements Serializable {
     }
 
     /**
+     * Whether this item is produced internally and must never appear on a menu or in an order.
+     */
+    public boolean isInternal() {
+        return Boolean.TRUE.equals(internalOnly);
+    }
+
+    /**
      * Check if this is a combo item with child items defined
      */
     public boolean hasComboItems() {
@@ -416,6 +454,56 @@ public class ItemMenu implements Serializable {
      */
     public List<ItemMenuComboItem> getComboItemsList() {
         return comboItems != null ? comboItems : new ArrayList<>();
+    }
+
+    // ========== Tiempo de preparación ==========
+
+    /**
+     * Tiempo de preparación que realmente representa a este platillo.
+     *
+     * <p>Si el platillo tiene su propio tiempo capturado, ese manda. Si es un combo
+     * sin tiempo propio, se suman los tiempos de sus hijos multiplicados por la
+     * cantidad de cada uno. Si no hay nada capturado devuelve {@code null}, para que
+     * la comanda no invente un tiempo que el restaurante nunca configuró.</p>
+     */
+    public Integer getEffectivePreparationTimeMinutes() {
+        return effectivePreparationTimeMinutes(0);
+    }
+
+    private Integer effectivePreparationTimeMinutes(int depth) {
+        if (preparationTimeMinutes != null && preparationTimeMinutes > 0) {
+            return preparationTimeMinutes;
+        }
+        if (!Boolean.TRUE.equals(isCombo) || comboItems == null || comboItems.isEmpty() || depth > 3) {
+            return null;
+        }
+        int total = 0;
+        boolean any = false;
+        for (ItemMenuComboItem comboItem : comboItems) {
+            ItemMenu child = comboItem.getChildMenu();
+            if (child == null) {
+                continue;
+            }
+            Integer childMinutes = child.effectivePreparationTimeMinutes(depth + 1);
+            if (childMinutes == null) {
+                continue;
+            }
+            int quantity = comboItem.getQuantity() != null && comboItem.getQuantity() > 0
+                    ? comboItem.getQuantity()
+                    : 1;
+            total += childMinutes * quantity;
+            any = true;
+        }
+        return any ? total : null;
+    }
+
+    /**
+     * Texto listo para pantalla del tiempo configurado ("15 min"), o {@code null}
+     * cuando el campo opcional está vacío.
+     */
+    public String getPreparationTimeLabel() {
+        return com.aatechsolutions.elgransazon.util.PreparationTimeFormatter
+                .format(getEffectivePreparationTimeMinutes());
     }
 
     // ========== Size Helper Methods ==========

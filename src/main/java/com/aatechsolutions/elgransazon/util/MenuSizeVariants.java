@@ -64,6 +64,9 @@ public final class MenuSizeVariants {
         dto.put("available", item.getAvailable());
         dto.put("imageUrl", item.getImageUrl());
         dto.put("description", item.getDescription());
+        // Tiempo de preparación del tamaño elegido: el carrito suma este dato para
+        // estimar la comanda, igual que hace con un platillo sin tamaños.
+        dto.put("preparationTimeMinutes", item.getEffectivePreparationTimeMinutes());
         return dto;
     }
 }

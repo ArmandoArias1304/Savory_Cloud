@@ -3,6 +3,7 @@ package com.aatechsolutions.elgransazon.presentation.controller;
 import com.aatechsolutions.elgransazon.application.service.IngredientCategoryService;
 import com.aatechsolutions.elgransazon.infrastructure.context.CompanyContext;
 import com.aatechsolutions.elgransazon.application.service.IngredientService;
+import com.aatechsolutions.elgransazon.application.service.ItemPreparationService;
 import com.aatechsolutions.elgransazon.application.service.OrderService;
 import com.aatechsolutions.elgransazon.application.service.ReportPdfService;
 import com.aatechsolutions.elgransazon.application.service.CategoryService;
@@ -40,6 +41,7 @@ public class ReportsController {
 
     private final OrderService orderService;
     private final ReportPdfService reportPdfService;
+    private final ItemPreparationService itemPreparationService;
     private final IngredientService ingredientService;
     private final IngredientCategoryService ingredientCategoryService;
     private final CategoryService categoryService;
@@ -50,6 +52,7 @@ public class ReportsController {
     public ReportsController(
             @Qualifier("adminOrderService") OrderService orderService,
             ReportPdfService reportPdfService,
+            ItemPreparationService itemPreparationService,
             IngredientService ingredientService,
             IngredientCategoryService ingredientCategoryService,
             CategoryService categoryService,
@@ -57,6 +60,7 @@ public class ReportsController {
             DateTimeService dateTimeService) {
         this.orderService = orderService;
         this.reportPdfService = reportPdfService;
+        this.itemPreparationService = itemPreparationService;
         this.ingredientService = ingredientService;
         this.ingredientCategoryService = ingredientCategoryService;
         this.categoryService = categoryService;
@@ -206,6 +210,28 @@ public class ReportsController {
                 return afterStart && beforeEnd;
             })
             .collect(Collectors.toList());
+    }
+
+    /**
+     * Internal production (buffet dishes, staff meals) of the same period as the sales report.
+     *
+     * <p>It is only printed as information: these dishes are never sold, so their quantities must
+     * never be added to sales, ticket promedio or category totals. The dates are read exactly like
+     * {@link #filterByDateRange} reads them, so both sections cover the same days; when they cannot
+     * be parsed the orders fall back to "no filter" and so does this.</p>
+     */
+    List<ItemPreparation> findInternalProduction(String startDate, String endDate) {
+        try {
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+            LocalDate from = startDate != null && !startDate.isEmpty()
+                    ? LocalDate.parse(startDate, formatter) : null;
+            LocalDate to = endDate != null && !endDate.isEmpty()
+                    ? LocalDate.parse(endDate, formatter) : null;
+            return itemPreparationService.findPreparationsForReport(from, to);
+        } catch (Exception e) {
+            log.error("Error parsing date range for internal production: {} - {}", startDate, endDate, e);
+            return itemPreparationService.findPreparationsForReport(null, null);
+        }
     }
 
     /**
@@ -453,11 +479,14 @@ public class ReportsController {
             List<Map<String, Object>> topSellingComplements = calculateTopSellingComplements(paidOrders, 5);
             BigDecimal totalComplementsSales = calculateTotalComplementsSales(paidOrders);
 
+            // Internal production of the period: printed as an informational block only.
+            List<ItemPreparation> internalPreparations = findInternalProduction(startDate, endDate);
+
             // Generate PDF
             byte[] pdfBytes = reportPdfService.generateExecutiveReport(
                 paidOrders, startDate, endDate, totalSales, totalOrders,
                 salesByCategory, salesByEmployee, ordersByPaymentMethod, topSellingItems,
-                topSellingComplements, totalComplementsSales
+                topSellingComplements, totalComplementsSales, internalPreparations
             );
 
             // Prepare response
@@ -501,10 +530,13 @@ public class ReportsController {
             List<Map<String, Object>> allComplements = calculateTopSellingComplements(paidOrders, Integer.MAX_VALUE);
             BigDecimal totalComplementsSales = calculateTotalComplementsSales(paidOrders);
 
+            // Internal production of the period: printed as an informational block only.
+            List<ItemPreparation> internalPreparations = findInternalProduction(startDate, endDate);
+
             // Generate PDF
             byte[] pdfBytes = reportPdfService.generateProductsReport(
                 paidOrders, startDate, endDate, topSellingItems,
-                allComplements, totalComplementsSales
+                allComplements, totalComplementsSales, internalPreparations
             );
 
             // Prepare response

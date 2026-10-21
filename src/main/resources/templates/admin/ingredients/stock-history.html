@@ -21,6 +21,8 @@
 
     <!-- Sistema de Temas (Modo Claro/Oscuro) -->
     <div th:replace="~{fragments/theme :: themeResources}"></div>
+    <!-- SweetAlert2: confirmaciones de corrección y anulación -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <script>
       tailwind.config = {
@@ -71,6 +73,22 @@
         </p>
       </div>
 
+      <!-- Alertas -->
+      <div
+        th:if="${successMessage}"
+        class="mb-6 p-4 rounded-xl bg-green-100 dark:bg-green-900/30 border border-green-200 dark:border-green-800 flex items-center gap-3"
+      >
+        <span class="material-symbols-outlined text-green-600 dark:text-green-400">check_circle</span>
+        <p class="text-green-800 dark:text-green-300 font-medium" th:text="${successMessage}"></p>
+      </div>
+      <div
+        th:if="${errorMessage}"
+        class="mb-6 p-4 rounded-xl bg-red-100 dark:bg-red-900/30 border border-red-200 dark:border-red-800 flex items-center gap-3"
+      >
+        <span class="material-symbols-outlined text-red-600 dark:text-red-400">error</span>
+        <p class="text-red-800 dark:text-red-300 font-medium" th:text="${errorMessage}"></p>
+      </div>
+
       <!-- Resumen Total -->
       <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <div
@@ -105,7 +123,7 @@
           class="p-6 rounded-2xl bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 border-2 border-purple-200 dark:border-purple-800 shadow-lg"
         >
           <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">
-            Total de Compras
+            Compras vigentes
           </p>
           <p
             class="text-3xl font-bold text-purple-600 dark:text-purple-400"
@@ -148,13 +166,19 @@
                 </th>
                 <th
                   class="px-6 py-4 text-left text-xs font-bold text-white uppercase tracking-wider"
+                  title="Foto del stock en el momento en que se registró la compra"
                 >
-                  Stock Resultante
+                  Stock al momento
                 </th>
                 <th
                   class="px-6 py-4 text-left text-xs font-bold text-white uppercase tracking-wider"
                 >
                   Agregado Por
+                </th>
+                <th
+                  class="px-6 py-4 text-right text-xs font-bold text-white uppercase tracking-wider"
+                >
+                  Acciones
                 </th>
               </tr>
             </thead>
@@ -184,6 +208,11 @@
                       >
                         14:30:00
                       </p>
+                      <p
+                        th:if="${record.editedAt != null}"
+                        class="text-xs text-amber-600 dark:text-amber-400 font-medium"
+                        th:text="'Corregida el ' + ${#tz.format(record.editedAt, 'dd/MM/yyyy HH:mm')}"
+                      ></p>
                     </div>
                   </div>
                 </td>
@@ -245,10 +274,40 @@
                     >
                   </div>
                 </td>
+
+                <td class="px-6 py-4 text-right whitespace-nowrap">
+                  <div class="inline-flex items-center gap-3">
+                    <button
+                      type="button"
+                      class="js-edit-stock inline-flex items-center gap-1 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-semibold"
+                      th:attr="data-history-id=${record.id},data-quantity=${record.quantityAdded},data-cost=${record.costPerUnit},data-current-stock=${ingredient.currentStock},data-edit-url=@{/admin/ingredients/{id}/stock-history/{historyId}/edit(id=${ingredient.idIngredient}, historyId=${record.id})}"
+                    >
+                      <span class="material-symbols-outlined text-lg">edit</span>
+                      Editar
+                    </button>
+                    <button
+                      type="button"
+                      class="js-void-stock inline-flex items-center gap-1 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 font-semibold"
+                      th:attr="data-history-id=${record.id},data-quantity=${record.quantityAdded},data-current-stock=${ingredient.currentStock}"
+                    >
+                      <span class="material-symbols-outlined text-lg">block</span>
+                      Anular
+                    </button>
+                  </div>
+
+                  <form
+                    th:id="'voidForm-' + ${record.id}"
+                    th:action="@{/admin/ingredients/{id}/stock-history/{historyId}/void(id=${ingredient.idIngredient}, historyId=${record.id})}"
+                    method="post"
+                    class="hidden"
+                  >
+                    <input type="hidden" name="reason" value="" />
+                  </form>
+                </td>
               </tr>
 
               <tr th:if="${#lists.isEmpty(history)}">
-                <td colspan="6" class="px-6 py-12 text-center">
+                <td colspan="7" class="px-6 py-12 text-center">
                   <span
                     class="material-symbols-outlined text-6xl text-gray-300 dark:text-gray-600"
                     >inbox</span
@@ -267,7 +326,292 @@
       </div>
     </div>
 
+    <p class="mt-4 text-xs text-gray-500 dark:text-gray-400">
+      Corregir una entrada ajusta el stock por la diferencia. Anular una entrada le resta la
+      cantidad completa; ambas cosas dejan de contar en los gastos. Las entradas anuladas no se
+      muestran, pero quedan registradas con quién las anuló y por qué.
+    </p>
+
+    <!-- Modal de corrección (HTML propio: el modal de SweetAlert desbordaba los inputs) -->
+    <div
+      id="editModal"
+      class="hidden fixed inset-0 z-50 items-center justify-center p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="editModalTitle"
+    >
+      <div id="editBackdrop" class="absolute inset-0 bg-black/60"></div>
+      <div
+        class="relative w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-2xl"
+      >
+        <form id="editForm" method="post" class="p-5 sm:p-6 space-y-4">
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <h3
+                id="editModalTitle"
+                class="text-xl font-bold text-gray-900 dark:text-white"
+              >
+                Corregir entrada
+              </h3>
+              <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                Stock actual:
+                <strong
+                  id="editStock"
+                  class="text-gray-900 dark:text-white"
+                ></strong>
+              </p>
+            </div>
+            <button
+              type="button"
+              id="editClose"
+              class="p-1 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              aria-label="Cerrar"
+            >
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </div>
+
+          <div>
+            <label
+              for="editQty"
+              class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1"
+            >
+              Cantidad (<span id="editUnit"></span>)
+            </label>
+            <input
+              id="editQty"
+              name="quantityAdded"
+              type="number"
+              min="0.01"
+              step="0.01"
+              required
+              class="w-full h-11 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 px-3 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:outline-none"
+            />
+          </div>
+
+          <div>
+            <label
+              for="editCost"
+              class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1"
+            >
+              Costo por unidad
+            </label>
+            <input
+              id="editCost"
+              name="costPerUnit"
+              type="number"
+              min="0"
+              step="0.01"
+              required
+              class="w-full h-11 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 px-3 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:outline-none"
+            />
+          </div>
+
+          <p id="editError" class="hidden text-sm font-medium text-red-600 dark:text-red-400"></p>
+
+          <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
+            <button
+              type="button"
+              id="editCancel"
+              class="h-11 px-5 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              class="h-11 px-5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold transition-colors"
+            >
+              Guardar cambio
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- SweetAlert solo para confirmar la anulación -->
+    <style>
+      .swal2-popup .swal2-input {
+        width: 100% !important;
+        box-sizing: border-box;
+        margin: 0.5rem 0 0 !important;
+        color: #1f2937 !important;
+        background-color: #fff !important;
+      }
+    </style>
+
     <!-- Script del Sistema de Temas -->
     <div th:replace="~{fragments/theme :: themeScript}"></div>
+
+    <script th:inline="javascript">
+      const STOCK_UNIT = /*[[${ingredient.unitOfMeasure}]]*/ "";
+
+      function isDarkMode() {
+        return document.documentElement.classList.contains("dark");
+      }
+
+      function swalColors() {
+        return isDarkMode()
+          ? { background: "#1f2937", color: "#f3f4f6" }
+          : { background: "#fff", color: "#1f2937" };
+      }
+
+      function formatNumber(value) {
+        return Number(value).toFixed(2);
+      }
+
+      const editModal = document.getElementById("editModal");
+      const editForm = document.getElementById("editForm");
+      const editQty = document.getElementById("editQty");
+      const editCost = document.getElementById("editCost");
+      const editError = document.getElementById("editError");
+
+      document.addEventListener("DOMContentLoaded", function () {
+        document.querySelectorAll(".js-edit-stock").forEach(function (button) {
+          button.addEventListener("click", function () {
+            openEdit(button);
+          });
+        });
+
+        document.getElementById("editClose").addEventListener("click", closeEdit);
+        document.getElementById("editCancel").addEventListener("click", closeEdit);
+        document.getElementById("editBackdrop").addEventListener("click", closeEdit);
+        document.addEventListener("keydown", function (event) {
+          if (event.key === "Escape" && !editModal.classList.contains("hidden")) {
+            closeEdit();
+          }
+        });
+        editForm.addEventListener("submit", validateEdit);
+
+        document.querySelectorAll(".js-void-stock").forEach(function (button) {
+          button.addEventListener("click", function () {
+            confirmVoid(
+              button.dataset.historyId,
+              button.dataset.quantity,
+              button.dataset.currentStock
+            );
+          });
+        });
+      });
+
+      function openEdit(button) {
+        editForm.action = button.dataset.editUrl;
+        editQty.value = button.dataset.quantity;
+        editCost.value = button.dataset.cost;
+
+        const isUnit = STOCK_UNIT === "UN";
+        editQty.step = isUnit ? "1" : "0.01";
+        editQty.min = isUnit ? "1" : "0.01";
+
+        document.getElementById("editUnit").textContent = STOCK_UNIT;
+        document.getElementById("editStock").textContent =
+          formatNumber(button.dataset.currentStock) + " " + STOCK_UNIT;
+
+        hideEditError();
+        editModal.classList.remove("hidden");
+        editModal.classList.add("flex");
+        editQty.focus();
+        editQty.select();
+      }
+
+      function closeEdit() {
+        editModal.classList.add("hidden");
+        editModal.classList.remove("flex");
+      }
+
+      function showEditError(message) {
+        editError.textContent = message;
+        editError.classList.remove("hidden");
+      }
+
+      function hideEditError() {
+        editError.textContent = "";
+        editError.classList.add("hidden");
+      }
+
+      function validateEdit(event) {
+        const quantity = parseFloat(editQty.value);
+        const cost = parseFloat(editCost.value);
+
+        if (!quantity || quantity <= 0) {
+          event.preventDefault();
+          showEditError("La cantidad debe ser mayor a 0.");
+          return;
+        }
+        if (STOCK_UNIT === "UN" && !Number.isInteger(quantity)) {
+          event.preventDefault();
+          showEditError("Para unidades (UN), la cantidad debe ser un número entero.");
+          return;
+        }
+        if (isNaN(cost) || cost < 0) {
+          event.preventDefault();
+          showEditError("El costo por unidad no puede ser negativo.");
+        }
+      }
+
+      function confirmVoid(historyId, quantity, currentStock) {
+        const added = parseFloat(quantity);
+        const stock = parseFloat(currentStock);
+        const remaining = stock - added;
+
+        if (remaining < 0) {
+          Swal.fire({
+            icon: "error",
+            title: "No se puede anular",
+            html:
+              "El stock actual es <strong>" +
+              formatNumber(stock) +
+              " " +
+              STOCK_UNIT +
+              "</strong> y anular " +
+              formatNumber(added) +
+              " " +
+              STOCK_UNIT +
+              " lo dejaría en <strong>" +
+              formatNumber(remaining) +
+              " " +
+              STOCK_UNIT +
+              "</strong>.<br>Corrige la cantidad con <strong>Editar</strong> o registra la compra que falta.",
+            ...swalColors(),
+          });
+          return;
+        }
+
+        Swal.fire({
+          icon: "warning",
+          title: "¿Anular esta entrada?",
+          html:
+            "Se restarán <strong>" +
+            formatNumber(added) +
+            " " +
+            STOCK_UNIT +
+            "</strong> del stock.<br>Stock: <strong>" +
+            formatNumber(stock) +
+            " → " +
+            formatNumber(remaining) +
+            " " +
+            STOCK_UNIT +
+            "</strong>.<br><span class=\"text-sm\">Las unidades ya consumidas no se devuelven.</span>",
+          input: "text",
+          inputLabel: "Motivo (opcional)",
+          inputPlaceholder: "Ej. compra duplicada, error de captura",
+          showCancelButton: true,
+          confirmButtonText: "Sí, anular",
+          cancelButtonText: "Volver",
+          confirmButtonColor: "#e53e3e",
+          reverseButtons: true,
+          ...swalColors(),
+        }).then(function (result) {
+          if (!result.isConfirmed) {
+            return;
+          }
+          const form = document.getElementById("voidForm-" + historyId);
+          if (!form) {
+            return;
+          }
+          form.querySelector('input[name="reason"]').value = result.value || "";
+          form.submit();
+        });
+      }
+    </script>
   </body>
 </html>

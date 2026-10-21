@@ -244,6 +244,15 @@
                       th:text="${#tz.format(order.createdAt, 'dd/MM/yyyy HH:mm')}"
                     ></span>
                   </p>
+                  <!-- Tiempo estimado de preparación de la comanda (referencia para el reparto) -->
+                  <span
+                    th:if="${order.estimatedPreparationLabel != null}"
+                    class="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300"
+                    th:title="'Tiempo estimado de preparación: ' + ${order.estimatedPreparationLabel}"
+                  >
+                    <span class="material-symbols-outlined !text-[12px]">timer</span>
+                    <span th:text="${order.estimatedPreparationLabel}"></span>
+                  </span>
                 </div>
               </div>
               <span
