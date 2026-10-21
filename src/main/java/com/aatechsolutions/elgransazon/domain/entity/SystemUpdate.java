@@ -120,4 +120,41 @@ public class SystemUpdate implements Serializable {
                 .filter(line -> !line.isEmpty())
                 .toList();
     }
+
+    /**
+     * Changelog split into label/detail pairs so templates can render the
+     * short label (text before the first colon) in bold.
+     */
+    public List<ChangeEntry> getChangeEntries() {
+        return getChangeLines().stream()
+                .map(ChangeEntry::parse)
+                .toList();
+    }
+
+    /**
+     * One changelog line: {@code label} is the bold headline (with its colon)
+     * when the programmer wrote "Label: detail"; otherwise it is null and the
+     * whole line is plain {@code detail}.
+     */
+    @Getter
+    @AllArgsConstructor
+    public static class ChangeEntry implements Serializable {
+
+        /** Longest label treated as a headline; longer ones stay plain text. */
+        private static final int MAX_LABEL_LENGTH = 80;
+
+        private final String label;
+        private final String detail;
+
+        static ChangeEntry parse(String line) {
+            int separator = line.indexOf(':');
+            if (separator > 0 && separator <= MAX_LABEL_LENGTH) {
+                String label = line.substring(0, separator).trim();
+                if (!label.isEmpty()) {
+                    return new ChangeEntry(label + ":", line.substring(separator + 1).trim());
+                }
+            }
+            return new ChangeEntry(null, line.trim());
+        }
+    }
 }

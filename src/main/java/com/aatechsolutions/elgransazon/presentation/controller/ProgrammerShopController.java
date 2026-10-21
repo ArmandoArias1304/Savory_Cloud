@@ -100,6 +100,7 @@ public class ProgrammerShopController {
         product.setFeatured(featured);
         // The photo must come from an upload, never from a client-supplied URL.
         product.setImageUrl(null);
+        validateDiscount(product, result);
         if (!result.hasErrors()) {
             applyImage(product, imageFile, result, true);
         }
@@ -158,6 +159,7 @@ public class ProgrammerShopController {
         product.setFeatured(featured);
         // Keep the stored photo; only a new upload can replace it.
         product.setImageUrl(existing.getImageUrl());
+        validateDiscount(product, result);
 
         String previousImage = existing.getImageUrl();
         if (!result.hasErrors()) {
@@ -219,6 +221,26 @@ public class ProgrammerShopController {
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
         }
         return "redirect:/programmer/shop";
+    }
+
+    /**
+     * A promotion is only valid when it is positive and below the regular
+     * price; the programmer gets the reason right on the field.
+     */
+    private void validateDiscount(ShopProduct product, BindingResult result) {
+        BigDecimal discount = product.getDiscountPrice();
+        if (discount == null) {
+            return;
+        }
+        if (discount.compareTo(BigDecimal.ZERO) <= 0) {
+            result.rejectValue("discountPrice", "discount.positive",
+                    "El precio con descuento debe ser mayor a 0");
+            return;
+        }
+        if (product.getPrice() == null || discount.compareTo(product.getPrice()) >= 0) {
+            result.rejectValue("discountPrice", "discount.abovePrice",
+                    "El precio con descuento debe ser menor al precio normal");
+        }
     }
 
     /**

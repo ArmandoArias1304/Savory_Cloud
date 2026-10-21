@@ -154,6 +154,52 @@
               </div>
             </div>
 
+            <!-- Promoción -->
+            <div
+              class="rounded-xl bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 p-4 sm:p-5"
+            >
+              <div class="flex items-start gap-3">
+                <div
+                  class="w-10 h-10 rounded-xl bg-rose-100 dark:bg-rose-900/30 flex items-center justify-center flex-shrink-0"
+                >
+                  <span class="material-symbols-outlined text-rose-600 dark:text-rose-400"
+                    >sell</span
+                  >
+                </div>
+                <div class="flex-1 min-w-0">
+                  <label for="discountPrice" class="block text-sm font-semibold mb-2">
+                    Precio con descuento (opcional)
+                  </label>
+                  <div class="relative">
+                    <span
+                      class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 font-semibold"
+                      >$</span
+                    >
+                    <input
+                      id="discountPrice"
+                      type="number"
+                      name="discountPrice"
+                      th:value="*{discountPrice}"
+                      min="0"
+                      step="0.01"
+                      placeholder="Ej. 399.00"
+                      class="w-full h-12 pl-8 pr-4 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all"
+                    />
+                  </div>
+                  <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                    Déjalo vacío para vender al precio normal. Si escribes un precio menor, la
+                    tienda lo muestra como promoción: el precio original tachado y el descuento
+                    resaltado.
+                  </p>
+                  <p
+                    th:if="${#fields.hasErrors('discountPrice')}"
+                    th:errors="*{discountPrice}"
+                    class="mt-1 text-sm text-red-600 dark:text-red-400"
+                  ></p>
+                </div>
+              </div>
+            </div>
+
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
               <div>
                 <label for="sortOrder" class="block text-sm font-semibold mb-2">Orden</label>

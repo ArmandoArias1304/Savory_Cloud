@@ -58,6 +58,16 @@
               <span class="hidden sm:inline">Panel</span>
             </a>
             <a
+              th:href="@{/novedades}"
+              target="_blank"
+              rel="noopener"
+              class="inline-flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-xl transition-all backdrop-blur-sm font-semibold"
+              title="Ver el historial como lo ven los restaurantes"
+            >
+              <span class="material-symbols-outlined">history</span>
+              <span class="hidden sm:inline">Historial</span>
+            </a>
+            <a
               th:href="@{/programmer/updates/new}"
               class="inline-flex items-center gap-2 px-4 sm:px-5 py-2 bg-white text-primary-dark hover:bg-gray-100 rounded-xl transition-all font-bold shadow-md"
             >
@@ -244,11 +254,19 @@
 
             <ul class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2">
               <li
-                th:each="line : ${item.changeLines}"
+                th:each="entry : ${item.changeEntries}"
                 class="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-300"
               >
                 <span class="material-symbols-outlined text-primary text-lg flex-shrink-0">check_circle</span>
-                <span th:text="${line}">Cambio</span>
+                <span>
+                  <strong
+                    th:if="${entry.label != null}"
+                    class="font-bold text-gray-900 dark:text-white"
+                    th:text="${entry.label}"
+                    >Etiqueta:</strong
+                  >
+                  <span th:text="${entry.detail}">Cambio</span>
+                </span>
               </li>
             </ul>
           </div>

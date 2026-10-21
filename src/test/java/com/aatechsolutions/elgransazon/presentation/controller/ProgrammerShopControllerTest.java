@@ -159,6 +159,67 @@ class ProgrammerShopControllerTest {
     }
 
     @Test
+    @DisplayName("una promoción que no baja el precio se rechaza")
+    void rejectsADiscountThatDoesNotLowerThePrice() throws Exception {
+        when(shopProductService.findCategories(false)).thenReturn(List.of());
+
+        mockMvc.perform(multipart("/programmer/shop")
+                        .param("name", "Tarjeta QR")
+                        .param("price", "250.00")
+                        .param("discountPrice", "250.00")
+                        .param("active", "true"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("programmer/shop/form"))
+                .andExpect(model().attributeHasFieldErrors("product", "discountPrice"));
+
+        verify(shopProductService, never()).create(any());
+    }
+
+    @Test
+    @DisplayName("una promoción válida se guarda junto con el producto")
+    void storesAValidDiscount() throws Exception {
+        MockMultipartFile photo = new MockMultipartFile(
+                "imageFile", "tarjeta.png", "image/png", new byte[]{1, 2, 3});
+        when(imageStorageService.isValidImage(photo)).thenReturn(true);
+        when(imageStorageService.saveImage(eq(photo), eq("shop-products"), eq("Tarjeta QR")))
+                .thenReturn("https://images.example.com/tarjeta.png");
+        when(shopProductService.create(any(ShopProduct.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        mockMvc.perform(multipart("/programmer/shop")
+                        .file(photo)
+                        .param("name", "Tarjeta QR")
+                        .param("price", "250.00")
+                        .param("discountPrice", "199.00")
+                        .param("active", "true"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/programmer/shop"));
+
+        ArgumentCaptor<ShopProduct> captor = ArgumentCaptor.forClass(ShopProduct.class);
+        verify(shopProductService).create(captor.capture());
+        assertEquals(0, new BigDecimal("199.00").compareTo(captor.getValue().getDiscountPrice()));
+    }
+
+    @Test
+    @DisplayName("editar un producto sin promoción la elimina")
+    void updateClearsTheDiscountWhenTheFieldIsEmpty() throws Exception {
+        ShopProduct existing = product(1L, true);
+        existing.setDiscountPrice(new BigDecimal("199.00"));
+        when(shopProductService.findById(1L)).thenReturn(Optional.of(existing));
+
+        mockMvc.perform(multipart("/programmer/shop/1")
+                        .param("name", "Tarjeta QR")
+                        .param("price", "250.00")
+                        .param("discountPrice", "")
+                        .param("active", "true"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/programmer/shop"));
+
+        ArgumentCaptor<ShopProduct> captor = ArgumentCaptor.forClass(ShopProduct.class);
+        verify(shopProductService).update(eq(1L), captor.capture());
+        assertTrue(captor.getValue().getDiscountPrice() == null);
+    }
+
+    @Test
     @DisplayName("una imagen inválida se rechaza con mensaje de campo")
     void rejectsInvalidImages() throws Exception {
         MockMultipartFile photo = new MockMultipartFile(

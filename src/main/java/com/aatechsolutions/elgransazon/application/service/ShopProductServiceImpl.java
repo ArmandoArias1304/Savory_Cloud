@@ -71,6 +71,7 @@ public class ShopProductServiceImpl implements ShopProductService {
         existing.setName(product.getName());
         existing.setDescription(product.getDescription());
         existing.setPrice(product.getPrice());
+        existing.setDiscountPrice(product.getDiscountPrice());
         existing.setCategory(product.getCategory());
         existing.setCurrency(product.getCurrency());
         existing.setFeatured(Boolean.TRUE.equals(product.getFeatured()));
@@ -133,6 +134,12 @@ public class ShopProductServiceImpl implements ShopProductService {
         }
         if (product.getPrice() == null) {
             product.setPrice(BigDecimal.ZERO);
+        }
+        // A promotion only exists when it really lowers the price.
+        if (product.getDiscountPrice() != null
+                && (product.getDiscountPrice().compareTo(BigDecimal.ZERO) <= 0
+                    || product.getDiscountPrice().compareTo(product.getPrice()) >= 0)) {
+            product.setDiscountPrice(null);
         }
         if (product.getFeatured() == null) {
             product.setFeatured(false);

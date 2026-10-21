@@ -6,6 +6,7 @@ import lombok.*;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 
 /**
@@ -63,6 +64,15 @@ public class ShopProduct implements Serializable {
     @Column(name = "image_url", length = 500)
     private String imageUrl;
 
+    /**
+     * Promotional price shown instead of {@link #price} while the offer lasts.
+     * {@code null} means the product is sold at its regular price.
+     */
+    @DecimalMin(value = "0.0", inclusive = false, message = "El precio con descuento debe ser mayor a 0")
+    @Digits(integer = 8, fraction = 2, message = "El precio con descuento debe tener máximo 8 dígitos y 2 decimales")
+    @Column(name = "discount_price", precision = 10, scale = 2)
+    private BigDecimal discountPrice;
+
     @Column(name = "featured", nullable = false)
     @Builder.Default
     private Boolean featured = false;
@@ -81,6 +91,42 @@ public class ShopProduct implements Serializable {
 
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    /**
+     * True when the product is currently offered below its regular price.
+     * A discount equal to or above the price is ignored so the store never
+     * shows an offer that is not a real saving.
+     */
+    public boolean isOnSale() {
+        return discountPrice != null
+                && price != null
+                && discountPrice.compareTo(BigDecimal.ZERO) > 0
+                && discountPrice.compareTo(price) < 0;
+    }
+
+    /** Price the customer actually pays. */
+    public BigDecimal getFinalPrice() {
+        return isOnSale() ? discountPrice : price;
+    }
+
+    /** Whole percentage saved, e.g. {@code 20} for 499 → 399.20. */
+    public int getDiscountPercent() {
+        if (!isOnSale()) {
+            return 0;
+        }
+        return price.subtract(discountPrice)
+                .multiply(BigDecimal.valueOf(100))
+                .divide(price, 0, RoundingMode.HALF_UP)
+                .intValue();
+    }
+
+    /** Amount saved when the promotion is active; zero otherwise. */
+    public BigDecimal getSavingsAmount() {
+        if (!isOnSale()) {
+            return BigDecimal.ZERO;
+        }
+        return price.subtract(discountPrice);
+    }
 
     @PrePersist
     protected void onCreate() {

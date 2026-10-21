@@ -106,6 +106,23 @@ public class GlobalControllerAdvice {
     }
 
     /**
+     * How many updates are published. The modal only offers the version history
+     * when there is at least one older version to read.
+     */
+    @ModelAttribute("publishedUpdatesCount")
+    public Long addPublishedUpdatesCount(Authentication authentication) {
+        if (!isRealAuthenticatedUser(authentication)) {
+            return null;
+        }
+        try {
+            return systemUpdateService.countPublished();
+        } catch (Exception e) {
+            log.warn("Could not count published system updates: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    /**
      * Update that must pop up automatically for the current employee. It is null
      * when the employee already saw it, when the latest update targets other roles
      * or when there is no published update.

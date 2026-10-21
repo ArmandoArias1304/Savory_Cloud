@@ -46,6 +46,12 @@ public class SystemUpdateServiceImpl implements SystemUpdateService {
 
     @Override
     @Transactional(readOnly = true)
+    public List<SystemUpdate> findAllPublished() {
+        return updateRepository.findByPublishedTrueOrderByPublishedAtDescIdDesc();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public Optional<SystemUpdate> findPendingFor(Long employeeId, Set<SystemUpdateRole> userRoles) {
         if (employeeId == null || userRoles == null || userRoles.isEmpty()) {
             return Optional.empty();

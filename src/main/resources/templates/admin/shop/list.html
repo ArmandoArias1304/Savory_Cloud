@@ -204,9 +204,14 @@
             >
               <article
                 th:each="product : ${products}"
-                class="group bg-white dark:bg-gray-900 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-800 overflow-hidden flex flex-col hover:shadow-xl hover:-translate-y-0.5 transition-all"
+                th:attr="data-product-href=@{/admin/shop/{id}(id=${product.idProduct})}"
+                class="js-product-card group relative bg-white dark:bg-gray-900 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-800 overflow-hidden flex flex-col hover:shadow-xl hover:-translate-y-0.5 transition-all cursor-pointer"
               >
-                <div class="relative h-48 bg-gray-100 dark:bg-gray-800 overflow-hidden">
+                <a
+                  th:href="@{/admin/shop/{id}(id=${product.idProduct})}"
+                  class="relative block h-48 bg-gray-100 dark:bg-gray-800 overflow-hidden"
+                  th:title="'Ver detalle de ' + ${product.name}"
+                >
                   <div class="absolute inset-0 flex items-center justify-center">
                     <span class="material-symbols-outlined text-6xl text-gray-300 dark:text-gray-600"
                       >image</span
@@ -227,7 +232,14 @@
                     <span class="material-symbols-outlined text-sm">star</span>
                     Destacado
                   </span>
-                </div>
+                  <span
+                    th:if="${product.onSale}"
+                    class="absolute top-3 right-3 inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-rose-600 text-white shadow"
+                  >
+                    <span class="material-symbols-outlined text-sm">sell</span>
+                    Promoción
+                  </span>
+                </a>
 
                 <div class="p-5 flex flex-col flex-1">
                   <span
@@ -236,11 +248,14 @@
                     th:text="${product.category}"
                     >Categoría</span
                   >
-                  <h2
-                    class="text-lg font-bold text-gray-900 dark:text-white leading-tight"
-                    th:text="${product.name}"
-                  >
-                    Producto
+                  <h2 class="text-lg font-bold leading-tight">
+                    <a
+                      th:href="@{/admin/shop/{id}(id=${product.idProduct})}"
+                      class="text-gray-900 dark:text-white hover:text-primary-dark dark:hover:text-primary transition-colors"
+                      th:text="${product.name}"
+                    >
+                      Producto
+                    </a>
                   </h2>
                   <p
                     class="mt-2 text-sm text-gray-600 dark:text-gray-400 flex-1 line-clamp-3"
@@ -249,38 +264,69 @@
                     Descripción del producto.
                   </p>
 
-                  <div class="mt-4 flex items-end justify-between gap-3">
-                    <div>
+                  <div class="mt-4">
+                    <div class="flex items-center gap-2 flex-wrap">
                       <p class="text-xs uppercase tracking-wide text-gray-400 dark:text-gray-500">
                         Precio
                       </p>
-                      <p
-                        class="text-2xl font-extrabold text-gray-900 dark:text-white"
+                      <span
+                        th:if="${product.onSale}"
+                        class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300"
+                        th:text="'-' + ${product.discountPercent} + '%'"
+                        >-20%</span
+                      >
+                    </div>
+                    <div class="flex items-baseline gap-2 flex-wrap">
+                      <span
+                        th:if="${product.onSale}"
+                        class="text-sm font-semibold text-gray-400 dark:text-gray-500 line-through"
                         th:text="'$ ' + ${#numbers.formatDecimal(product.price, 1, 'COMMA', 2, 'POINT')}"
+                        >$ 0.00</span
+                      >
+                      <p
+                        class="text-2xl font-extrabold"
+                        th:classappend="${product.onSale} ? 'text-primary-dark dark:text-primary' : 'text-gray-900 dark:text-white'"
+                        th:text="'$ ' + ${#numbers.formatDecimal(product.finalPrice, 1, 'COMMA', 2, 'POINT')}"
                       >
                         $ 0.00
                       </p>
                     </div>
+                    <p
+                      th:if="${product.onSale}"
+                      class="mt-1 text-xs font-semibold text-primary-dark dark:text-primary"
+                      th:text="'Ahorras $ ' + ${#numbers.formatDecimal(product.savingsAmount, 1, 'COMMA', 2, 'POINT')}"
+                    >
+                      Ahorras
+                    </p>
                   </div>
 
-                  <a
-                    th:if="${whatsappLinks[product.idProduct] != null}"
-                    th:href="${whatsappLinks[product.idProduct]}"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    class="mt-4 inline-flex items-center justify-center gap-2 w-full px-4 py-3 rounded-xl bg-[#25D366] hover:bg-[#1ebe5b] text-white font-bold shadow-md hover:shadow-lg transition-all"
-                  >
-                    <span class="material-symbols-outlined text-xl">chat</span>
-                    Pedir por WhatsApp
-                  </a>
-                  <span
-                    th:if="${whatsappLinks[product.idProduct] == null}"
-                    class="mt-4 inline-flex items-center justify-center gap-2 w-full px-4 py-3 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 font-semibold cursor-not-allowed"
-                    title="El programador aún no configuró el WhatsApp de ventas"
-                  >
-                    <span class="material-symbols-outlined text-xl">chat_bubble</span>
-                    WhatsApp no disponible
-                  </span>
+                  <div class="mt-4 flex flex-col gap-2">
+                    <a
+                      th:href="@{/admin/shop/{id}(id=${product.idProduct})}"
+                      class="inline-flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-200 font-semibold hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                    >
+                      <span class="material-symbols-outlined text-lg">open_in_new</span>
+                      Ver detalle
+                    </a>
+                    <a
+                      th:if="${whatsappLinks[product.idProduct] != null}"
+                      th:href="${whatsappLinks[product.idProduct]}"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="inline-flex items-center justify-center gap-2 w-full px-4 py-3 rounded-xl bg-[#25D366] hover:bg-[#1ebe5b] text-white font-bold shadow-md hover:shadow-lg transition-all"
+                    >
+                      <span class="material-symbols-outlined text-xl">chat</span>
+                      Pedir por WhatsApp
+                    </a>
+                    <span
+                      th:if="${whatsappLinks[product.idProduct] == null}"
+                      class="inline-flex items-center justify-center gap-2 w-full px-4 py-3 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 font-semibold cursor-not-allowed"
+                      title="El programador aún no configuró el WhatsApp de ventas"
+                    >
+                      <span class="material-symbols-outlined text-xl">chat_bubble</span>
+                      WhatsApp no disponible
+                    </span>
+                  </div>
                 </div>
               </article>
             </div>
@@ -296,5 +342,23 @@
 
     <div th:replace="~{fragments/sidebar :: sidebarScripts}"></div>
     <div th:replace="~{fragments/theme :: themeScript}"></div>
+
+    <script>
+      // Toda la tarjeta abre el detalle, salvo los botones que ya tienen su
+      // propio destino (WhatsApp o el enlace "Ver detalle").
+      document.addEventListener("DOMContentLoaded", function () {
+        document.querySelectorAll(".js-product-card").forEach(function (card) {
+          card.addEventListener("click", function (event) {
+            if (event.target.closest("a, button")) {
+              return;
+            }
+            const href = card.dataset.productHref;
+            if (href) {
+              window.location.href = href;
+            }
+          });
+        });
+      });
+    </script>
   </body>
 </html>

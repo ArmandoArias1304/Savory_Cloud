@@ -11,6 +11,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
@@ -82,5 +83,14 @@ class SystemUpdateServiceTest {
     @Test
     void pendingIsEmptyWithoutAnEmployee() {
         assertTrue(service.findPendingFor(null, Set.of(SystemUpdateRole.WAITER)).isEmpty());
+    }
+
+    @Test
+    void publishedHistoryComesStraightFromTheRepository() {
+        SystemUpdate update = update();
+        when(updateRepository.findByPublishedTrueOrderByPublishedAtDescIdDesc())
+                .thenReturn(List.of(update));
+
+        assertEquals(List.of(update), service.findAllPublished());
     }
 }

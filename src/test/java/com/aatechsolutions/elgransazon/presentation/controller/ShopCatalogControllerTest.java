@@ -24,6 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
@@ -106,6 +107,53 @@ class ShopCatalogControllerTest {
         @SuppressWarnings("unchecked")
         Map<Long, String> links = (Map<Long, String>) result.getModelAndView().getModel().get("whatsappLinks");
         org.junit.jupiter.api.Assertions.assertNull(links.get(1L));
+    }
+
+    @Test
+    @DisplayName("el detalle abre el producto publicado y cotiza su precio con descuento")
+    void detailShowsThePublishedProduct() throws Exception {
+        ShopProduct product = product();
+        product.setDiscountPrice(new BigDecimal("199.00"));
+        when(shopProductService.findById(1L)).thenReturn(java.util.Optional.of(product));
+        when(globalSystemConfigService.getConfiguration())
+                .thenReturn(GlobalSystemConfig.builder().shopWhatsappNumber("55 1234 5678").build());
+
+        org.springframework.test.web.servlet.MvcResult result = mockMvc.perform(get("/admin/shop/1"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("admin/shop/detail"))
+                .andExpect(model().attribute("product", product))
+                .andExpect(model().attribute("whatsappConfigured", true))
+                .andExpect(model().attribute("restaurantName", "El Gran Sazón"))
+                .andReturn();
+
+        String link = (String) result.getModelAndView().getModel().get("whatsappLink");
+        assertTrue(link.startsWith("https://wa.me/525512345678?text="));
+        assertTrue(link.contains("Tarjeta%20QR%20para%20mesa"));
+        // The request quotes the promotional price, not the crossed-out one.
+        assertTrue(link.contains("199.00"));
+        assertTrue(!link.contains("250.00"));
+    }
+
+    @Test
+    @DisplayName("un producto oculto no abre su detalle: regresa al catálogo")
+    void hiddenProductRedirectsToTheCatalogue() throws Exception {
+        ShopProduct hidden = product();
+        hidden.setActive(false);
+        when(shopProductService.findById(1L)).thenReturn(java.util.Optional.of(hidden));
+
+        mockMvc.perform(get("/admin/shop/1"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/shop"));
+    }
+
+    @Test
+    @DisplayName("un producto inexistente tampoco abre el detalle")
+    void unknownProductRedirectsToTheCatalogue() throws Exception {
+        when(shopProductService.findById(99L)).thenReturn(java.util.Optional.empty());
+
+        mockMvc.perform(get("/admin/shop/99"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/shop"));
     }
 
     private ShopProduct product() {

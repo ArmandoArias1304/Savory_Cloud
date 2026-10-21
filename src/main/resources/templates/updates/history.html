@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title th:text="${globalSystemConfig.systemName + ' - Novedades'}">SavoryCloud - Novedades</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@300;400;500;600;700"
+      rel="stylesheet"
+    />
+    <div th:replace="~{fragments/theme :: themeResources}"></div>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#38e07b",
+              "primary-dark": "#2bc866",
+              "background-light": "#f8faf9",
+              "background-dark": "#0f1713",
+            },
+            fontFamily: { display: ["Work Sans"] },
+          },
+        },
+      };
+    </script>
+  </head>
+  <body
+    class="bg-gradient-to-br from-background-light to-gray-50 dark:from-background-dark dark:to-gray-900 font-display text-gray-800 dark:text-gray-200 min-h-screen"
+  >
+    <header class="bg-gradient-to-r from-primary to-primary-dark text-white shadow-lg sticky top-0 z-30">
+      <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-6">
+        <div class="flex items-center justify-between gap-4">
+          <div class="flex items-center gap-4 min-w-0">
+            <a
+              href="/"
+              onclick="if (window.history.length > 1) { event.preventDefault(); window.history.back(); }"
+              class="w-11 h-11 bg-white/20 hover:bg-white/30 rounded-xl flex items-center justify-center transition-colors flex-shrink-0"
+              title="Volver"
+            >
+              <span class="material-symbols-outlined">arrow_back</span>
+            </a>
+            <div class="min-w-0">
+              <p class="text-white/75 text-xs font-semibold uppercase tracking-widest">
+                Novedades de
+                <span
+                  th:text="${globalSystemConfig != null ? globalSystemConfig.systemName : 'Savory Cloud'}"
+                  >Savory Cloud</span
+                >
+              </p>
+              <h1 class="text-2xl sm:text-3xl font-bold leading-tight">Historial de versiones</h1>
+              <p class="text-white/80 text-sm">Todo lo que ha cambiado en cada versión</p>
+            </div>
+          </div>
+          <div
+            class="hidden sm:flex w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-sm items-center justify-center overflow-hidden flex-shrink-0"
+          >
+            <img
+              th:if="${globalSystemConfig != null
+                  and globalSystemConfig.systemLogoUrl != null
+                  and !globalSystemConfig.systemLogoUrl.isEmpty()}"
+              th:src="${@cloudinaryUrl.logoLarge(globalSystemConfig.systemLogoUrl)}"
+              th:alt="${globalSystemConfig.systemName}"
+              class="w-full h-full object-contain p-1.5"
+            />
+            <span
+              th:if="${globalSystemConfig == null
+                  or globalSystemConfig.systemLogoUrl == null
+                  or globalSystemConfig.systemLogoUrl.isEmpty()}"
+              class="material-symbols-outlined text-3xl"
+              >system_update_alt</span
+            >
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <style>
+      /* Acordeón de versiones: el marcador nativo se oculta y el chevron gira
+         con CSS propio para no depender de la variante group-open del CDN. */
+      .version-details > summary::-webkit-details-marker {
+        display: none;
+      }
+
+      .version-details .version-chevron {
+        transition: transform 0.2s ease;
+      }
+
+      .version-details[open] .version-chevron {
+        transform: rotate(180deg);
+      }
+    </style>
+
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+      <!-- Sin versiones publicadas -->
+      <div
+        th:if="${#lists.isEmpty(updates)}"
+        class="bg-white dark:bg-gray-900 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-800 py-16 px-6 text-center"
+      >
+        <div
+          class="w-20 h-20 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4"
+        >
+          <span class="material-symbols-outlined text-5xl text-gray-300 dark:text-gray-600"
+            >system_update_alt</span
+          >
+        </div>
+        <p class="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-1">
+          Aún no hay versiones publicadas
+        </p>
+        <p class="text-sm text-gray-500 dark:text-gray-400">
+          Cuando se publique una actualización del sistema aparecerá aquí con todas sus novedades.
+        </p>
+      </div>
+
+      <div th:unless="${#lists.isEmpty(updates)}" class="space-y-6">
+        <!-- Versión actual -->
+        <section
+          th:if="${latest != null}"
+          class="bg-white dark:bg-gray-900 rounded-2xl shadow-lg border border-primary/30 dark:border-primary/40 overflow-hidden"
+        >
+          <div
+            class="bg-gradient-to-br from-primary/15 via-primary/10 to-transparent dark:from-primary/20 dark:via-primary/10 px-5 sm:px-7 py-4 border-b border-primary/20 flex flex-wrap items-center gap-3"
+          >
+            <span
+              class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-primary text-white text-xs font-extrabold shadow-sm"
+            >
+              <span class="material-symbols-outlined text-sm">verified</span>
+              Versión actual
+            </span>
+            <span
+              class="text-2xl font-extrabold text-gray-900 dark:text-white"
+              th:text="'v' + ${latest.version}"
+              >v1.0.0</span
+            >
+            <span
+              th:if="${latest.publishedAt != null}"
+              class="text-xs text-gray-500 dark:text-gray-400"
+              th:text="${#temporals.format(latest.publishedAt, 'dd/MM/yyyy')}"
+            >
+              01/01/2026
+            </span>
+          </div>
+
+          <div class="px-5 sm:px-7 py-6">
+            <h2
+              class="text-xl sm:text-2xl font-extrabold text-gray-900 dark:text-white leading-tight"
+              th:text="${latest.title}"
+            >
+              Título de la actualización
+            </h2>
+
+            <ul class="mt-5 space-y-3">
+              <li th:each="entry : ${latest.changeEntries}" class="flex items-start gap-3">
+                <span
+                  class="w-6 h-6 rounded-full bg-primary/15 dark:bg-primary/20 text-primary flex items-center justify-center flex-shrink-0 mt-0.5"
+                >
+                  <span class="material-symbols-outlined text-base">check</span>
+                </span>
+                <span class="text-sm sm:text-base text-gray-700 dark:text-gray-300">
+                  <strong
+                    th:if="${entry.label != null}"
+                    class="font-bold text-gray-900 dark:text-white"
+                    th:text="${entry.label}"
+                    >Etiqueta:</strong
+                  >
+                  <span th:text="${entry.detail}">Cambio</span>
+                </span>
+              </li>
+            </ul>
+          </div>
+
+          <div
+            class="px-5 sm:px-7 pb-5 text-xs text-gray-500 dark:text-gray-400 flex items-center gap-2"
+          >
+            <span class="material-symbols-outlined text-base text-primary">info</span>
+            Esta es la versión más reciente publicada en
+            <span
+              class="font-semibold"
+              th:text="${(globalSystemConfig != null ? globalSystemConfig.systemName : 'Savory Cloud') + '.'}"
+              >Savory Cloud.</span
+            >
+          </div>
+        </section>
+
+        <!-- Versiones anteriores -->
+        <section th:if="${!#lists.isEmpty(previousUpdates)}">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="material-symbols-outlined text-primary">history</span>
+            <h2 class="text-lg font-bold text-gray-900 dark:text-white">Versiones anteriores</h2>
+            <span
+              class="inline-flex items-center justify-center min-w-6 h-6 px-2 rounded-full bg-gray-200 dark:bg-gray-800 text-xs font-bold text-gray-700 dark:text-gray-300"
+              th:text="${#lists.size(previousUpdates)}"
+              >0</span
+            >
+          </div>
+          <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">
+            Pulsa una versión para ver sus novedades completas.
+          </p>
+
+          <div class="space-y-3">
+            <details
+              th:each="item : ${previousUpdates}"
+              class="version-details bg-white dark:bg-gray-900 rounded-2xl shadow-md border border-gray-100 dark:border-gray-800 overflow-hidden"
+            >
+              <summary
+                class="flex items-center gap-3 sm:gap-4 p-4 sm:p-5 cursor-pointer select-none list-none hover:bg-gray-50 dark:hover:bg-gray-800/60 transition-colors"
+              >
+                <span
+                  class="inline-flex items-center justify-center px-2.5 py-1 rounded-lg bg-gray-100 dark:bg-gray-800 text-xs font-extrabold text-gray-700 dark:text-gray-200 whitespace-nowrap"
+                  th:text="'v' + ${item.version}"
+                  >v1.0.0</span
+                >
+                <div class="flex-1 min-w-0">
+                  <p
+                    class="font-bold text-gray-900 dark:text-white leading-snug line-clamp-2"
+                    th:text="${item.title}"
+                  >
+                    Título de la actualización
+                  </p>
+                  <p
+                    th:if="${item.publishedAt != null}"
+                    class="text-xs text-gray-500 dark:text-gray-400 mt-0.5"
+                    th:text="${#temporals.format(item.publishedAt, 'dd/MM/yyyy')}"
+                  >
+                    01/01/2026
+                  </p>
+                </div>
+                <span
+                  class="version-chevron material-symbols-outlined text-gray-400 dark:text-gray-500"
+                  >expand_more</span
+                >
+              </summary>
+
+              <div class="px-4 sm:px-5 pb-5">
+                <ul class="space-y-2.5 border-t border-gray-100 dark:border-gray-800 pt-4">
+                  <li
+                    th:each="entry : ${item.changeEntries}"
+                    class="flex items-start gap-2.5 text-sm text-gray-700 dark:text-gray-300"
+                  >
+                    <span class="material-symbols-outlined text-primary text-lg flex-shrink-0 mt-0.5"
+                      >check_circle</span
+                    >
+                    <span>
+                      <strong
+                        th:if="${entry.label != null}"
+                        class="font-bold text-gray-900 dark:text-white"
+                        th:text="${entry.label}"
+                        >Etiqueta:</strong
+                      >
+                      <span th:text="${entry.detail}">Cambio</span>
+                    </span>
+                  </li>
+                </ul>
+              </div>
+            </details>
+          </div>
+        </section>
+
+        <p class="text-center text-xs text-gray-500 dark:text-gray-400 pt-2">
+          Gracias por utilizar
+          <span
+            class="font-semibold"
+            th:text="${(globalSystemConfig != null ? globalSystemConfig.systemName : 'Savory Cloud') + '.'}"
+            >Savory Cloud.</span
+          >
+          Seguimos mejorando cada día para tu restaurante.
+        </p>
+      </div>
+    </div>
+
+    <div th:replace="~{fragments/theme :: themeScript}"></div>
+  </body>
+</html>

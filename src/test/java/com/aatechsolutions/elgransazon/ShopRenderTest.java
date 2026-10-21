@@ -148,6 +148,80 @@ class ShopRenderTest {
     }
 
     @Test
+    @DisplayName("el catálogo tacha el precio normal y resalta el de promoción")
+    void catalogueRendersPromotionalPrice() {
+        AbstractContext ctx = webContext("ROLE_WAITER");
+        baseVariables(ctx);
+        ShopProduct product = product();
+        product.setDiscountPrice(new BigDecimal("199.00"));
+        Map<Long, String> links = new LinkedHashMap<>();
+        links.put(product.getIdProduct(), "https://wa.me/525512345678?text=Hola");
+
+        ctx.setVariable("products", List.of(product));
+        ctx.setVariable("whatsappLinks", links);
+        ctx.setVariable("whatsappConfigured", true);
+        ctx.setVariable("restaurantName", "El Gran Sazón");
+        ctx.setVariable("categories", List.of("Tarjetas"));
+
+        String html = templateEngine.process("admin/shop/list", ctx);
+
+        assertTrue(html.contains("$ 250.00"), "se conserva el precio original");
+        assertTrue(html.contains("$ 199.00"), "se muestra el precio con descuento");
+        assertTrue(html.contains("line-through"), "el precio original va tachado");
+        assertTrue(html.contains("-20%"), "se anuncia el porcentaje de descuento");
+        assertTrue(html.contains("Ahorras $ 51.00"));
+        assertTrue(html.contains("/admin/shop/1"), "la tarjeta abre el detalle del producto");
+        assertTrue(html.contains("Ver detalle"));
+    }
+
+    @Test
+    @DisplayName("el detalle muestra foto grande, descripción completa y promoción")
+    void productDetailRendersEverything() {
+        AbstractContext ctx = webContext("ROLE_WAITER");
+        baseVariables(ctx);
+        ShopProduct product = product();
+        product.setDescription("Tarjeta impresa con código QR.\nIncluye base de acrílico y envío.");
+        product.setDiscountPrice(new BigDecimal("199.00"));
+
+        ctx.setVariable("product", product);
+        ctx.setVariable("whatsappLink", "https://wa.me/525512345678?text=Hola");
+        ctx.setVariable("whatsappConfigured", true);
+        ctx.setVariable("restaurantName", "El Gran Sazón");
+
+        String html = templateEngine.process("admin/shop/detail", ctx);
+
+        assertTrue(html.contains("https://images.example.com/qr.png"));
+        assertTrue(html.contains("Tarjeta QR para mesa"));
+        assertTrue(html.contains("Incluye base de acrílico y envío."));
+        assertTrue(html.contains("$ 250.00"));
+        assertTrue(html.contains("$ 199.00"));
+        assertTrue(html.contains("line-through"));
+        assertTrue(html.contains("-20% de descuento"));
+        assertTrue(html.contains("Ahorras $ 51.00"));
+        assertTrue(html.contains("Pedir por WhatsApp"));
+        assertTrue(html.contains("Volver a la tienda"));
+    }
+
+    @Test
+    @DisplayName("sin descuento el detalle no inventa una promoción")
+    void productDetailWithoutDiscount() {
+        AbstractContext ctx = webContext("ROLE_WAITER");
+        baseVariables(ctx);
+
+        ctx.setVariable("product", product());
+        ctx.setVariable("whatsappLink", null);
+        ctx.setVariable("whatsappConfigured", false);
+        ctx.setVariable("restaurantName", "El Gran Sazón");
+
+        String html = templateEngine.process("admin/shop/detail", ctx);
+
+        assertTrue(html.contains("$ 250.00"));
+        assertFalse(html.contains("de descuento"));
+        assertFalse(html.contains("Ahorras"));
+        assertTrue(html.contains("WhatsApp no disponible"));
+    }
+
+    @Test
     @DisplayName("el panel del programador lista productos y configura el WhatsApp")
     void programmerListRenders() {
         AbstractContext ctx = webContext("ROLE_PROGRAMMER");

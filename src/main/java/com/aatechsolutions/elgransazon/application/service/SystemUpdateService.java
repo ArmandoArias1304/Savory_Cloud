@@ -19,6 +19,9 @@ public interface SystemUpdateService {
     /** Latest published update, used by every version button. */
     Optional<SystemUpdate> findLatestPublished();
 
+    /** Every published update, newest first; feeds the version history page. */
+    List<SystemUpdate> findAllPublished();
+
     /**
      * Latest published update that should pop up automatically for this employee:
      * it must target one of their roles and not have been seen yet.

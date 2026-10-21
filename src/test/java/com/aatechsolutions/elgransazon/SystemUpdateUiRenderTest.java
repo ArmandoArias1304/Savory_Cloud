@@ -1,6 +1,7 @@
 package com.aatechsolutions.elgransazon;
 
 import com.aatechsolutions.elgransazon.domain.entity.GlobalSystemConfig;
+import com.aatechsolutions.elgransazon.domain.entity.SystemConfiguration;
 import com.aatechsolutions.elgransazon.domain.entity.SystemUpdate;
 import com.aatechsolutions.elgransazon.domain.entity.SystemUpdateRole;
 import org.junit.jupiter.api.Test;
@@ -94,7 +95,8 @@ class SystemUpdateUiRenderTest {
                 .id(7L)
                 .version("1.4.2")
                 .title("Mejoras para meseros")
-                .changes("Nuevo filtro de pedidos por mesa\nCorrección del total de la cuenta")
+                .changes("Transferencia de pedidos entre meseros: Ahora los meseros pueden compartir "
+                        + "una comanda con un solo clic\nCorrección del total de la cuenta")
                 .targetRoles(Set.of(SystemUpdateRole.WAITER))
                 .published(true)
                 .publishedAt(LocalDateTime.of(2026, 10, 19, 10, 30))
@@ -112,8 +114,12 @@ class SystemUpdateUiRenderTest {
         assertTrue(html.contains("id=\"systemUpdateModal\""), "the modal must render");
         assertTrue(html.contains("1.4.2"), "the version must be visible");
         assertTrue(html.contains("Mejoras para meseros"), "the title must be visible");
-        assertTrue(html.contains("Nuevo filtro de pedidos por mesa"), "one change per line");
-        assertTrue(html.contains("Corrección del total de la cuenta"), "all changes render");
+        assertTrue(html.contains(">Transferencia de pedidos entre meseros:</strong"),
+                "the label of a change is rendered in bold");
+        assertTrue(html.contains("Ahora los meseros pueden compartir una comanda"),
+                "the rest of the change follows as plain text");
+        assertTrue(html.contains(">Corrección del total de la cuenta</span>"),
+                "a change without a colon stays plain text");
         assertTrue(html.contains("w=192,h=192,fit=contain"),
                 "the configured system logo is used with the large variant");
         assertTrue(html.contains("Gracias por utilizar"), "the friendly footer must be there");
@@ -158,6 +164,78 @@ class SystemUpdateUiRenderTest {
         String alreadySeen = render(update(), null);
         assertTrue(alreadySeen.contains("const autoOpen = false;"),
                 "the button still opens the modal, but it does not pop up again");
+    }
+
+    @Test
+    void modalOffersTheHistoryOnlyWhenThereAreOlderVersions() {
+        WebContext withHistory = context(update(), null);
+        withHistory.setVariable("publishedUpdatesCount", 3L);
+        String html = templateEngine.process("fragments/system-update", withHistory);
+
+        assertTrue(html.contains("Ver versiones anteriores"),
+                "the modal links to the full changelog");
+        assertTrue(html.contains("href=\"/novedades\""),
+                "the history page is one click away");
+
+        WebContext singleVersion = context(update(), null);
+        singleVersion.setVariable("publishedUpdatesCount", 1L);
+        assertFalse(templateEngine.process("fragments/system-update", singleVersion)
+                        .contains("Ver versiones anteriores"),
+                "without older versions the button would be dead weight");
+    }
+
+    @Test
+    void historyPageShowsTheCurrentVersionAndTheOlderOnes() {
+        SystemUpdate latest = update();
+        SystemUpdate older = SystemUpdate.builder()
+                .id(6L)
+                .version("1.4.1")
+                .title("Ajustes de caja")
+                .changes("Corrección del corte de caja")
+                .targetRoles(Set.of(SystemUpdateRole.CASHIER))
+                .published(true)
+                .publishedAt(LocalDateTime.of(2026, 10, 10, 9, 0))
+                .build();
+
+        WebContext ctx = context(latest, null);
+        ctx.setVariable("systemConfig", SystemConfiguration.builder()
+                .restaurantName("El Gran Sazón")
+                .build());
+        ctx.setVariable("publishedUpdatesCount", 2L);
+        ctx.setVariable("updates", List.of(latest, older));
+        ctx.setVariable("latest", latest);
+        ctx.setVariable("previousUpdates", List.of(older));
+
+        String html = templateEngine.process("updates/history", ctx);
+
+        assertTrue(html.contains("Historial de versiones"), "the page title is rendered");
+        assertTrue(html.contains("Versión actual"), "the newest version is highlighted");
+        assertTrue(html.contains("v1.4.2"));
+        assertTrue(html.contains("Mejoras para meseros"));
+        assertTrue(html.contains("Versiones anteriores"));
+        assertTrue(html.contains("v1.4.1"), "older versions are listed");
+        assertTrue(html.contains("Ajustes de caja"));
+        assertTrue(html.contains("<details"), "each older version opens in place");
+        assertTrue(html.contains("Corrección del corte de caja"),
+                "the changelog of an older version is available");
+        assertTrue(html.contains(">Transferencia de pedidos entre meseros:</strong"),
+                "the current version shows its bold label too");
+        assertTrue(html.contains(">Corrección del corte de caja</span>"),
+                "a plain line keeps rendering as plain text");
+    }
+
+    @Test
+    void historyPageExplainsWhenNothingIsPublished() {
+        WebContext ctx = context(null, null);
+        ctx.setVariable("publishedUpdatesCount", 0L);
+        ctx.setVariable("updates", List.of());
+        ctx.setVariable("latest", null);
+        ctx.setVariable("previousUpdates", List.of());
+
+        String html = templateEngine.process("updates/history", ctx);
+
+        assertTrue(html.contains("Aún no hay versiones publicadas"));
+        assertFalse(html.contains("Versión actual"));
     }
 
     @Test

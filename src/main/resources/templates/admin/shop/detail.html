@@ -1,0 +1,259 @@
+<!doctype html>
+<html
+  lang="es"
+  xmlns:th="http://www.thymeleaf.org"
+  xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title th:text="${globalSystemConfig.systemName + ' - ' + product.name}">
+      SavoryCloud - Producto
+    </title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@300;400;500;600;700"
+      rel="stylesheet"
+    />
+    <div th:replace="~{fragments/theme :: themeResources}"></div>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#38e07b",
+              "primary-dark": "#2bc866",
+              "background-light": "#f8faf9",
+              "background-dark": "#0f1713",
+            },
+            fontFamily: { display: ["Work Sans"] },
+          },
+        },
+      };
+    </script>
+    <div th:replace="~{fragments/sidebar :: sidebarStyles}"></div>
+  </head>
+  <body
+    class="bg-gradient-to-br from-background-light to-gray-50 dark:from-background-dark dark:to-gray-900 font-display text-gray-800 dark:text-gray-200 overflow-hidden"
+  >
+    <div th:replace="~{fragments/sidebar :: menuControls}"></div>
+
+    <div class="flex h-screen overflow-hidden">
+      <div th:replace="~{fragments/sidebar :: sidebar(activeMenu='shop')}"></div>
+
+      <main class="flex-1 overflow-y-auto h-screen">
+        <div class="min-h-screen pb-16">
+          <header
+            class="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 shadow-lg sticky top-0 z-30"
+          >
+            <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-5">
+              <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div class="flex items-center gap-3 sm:gap-4">
+                  <a
+                    th:href="@{/admin/shop}"
+                    class="w-11 h-11 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-xl flex items-center justify-center transition-colors"
+                    title="Volver a la tienda"
+                  >
+                    <span class="material-symbols-outlined text-gray-700 dark:text-gray-200"
+                      >arrow_back</span
+                    >
+                  </a>
+                  <div>
+                    <p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+                      <a
+                        th:href="@{/admin/shop}"
+                        class="hover:text-primary-dark dark:hover:text-primary font-medium"
+                        >Tienda</a
+                      >
+                      <span class="mx-1">/</span>
+                      <span th:text="${product.category} ?: 'Producto'">Producto</span>
+                    </p>
+                    <h1
+                      class="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white leading-tight"
+                      th:text="${product.name}"
+                    >
+                      Producto
+                    </h1>
+                  </div>
+                </div>
+                <div
+                  class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-sm"
+                >
+                  <span class="material-symbols-outlined text-lg">info</span>
+                  Precios en pesos mexicanos (MXN)
+                </div>
+              </div>
+            </div>
+          </header>
+
+          <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+            <div
+              th:if="${errorMessage}"
+              class="bg-red-50 border-l-4 border-red-500 text-red-800 px-4 sm:px-6 py-4 rounded-lg mb-6 flex items-start gap-3 shadow-sm"
+            >
+              <span class="material-symbols-outlined text-red-500 text-xl flex-shrink-0 mt-0.5"
+                >error</span
+              >
+              <span class="text-sm sm:text-base" th:text="${errorMessage}"></span>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 items-start">
+              <!-- Foto grande -->
+              <div
+                class="bg-white dark:bg-gray-900 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-800 overflow-hidden"
+              >
+                <div class="relative aspect-square bg-gray-100 dark:bg-gray-800">
+                  <div class="absolute inset-0 flex flex-col items-center justify-center gap-2">
+                    <span
+                      class="material-symbols-outlined text-7xl text-gray-300 dark:text-gray-600"
+                      >image</span
+                    >
+                    <span class="text-sm text-gray-400 dark:text-gray-500">Sin foto</span>
+                  </div>
+                  <img
+                    th:if="${product.imageUrl != null and !#strings.isEmpty(product.imageUrl)}"
+                    th:src="${product.imageUrl}"
+                    th:alt="${product.name}"
+                    class="relative w-full h-full object-contain bg-white dark:bg-gray-950"
+                    onerror="this.style.display='none'"
+                  />
+                  <div class="absolute top-4 left-4 flex flex-col gap-2">
+                    <span
+                      th:if="${product.featured}"
+                      class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-amber-400 text-amber-950 shadow"
+                    >
+                      <span class="material-symbols-outlined text-sm">star</span>
+                      Destacado
+                    </span>
+                    <span
+                      th:if="${product.onSale}"
+                      class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-rose-600 text-white shadow"
+                    >
+                      <span class="material-symbols-outlined text-sm">sell</span>
+                      Promoción
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Información -->
+              <div
+                class="bg-white dark:bg-gray-900 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-800 p-5 sm:p-7 flex flex-col"
+              >
+                <span
+                  th:if="${product.category != null and !#strings.isEmpty(product.category)}"
+                  class="inline-flex self-start items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-primary/10 text-primary-dark dark:text-primary mb-3"
+                  th:text="${product.category}"
+                  >Categoría</span
+                >
+                <h2
+                  class="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white leading-tight"
+                  th:text="${product.name}"
+                >
+                  Producto
+                </h2>
+
+                <div class="mt-4">
+                  <h3
+                    class="text-xs uppercase tracking-wide font-bold text-gray-500 dark:text-gray-400 mb-1"
+                  >
+                    Descripción
+                  </h3>
+                  <p
+                    class="text-sm sm:text-base text-gray-700 dark:text-gray-300 whitespace-pre-line leading-relaxed"
+                    th:text="${#strings.isEmpty(product.description) ? 'Este producto todavía no tiene descripción. Escríbenos por WhatsApp para más información.' : product.description}"
+                  >
+                    Descripción del producto.
+                  </p>
+                </div>
+
+                <div
+                  class="mt-6 rounded-2xl bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 p-4 sm:p-5"
+                >
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <p
+                      class="text-xs uppercase tracking-wide font-bold text-gray-500 dark:text-gray-400"
+                    >
+                      Precio
+                    </p>
+                    <span
+                      th:if="${product.onSale}"
+                      class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300"
+                      th:text="'-' + ${product.discountPercent} + '% de descuento'"
+                      >-20% de descuento</span
+                    >
+                  </div>
+
+                  <div class="mt-1 flex items-baseline gap-3 flex-wrap">
+                    <span
+                      th:if="${product.onSale}"
+                      class="text-lg sm:text-xl font-semibold text-gray-400 dark:text-gray-500 line-through"
+                      th:text="'$ ' + ${#numbers.formatDecimal(product.price, 1, 'COMMA', 2, 'POINT')}"
+                      >$ 0.00</span
+                    >
+                    <p
+                      class="text-3xl sm:text-4xl font-extrabold"
+                      th:classappend="${product.onSale} ? 'text-primary-dark dark:text-primary' : 'text-gray-900 dark:text-white'"
+                      th:text="'$ ' + ${#numbers.formatDecimal(product.finalPrice, 1, 'COMMA', 2, 'POINT')}"
+                    >
+                      $ 0.00
+                    </p>
+                  </div>
+                  <p
+                    th:if="${product.onSale}"
+                    class="mt-1 text-sm font-semibold text-primary-dark dark:text-primary"
+                    th:text="'Ahorras $ ' + ${#numbers.formatDecimal(product.savingsAmount, 1, 'COMMA', 2, 'POINT')} + ' (' + ${product.discountPercent} + '% menos)'"
+                  >
+                    Ahorras
+                  </p>
+                </div>
+
+                <div class="mt-6 flex flex-col gap-2">
+                  <a
+                    th:if="${whatsappLink != null}"
+                    th:href="${whatsappLink}"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="inline-flex items-center justify-center gap-2 w-full px-5 py-3.5 rounded-xl bg-[#25D366] hover:bg-[#1ebe5b] text-white font-bold shadow-md hover:shadow-lg transition-all"
+                  >
+                    <span class="material-symbols-outlined text-xl">chat</span>
+                    Pedir por WhatsApp
+                  </a>
+                  <span
+                    th:if="${whatsappLink == null}"
+                    class="inline-flex items-center justify-center gap-2 w-full px-5 py-3.5 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 font-semibold cursor-not-allowed"
+                    title="El programador aún no configuró el WhatsApp de ventas"
+                  >
+                    <span class="material-symbols-outlined text-xl">chat_bubble</span>
+                    WhatsApp no disponible
+                  </span>
+                  <a
+                    th:href="@{/admin/shop}"
+                    class="inline-flex items-center justify-center gap-2 w-full px-5 py-3 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-200 font-semibold hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                  >
+                    <span class="material-symbols-outlined text-lg">arrow_back</span>
+                    Volver a la tienda
+                  </a>
+                </div>
+
+                <p class="mt-3 text-xs text-gray-500 dark:text-gray-400">
+                  Al pedir por WhatsApp se enviará tu nombre de restaurante y este producto.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <div th:replace="~{fragments/sidebar :: sidebarScripts}"></div>
+    <div th:replace="~{fragments/theme :: themeScript}"></div>
+  </body>
+</html>
