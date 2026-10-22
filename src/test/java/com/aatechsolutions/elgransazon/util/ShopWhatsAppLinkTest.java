@@ -1,5 +1,8 @@
 package com.aatechsolutions.elgransazon.util;
 
+import com.aatechsolutions.elgransazon.domain.entity.ShopBillingType;
+import com.aatechsolutions.elgransazon.domain.entity.ShopPricingMode;
+import com.aatechsolutions.elgransazon.domain.entity.ShopProduct;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -71,5 +74,50 @@ class ShopWhatsAppLinkTest {
     void formatsPrices() {
         assertEquals("$ 1,250.50", ShopWhatsAppLink.formatPrice(new BigDecimal("1250.5"), "MXN"));
         assertEquals("", ShopWhatsAppLink.formatPrice(null, "MXN"));
+    }
+
+    @Test
+    @DisplayName("el mensaje cotiza rangos y precios a evaluar sin inventar montos")
+    void priceLabelFollowsThePricingMode() {
+        ShopProduct fixed = ShopProduct.builder()
+                .price(new BigDecimal("250.00"))
+                .build();
+        ShopProduct range = ShopProduct.builder()
+                .pricingMode(ShopPricingMode.RANGE)
+                .price(new BigDecimal("200.00"))
+                .maxPrice(new BigDecimal("500.00"))
+                .build();
+        ShopProduct monthlyRange = ShopProduct.builder()
+                .pricingMode(ShopPricingMode.RANGE)
+                .billingType(ShopBillingType.MONTHLY)
+                .price(new BigDecimal("200.00"))
+                .maxPrice(new BigDecimal("500.00"))
+                .build();
+        ShopProduct quote = ShopProduct.builder()
+                .pricingMode(ShopPricingMode.QUOTE)
+                .price(BigDecimal.ZERO)
+                .build();
+        ShopProduct monthlyQuote = ShopProduct.builder()
+                .pricingMode(ShopPricingMode.QUOTE)
+                .billingType(ShopBillingType.MONTHLY)
+                .price(BigDecimal.ZERO)
+                .build();
+
+        assertEquals("$ 250.00", ShopWhatsAppLink.priceLabel(fixed));
+        assertEquals("$ 200.00 – $ 500.00", ShopWhatsAppLink.priceLabel(range));
+        assertEquals("$ 200.00 – $ 500.00 / mes", ShopWhatsAppLink.priceLabel(monthlyRange));
+        assertEquals("precio a evaluar", ShopWhatsAppLink.priceLabel(quote));
+        assertEquals("precio a evaluar, cobro mensual", ShopWhatsAppLink.priceLabel(monthlyQuote));
+    }
+
+    @Test
+    @DisplayName("el mensaje distingue un cobro mensual de un pago único")
+    void monthlyPricesAreAnnouncedPerMonth() {
+        assertEquals("$ 150.00 / mes", ShopWhatsAppLink.formatPrice(
+                new BigDecimal("150.00"), "MXN", ShopBillingType.MONTHLY));
+        assertEquals("$ 250.00", ShopWhatsAppLink.formatPrice(
+                new BigDecimal("250.00"), "MXN", ShopBillingType.ONE_TIME));
+        assertEquals("", ShopWhatsAppLink.formatPrice(
+                null, "MXN", ShopBillingType.MONTHLY));
     }
 }

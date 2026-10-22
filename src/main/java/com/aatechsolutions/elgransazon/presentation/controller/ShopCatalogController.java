@@ -55,7 +55,7 @@ public class ShopCatalogController {
                     whatsappNumber,
                     restaurantName,
                     product.getName(),
-                    ShopWhatsAppLink.formatPrice(product.getFinalPrice(), product.getCurrency())));
+                    ShopWhatsAppLink.priceLabel(product)));
         }
 
         model.addAttribute("products", products);
@@ -93,7 +93,7 @@ public class ShopCatalogController {
                 whatsappNumber,
                 restaurantName,
                 product.getName(),
-                ShopWhatsAppLink.formatPrice(product.getFinalPrice(), product.getCurrency())));
+                ShopWhatsAppLink.priceLabel(product)));
         model.addAttribute("whatsappConfigured", ShopWhatsAppLink.isValidPhone(whatsappNumber));
         model.addAttribute("restaurantName", restaurantName);
 

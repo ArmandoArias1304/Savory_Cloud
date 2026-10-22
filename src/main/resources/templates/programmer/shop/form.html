@@ -113,10 +113,95 @@
               <p th:if="${#fields.hasErrors('description')}" th:errors="*{description}" class="mt-1 text-sm text-red-600 dark:text-red-400"></p>
             </div>
 
+            <!-- Tipo de precio: fijo, rango o a evaluar -->
+            <div
+              class="rounded-xl bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 p-4 sm:p-5"
+            >
+              <div class="flex items-start gap-3 mb-4">
+                <div
+                  class="w-10 h-10 rounded-xl bg-primary/15 flex items-center justify-center flex-shrink-0"
+                >
+                  <span class="material-symbols-outlined text-primary-dark dark:text-primary"
+                    >price_change</span
+                  >
+                </div>
+                <div>
+                  <h3 class="text-sm font-semibold">Tipo de precio</h3>
+                  <p class="text-xs text-gray-600 dark:text-gray-400">
+                    Usa un rango si el precio cambia según el trabajo, o "a evaluar" si prefieres
+                    cotizar cada pedido antes de dar un número.
+                  </p>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <label
+                  class="js-pricing-option flex items-start gap-3 p-3 rounded-xl bg-white dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 cursor-pointer transition-colors"
+                >
+                  <input
+                    type="radio"
+                    name="pricingMode"
+                    value="FIXED"
+                    th:checked="${product.pricingMode == null or product.pricingMode.name() == 'FIXED'}"
+                    class="mt-0.5 w-5 h-5 border-gray-300 text-primary focus:ring-primary"
+                  />
+                  <span>
+                    <span class="block text-sm font-semibold">Precio fijo</span>
+                    <span class="block text-xs text-gray-500 dark:text-gray-400">
+                      Un solo precio para todos.
+                    </span>
+                  </span>
+                </label>
+
+                <label
+                  class="js-pricing-option flex items-start gap-3 p-3 rounded-xl bg-white dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 cursor-pointer transition-colors"
+                >
+                  <input
+                    type="radio"
+                    name="pricingMode"
+                    value="RANGE"
+                    th:checked="${product.pricingMode != null and product.pricingMode.name() == 'RANGE'}"
+                    class="mt-0.5 w-5 h-5 border-gray-300 text-primary focus:ring-primary"
+                  />
+                  <span>
+                    <span class="block text-sm font-semibold">Rango de precios</span>
+                    <span class="block text-xs text-gray-500 dark:text-gray-400">
+                      Un mínimo y un máximo.
+                    </span>
+                  </span>
+                </label>
+
+                <label
+                  class="js-pricing-option flex items-start gap-3 p-3 rounded-xl bg-white dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 cursor-pointer transition-colors"
+                >
+                  <input
+                    type="radio"
+                    name="pricingMode"
+                    value="QUOTE"
+                    th:checked="${product.pricingMode != null and product.pricingMode.name() == 'QUOTE'}"
+                    class="mt-0.5 w-5 h-5 border-gray-300 text-primary focus:ring-primary"
+                  />
+                  <span>
+                    <span class="block text-sm font-semibold">Precio a evaluar</span>
+                    <span class="block text-xs text-gray-500 dark:text-gray-400">
+                      Sin precio: lo cotizas al recibir el pedido.
+                    </span>
+                  </span>
+                </label>
+              </div>
+
+              <p
+                th:if="${#fields.hasErrors('pricingMode')}"
+                th:errors="*{pricingMode}"
+                class="mt-2 text-sm text-red-600 dark:text-red-400"
+              ></p>
+            </div>
+
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
-              <div>
+              <div id="priceWrapper">
                 <label for="price" class="block text-sm font-semibold mb-2">
-                  Precio (MXN) <span class="text-red-500">*</span>
+                  <span id="priceLabelText">Precio (MXN)</span>
+                  <span id="priceRequiredStar" class="text-red-500">*</span>
                 </label>
                 <div class="relative">
                   <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 font-semibold">$</span>
@@ -127,12 +212,37 @@
                     th:value="*{price}"
                     min="0"
                     step="0.01"
-                    required
                     placeholder="0.00"
                     class="w-full h-12 pl-8 pr-4 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all"
                   />
                 </div>
                 <p th:if="${#fields.hasErrors('price')}" th:errors="*{price}" class="mt-1 text-sm text-red-600 dark:text-red-400"></p>
+                <p id="priceBillingHint" class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  Este precio se cobra una sola vez.
+                </p>
+              </div>
+
+              <div id="maxPriceWrapper" class="hidden">
+                <label for="maxPrice" class="block text-sm font-semibold mb-2">
+                  Hasta (MXN) <span class="text-red-500">*</span>
+                </label>
+                <div class="relative">
+                  <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 font-semibold">$</span>
+                  <input
+                    id="maxPrice"
+                    type="number"
+                    name="maxPrice"
+                    th:value="*{maxPrice}"
+                    min="0"
+                    step="0.01"
+                    placeholder="0.00"
+                    class="w-full h-12 pl-8 pr-4 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all"
+                  />
+                </div>
+                <p th:if="${#fields.hasErrors('maxPrice')}" th:errors="*{maxPrice}" class="mt-1 text-sm text-red-600 dark:text-red-400"></p>
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  La tienda muestra "Desde $ mínimo – hasta $ máximo".
+                </p>
               </div>
 
               <div>
@@ -154,8 +264,96 @@
               </div>
             </div>
 
+            <div id="priceNoteWrapper" class="hidden">
+              <label for="priceNote" class="block text-sm font-semibold mb-2">
+                Nota de precio (opcional)
+              </label>
+              <textarea
+                id="priceNote"
+                name="priceNote"
+                th:text="*{priceNote}"
+                rows="2"
+                maxlength="300"
+                placeholder="Ej. El precio depende de la distancia y del número de empleados."
+                class="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all resize-y"
+              ></textarea>
+              <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                Se muestra en la tienda para explicar de qué depende el precio.
+              </p>
+              <p th:if="${#fields.hasErrors('priceNote')}" th:errors="*{priceNote}" class="mt-1 text-sm text-red-600 dark:text-red-400"></p>
+            </div>
+
+            <!-- Forma de cobro: mensual o pago único -->
+            <div
+              class="rounded-xl bg-primary/5 dark:bg-primary/10 border-2 border-primary/30 p-4 sm:p-5"
+            >
+              <div class="flex items-start gap-3 mb-4">
+                <div
+                  class="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center flex-shrink-0"
+                >
+                  <span class="material-symbols-outlined text-primary-dark dark:text-primary"
+                    >payments</span
+                  >
+                </div>
+                <div>
+                  <h3 class="text-sm font-semibold">
+                    Forma de cobro <span class="text-red-500">*</span>
+                  </h3>
+                  <p class="text-xs text-gray-600 dark:text-gray-400">
+                    Indica si el precio se cobra una sola vez o cada mes junto con la
+                    mensualidad del restaurante.
+                  </p>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <label
+                  class="js-billing-option flex items-start gap-3 p-3 rounded-xl bg-white dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 cursor-pointer transition-colors"
+                >
+                  <input
+                    type="radio"
+                    name="billingType"
+                    value="ONE_TIME"
+                    th:checked="${product.billingType == null or product.billingType.name() == 'ONE_TIME'}"
+                    class="mt-0.5 w-5 h-5 border-gray-300 text-primary focus:ring-primary"
+                  />
+                  <span>
+                    <span class="block text-sm font-semibold">Pago único</span>
+                    <span class="block text-xs text-gray-500 dark:text-gray-400">
+                      Se cobra una sola vez, al pedirlo.
+                    </span>
+                  </span>
+                </label>
+
+                <label
+                  class="js-billing-option flex items-start gap-3 p-3 rounded-xl bg-white dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 cursor-pointer transition-colors"
+                >
+                  <input
+                    type="radio"
+                    name="billingType"
+                    value="MONTHLY"
+                    th:checked="${product.billingType != null and product.billingType.name() == 'MONTHLY'}"
+                    class="mt-0.5 w-5 h-5 border-gray-300 text-primary focus:ring-primary"
+                  />
+                  <span>
+                    <span class="block text-sm font-semibold">Mensual</span>
+                    <span class="block text-xs text-gray-500 dark:text-gray-400">
+                      Se suma a la mensualidad del restaurante, cada mes.
+                    </span>
+                  </span>
+                </label>
+              </div>
+
+              <p
+                th:if="${#fields.hasErrors('billingType')}"
+                th:errors="*{billingType}"
+                class="mt-2 text-sm text-red-600 dark:text-red-400"
+              ></p>
+            </div>
+
             <!-- Promoción -->
             <div
+              id="promoWrapper"
               class="rounded-xl bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 p-4 sm:p-5"
             >
               <div class="flex items-start gap-3">
@@ -363,6 +561,94 @@
             placeholder.classList.add("hidden");
           }
         });
+      });
+
+      // La forma de cobro cambia el texto de ayuda bajo el precio y resalta la
+      // tarjeta elegida, para que no haya duda de si el precio es mensual.
+      function syncBillingChoice() {
+        const radios = document.querySelectorAll('input[name="billingType"]');
+        const hint = document.getElementById("priceBillingHint");
+        let monthly = false;
+
+        radios.forEach(function (radio) {
+          const card = radio.closest("label");
+          if (card) {
+            card.classList.toggle("border-primary", radio.checked);
+            card.classList.toggle("ring-2", radio.checked);
+            card.classList.toggle("ring-primary/30", radio.checked);
+            card.classList.toggle("border-gray-200", !radio.checked);
+          }
+          if (radio.checked && radio.value === "MONTHLY") {
+            monthly = true;
+          }
+        });
+
+        if (hint) {
+          hint.textContent = monthly
+            ? "Este precio se cobra cada mes y se suma a la mensualidad del restaurante."
+            : "Este precio se cobra una sola vez, al pedir el producto.";
+        }
+      }
+
+      // El tipo de precio decide qué campos se piden: un monto fijo, el rango
+      // completo, o solo una nota cuando el precio se cotiza por pedido.
+      function syncPricingMode() {
+        const selected = document.querySelector('input[name="pricingMode"]:checked');
+        const mode = selected ? selected.value : "FIXED";
+        const priceInput = document.getElementById("price");
+        const priceWrapper = document.getElementById("priceWrapper");
+        const maxInput = document.getElementById("maxPrice");
+        const maxWrapper = document.getElementById("maxPriceWrapper");
+        const noteWrapper = document.getElementById("priceNoteWrapper");
+        const promoWrapper = document.getElementById("promoWrapper");
+        const priceLabel = document.getElementById("priceLabelText");
+        const requiredStar = document.getElementById("priceRequiredStar");
+
+        document.querySelectorAll(".js-pricing-option").forEach(function (card) {
+          const radio = card.querySelector('input[name="pricingMode"]');
+          const on = radio && radio.checked;
+          card.classList.toggle("border-primary", !!on);
+          card.classList.toggle("ring-2", !!on);
+          card.classList.toggle("ring-primary/30", !!on);
+          card.classList.toggle("border-gray-200", !on);
+        });
+
+        if (priceInput) {
+          priceInput.required = mode !== "QUOTE";
+        }
+        if (maxInput) {
+          maxInput.required = mode === "RANGE";
+        }
+        if (priceWrapper) {
+          priceWrapper.classList.toggle("hidden", mode === "QUOTE");
+        }
+        if (maxWrapper) {
+          maxWrapper.classList.toggle("hidden", mode !== "RANGE");
+        }
+        if (noteWrapper) {
+          noteWrapper.classList.toggle("hidden", mode === "FIXED");
+        }
+        if (promoWrapper) {
+          promoWrapper.classList.toggle("hidden", mode !== "FIXED");
+        }
+        if (priceLabel) {
+          priceLabel.textContent = mode === "RANGE" ? "Desde (MXN)" : "Precio (MXN)";
+        }
+        if (requiredStar) {
+          requiredStar.classList.toggle("hidden", mode === "QUOTE");
+        }
+      }
+
+      document.addEventListener("DOMContentLoaded", function () {
+        document.querySelectorAll('input[name="billingType"]').forEach(function (radio) {
+          radio.addEventListener("change", syncBillingChoice);
+        });
+        syncBillingChoice();
+
+        document.querySelectorAll('input[name="pricingMode"]').forEach(function (radio) {
+          radio.addEventListener("change", syncPricingMode);
+        });
+        syncPricingMode();
       });
     </script>
   </body>

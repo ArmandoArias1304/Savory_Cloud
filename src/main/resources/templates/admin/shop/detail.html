@@ -189,23 +189,60 @@
                       th:text="'-' + ${product.discountPercent} + '% de descuento'"
                       >-20% de descuento</span
                     >
+                    <span
+                      th:if="${product.priceRange}"
+                      class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
+                      th:text="${product.pricingLabel}"
+                      >Rango de precios</span
+                    >
+                    <span
+                      class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold"
+                      th:classappend="${product.monthly} ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300'"
+                      th:text="${product.monthly} ? 'Cobro mensual' : 'Pago único'"
+                      >Cobro mensual</span
+                    >
                   </div>
 
                   <div class="mt-1 flex items-baseline gap-3 flex-wrap">
                     <span
                       th:if="${product.onSale}"
                       class="text-lg sm:text-xl font-semibold text-gray-400 dark:text-gray-500 line-through"
-                      th:text="'$ ' + ${#numbers.formatDecimal(product.price, 1, 'COMMA', 2, 'POINT')}"
+                      th:text="'$ ' + ${#numbers.formatDecimal(product.price, 1, 'COMMA', 2, 'POINT')} + ${product.billingPeriodSuffix}"
                       >$ 0.00</span
                     >
                     <p
+                      th:if="${product.quote}"
+                      class="text-3xl sm:text-4xl font-extrabold text-gray-900 dark:text-white"
+                    >
+                      Precio a evaluar
+                    </p>
+                    <p
+                      th:if="${product.priceRange and product.maxPrice != null}"
+                      class="text-3xl sm:text-4xl font-extrabold text-gray-900 dark:text-white"
+                      th:text="'$ ' + ${#numbers.formatDecimal(product.price, 1, 'COMMA', 2, 'POINT')} + ' – $ ' + ${#numbers.formatDecimal(product.maxPrice, 1, 'COMMA', 2, 'POINT')} + ${product.billingPeriodSuffix}"
+                    >
+                      $ 0.00 – $ 0.00
+                    </p>
+                    <p
+                      th:if="${product.fixedPrice}"
                       class="text-3xl sm:text-4xl font-extrabold"
                       th:classappend="${product.onSale} ? 'text-primary-dark dark:text-primary' : 'text-gray-900 dark:text-white'"
-                      th:text="'$ ' + ${#numbers.formatDecimal(product.finalPrice, 1, 'COMMA', 2, 'POINT')}"
+                      th:text="'$ ' + ${#numbers.formatDecimal(product.finalPrice, 1, 'COMMA', 2, 'POINT')} + ${product.billingPeriodSuffix}"
                     >
                       $ 0.00
                     </p>
                   </div>
+                  <p
+                    th:if="${product.priceNote != null}"
+                    class="mt-2 flex items-start gap-1.5 text-xs text-gray-600 dark:text-gray-400"
+                  >
+                    <span class="material-symbols-outlined text-sm mt-0.5">info</span>
+                    <span th:text="${product.priceNote}">El precio depende de la distancia.</span>
+                  </p>
+                  <p class="mt-2 flex items-start gap-1.5 text-xs text-gray-600 dark:text-gray-400">
+                    <span class="material-symbols-outlined text-sm mt-0.5">info</span>
+                    <span th:text="${product.billingDescription}">Se cobra una sola vez, al pedirlo.</span>
+                  </p>
                   <p
                     th:if="${product.onSale}"
                     class="mt-1 text-sm font-semibold text-primary-dark dark:text-primary"

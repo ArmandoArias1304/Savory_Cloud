@@ -3,6 +3,7 @@ package com.aatechsolutions.elgransazon.presentation.controller;
 import com.aatechsolutions.elgransazon.application.service.GlobalSystemConfigService;
 import com.aatechsolutions.elgransazon.application.service.ImageStorageService;
 import com.aatechsolutions.elgransazon.application.service.ShopProductService;
+import com.aatechsolutions.elgransazon.domain.entity.ShopPricingMode;
 import com.aatechsolutions.elgransazon.domain.entity.ShopProduct;
 import com.aatechsolutions.elgransazon.util.ShopWhatsAppLink;
 import jakarta.validation.Valid;
@@ -81,6 +82,7 @@ public class ProgrammerShopController {
     public String showCreateForm(Model model) {
         ShopProduct product = new ShopProduct();
         product.setActive(true);
+        product.setPricingMode(ShopPricingMode.FIXED);
         product.setPrice(BigDecimal.ZERO);
         product.setSortOrder(0);
         model.addAttribute("product", product);
@@ -100,7 +102,7 @@ public class ProgrammerShopController {
         product.setFeatured(featured);
         // The photo must come from an upload, never from a client-supplied URL.
         product.setImageUrl(null);
-        validateDiscount(product, result);
+        validatePricing(product, result);
         if (!result.hasErrors()) {
             applyImage(product, imageFile, result, true);
         }
@@ -159,7 +161,7 @@ public class ProgrammerShopController {
         product.setFeatured(featured);
         // Keep the stored photo; only a new upload can replace it.
         product.setImageUrl(existing.getImageUrl());
-        validateDiscount(product, result);
+        validatePricing(product, result);
 
         String previousImage = existing.getImageUrl();
         if (!result.hasErrors()) {
@@ -221,6 +223,47 @@ public class ProgrammerShopController {
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
         }
         return "redirect:/programmer/shop";
+    }
+
+    /**
+     * A fixed price is mandatory, a range needs both bounds in order, and a
+     * quote publishes no amount. Only a fixed price may carry a promotion.
+     */
+    private void validatePricing(ShopProduct product, BindingResult result) {
+        ShopPricingMode mode = product.getPricingModeOrDefault();
+        product.setPricingMode(mode);
+
+        if (mode == ShopPricingMode.FIXED) {
+            if (product.getPrice() == null) {
+                result.rejectValue("price", "price.required", "El precio es requerido");
+                return;
+            }
+            validateDiscount(product, result);
+            return;
+        }
+
+        // Ranges and quotes are never announced as a promotion.
+        product.setDiscountPrice(null);
+
+        if (mode == ShopPricingMode.RANGE) {
+            if (product.getPrice() == null) {
+                result.rejectValue("price", "price.required",
+                        "Indica el precio mínimo del rango");
+            }
+            if (product.getMaxPrice() == null) {
+                result.rejectValue("maxPrice", "maxPrice.required",
+                        "Indica el precio máximo del rango");
+            } else if (product.getPrice() != null
+                    && product.getMaxPrice().compareTo(product.getPrice()) <= 0) {
+                result.rejectValue("maxPrice", "maxPrice.order",
+                        "El precio máximo debe ser mayor al precio mínimo");
+            }
+            return;
+        }
+
+        // Quote: nothing is published, and the note explains what it depends on.
+        product.setPrice(BigDecimal.ZERO);
+        product.setMaxPrice(null);
     }
 
     /**

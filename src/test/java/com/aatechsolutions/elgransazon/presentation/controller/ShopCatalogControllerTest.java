@@ -4,6 +4,8 @@ import com.aatechsolutions.elgransazon.application.service.GlobalSystemConfigSer
 import com.aatechsolutions.elgransazon.application.service.ShopProductService;
 import com.aatechsolutions.elgransazon.domain.entity.Company;
 import com.aatechsolutions.elgransazon.domain.entity.GlobalSystemConfig;
+import com.aatechsolutions.elgransazon.domain.entity.ShopBillingType;
+import com.aatechsolutions.elgransazon.domain.entity.ShopPricingMode;
 import com.aatechsolutions.elgransazon.domain.entity.ShopProduct;
 import com.aatechsolutions.elgransazon.infrastructure.context.CompanyContext;
 import org.junit.jupiter.api.AfterEach;
@@ -132,6 +134,89 @@ class ShopCatalogControllerTest {
         // The request quotes the promotional price, not the crossed-out one.
         assertTrue(link.contains("199.00"));
         assertTrue(!link.contains("250.00"));
+    }
+
+    @Test
+    @DisplayName("el mensaje de WhatsApp avisa cuando el cobro es mensual")
+    void monthlyProductLinkStatesTheBillingPeriod() throws Exception {
+        ShopProduct product = product();
+        product.setPrice(new BigDecimal("150.00"));
+        product.setBillingType(ShopBillingType.MONTHLY);
+        when(shopProductService.findById(1L)).thenReturn(java.util.Optional.of(product));
+        when(globalSystemConfigService.getConfiguration())
+                .thenReturn(GlobalSystemConfig.builder().shopWhatsappNumber("55 1234 5678").build());
+
+        org.springframework.test.web.servlet.MvcResult result = mockMvc.perform(get("/admin/shop/1"))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        String link = (String) result.getModelAndView().getModel().get("whatsappLink");
+        String message = java.net.URLDecoder.decode(
+                link.substring(link.indexOf("text=") + 5), java.nio.charset.StandardCharsets.UTF_8);
+        assertTrue(message.contains("$ 150.00 / mes"), "el restaurante sabe que se cobra cada mes");
+    }
+
+    @Test
+    @DisplayName("un producto de pago único no menciona una mensualidad")
+    void oneTimeProductLinkHasNoMonthlySuffix() throws Exception {
+        ShopProduct product = product();
+        when(shopProductService.findById(1L)).thenReturn(java.util.Optional.of(product));
+        when(globalSystemConfigService.getConfiguration())
+                .thenReturn(GlobalSystemConfig.builder().shopWhatsappNumber("55 1234 5678").build());
+
+        org.springframework.test.web.servlet.MvcResult result = mockMvc.perform(get("/admin/shop/1"))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        String link = (String) result.getModelAndView().getModel().get("whatsappLink");
+        String message = java.net.URLDecoder.decode(
+                link.substring(link.indexOf("text=") + 5), java.nio.charset.StandardCharsets.UTF_8);
+        assertTrue(message.contains("$ 250.00"));
+        assertTrue(!message.contains("/ mes"));
+    }
+
+    @Test
+    @DisplayName("un rango se cotiza con mínimo y máximo en el mensaje")
+    void rangeProductLinkShowsBothBounds() throws Exception {
+        ShopProduct product = product();
+        product.setPricingMode(ShopPricingMode.RANGE);
+        product.setPrice(new BigDecimal("200.00"));
+        product.setMaxPrice(new BigDecimal("500.00"));
+        when(shopProductService.findById(1L)).thenReturn(java.util.Optional.of(product));
+        when(globalSystemConfigService.getConfiguration())
+                .thenReturn(GlobalSystemConfig.builder().shopWhatsappNumber("55 1234 5678").build());
+
+        String message = decodedLink(mockMvc.perform(get("/admin/shop/1"))
+                .andExpect(status().isOk())
+                .andReturn());
+
+        assertTrue(message.contains("$ 200.00 – $ 500.00"),
+                "el restaurante ve de cuánto a cuánto va el precio");
+    }
+
+    @Test
+    @DisplayName("un producto a evaluar pide cotización en el mensaje")
+    void quoteProductLinkAsksForAPrice() throws Exception {
+        ShopProduct product = product();
+        product.setPricingMode(ShopPricingMode.QUOTE);
+        product.setPrice(BigDecimal.ZERO);
+        product.setPriceNote("Depende de la distancia");
+        when(shopProductService.findById(1L)).thenReturn(java.util.Optional.of(product));
+        when(globalSystemConfigService.getConfiguration())
+                .thenReturn(GlobalSystemConfig.builder().shopWhatsappNumber("55 1234 5678").build());
+
+        String message = decodedLink(mockMvc.perform(get("/admin/shop/1"))
+                .andExpect(status().isOk())
+                .andReturn());
+
+        assertTrue(message.contains("precio a evaluar"));
+        assertTrue(!message.contains("$ 0.00"), "nunca se envía un precio de cero");
+    }
+
+    private String decodedLink(org.springframework.test.web.servlet.MvcResult result) {
+        String link = (String) result.getModelAndView().getModel().get("whatsappLink");
+        return java.net.URLDecoder.decode(link.substring(link.indexOf("text=") + 5),
+                java.nio.charset.StandardCharsets.UTF_8);
     }
 
     @Test

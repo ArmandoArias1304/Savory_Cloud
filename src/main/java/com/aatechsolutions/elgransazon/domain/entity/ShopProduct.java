@@ -45,11 +45,31 @@ public class ShopProduct implements Serializable {
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
-    @NotNull(message = "El precio es requerido")
+    /**
+     * How the price is published. With a range it is the minimum; a quote has
+     * no published amount and stores 0 so the NOT NULL column stays valid.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "pricing_mode", length = 20)
+    @Builder.Default
+    private ShopPricingMode pricingMode = ShopPricingMode.FIXED;
+
+    // Required for the fixed and range modes; the controller reports which one.
     @DecimalMin(value = "0.0", inclusive = true, message = "El precio no puede ser negativo")
     @Digits(integer = 8, fraction = 2, message = "El precio debe tener máximo 8 dígitos y 2 decimales")
     @Column(name = "price", precision = 10, scale = 2, nullable = false)
     private BigDecimal price;
+
+    /** Upper bound of the range mode; null for fixed and quote prices. */
+    @DecimalMin(value = "0.0", inclusive = false, message = "El precio máximo debe ser mayor a 0")
+    @Digits(integer = 8, fraction = 2, message = "El precio máximo debe tener máximo 8 dígitos y 2 decimales")
+    @Column(name = "max_price", precision = 10, scale = 2)
+    private BigDecimal maxPrice;
+
+    /** What the price depends on: distance, headcount, scope... */
+    @Size(max = 300, message = "La nota de precio no puede exceder 300 caracteres")
+    @Column(name = "price_note", length = 300)
+    private String priceNote;
 
     @Size(max = 3, message = "El código de moneda debe tener 3 caracteres")
     @Column(name = "currency", length = 3)
@@ -72,6 +92,16 @@ public class ShopProduct implements Serializable {
     @Digits(integer = 8, fraction = 2, message = "El precio con descuento debe tener máximo 8 dígitos y 2 decimales")
     @Column(name = "discount_price", precision = 10, scale = 2)
     private BigDecimal discountPrice;
+
+    /**
+     * How the restaurant is charged: once, or every month on top of its
+     * subscription. Existing rows (created before this field existed) are
+     * treated as one-time payments, which is what every product used to be.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "billing_type", length = 20)
+    @Builder.Default
+    private ShopBillingType billingType = ShopBillingType.ONE_TIME;
 
     @Column(name = "featured", nullable = false)
     @Builder.Default
@@ -98,15 +128,66 @@ public class ShopProduct implements Serializable {
      * shows an offer that is not a real saving.
      */
     public boolean isOnSale() {
-        return discountPrice != null
+        return isFixedPrice()
+                && discountPrice != null
                 && price != null
                 && discountPrice.compareTo(BigDecimal.ZERO) > 0
                 && discountPrice.compareTo(price) < 0;
     }
 
+    /** Pricing mode, defaulting to a fixed price when it was never set. */
+    public ShopPricingMode getPricingModeOrDefault() {
+        return pricingMode == null ? ShopPricingMode.FIXED : pricingMode;
+    }
+
+    /** Price published as one number (the only mode that can have a promotion). */
+    public boolean isFixedPrice() {
+        return getPricingModeOrDefault() == ShopPricingMode.FIXED;
+    }
+
+    /** Price published as a minimum and a maximum. */
+    public boolean isPriceRange() {
+        return getPricingModeOrDefault() == ShopPricingMode.RANGE;
+    }
+
+    /** No published price: the restaurant asks for a quote. */
+    public boolean isQuote() {
+        return getPricingModeOrDefault() == ShopPricingMode.QUOTE;
+    }
+
+    /** Human label of the pricing mode, e.g. {@code Precio a evaluar}. */
+    public String getPricingLabel() {
+        return getPricingModeOrDefault().getLabel();
+    }
+
     /** Price the customer actually pays. */
     public BigDecimal getFinalPrice() {
         return isOnSale() ? discountPrice : price;
+    }
+
+    /** Billing type, defaulting to a one-time payment when it was never set. */
+    public ShopBillingType getBillingTypeOrDefault() {
+        return billingType == null ? ShopBillingType.ONE_TIME : billingType;
+    }
+
+    /** True when the price is charged every month. */
+    public boolean isMonthly() {
+        return getBillingTypeOrDefault() == ShopBillingType.MONTHLY;
+    }
+
+    /** Human label of the billing type, e.g. {@code Mensual}. */
+    public String getBillingLabel() {
+        return getBillingTypeOrDefault().getLabel();
+    }
+
+    /** Explanation shown next to the price, e.g. {@code Se suma a la mensualidad}. */
+    public String getBillingDescription() {
+        return getBillingTypeOrDefault().getDescription();
+    }
+
+    /** Suffix appended to the price: {@code  / mes} only for monthly products. */
+    public String getBillingPeriodSuffix() {
+        return isMonthly() ? " / mes" : "";
     }
 
     /** Whole percentage saved, e.g. {@code 20} for 499 → 399.20. */
@@ -141,6 +222,12 @@ public class ShopProduct implements Serializable {
         }
         if (this.featured == null) {
             this.featured = false;
+        }
+        if (this.billingType == null) {
+            this.billingType = ShopBillingType.ONE_TIME;
+        }
+        if (this.pricingMode == null) {
+            this.pricingMode = ShopPricingMode.FIXED;
         }
         if (this.sortOrder == null) {
             this.sortOrder = 0;

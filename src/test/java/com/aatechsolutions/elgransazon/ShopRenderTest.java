@@ -1,6 +1,8 @@
 package com.aatechsolutions.elgransazon;
 
 import com.aatechsolutions.elgransazon.domain.entity.GlobalSystemConfig;
+import com.aatechsolutions.elgransazon.domain.entity.ShopBillingType;
+import com.aatechsolutions.elgransazon.domain.entity.ShopPricingMode;
 import com.aatechsolutions.elgransazon.domain.entity.ShopProduct;
 import com.aatechsolutions.elgransazon.domain.entity.SystemConfiguration;
 import org.junit.jupiter.api.AfterEach;
@@ -175,6 +177,181 @@ class ShopRenderTest {
     }
 
     @Test
+    @DisplayName("un producto mensual se anuncia por mes y con su distintivo de cobro")
+    void catalogueMarksMonthlyProducts() {
+        AbstractContext ctx = webContext("ROLE_WAITER");
+        baseVariables(ctx);
+        ShopProduct product = product();
+        product.setPrice(new BigDecimal("150.00"));
+        product.setBillingType(ShopBillingType.MONTHLY);
+        Map<Long, String> links = new LinkedHashMap<>();
+        links.put(product.getIdProduct(), "https://wa.me/525512345678?text=Hola");
+
+        ctx.setVariable("products", List.of(product));
+        ctx.setVariable("whatsappLinks", links);
+        ctx.setVariable("whatsappConfigured", true);
+        ctx.setVariable("restaurantName", "El Gran Sazón");
+        ctx.setVariable("categories", List.of("Tarjetas"));
+
+        String html = templateEngine.process("admin/shop/list", ctx);
+
+        assertTrue(html.contains("$ 150.00 / mes"), "el precio mensual se anuncia por mes");
+        assertTrue(html.contains("Mensual"), "la tarjeta distingue el cobro mensual");
+        assertTrue(html.contains("Se suma a la mensualidad del restaurante."),
+                "la tarjeta explica que se suma a la mensualidad");
+        assertFalse(html.contains("$ 150.00 </p>"), "nunca se muestra como si fuera un pago único");
+    }
+
+    @Test
+    @DisplayName("un rango se anuncia con mínimo y máximo, sin inventar un precio")
+    void catalogueShowsThePriceRange() {
+        AbstractContext ctx = webContext("ROLE_WAITER");
+        baseVariables(ctx);
+        ShopProduct product = product();
+        product.setPricingMode(ShopPricingMode.RANGE);
+        product.setPrice(new BigDecimal("200.00"));
+        product.setMaxPrice(new BigDecimal("500.00"));
+        product.setPriceNote("Depende de la distancia");
+        Map<Long, String> links = new LinkedHashMap<>();
+        links.put(product.getIdProduct(), "https://wa.me/525512345678?text=Hola");
+
+        ctx.setVariable("products", List.of(product));
+        ctx.setVariable("whatsappLinks", links);
+        ctx.setVariable("whatsappConfigured", true);
+        ctx.setVariable("restaurantName", "El Gran Sazón");
+        ctx.setVariable("categories", List.of("Tarjetas"));
+
+        String html = templateEngine.process("admin/shop/list", ctx);
+
+        assertTrue(html.contains("$ 200.00 – $ 500.00"), "se publica el rango completo");
+        assertTrue(html.contains("Depende de la distancia"), "la nota explica de qué depende");
+        assertFalse(html.contains("$ 200.00 </p>"), "no se anuncia solo el mínimo");
+    }
+
+    @Test
+    @DisplayName("un producto a evaluar se muestra sin monto")
+    void catalogueShowsQuoteProductsWithoutAmount() {
+        AbstractContext ctx = webContext("ROLE_WAITER");
+        baseVariables(ctx);
+        ShopProduct product = product();
+        product.setPricingMode(ShopPricingMode.QUOTE);
+        product.setPrice(BigDecimal.ZERO);
+        product.setPriceNote("Se cotiza según el número de empleados");
+        Map<Long, String> links = new LinkedHashMap<>();
+        links.put(product.getIdProduct(), "https://wa.me/525512345678?text=Hola");
+
+        ctx.setVariable("products", List.of(product));
+        ctx.setVariable("whatsappLinks", links);
+        ctx.setVariable("whatsappConfigured", true);
+        ctx.setVariable("restaurantName", "El Gran Sazón");
+        ctx.setVariable("categories", List.of());
+
+        String html = templateEngine.process("admin/shop/list", ctx);
+
+        assertTrue(html.contains("Precio a evaluar"));
+        assertTrue(html.contains("Se cotiza según el número de empleados"));
+        assertFalse(html.contains("$ 0.00"), "un precio a evaluar nunca muestra cero");
+    }
+
+    @Test
+    @DisplayName("el detalle de un producto a evaluar explica la cotización")
+    void productDetailExplainsTheQuote() {
+        AbstractContext ctx = webContext("ROLE_WAITER");
+        baseVariables(ctx);
+        ShopProduct product = product();
+        product.setPricingMode(ShopPricingMode.QUOTE);
+        product.setPrice(BigDecimal.ZERO);
+        product.setPriceNote("Depende de la distancia y del número de empleados");
+
+        ctx.setVariable("product", product);
+        ctx.setVariable("whatsappLink", "https://wa.me/525512345678?text=Hola");
+        ctx.setVariable("whatsappConfigured", true);
+        ctx.setVariable("restaurantName", "El Gran Sazón");
+
+        String html = templateEngine.process("admin/shop/detail", ctx);
+
+        assertTrue(html.contains("Precio a evaluar"));
+        assertTrue(html.contains("Depende de la distancia y del número de empleados"));
+        assertTrue(html.contains("Se cobra una sola vez, al pedirlo."),
+                "la forma de cobro sigue visible");
+        assertFalse(html.contains("$ 0.00"));
+    }
+
+    @Test
+    @DisplayName("el programador ve qué productos se cotizan y cuáles tienen rango")
+    void programmerListShowsRangeAndQuotePrices() {
+        AbstractContext ctx = webContext("ROLE_PROGRAMMER");
+        baseVariables(ctx);
+        ShopProduct range = product();
+        range.setPricingMode(ShopPricingMode.RANGE);
+        range.setPrice(new BigDecimal("200.00"));
+        range.setMaxPrice(new BigDecimal("500.00"));
+        ShopProduct quote = product();
+        quote.setIdProduct(2L);
+        quote.setName("Capacitación a domicilio");
+        quote.setPricingMode(ShopPricingMode.QUOTE);
+        quote.setPrice(BigDecimal.ZERO);
+
+        ctx.setVariable("products", List.of(range, quote));
+        ctx.setVariable("categories", List.of("Tarjetas"));
+        ctx.setVariable("whatsappNumber", "525512345678");
+        ctx.setVariable("totalCount", 2L);
+        ctx.setVariable("activeCount", 2L);
+
+        String html = templateEngine.process("programmer/shop/list", ctx);
+
+        assertTrue(html.contains("$ 200.00 – $ 500.00"));
+        assertTrue(html.contains("Precio a evaluar"));
+        assertFalse(html.contains("$ 0.00"));
+    }
+
+    @Test
+    @DisplayName("el detalle de un producto mensual aclara el cobro")
+    void productDetailExplainsTheMonthlyCharge() {
+        AbstractContext ctx = webContext("ROLE_WAITER");
+        baseVariables(ctx);
+        ShopProduct product = product();
+        product.setBillingType(ShopBillingType.MONTHLY);
+
+        ctx.setVariable("product", product);
+        ctx.setVariable("whatsappLink", "https://wa.me/525512345678?text=Hola");
+        ctx.setVariable("whatsappConfigured", true);
+        ctx.setVariable("restaurantName", "El Gran Sazón");
+
+        String html = templateEngine.process("admin/shop/detail", ctx);
+
+        assertTrue(html.contains("$ 250.00 / mes"));
+        assertTrue(html.contains("Cobro mensual"));
+        assertTrue(html.contains("Se suma a la mensualidad del restaurante."));
+        assertFalse(html.contains("Se cobra una sola vez, al pedirlo."));
+    }
+
+    @Test
+    @DisplayName("el programador distingue sus productos mensuales de los de pago único")
+    void programmerListShowsTheBillingType() {
+        AbstractContext ctx = webContext("ROLE_PROGRAMMER");
+        baseVariables(ctx);
+        ShopProduct monthly = product();
+        monthly.setBillingType(ShopBillingType.MONTHLY);
+        ShopProduct oneTime = product();
+        oneTime.setIdProduct(2L);
+        oneTime.setName("Tarjeta QR impresa");
+
+        ctx.setVariable("products", List.of(monthly, oneTime));
+        ctx.setVariable("categories", List.of("Tarjetas"));
+        ctx.setVariable("whatsappNumber", "525512345678");
+        ctx.setVariable("totalCount", 2L);
+        ctx.setVariable("activeCount", 2L);
+
+        String html = templateEngine.process("programmer/shop/list", ctx);
+
+        assertTrue(html.contains("$ 250.00 / mes"), "el precio del mensual se marca por mes");
+        assertTrue(html.contains("Mensual"));
+        assertTrue(html.contains("Pago único"));
+        assertTrue(html.contains("Se cobra una sola vez, al pedirlo."));
+    }
+
+    @Test
     @DisplayName("el detalle muestra foto grande, descripción completa y promoción")
     void productDetailRendersEverything() {
         AbstractContext ctx = webContext("ROLE_WAITER");
@@ -218,6 +395,8 @@ class ShopRenderTest {
         assertTrue(html.contains("$ 250.00"));
         assertFalse(html.contains("de descuento"));
         assertFalse(html.contains("Ahorras"));
+        assertTrue(html.contains("Pago único"));
+        assertTrue(html.contains("Se cobra una sola vez, al pedirlo."));
         assertTrue(html.contains("WhatsApp no disponible"));
     }
 

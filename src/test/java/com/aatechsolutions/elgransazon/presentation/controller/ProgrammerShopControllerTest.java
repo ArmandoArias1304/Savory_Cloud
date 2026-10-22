@@ -4,6 +4,8 @@ import com.aatechsolutions.elgransazon.application.service.GlobalSystemConfigSer
 import com.aatechsolutions.elgransazon.application.service.ImageStorageService;
 import com.aatechsolutions.elgransazon.application.service.ShopProductService;
 import com.aatechsolutions.elgransazon.domain.entity.GlobalSystemConfig;
+import com.aatechsolutions.elgransazon.domain.entity.ShopBillingType;
+import com.aatechsolutions.elgransazon.domain.entity.ShopPricingMode;
 import com.aatechsolutions.elgransazon.domain.entity.ShopProduct;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -148,6 +150,7 @@ class ProgrammerShopControllerTest {
                         .file(photo)
                         .param("name", "Tarjeta QR")
                         .param("price", "250.00")
+                        .param("billingType", "ONE_TIME")
                         .param("active", "true"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/programmer/shop"));
@@ -156,6 +159,157 @@ class ProgrammerShopControllerTest {
         verify(shopProductService).create(captor.capture());
         assertEquals("https://images.example.com/tarjeta.png", captor.getValue().getImageUrl());
         assertTrue(captor.getValue().getActive());
+        assertEquals(ShopBillingType.ONE_TIME, captor.getValue().getBillingType());
+    }
+
+    @Test
+    @DisplayName("la forma de cobro elegida llega al producto guardado")
+    void createStoresTheChosenBillingType() throws Exception {
+        MockMultipartFile photo = new MockMultipartFile(
+                "imageFile", "wifi.png", "image/png", new byte[]{1, 2, 3});
+        when(imageStorageService.isValidImage(photo)).thenReturn(true);
+        when(imageStorageService.saveImage(eq(photo), eq("shop-products"), anyString()))
+                .thenReturn("https://images.example.com/wifi.png");
+        when(shopProductService.create(any(ShopProduct.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        mockMvc.perform(multipart("/programmer/shop")
+                        .file(photo)
+                        .param("name", "WiFi Social")
+                        .param("price", "150.00")
+                        .param("billingType", "MONTHLY")
+                        .param("active", "true"))
+                .andExpect(status().is3xxRedirection());
+
+        ArgumentCaptor<ShopProduct> captor = ArgumentCaptor.forClass(ShopProduct.class);
+        verify(shopProductService).create(captor.capture());
+        assertEquals(ShopBillingType.MONTHLY, captor.getValue().getBillingType());
+        assertTrue(captor.getValue().isMonthly());
+    }
+
+    @Test
+    @DisplayName("sin elegir forma de cobro el producto queda como pago único")
+    void createDefaultsToAOneTimePayment() throws Exception {
+        MockMultipartFile photo = new MockMultipartFile(
+                "imageFile", "tarjeta.png", "image/png", new byte[]{1, 2, 3});
+        when(imageStorageService.isValidImage(photo)).thenReturn(true);
+        when(imageStorageService.saveImage(eq(photo), eq("shop-products"), anyString()))
+                .thenReturn("https://images.example.com/tarjeta.png");
+        when(shopProductService.create(any(ShopProduct.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        mockMvc.perform(multipart("/programmer/shop")
+                        .file(photo)
+                        .param("name", "Tarjeta QR")
+                        .param("price", "250.00")
+                        .param("active", "true"))
+                .andExpect(status().is3xxRedirection());
+
+        ArgumentCaptor<ShopProduct> captor = ArgumentCaptor.forClass(ShopProduct.class);
+        verify(shopProductService).create(captor.capture());
+        assertEquals(ShopBillingType.ONE_TIME, captor.getValue().getBillingTypeOrDefault());
+    }
+
+    @Test
+    @DisplayName("un rango de precios se guarda con su mínimo y su máximo")
+    void createStoresAPriceRange() throws Exception {
+        MockMultipartFile photo = new MockMultipartFile(
+                "imageFile", "capacitacion.png", "image/png", new byte[]{1, 2, 3});
+        when(imageStorageService.isValidImage(photo)).thenReturn(true);
+        when(imageStorageService.saveImage(eq(photo), eq("shop-products"), anyString()))
+                .thenReturn("https://images.example.com/capacitacion.png");
+        when(shopProductService.create(any(ShopProduct.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        mockMvc.perform(multipart("/programmer/shop")
+                        .file(photo)
+                        .param("name", "Capacitación")
+                        .param("pricingMode", "RANGE")
+                        .param("price", "200.00")
+                        .param("maxPrice", "500.00")
+                        .param("priceNote", "Depende de la distancia")
+                        .param("active", "true"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/programmer/shop"));
+
+        ArgumentCaptor<ShopProduct> captor = ArgumentCaptor.forClass(ShopProduct.class);
+        verify(shopProductService).create(captor.capture());
+        assertEquals(ShopPricingMode.RANGE, captor.getValue().getPricingMode());
+        assertEquals(0, new BigDecimal("500.00").compareTo(captor.getValue().getMaxPrice()));
+        assertEquals("Depende de la distancia", captor.getValue().getPriceNote());
+    }
+
+    @Test
+    @DisplayName("un rango cuyo máximo no supera al mínimo se rechaza")
+    void rejectsARangeThatDoesNotGrow() throws Exception {
+        when(shopProductService.findCategories(false)).thenReturn(List.of());
+
+        mockMvc.perform(multipart("/programmer/shop")
+                        .param("name", "Capacitación")
+                        .param("pricingMode", "RANGE")
+                        .param("price", "500.00")
+                        .param("maxPrice", "200.00")
+                        .param("active", "true"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("programmer/shop/form"))
+                .andExpect(model().attributeHasFieldErrors("product", "maxPrice"));
+
+        verify(shopProductService, never()).create(any());
+    }
+
+    @Test
+    @DisplayName("un rango sin máximo se rechaza en el campo del máximo")
+    void rejectsARangeWithoutMaximum() throws Exception {
+        when(shopProductService.findCategories(false)).thenReturn(List.of());
+
+        mockMvc.perform(multipart("/programmer/shop")
+                        .param("name", "Capacitación")
+                        .param("pricingMode", "RANGE")
+                        .param("price", "200.00")
+                        .param("active", "true"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("programmer/shop/form"))
+                .andExpect(model().attributeHasFieldErrors("product", "maxPrice"));
+
+        verify(shopProductService, never()).create(any());
+    }
+
+    @Test
+    @DisplayName("un precio a evaluar se guarda sin monto publicado")
+    void createStoresAQuoteWithoutPrice() throws Exception {
+        MockMultipartFile photo = new MockMultipartFile(
+                "imageFile", "capacitacion.png", "image/png", new byte[]{1, 2, 3});
+        when(imageStorageService.isValidImage(photo)).thenReturn(true);
+        when(imageStorageService.saveImage(eq(photo), eq("shop-products"), anyString()))
+                .thenReturn("https://images.example.com/capacitacion.png");
+        when(shopProductService.create(any(ShopProduct.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        mockMvc.perform(multipart("/programmer/shop")
+                        .file(photo)
+                        .param("name", "Capacitación a domicilio")
+                        .param("pricingMode", "QUOTE")
+                        .param("priceNote", "Se cotiza según la distancia")
+                        .param("active", "true"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/programmer/shop"));
+
+        ArgumentCaptor<ShopProduct> captor = ArgumentCaptor.forClass(ShopProduct.class);
+        verify(shopProductService).create(captor.capture());
+        assertTrue(captor.getValue().isQuote());
+        assertEquals(0, BigDecimal.ZERO.compareTo(captor.getValue().getPrice()));
+    }
+
+    @Test
+    @DisplayName("un precio fijo sin monto se rechaza aunque no haya foto")
+    void rejectsAFixedPriceWithoutAmount() throws Exception {
+        when(shopProductService.findCategories(false)).thenReturn(List.of());
+
+        mockMvc.perform(multipart("/programmer/shop")
+                        .param("name", "Capacitación")
+                        .param("pricingMode", "FIXED")
+                        .param("active", "true"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("programmer/shop/form"))
+                .andExpect(model().attributeHasFieldErrors("product", "price"));
+
+        verify(shopProductService, never()).create(any());
     }
 
     @Test

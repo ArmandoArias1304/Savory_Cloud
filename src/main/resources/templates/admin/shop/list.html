@@ -242,12 +242,22 @@
                 </a>
 
                 <div class="p-5 flex flex-col flex-1">
-                  <span
-                    th:if="${product.category != null and !#strings.isEmpty(product.category)}"
-                    class="inline-flex self-start items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-primary/10 text-primary-dark dark:text-primary mb-2"
-                    th:text="${product.category}"
-                    >Categoría</span
-                  >
+                  <div class="flex items-center gap-2 flex-wrap mb-2">
+                    <span
+                      th:if="${product.category != null and !#strings.isEmpty(product.category)}"
+                      class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-primary/10 text-primary-dark dark:text-primary"
+                      th:text="${product.category}"
+                      >Categoría</span
+                    >
+                    <span
+                      class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold"
+                      th:classappend="${product.monthly} ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300'"
+                      th:title="${product.billingDescription}"
+                    >
+                      <span class="material-symbols-outlined text-sm" th:text="${product.monthly} ? 'autorenew' : 'looks_one'">autorenew</span>
+                      <span th:text="${product.billingLabel}">Mensual</span>
+                    </span>
+                  </div>
                   <h2 class="text-lg font-bold leading-tight">
                     <a
                       th:href="@{/admin/shop/{id}(id=${product.idProduct})}"
@@ -280,13 +290,27 @@
                       <span
                         th:if="${product.onSale}"
                         class="text-sm font-semibold text-gray-400 dark:text-gray-500 line-through"
-                        th:text="'$ ' + ${#numbers.formatDecimal(product.price, 1, 'COMMA', 2, 'POINT')}"
+                        th:text="'$ ' + ${#numbers.formatDecimal(product.price, 1, 'COMMA', 2, 'POINT')} + ${product.billingPeriodSuffix}"
                         >$ 0.00</span
                       >
                       <p
+                        th:if="${product.quote}"
+                        class="text-xl font-extrabold text-gray-900 dark:text-white leading-tight"
+                      >
+                        Precio a evaluar
+                      </p>
+                      <p
+                        th:if="${product.priceRange and product.maxPrice != null}"
+                        class="text-xl font-extrabold text-gray-900 dark:text-white"
+                        th:text="'$ ' + ${#numbers.formatDecimal(product.price, 1, 'COMMA', 2, 'POINT')} + ' – $ ' + ${#numbers.formatDecimal(product.maxPrice, 1, 'COMMA', 2, 'POINT')} + ${product.billingPeriodSuffix}"
+                      >
+                        $ 0.00 – $ 0.00
+                      </p>
+                      <p
+                        th:if="${product.fixedPrice}"
                         class="text-2xl font-extrabold"
                         th:classappend="${product.onSale} ? 'text-primary-dark dark:text-primary' : 'text-gray-900 dark:text-white'"
-                        th:text="'$ ' + ${#numbers.formatDecimal(product.finalPrice, 1, 'COMMA', 2, 'POINT')}"
+                        th:text="'$ ' + ${#numbers.formatDecimal(product.finalPrice, 1, 'COMMA', 2, 'POINT')} + ${product.billingPeriodSuffix}"
                       >
                         $ 0.00
                       </p>
@@ -294,9 +318,16 @@
                     <p
                       th:if="${product.onSale}"
                       class="mt-1 text-xs font-semibold text-primary-dark dark:text-primary"
-                      th:text="'Ahorras $ ' + ${#numbers.formatDecimal(product.savingsAmount, 1, 'COMMA', 2, 'POINT')}"
+                      th:text="'Ahorras $ ' + ${#numbers.formatDecimal(product.savingsAmount, 1, 'COMMA', 2, 'POINT')} + (${product.monthly} ? ' al mes' : '')"
                     >
                       Ahorras
+                    </p>
+                    <p
+                      th:if="${product.priceNote != null}"
+                      class="mt-1 text-xs text-gray-500 dark:text-gray-400 line-clamp-2"
+                      th:text="${product.priceNote}"
+                    >
+                      Nota de precio
                     </p>
                   </div>
 

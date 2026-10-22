@@ -1,5 +1,8 @@
 package com.aatechsolutions.elgransazon.util;
 
+import com.aatechsolutions.elgransazon.domain.entity.ShopBillingType;
+import com.aatechsolutions.elgransazon.domain.entity.ShopProduct;
+
 import java.math.BigDecimal;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -68,6 +71,42 @@ public final class ShopWhatsAppLink {
         String encoded = URLEncoder.encode(message.toString(), StandardCharsets.UTF_8)
                 .replace("+", "%20");
         return "https://wa.me/" + phone + "?text=" + encoded;
+    }
+
+    /**
+     * Price label that states how the restaurant is charged, so the WhatsApp
+     * message cannot be mistaken for a one-time purchase:
+     * {@code $ 1,250.00} or {@code $ 150.00 / mes}.
+     */
+    public static String formatPrice(BigDecimal price, String currency, ShopBillingType billingType) {
+        return appendBillingPeriod(formatPrice(price, currency), billingType);
+    }
+
+    /**
+     * Price label for the WhatsApp message, honoring the pricing mode: a
+     * range is quoted as {@code $ 200.00 – $ 500.00} and a quote asks for a
+     * price instead of inventing one.
+     */
+    public static String priceLabel(ShopProduct product) {
+        ShopBillingType billing = product.getBillingTypeOrDefault();
+        if (product.isQuote()) {
+            return billing == ShopBillingType.MONTHLY
+                    ? "precio a evaluar, cobro mensual"
+                    : "precio a evaluar";
+        }
+        if (product.isPriceRange() && product.getMaxPrice() != null) {
+            String range = formatPrice(product.getPrice(), product.getCurrency())
+                    + " – " + formatPrice(product.getMaxPrice(), product.getCurrency());
+            return appendBillingPeriod(range, billing);
+        }
+        return formatPrice(product.getFinalPrice(), product.getCurrency(), billing);
+    }
+
+    private static String appendBillingPeriod(String label, ShopBillingType billingType) {
+        if (label.isEmpty() || billingType != ShopBillingType.MONTHLY) {
+            return label;
+        }
+        return label + " / mes";
     }
 
     /**

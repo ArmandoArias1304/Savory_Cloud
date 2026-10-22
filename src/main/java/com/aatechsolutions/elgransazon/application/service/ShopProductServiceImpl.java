@@ -1,5 +1,7 @@
 package com.aatechsolutions.elgransazon.application.service;
 
+import com.aatechsolutions.elgransazon.domain.entity.ShopBillingType;
+import com.aatechsolutions.elgransazon.domain.entity.ShopPricingMode;
 import com.aatechsolutions.elgransazon.domain.entity.ShopProduct;
 import com.aatechsolutions.elgransazon.domain.repository.ShopProductRepository;
 import lombok.RequiredArgsConstructor;
@@ -70,8 +72,12 @@ public class ShopProductServiceImpl implements ShopProductService {
         normalize(product);
         existing.setName(product.getName());
         existing.setDescription(product.getDescription());
+        existing.setPricingMode(product.getPricingModeOrDefault());
         existing.setPrice(product.getPrice());
+        existing.setMaxPrice(product.getMaxPrice());
+        existing.setPriceNote(product.getPriceNote());
         existing.setDiscountPrice(product.getDiscountPrice());
+        existing.setBillingType(product.getBillingTypeOrDefault());
         existing.setCategory(product.getCategory());
         existing.setCurrency(product.getCurrency());
         existing.setFeatured(Boolean.TRUE.equals(product.getFeatured()));
@@ -132,6 +138,59 @@ public class ShopProductServiceImpl implements ShopProductService {
         if (product.getCurrency() == null || product.getCurrency().isBlank()) {
             product.setCurrency("MXN");
         }
+        normalizePricing(product);
+        if (product.getFeatured() == null) {
+            product.setFeatured(false);
+        }
+        if (product.getBillingType() == null) {
+            product.setBillingType(ShopBillingType.ONE_TIME);
+        }
+        if (product.getActive() == null) {
+            product.setActive(true);
+        }
+        if (product.getSortOrder() == null) {
+            product.setSortOrder(0);
+        }
+    }
+
+    /**
+     * Keep the published price consistent with the chosen mode: a range needs
+     * its maximum, a quote publishes no amount, and only a fixed price can
+     * carry a promotion.
+     */
+    private void normalizePricing(ShopProduct product) {
+        ShopPricingMode mode = product.getPricingModeOrDefault();
+        product.setPricingMode(mode);
+
+        String note = product.getPriceNote();
+        product.setPriceNote(note == null || note.isBlank() ? null : note.trim());
+
+        if (mode == ShopPricingMode.QUOTE) {
+            // Nothing is published, so no amount may leak into the store.
+            product.setPrice(BigDecimal.ZERO);
+            product.setMaxPrice(null);
+            product.setDiscountPrice(null);
+            return;
+        }
+
+        if (mode == ShopPricingMode.RANGE) {
+            product.setDiscountPrice(null);
+            if (product.getPrice() == null) {
+                product.setPrice(BigDecimal.ZERO);
+            }
+            boolean validRange = product.getMaxPrice() != null
+                    && product.getMaxPrice().compareTo(product.getPrice()) > 0;
+            if (!validRange) {
+                // A range without a higher maximum would show a broken price.
+                product.setPricingMode(ShopPricingMode.FIXED);
+                product.setMaxPrice(null);
+            }
+            return;
+        }
+
+        // Fixed price: neither the range nor its note apply.
+        product.setMaxPrice(null);
+        product.setPriceNote(null);
         if (product.getPrice() == null) {
             product.setPrice(BigDecimal.ZERO);
         }
@@ -140,15 +199,6 @@ public class ShopProductServiceImpl implements ShopProductService {
                 && (product.getDiscountPrice().compareTo(BigDecimal.ZERO) <= 0
                     || product.getDiscountPrice().compareTo(product.getPrice()) >= 0)) {
             product.setDiscountPrice(null);
-        }
-        if (product.getFeatured() == null) {
-            product.setFeatured(false);
-        }
-        if (product.getActive() == null) {
-            product.setActive(true);
-        }
-        if (product.getSortOrder() == null) {
-            product.setSortOrder(0);
         }
     }
 
