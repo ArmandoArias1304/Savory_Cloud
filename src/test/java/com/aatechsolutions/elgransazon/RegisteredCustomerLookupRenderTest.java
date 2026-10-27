@@ -17,6 +17,7 @@ import org.thymeleaf.web.servlet.JakartaServletWebApplication;
 
 import java.util.Set;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @SpringBootTest
@@ -44,6 +45,7 @@ class RegisteredCustomerLookupRenderTest {
     void rendersTheOptionalCustomerLookupWithAValidatedRolePath() {
         AbstractContext context = webContext();
         context.setVariable("rolePath", "cashier");
+        context.setVariable("loyaltyEnabled", true);
         String html = templateEngine.process(
                 "fragments/registered-customer-lookup",
                 Set.of("registeredCustomerLookup"),
@@ -52,6 +54,20 @@ class RegisteredCustomerLookupRenderTest {
         assertTrue(html.contains("data-role=\"cashier\""));
         assertTrue(html.contains("name=\"customerId\""));
         assertTrue(html.contains("Buscar y asociar una cuenta de fidelización"));
+    }
+
+    @Test
+    void hidesTheLookupWhenLoyaltyIsDisabled() {
+        AbstractContext context = webContext();
+        context.setVariable("rolePath", "cashier");
+        context.setVariable("loyaltyEnabled", false);
+
+        String html = templateEngine.process(
+                "fragments/registered-customer-lookup",
+                Set.of("registeredCustomerLookup"),
+                context);
+
+        assertFalse(html.contains("id=\"registeredCustomerEnabled\""));
     }
 
     @Test
@@ -78,6 +94,7 @@ class RegisteredCustomerLookupRenderTest {
         context.setVariable("linkedReservation", null);
         context.setVariable("config", null);
         context.setVariable("currentRole", "cashier");
+        context.setVariable("loyaltyEnabled", true);
 
         String html = templateEngine.process("cashier/orders/order-customer-info", context);
 

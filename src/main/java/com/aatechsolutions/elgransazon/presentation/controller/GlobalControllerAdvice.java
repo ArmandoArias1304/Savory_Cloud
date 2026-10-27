@@ -7,8 +7,10 @@ import com.aatechsolutions.elgransazon.domain.entity.SystemConfiguration;
 import com.aatechsolutions.elgransazon.domain.entity.SystemUpdate;
 import com.aatechsolutions.elgransazon.domain.entity.SystemUpdateRole;
 import com.aatechsolutions.elgransazon.application.service.GlobalSystemConfigService;
+import com.aatechsolutions.elgransazon.application.service.FeatureAccessService;
 import com.aatechsolutions.elgransazon.application.service.SystemConfigurationService;
 import com.aatechsolutions.elgransazon.application.service.SystemUpdateService;
+import com.aatechsolutions.elgransazon.domain.entity.FeatureKey;
 import com.aatechsolutions.elgransazon.domain.repository.EmployeeRepository;
 import com.aatechsolutions.elgransazon.infrastructure.context.CompanyContext;
 import com.aatechsolutions.elgransazon.infrastructure.security.CustomEmployeeDetails;
@@ -55,6 +57,9 @@ public class GlobalControllerAdvice {
 
     @Autowired
     private EmployeeRepository employeeRepository;
+
+    @Autowired
+    private FeatureAccessService featureAccessService;
 
     /**
      * Trim leading/trailing whitespace from all String fields across every controller.
@@ -182,6 +187,11 @@ public class GlobalControllerAdvice {
     public SystemConfiguration addSystemConfiguration() {
         // Returns null when no company context - templates should handle null gracefully
         return systemConfigurationService.getConfiguration();
+    }
+
+    @ModelAttribute("loyaltyEnabled")
+    public boolean addLoyaltyEnabled() {
+        return featureAccessService.isEnabled(FeatureKey.LOYALTY);
     }
 
     /**

@@ -1,5 +1,6 @@
 <div
   th:fragment="registeredCustomerLookup(rolePath)"
+  th:if="${loyaltyEnabled}"
   id="registeredCustomerLookup"
   th:attr="data-role=${rolePath}"
   class="mb-4 rounded-xl border border-emerald-200 dark:border-emerald-900 bg-emerald-50/70 dark:bg-emerald-950/20 p-4"

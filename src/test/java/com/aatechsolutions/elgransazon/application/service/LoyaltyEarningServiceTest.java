@@ -91,6 +91,19 @@ class LoyaltyEarningServiceTest {
     }
 
     @Test
+    void doesNotAwardStampsWhenLoyaltyAddOnIsDisabled() {
+        Order order = paidOrder("ORD-1", new BigDecimal("100.00"));
+        when(orderRepository.findByIdWithDetails(50L)).thenReturn(Optional.of(order));
+        when(featureAccessService.isEnabled(company, FeatureKey.LOYALTY)).thenReturn(false);
+
+        assertFalse(service.awardForPaidOrder(50L, "cashier"));
+
+        verify(accountService, never()).getOrCreate(any(), any());
+        verify(ledgerService, never()).record(
+                any(), any(), any(), any(), any(), anyInt(), anyInt(), anyString(), anyString());
+    }
+
+    @Test
     void neverAwardsTwiceForTheSameOrder() {
         Order order = paidOrder("ORD-1", new BigDecimal("100.00"));
         when(orderRepository.findByIdWithDetails(50L)).thenReturn(Optional.of(order));
