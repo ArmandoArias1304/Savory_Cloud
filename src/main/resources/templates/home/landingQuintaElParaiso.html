@@ -27,6 +27,12 @@
       rel="stylesheet"
     />
 
+    <link
+      rel="stylesheet"
+      th:href="@{/css/landing-promotions.css}"
+      href="/css/landing-promotions.css"
+    />
+
     <style>
       body {
         background-color: #38e07b;
@@ -3519,6 +3525,11 @@
             </div>
           </div>
 
+          <!-- Sección de promociones (fragmento compartido) -->
+          <div
+            th:replace="~{fragments/landing-promotions :: promotions(${landingPromotions}, '#38e07b')}"
+          ></div>
+
           <!-- Sección Sobre Nosotros -->
           <div class="section-header scroll-animation">
             <h2 class="section-title">Nuestra Historia</h2>
@@ -4608,237 +4619,6 @@
             </div>
           </div>
 
-          <!-- Sección Promociones -->
-          <div
-            class="promociones-section scroll-animation"
-            th:if="${promoCombo != null or promoPercent != null or promoFixed != null}"
-          >
-            <h2 class="promociones-title">Promociones Especiales</h2>
-            <p class="promociones-subtitle">
-              ¡Aprovecha nuestras ofertas por tiempo limitado!
-            </p>
-
-            <div class="promociones-grid">
-              <!-- Promoción BUY_X_PAY_Y (2x1, 3x2, etc) -->
-              <div class="promo-card scale-up" th:if="${promoCombo != null}">
-                <div class="promo-badge" th:text="${promoCombo.displayLabel}">
-                  2x1
-                </div>
-                <img
-                  th:src="${promoCombo.imageUrl != null and !promoCombo.imageUrl.isEmpty()} ? ${promoCombo.imageUrl} : 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=600&q=80'"
-                  th:alt="${promoCombo.name}"
-                  class="promo-image"
-                />
-                <div class="promo-content">
-                  <h3 class="promo-title" th:text="${promoCombo.name}">
-                    Promoción 2x1
-                  </h3>
-                  <p
-                    class="promo-description"
-                    th:text="${promoCombo.description}"
-                  >
-                    Descripción de la promoción
-                  </p>
-
-                  <!-- Mostrar productos (máximo 4) -->
-                  <div
-                    class="promo-products"
-                    th:if="${promoCombo.items.size() > 0}"
-                  >
-                    <p
-                      style="
-                        font-size: 0.9rem;
-                        color: #666;
-                        margin-bottom: 0.5rem;
-                      "
-                    >
-                      <strong>Productos:</strong>
-                    </p>
-                    <p style="font-size: 0.85rem; color: #888">
-                      <span
-                        th:each="item, iterStat : ${promoCombo.items}"
-                        th:if="${iterStat.index < 3}"
-                      >
-                        <span th:text="${item.name}">Producto</span
-                        ><span th:if="${!iterStat.last and iterStat.index < 2}"
-                          >,
-                        </span>
-                      </span>
-                      <span th:if="${promoCombo.items.size() > 3}">
-                        y
-                        <span th:text="${promoCombo.items.size() - 3}">X</span>
-                        más
-                      </span>
-                    </p>
-                  </div>
-
-                  <div class="promo-price-container" style="margin-top: 1rem">
-                    <span
-                      class="promo-discount"
-                      th:text="${promoCombo.displayLabel}"
-                      >2x1</span
-                    >
-                  </div>
-                  <a href="/login" class="promo-btn">Ver Menú</a>
-                  <div class="promo-timer">
-                    <i class="fas fa-calendar"></i>
-                    Válido hasta
-                    <span
-                      th:text="${#temporals.format(promoCombo.endDate, 'dd/MM/yyyy')}"
-                      >fecha</span
-                    >
-                  </div>
-                </div>
-              </div>
-
-              <!-- Promoción PERCENTAGE_DISCOUNT (30%, 50%, etc) -->
-              <div class="promo-card scale-up" th:if="${promoPercent != null}">
-                <div class="promo-badge" th:text="${promoPercent.displayLabel}">
-                  -30% OFF
-                </div>
-                <img
-                  th:src="${promoPercent.imageUrl != null and !promoPercent.imageUrl.isEmpty()} ? ${promoPercent.imageUrl} : 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&q=80'"
-                  th:alt="${promoPercent.name}"
-                  class="promo-image"
-                />
-                <div class="promo-content">
-                  <h3 class="promo-title" th:text="${promoPercent.name}">
-                    Descuento Especial
-                  </h3>
-                  <p
-                    class="promo-description"
-                    th:text="${promoPercent.description}"
-                  >
-                    Descripción de la promoción
-                  </p>
-
-                  <!-- Mostrar productos (máximo 4) -->
-                  <div
-                    class="promo-products"
-                    th:if="${promoPercent.items.size() > 0}"
-                  >
-                    <p
-                      style="
-                        font-size: 0.9rem;
-                        color: #666;
-                        margin-bottom: 0.5rem;
-                      "
-                    >
-                      <strong>Productos:</strong>
-                    </p>
-                    <p style="font-size: 0.85rem; color: #888">
-                      <span
-                        th:each="item, iterStat : ${promoPercent.items}"
-                        th:if="${iterStat.index < 3}"
-                      >
-                        <span th:text="${item.name}">Producto</span
-                        ><span th:if="${!iterStat.last and iterStat.index < 2}"
-                          >,
-                        </span>
-                      </span>
-                      <span th:if="${promoPercent.items.size() > 3}">
-                        y
-                        <span th:text="${promoPercent.items.size() - 3}"
-                          >X</span
-                        >
-                        más
-                      </span>
-                    </p>
-                  </div>
-
-                  <div class="promo-price-container" style="margin-top: 1rem">
-                    <span
-                      class="promo-discount"
-                      th:text="${promoPercent.displayLabel}"
-                      >-30% OFF</span
-                    >
-                  </div>
-                  <a href="/login" class="promo-btn">Ver Menú</a>
-                  <div class="promo-timer">
-                    <i class="fas fa-calendar"></i>
-                    Válido hasta
-                    <span
-                      th:text="${#temporals.format(promoPercent.endDate, 'dd/MM/yyyy')}"
-                      >fecha</span
-                    >
-                  </div>
-                </div>
-              </div>
-
-              <!-- Promoción FIXED_AMOUNT_DISCOUNT ($20 OFF, etc) -->
-              <div class="promo-card scale-up" th:if="${promoFixed != null}">
-                <div class="promo-badge" th:text="${promoFixed.displayLabel}">
-                  -$20 OFF
-                </div>
-                <img
-                  th:src="${promoFixed.imageUrl != null and !promoFixed.imageUrl.isEmpty()} ? ${promoFixed.imageUrl} : 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=600&q=80'"
-                  th:alt="${promoFixed.name}"
-                  class="promo-image"
-                />
-                <div class="promo-content">
-                  <h3 class="promo-title" th:text="${promoFixed.name}">
-                    Descuento Fijo
-                  </h3>
-                  <p
-                    class="promo-description"
-                    th:text="${promoFixed.description}"
-                  >
-                    Descripción de la promoción
-                  </p>
-
-                  <!-- Mostrar productos (máximo 4) -->
-                  <div
-                    class="promo-products"
-                    th:if="${promoFixed.items.size() > 0}"
-                  >
-                    <p
-                      style="
-                        font-size: 0.9rem;
-                        color: #666;
-                        margin-bottom: 0.5rem;
-                      "
-                    >
-                      <strong>Productos:</strong>
-                    </p>
-                    <p style="font-size: 0.85rem; color: #888">
-                      <span
-                        th:each="item, iterStat : ${promoFixed.items}"
-                        th:if="${iterStat.index < 3}"
-                      >
-                        <span th:text="${item.name}">Producto</span
-                        ><span th:if="${!iterStat.last and iterStat.index < 2}"
-                          >,
-                        </span>
-                      </span>
-                      <span th:if="${promoFixed.items.size() > 3}">
-                        y
-                        <span th:text="${promoFixed.items.size() - 3}">X</span>
-                        más
-                      </span>
-                    </p>
-                  </div>
-
-                  <div class="promo-price-container" style="margin-top: 1rem">
-                    <span
-                      class="promo-discount"
-                      th:text="${promoFixed.displayLabel}"
-                      >-$20 OFF</span
-                    >
-                  </div>
-                  <a href="/login" class="promo-btn">Ver Menú</a>
-                  <div class="promo-timer">
-                    <i class="fas fa-calendar"></i>
-                    Válido hasta
-                    <span
-                      th:text="${#temporals.format(promoFixed.endDate, 'dd/MM/yyyy')}"
-                      >fecha</span
-                    >
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
           <!-- Sección How To Order - Solo si tiene módulo de cliente/ecommerce -->
           <div th:if="${hasCustomerModule}" class="how-to-order-section">
             <h2 class="how-to-order-title scroll-animation">
@@ -5475,9 +5255,23 @@
               &copy; 2025 Empresa. Todos los derechos reservados.
             </p>
             <div class="footer-bottom-links">
-              <a href="#">Política de Privacidad</a>
+              <a
+                href="#privacyModal"
+                data-bs-toggle="modal"
+                data-bs-target="#privacyModal"
+                aria-haspopup="dialog"
+                aria-controls="privacyModal"
+                >Política de Privacidad</a
+              >
               <span>|</span>
-              <a href="#">Términos y Condiciones</a>
+              <a
+                href="#termsModal"
+                data-bs-toggle="modal"
+                data-bs-target="#termsModal"
+                aria-haspopup="dialog"
+                aria-controls="termsModal"
+                >Términos y Condiciones</a
+              >
             </div>
           </div>
         </div>
@@ -5926,5 +5720,13 @@
         });
       })();
     </script>
+    <!-- Anuncios de promociones con carrusel (fragmento compartido) -->
+    <div
+      th:replace="~{fragments/landing-promotions :: announcements(${landingPromotions}, '#38e07b')}"
+    ></div>
+
+    <div th:replace="~{fragments/legal-documents :: dialogs}"></div>
+
+    <script th:src="@{/js/landing-promotions.js}" src="/js/landing-promotions.js"></script>
   </body>
 </html>

@@ -115,7 +115,9 @@ class AdminWaiterOrderDetailPanelEndpointTest {
                 mock(ReservationService.class),
                 mock(DateTimeService.class),
                 mock(CashRegisterService.class),
-                mock(OrderTransferService.class));
+                mock(OrderTransferService.class),
+                mock(com.aatechsolutions.elgransazon.application.service.CustomerService.class),
+                mock(com.aatechsolutions.elgransazon.application.service.CustomerAddressService.class));
 
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 // Las aserciones leen el nombre de vista y el modelo: no hace falta pintar HTML.

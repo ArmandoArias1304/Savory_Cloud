@@ -77,6 +77,46 @@
       .table-responsive::-webkit-scrollbar-thumb:hover {
         background: #2bc866;
       }
+
+      /* ===== Tarjeta con forma de gafete ===== */
+      .badge-decor {
+        position: absolute;
+        border-radius: 0.75rem;
+        background: rgba(255, 255, 255, 0.09);
+      }
+
+      .badge-decor-1 {
+        width: 9rem;
+        height: 9rem;
+        top: -4.5rem;
+        right: -2.5rem;
+        transform: rotate(38deg);
+      }
+
+      .badge-decor-2 {
+        width: 6rem;
+        height: 6rem;
+        bottom: -3.5rem;
+        left: -1.5rem;
+        transform: rotate(18deg);
+      }
+
+      .badge-decor-3 {
+        width: 3.5rem;
+        height: 3.5rem;
+        top: 2.25rem;
+        right: 4.5rem;
+        transform: rotate(58deg);
+        opacity: 0.7;
+      }
+
+      .badge-avatar {
+        transition: transform 0.3s ease;
+      }
+
+      .employee-card:hover .badge-avatar {
+        transform: scale(1.05);
+      }
     </style>
   </head>
   <body
@@ -109,6 +149,34 @@
               </p>
             </div>
             <div class="flex flex-col sm:flex-row gap-3">
+              <!-- Selector de vista: tabla o tarjetas -->
+              <div
+                class="flex self-start sm:self-center bg-gray-100 dark:bg-gray-800 rounded-xl p-1"
+              >
+                <button
+                  id="tableViewBtn"
+                  type="button"
+                  class="flex items-center gap-2 px-3 py-2 rounded-lg text-gray-600 dark:text-gray-400 transition-all"
+                  onclick="switchEmployeeView('table')"
+                  title="Vista de tabla"
+                  aria-label="Vista de tabla"
+                >
+                  <span class="material-symbols-outlined text-lg"
+                    >table_rows</span
+                  >
+                </button>
+                <button
+                  id="cardsViewBtn"
+                  type="button"
+                  class="flex items-center gap-2 px-3 py-2 rounded-lg text-gray-600 dark:text-gray-400 transition-all"
+                  onclick="switchEmployeeView('cards')"
+                  title="Vista de tarjetas"
+                  aria-label="Vista de tarjetas"
+                >
+                  <span class="material-symbols-outlined text-lg">badge</span>
+                </button>
+              </div>
+
               <!-- Only ADMIN can create employees -->
               <div
                 sec:authorize="hasRole('ROLE_ADMIN')"
@@ -470,6 +538,7 @@
           </div>
 
           <!-- TABLA -->
+          <div id="tableView" class="hidden">
           <div
             class="table-responsive rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-lg"
           >
@@ -524,7 +593,7 @@
               >
                 <tr
                   th:each="employee : ${employees}"
-                  class="employee-row hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+                  class="employee-item employee-row hover:bg-gray-50 dark:hover:bg-gray-800 transition"
                   th:attr="data-name=${employee.fullName.toLowerCase()},
                                            data-role=${employee.primaryRole},
                                            data-shifts=${employee.shifts.![id].toString()},
@@ -692,6 +761,34 @@
               <p class="font-medium">
                 No se encontraron empleados con los filtros seleccionados
               </p>
+            </div>
+          </div>
+          </div>
+
+          <!-- TARJETAS (gafete del empleado) -->
+          <div id="cardsView" class="hidden">
+            <div
+              id="noResultsCards"
+              class="hidden rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-10 text-center text-gray-600 dark:text-gray-400 shadow-lg"
+            >
+              <span
+                class="material-symbols-outlined text-5xl mb-2 text-gray-300 dark:text-gray-600"
+                >search_off</span
+              >
+              <p class="font-medium">
+                No se encontraron empleados con los filtros seleccionados
+              </p>
+            </div>
+
+            <div
+              id="cardsContainer"
+              class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5"
+            >
+              <th:block th:each="employee : ${employees}">
+                <article
+                  th:replace="~{admin/employees/employee-card :: employeeCard(${employee}, ${canManageEmployees})}"
+                ></article>
+              </th:block>
             </div>
           </div>
         </div>
@@ -869,6 +966,9 @@
     <script>
       // Filter functionality
       document.addEventListener("DOMContentLoaded", function () {
+        // Restaura la última vista elegida; las tarjetas son la vista inicial
+        switchEmployeeView(localStorage.getItem("employeesView") || "cards");
+
         const nameFilter = document.getElementById("nameFilter");
         const roleFilter = document.getElementById("roleFilter");
         const shiftFilter = document.getElementById("shiftFilter");
@@ -877,21 +977,26 @@
         const filteredCount = document.getElementById("filteredCount");
         const noResults = document.getElementById("noResults");
         const tableBody = document.getElementById("employeesTableBody");
+        const noResultsCards = document.getElementById("noResultsCards");
+        const cardsContainer = document.getElementById("cardsContainer");
 
+        // La fila y la tarjeta publican los mismos data-*: un solo filtro para ambas
         function applyFilters() {
           const nameValue = nameFilter.value.toLowerCase();
           const roleValue = roleFilter.value;
           const shiftValue = shiftFilter.value;
           const statusValue = statusFilter.value;
 
-          const rows = document.querySelectorAll(".employee-row");
-          let visibleCount = 0;
+          const items = document.querySelectorAll(".employee-item");
+          // Se cuentan empleados, no elementos: cada empleado tiene una fila y una tarjeta
+          let visibleRows = 0;
+          let visibleCards = 0;
 
-          rows.forEach((row) => {
-            const name = row.getAttribute("data-name");
-            const role = row.getAttribute("data-role");
-            const shifts = row.getAttribute("data-shifts");
-            const enabled = row.getAttribute("data-enabled");
+          items.forEach((item) => {
+            const name = item.getAttribute("data-name") || "";
+            const role = item.getAttribute("data-role");
+            const shifts = item.getAttribute("data-shifts") || "";
+            const enabled = item.getAttribute("data-enabled");
 
             let show = true;
 
@@ -911,23 +1016,27 @@
               show = false;
             }
 
+            item.style.display = show ? "" : "none";
+
             if (show) {
-              row.style.display = "";
-              visibleCount++;
-            } else {
-              row.style.display = "none";
+              if (item.classList.contains("employee-row")) {
+                visibleRows++;
+              } else {
+                visibleCards++;
+              }
             }
           });
 
-          filteredCount.textContent = visibleCount;
+          filteredCount.textContent = visibleRows;
 
-          if (visibleCount === 0) {
-            noResults.classList.remove("hidden");
-            tableBody.parentElement.style.display = "none";
-          } else {
-            noResults.classList.add("hidden");
-            tableBody.parentElement.style.display = "";
-          }
+          // Cada vista tiene su propio aviso de "sin resultados"
+          const rowsHidden = visibleRows === 0;
+          noResults.classList.toggle("hidden", !rowsHidden);
+          tableBody.parentElement.style.display = rowsHidden ? "none" : "";
+
+          const cardsHidden = visibleCards === 0;
+          noResultsCards.classList.toggle("hidden", !cardsHidden);
+          cardsContainer.style.display = cardsHidden ? "none" : "";
         }
 
         nameFilter.addEventListener("input", applyFilters);
@@ -943,141 +1052,180 @@
           applyFilters();
         });
 
-        // Status toggle with SweetAlert
+        // El switch de cada fila reutiliza el mismo diálogo que el botón de la tarjeta
         document.querySelectorAll(".status-toggle").forEach((toggle) => {
           toggle.addEventListener("change", function (e) {
             e.preventDefault();
 
-            const checkbox = this;
             const employeeId = this.getAttribute("data-employee-id");
             const employeeName = this.getAttribute("data-employee-name");
             const enabled = this.checked;
 
-            // Revertir temporalmente
-            checkbox.checked = !enabled;
+            // Revertir temporalmente: el estado real se aplica al confirmar
+            this.checked = !enabled;
 
-            const title = enabled
-              ? "¿Activar empleado?"
-              : "¿Desactivar empleado?";
-            const text = enabled
-              ? `¿Estás seguro de activar a ${employeeName}?`
-              : `¿Estás seguro de desactivar a ${employeeName}?`;
-            const confirmButtonText = enabled
-              ? "Sí, activar"
-              : "Sí, desactivar";
-            const successTitle = enabled ? "¡Activado!" : "¡Desactivado!";
-            const successText = enabled
-              ? `${employeeName} ha sido activado correctamente.`
-              : `${employeeName} ha sido desactivado correctamente.`;
+            requestEmployeeStatusChange(employeeId, employeeName, enabled);
+          });
+        });
 
-            Swal.fire({
-              title: title,
-              text: text,
-              icon: "warning",
-              showCancelButton: true,
-              confirmButtonColor: "#38e07b",
-              cancelButtonColor: "#ef4444",
-              confirmButtonText: confirmButtonText,
-              cancelButtonText: "Cancelar",
-              reverseButtons: true,
-              background: document.documentElement.classList.contains("dark")
-                ? "#1f2937"
-                : "#ffffff",
-              color: document.documentElement.classList.contains("dark")
-                ? "#f3f4f6"
-                : "#1f2937",
-              customClass: {
-                popup: "rounded-2xl",
-                confirmButton: "rounded-xl px-6 py-2.5 font-semibold",
-                cancelButton: "rounded-xl px-6 py-2.5 font-semibold",
-              },
-            }).then((result) => {
-              if (result.isConfirmed) {
-                fetch(
-                  `/admin/employees/${employeeId}/toggle-status?enabled=${enabled}`,
-                  {
-                    method: "POST",
-                    headers: {
-                      "Content-Type": "application/json",
-                    },
-                  },
-                )
-                  .then((response) => response.json())
-                  .then((data) => {
-                    if (data.success) {
-                      Swal.fire({
-                        title: successTitle,
-                        text: successText,
-                        icon: "success",
-                        confirmButtonColor: "#38e07b",
-                        confirmButtonText: "Entendido",
-                        timer: 1500,
-                        showConfirmButton: false,
-                        background: document.documentElement.classList.contains(
-                          "dark",
-                        )
-                          ? "#1f2937"
-                          : "#ffffff",
-                        color: document.documentElement.classList.contains(
-                          "dark",
-                        )
-                          ? "#f3f4f6"
-                          : "#1f2937",
-                        customClass: {
-                          popup: "rounded-2xl",
-                        },
-                      }).then(() => {
-                        // Recargar la página para actualizar los contadores y la tabla
-                        window.location.reload();
-                      });
-                    } else {
-                      Swal.fire({
-                        icon: "error",
-                        title: "Error",
-                        text: data.message,
-                        confirmButtonColor: "#38e07b",
-                        background: document.documentElement.classList.contains(
-                          "dark",
-                        )
-                          ? "#1f2937"
-                          : "#ffffff",
-                        color: document.documentElement.classList.contains(
-                          "dark",
-                        )
-                          ? "#f3f4f6"
-                          : "#1f2937",
-                        customClass: {
-                          popup: "rounded-2xl",
-                          confirmButton: "rounded-xl px-6 py-2.5 font-semibold",
-                        },
-                      });
-                    }
-                  })
-                  .catch((error) => {
-                    Swal.fire({
-                      icon: "error",
-                      title: "Error",
-                      text: "Error al cambiar el estado del empleado",
-                      confirmButtonColor: "#38e07b",
-                      background: document.documentElement.classList.contains(
-                        "dark",
-                      )
-                        ? "#1f2937"
-                        : "#ffffff",
-                      color: document.documentElement.classList.contains("dark")
-                        ? "#f3f4f6"
-                        : "#1f2937",
-                      customClass: {
-                        popup: "rounded-2xl",
-                        confirmButton: "rounded-xl px-6 py-2.5 font-semibold",
-                      },
-                    });
-                  });
-              }
-            });
+        // La tarjeta también abre la ficha con el teclado
+        document.querySelectorAll(".employee-card").forEach((card) => {
+          card.addEventListener("keydown", function (event) {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              showEmployeeDetails(this.getAttribute("data-employee-id"));
+            }
           });
         });
       });
+
+      // Cambia entre la tabla y las tarjetas y recuerda la elección
+      function switchEmployeeView(view) {
+        const tableView = document.getElementById("tableView");
+        const cardsView = document.getElementById("cardsView");
+        const tableViewBtn = document.getElementById("tableViewBtn");
+        const cardsViewBtn = document.getElementById("cardsViewBtn");
+
+        if (!tableView || !cardsView) {
+          return;
+        }
+
+        const showCards = view === "cards";
+        localStorage.setItem("employeesView", showCards ? "cards" : "table");
+
+        tableView.classList.toggle("hidden", showCards);
+        cardsView.classList.toggle("hidden", !showCards);
+
+        [
+          [tableViewBtn, !showCards],
+          [cardsViewBtn, showCards],
+        ].forEach(([button, isActive]) => {
+          button.classList.remove(
+            "bg-white",
+            "dark:bg-gray-700",
+            "text-primary",
+            "shadow-sm",
+            "text-gray-600",
+            "dark:text-gray-400",
+          );
+          if (isActive) {
+            button.classList.add(
+              "bg-white",
+              "dark:bg-gray-700",
+              "text-primary",
+              "shadow-sm",
+            );
+          } else {
+            button.classList.add("text-gray-600", "dark:text-gray-400");
+          }
+        });
+      }
+
+      // Tema compartido de las alertas (claro u oscuro)
+      function swalTheme(options) {
+        const isDark = document.documentElement.classList.contains("dark");
+        const config = {
+          background: isDark ? "#1f2937" : "#ffffff",
+          color: isDark ? "#f3f4f6" : "#1f2937",
+          customClass: {
+            popup: "rounded-2xl",
+            confirmButton: "rounded-xl px-6 py-2.5 font-semibold",
+          },
+        };
+        const extra = Object.assign({}, options);
+        if (extra.customClass) {
+          config.customClass = Object.assign(config.customClass, extra.customClass);
+          delete extra.customClass;
+        }
+        return Object.assign(config, extra);
+      }
+
+      // Pregunta antes de activar o desactivar y llama al endpoint existente
+      function requestEmployeeStatusChange(employeeId, employeeName, enabled) {
+        const title = enabled ? "¿Activar empleado?" : "¿Desactivar empleado?";
+        const text = enabled
+          ? `¿Estás seguro de activar a ${employeeName}?`
+          : `¿Estás seguro de desactivar a ${employeeName}?`;
+        const confirmButtonText = enabled ? "Sí, activar" : "Sí, desactivar";
+        const successTitle = enabled ? "¡Activado!" : "¡Desactivado!";
+        const successText = enabled
+          ? `${employeeName} ha sido activado correctamente.`
+          : `${employeeName} ha sido desactivado correctamente.`;
+
+        Swal.fire(
+          swalTheme({
+            title: title,
+            text: text,
+            icon: "warning",
+            showCancelButton: true,
+            confirmButtonColor: "#38e07b",
+            cancelButtonColor: "#ef4444",
+            confirmButtonText: confirmButtonText,
+            cancelButtonText: "Cancelar",
+            reverseButtons: true,
+            customClass: {
+              cancelButton: "rounded-xl px-6 py-2.5 font-semibold",
+            },
+          }),
+        ).then((result) => {
+          if (!result.isConfirmed) {
+            return;
+          }
+
+          fetch(`/admin/employees/${employeeId}/toggle-status?enabled=${enabled}`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+          })
+            .then((response) => response.json())
+            .then((data) => {
+              if (data.success) {
+                Swal.fire(
+                  swalTheme({
+                    title: successTitle,
+                    text: successText,
+                    icon: "success",
+                    timer: 1500,
+                    showConfirmButton: false,
+                  }),
+                ).then(() => {
+                  // Recargar para actualizar los contadores, la tabla y las tarjetas
+                  window.location.reload();
+                });
+              } else {
+                Swal.fire(
+                  swalTheme({
+                    icon: "error",
+                    title: "Error",
+                    text: data.message,
+                    confirmButtonColor: "#38e07b",
+                  }),
+                );
+              }
+            })
+            .catch(() => {
+              Swal.fire(
+                swalTheme({
+                  icon: "error",
+                  title: "Error",
+                  text: "Error al cambiar el estado del empleado",
+                  confirmButtonColor: "#38e07b",
+                }),
+              );
+            });
+        });
+      }
+
+      // Botón de activar/desactivar de la tarjeta: no debe abrir la ficha
+      function onEmployeeCardStatusClick(event, button) {
+        event.stopPropagation();
+        requestEmployeeStatusChange(
+          button.getAttribute("data-employee-id"),
+          button.getAttribute("data-employee-name"),
+          button.getAttribute("data-target-enabled") === "true",
+        );
+      }
 
       // Modal functionality
       function showEmployeeDetails(employeeId) {

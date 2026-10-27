@@ -55,9 +55,9 @@
              electrónica habilitada: la clave se genera al cobrar únicamente cuando la empresa
              tiene una configuración de Facturama lista). Es el mismo botón morado que se pinta
              por cuenta en el acordeón de "ticket(s) por persona", para que el cliente pueda
-             facturar directo desde la lista. -->
+             facturar directo desde la lista. Un pedido de canje ($0.00) no se factura. -->
         <a
-          th:if="${order.status.name() == 'PAID' and order.autofacturaKey != null and (order.payments == null or order.payments.isEmpty())}"
+          th:if="${order.status.name() == 'PAID' and order.autofacturaKey != null and !order.zeroLoyaltyRedemption and (order.payments == null or order.payments.isEmpty())}"
           th:href="@{/autofactura/{key}(key=${order.autofacturaKey})}"
           class="p-2 rounded-lg bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 hover:bg-purple-100 dark:hover:bg-purple-900/40 transition-all"
           title="Autofactura del pedido"
@@ -132,9 +132,10 @@
           <i class="fas fa-shipping-fast"></i>
         </button>
 
-        <!-- Collect Payment (full-order settlement: all items DELIVERED and no prior partial charges) -->
+        <!-- Collect Payment (full-order settlement: all items DELIVERED and no prior partial charges).
+             Un pedido de canje de $0.00 no se cobra aquí: se cierra en la pantalla Canjear. -->
         <a
-          th:if="${order.readyToCharge}"
+          th:if="${order.readyToCharge and !order.zeroLoyaltyRedemption}"
           th:href="@{/cashier/payments/form/{id}(id=${order.idOrder})}"
           class="p-2 rounded-lg bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/40 transition-all"
           title="Cobrar pedido"
@@ -144,12 +145,23 @@
 
         <!-- Dividir cuenta por persona / cobrar a la persona que se va (solo ítems ENTREGADOS) -->
         <a
-          th:if="${order.canCollectDeparture() || (order.orderType.name() == 'DELIVERY' && order.readyToCharge && !order.hasPartialCollections())}"
+          th:if="${!order.zeroLoyaltyRedemption and (order.canCollectDeparture() || (order.orderType.name() == 'DELIVERY' && order.readyToCharge && !order.hasPartialCollections()))}"
           th:href="@{/cashier/payments/form/{id}(id=${order.idOrder}, split='items')}"
           class="p-2 rounded-lg bg-teal-50 dark:bg-teal-900/20 text-teal-600 dark:text-teal-400 hover:bg-teal-100 dark:hover:bg-teal-900/40 transition-all"
           title="Cobrar a la persona que se va (solo los ítems ya entregados)"
         >
           <i class="fas fa-users"></i>
+        </a>
+
+        <!-- Canje: no se cobra aquí. Lleva a la pantalla Canjear, donde se cierra con
+             "Cerrar sin cobro" cuando cocina/barra ya lo entregaron. -->
+        <a
+          th:if="${order.zeroLoyaltyRedemption and order.status.name() != 'PAID' and order.status.name() != 'CANCELLED'}"
+          th:href="@{/loyalty}"
+          class="p-2 rounded-lg bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-all"
+          title="Pedido de canje ($0.00): no se cobra. Ciérralo en Canjear con «Cerrar sin cobro»."
+        >
+          <i class="fas fa-gift"></i>
         </a>
 
         <!-- Cancel (TO_ACCEPT, PENDING, IN_PREPARATION, READY) -->

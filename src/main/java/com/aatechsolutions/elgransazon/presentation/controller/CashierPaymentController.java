@@ -91,6 +91,14 @@ public class CashierPaymentController {
 
         return cashierOrderService.findByIdWithDetails(orderId)
                 .map(order -> {
+                    // A pure loyalty reward order totals $0.00: there is nothing to collect.
+                    // It is closed from the loyalty counter with "Cerrar sin cobro".
+                    if (order.isZeroLoyaltyRedemption()) {
+                        redirectAttributes.addFlashAttribute("errorMessage",
+                            "Pedido de canje ($0.00): no se cobra. Ciérralo en Canjear con «Cerrar sin cobro».");
+                        return "redirect:/loyalty";
+                    }
+
                     // A departing-guest collection may charge the ENTREGADO items of an open
                     // order (some items still PENDING/READY). Full-order payment requires
                     // the whole order ENTREGADO.

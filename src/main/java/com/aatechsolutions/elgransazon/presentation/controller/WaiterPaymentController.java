@@ -90,6 +90,14 @@ public class WaiterPaymentController {
                     // A departing-guest collection may charge the ENTREGADO items of an
                     // open order (some items still PENDING/READY). Full-order payment
                     // requires the whole order ENTREGADO.
+                    // A pure loyalty reward order ($0.00) is never collected here: cash closes it
+                    // from the loyalty counter with "Cerrar sin cobro".
+                    if (order.isZeroLoyaltyRedemption()) {
+                        redirectAttributes.addFlashAttribute("errorMessage",
+                            "Pedido de canje ($0.00): no se cobra. Caja lo cierra en Canjear con «Cerrar sin cobro».");
+                        return "redirect:/waiter/orders";
+                    }
+
                     boolean departureEligible = order.canCollectDeparture();
                     if (order.getStatus() != OrderStatus.DELIVERED && !departureEligible) {
                         redirectAttributes.addFlashAttribute("errorMessage", 

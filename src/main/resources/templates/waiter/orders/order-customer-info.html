@@ -216,6 +216,10 @@
                   />
 
                   <div class="space-y-6">
+                    <div
+                      th:replace="~{fragments/registered-customer-lookup :: registeredCustomerLookup('waiter')}"
+                    ></div>
+
                     <!-- Customer Name & Phone -->
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <!-- Customer Name -->
@@ -565,5 +569,8 @@
           });
         });
     </script>
+    <div
+      th:replace="~{fragments/registered-customer-lookup :: registeredCustomerLookupScript}"
+    ></div>
   </body>
 </html>

@@ -301,6 +301,82 @@ public class Promotion implements Serializable {
     }
 
     /**
+     * Human readable days of the week for the UI, e.g. "Todos los días",
+     * "Lunes a viernes", "Viernes y sábado" or "Lunes, miércoles y viernes".
+     *
+     * <p>The landing shows this next to the time window so a client who reads a
+     * promotion outside its schedule knows when it applies.</p>
+     */
+    public String getValidDaysLabel() {
+        java.util.Set<DayOfWeek> days = getValidDaysSet();
+        if (days.isEmpty()) {
+            return "Días por definir";
+        }
+        if (days.size() == DayOfWeek.values().length) {
+            return "Todos los días";
+        }
+
+        java.util.List<DayOfWeek> ordered = java.util.Arrays.stream(DayOfWeek.values())
+                .filter(days::contains)
+                .toList();
+
+        if (ordered.size() == 1) {
+            return capitalize(dayName(ordered.get(0)));
+        }
+
+        boolean contiguous = true;
+        for (int i = 1; i < ordered.size(); i++) {
+            if (ordered.get(i) != ordered.get(i - 1).plus(1)) {
+                contiguous = false;
+                break;
+            }
+        }
+        if (contiguous) {
+            return capitalize(dayName(ordered.get(0))) + " a " + dayName(ordered.get(ordered.size() - 1));
+        }
+
+        StringBuilder label = new StringBuilder();
+        for (int i = 0; i < ordered.size(); i++) {
+            if (i > 0) {
+                label.append(i == ordered.size() - 1 ? " y " : ", ");
+            }
+            label.append(dayName(ordered.get(i)));
+        }
+        return capitalize(label.toString());
+    }
+
+    /**
+     * Days plus the daily time window, ready to print on a promotion card:
+     * "Viernes y sábado · 18:00 a 21:00", "Todos los días" when it has no window.
+     */
+    public String getScheduleLabel() {
+        if (!hasTimeWindow()) {
+            return getValidDaysLabel();
+        }
+        return getValidDaysLabel() + " · " + getTimeWindowLabel();
+    }
+
+    private static String dayName(DayOfWeek day) {
+        switch (day) {
+            case MONDAY: return "lunes";
+            case TUESDAY: return "martes";
+            case WEDNESDAY: return "miércoles";
+            case THURSDAY: return "jueves";
+            case FRIDAY: return "viernes";
+            case SATURDAY: return "sábado";
+            case SUNDAY: return "domingo";
+            default: return "";
+        }
+    }
+
+    private static String capitalize(String text) {
+        if (text == null || text.isEmpty()) {
+            return text;
+        }
+        return Character.toUpperCase(text.charAt(0)) + text.substring(1);
+    }
+
+    /**
      * Check if promotion is valid for a specific day of week
      */
     public boolean isValidForDay(DayOfWeek dayOfWeek) {

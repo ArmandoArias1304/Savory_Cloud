@@ -1,0 +1,193 @@
+<div
+  th:fragment="registeredCustomerLookup(rolePath)"
+  id="registeredCustomerLookup"
+  th:attr="data-role=${rolePath}"
+  class="mb-4 rounded-xl border border-emerald-200 dark:border-emerald-900 bg-emerald-50/70 dark:bg-emerald-950/20 p-4"
+>
+  <input type="hidden" name="customerId" id="registeredCustomerId" />
+  <label class="flex items-start gap-3 cursor-pointer">
+    <input
+      type="checkbox"
+      id="registeredCustomerEnabled"
+      class="mt-1 h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+    />
+    <span>
+      <span class="block text-sm font-semibold text-gray-900 dark:text-white">
+        Buscar y asociar una cuenta de fidelización
+      </span>
+      <span class="block mt-1 text-xs text-gray-600 dark:text-gray-400">
+        Opcional. Al activarla, se resaltará el teléfono: escríbelo ahí y luego
+        pulsa buscar.
+      </span>
+    </span>
+  </label>
+
+  <div id="registeredCustomerSearch" class="hidden mt-4">
+    <div class="flex flex-col sm:flex-row gap-2">
+      <button
+        type="button"
+        id="searchRegisteredCustomer"
+        class="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        <span class="material-symbols-outlined text-lg">search</span>
+        Buscar por teléfono
+      </button>
+      <button
+        type="button"
+        id="clearRegisteredCustomer"
+        class="hidden rounded-lg border border-gray-300 dark:border-gray-700 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-white dark:hover:bg-gray-800"
+      >
+        Quitar asociación
+      </button>
+    </div>
+    <p
+      id="registeredCustomerStatus"
+      role="status"
+      aria-live="polite"
+      class="mt-2 text-sm text-gray-600 dark:text-gray-400"
+    >
+      Activa la casilla para resaltar el campo de teléfono.
+    </p>
+    <div id="registeredCustomerResults" class="mt-2 space-y-2"></div>
+  </div>
+</div>
+
+<script th:fragment="registeredCustomerLookupScript">
+  (() => {
+    const lookup = document.getElementById("registeredCustomerLookup");
+    if (!lookup) return;
+
+    const checkbox = document.getElementById("registeredCustomerEnabled");
+    const searchPanel = document.getElementById("registeredCustomerSearch");
+    const searchButton = document.getElementById("searchRegisteredCustomer");
+    const clearButton = document.getElementById("clearRegisteredCustomer");
+    const status = document.getElementById("registeredCustomerStatus");
+    const results = document.getElementById("registeredCustomerResults");
+    const customerId = document.getElementById("registeredCustomerId");
+    const customerName = document.getElementById("customerName");
+    const customerPhone = document.getElementById("customerPhone");
+    let requestSequence = 0;
+
+    const clearResults = () => {
+      results.replaceChildren();
+    };
+
+    const clearAssociation = () => {
+      customerId.value = "";
+      clearButton.classList.add("hidden");
+    };
+
+    const highlightPhone = (highlight) => {
+      customerPhone.classList.toggle("ring-4", highlight);
+      customerPhone.classList.toggle("ring-emerald-500", highlight);
+      customerPhone.classList.toggle("border-emerald-500", highlight);
+      if (highlight) {
+        customerPhone.focus({ preventScroll: true });
+        customerPhone.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    };
+
+    checkbox.addEventListener("change", () => {
+      requestSequence++;
+      searchButton.disabled = false;
+      searchPanel.classList.toggle("hidden", !checkbox.checked);
+      highlightPhone(checkbox.checked);
+      clearResults();
+      clearAssociation();
+      status.textContent = checkbox.checked
+        ? "Escribe el teléfono en el campo resaltado y después pulsa «Buscar por teléfono»."
+        : "";
+    });
+
+    customerPhone.addEventListener("input", () => {
+      if (!checkbox.checked) return;
+      requestSequence++;
+      searchButton.disabled = false;
+      clearAssociation();
+      clearResults();
+      status.textContent =
+        customerPhone.value.replace(/\D/g, "").length < 4
+          ? "Ingresa al menos 4 dígitos en el teléfono del cliente."
+          : "Presiona «Buscar por teléfono» para consultar las cuentas disponibles.";
+    });
+
+    clearButton.addEventListener("click", () => {
+      requestSequence++;
+      searchButton.disabled = false;
+      clearAssociation();
+      clearResults();
+      status.textContent =
+        "La cuenta se desasoció. Puedes buscar otro teléfono.";
+    });
+
+    searchButton.addEventListener("click", async () => {
+      const phone = customerPhone.value.replace(/\D/g, "");
+      if (phone.length < 4) {
+        status.textContent = "Ingresa al menos 4 dígitos para buscar.";
+        return;
+      }
+
+      const sequence = ++requestSequence;
+      searchButton.disabled = true;
+      clearResults();
+      status.textContent = "Buscando cuentas...";
+
+      try {
+        const response = await fetch(
+          `/${lookup.dataset.role}/orders/customers/by-phone?phone=${encodeURIComponent(phone)}`,
+          { headers: { Accept: "application/json" } },
+        );
+        if (!response.ok) {
+          throw new Error("No fue posible buscar las cuentas de clientes.");
+        }
+        const data = await response.json();
+        if (sequence !== requestSequence) return;
+
+        const customers = Array.isArray(data.customers) ? data.customers : [];
+        if (customers.length === 0) {
+          status.textContent =
+            "No se encontraron cuentas activas con ese teléfono.";
+          return;
+        }
+
+        status.textContent = "Selecciona la cuenta que deseas asociar:";
+        customers.forEach((customer) => {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className =
+            "block w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-3 text-left hover:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500";
+          const name = document.createElement("span");
+          name.className =
+            "block text-sm font-semibold text-gray-900 dark:text-white";
+          name.textContent = customer.fullName || "Cliente";
+          const phoneLabel = document.createElement("span");
+          phoneLabel.className =
+            "block mt-1 text-xs text-gray-600 dark:text-gray-400";
+          phoneLabel.textContent = customer.phone || "";
+          button.append(name, phoneLabel);
+          button.addEventListener("click", () => {
+            customerId.value = customer.id;
+            customerName.value = customer.fullName || "";
+            customerPhone.value = customer.phone || "";
+            if (typeof validatePhoneNumber === "function") {
+              validatePhoneNumber(customerPhone);
+            }
+            clearResults();
+            status.textContent = `Cuenta asociada: ${customer.fullName || customer.phone}.`;
+            clearButton.classList.remove("hidden");
+          });
+          results.append(button);
+        });
+      } catch (error) {
+        if (sequence === requestSequence) {
+          status.textContent =
+            error instanceof Error
+              ? error.message
+              : "Ocurrió un error al buscar cuentas.";
+        }
+      } finally {
+        if (sequence === requestSequence) searchButton.disabled = false;
+      }
+    });
+  })();
+</script>

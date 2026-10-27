@@ -76,7 +76,8 @@ class CashierOrderActionsEndpointTest {
                 mock(WebSocketNotificationService.class),
                 mock(DateTimeService.class),
                 mock(ReservationService.class),
-                mock(com.aatechsolutions.elgransazon.application.service.CashRegisterService.class));
+                mock(com.aatechsolutions.elgransazon.application.service.CashRegisterService.class),
+                mock(com.aatechsolutions.elgransazon.application.service.CustomerService.class));
 
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 // The assertions read the view name + model, so no HTML is rendered here.

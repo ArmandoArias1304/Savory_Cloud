@@ -1,0 +1,339 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+  <body>
+    <th:block th:fragment="dialogs">
+      <div
+        class="modal fade"
+        id="privacyModal"
+        tabindex="-1"
+        aria-labelledby="privacyModalTitle"
+        aria-hidden="true"
+      >
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-xl modal-fullscreen-md-down">
+          <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header bg-dark text-white px-4 py-3">
+              <div>
+                <p class="text-uppercase small fw-semibold text-success mb-1">Información legal</p>
+                <h2 class="modal-title fs-4 fw-bold" id="privacyModalTitle">Aviso de privacidad</h2>
+                <p class="small text-white-50 mb-0" th:text="${systemConfig.restaurantName}">Nombre del restaurante</p>
+              </div>
+              <button
+                type="button"
+                class="btn-close btn-close-white ms-3"
+                data-bs-dismiss="modal"
+                aria-label="Cerrar aviso de privacidad"
+              ></button>
+            </div>
+            <div class="modal-body p-4 p-lg-5">
+              <p class="lead text-secondary">
+                Cuidamos tus datos y los usamos para atender tu cuenta, tus pedidos y las solicitudes
+                que haces al restaurante.
+              </p>
+
+              <div class="alert alert-success border-0 rounded-3 mb-4">
+                <h3 class="h6 fw-bold">¿Quién trata tus datos y cómo contactarlo?</h3>
+                <p class="mb-2">
+                  El negocio que opera esta página es
+                  <strong th:text="${systemConfig.restaurantName}">Nombre del restaurante</strong>.
+                  Para asuntos de privacidad, solicitudes sobre tus datos o dudas, comunícate por estos medios:
+                </p>
+                <address class="mb-0">
+                  <span th:text="${systemConfig.address}">Domicilio del restaurante</span><br />
+                  <a th:href="|mailto:${systemConfig.email}|" th:text="${systemConfig.email}">correo@restaurante.mx</a>
+                  ·
+                  <a th:href="|tel:${systemConfig.phone}|" th:text="${systemConfig.phone}">5512345678</a>
+                </address>
+              </div>
+
+              <section class="mb-4">
+                <h3 class="h5 fw-bold">1. Datos que podemos tratar</h3>
+                <p>Según los servicios que utilices, podemos tratar:</p>
+                <ul>
+                  <li>
+                    <strong>Cuenta:</strong> nombre, nombre de usuario, correo electrónico, teléfono,
+                    contraseña protegida mediante un método criptográfico, estado de verificación del correo
+                    y fechas de creación, actualización y último acceso.
+                  </li>
+                  <li>
+                    <strong>Pedidos y entregas:</strong> productos, cantidades, importes, descuentos,
+                    propina, estado y fecha del pedido, método de pago elegido, nombre y teléfono de contacto,
+                    domicilio, referencias y, cuando se proporciona, ubicación aproximada mediante coordenadas.
+                  </li>
+                  <li>
+                    <strong>Reservaciones:</strong> nombre, teléfono, correo si se proporciona, cantidad de
+                    comensales, fecha, hora y solicitudes especiales.
+                  </li>
+                  <li>
+                    <strong>Fidelización y reseñas:</strong> saldo y movimientos de sellos, recompensas,
+                    compras elegibles, calificación y comentarios que envíes.
+                  </li>
+                  <li>
+                    <strong>Facturación solicitada:</strong> RFC, nombre o razón social, régimen fiscal,
+                    uso del CFDI y código postal fiscal.
+                  </li>
+                  <li>
+                    <strong>Datos técnicos:</strong> información necesaria para mantener la sesión, proteger
+                    el acceso y operar el sitio. El navegador también puede comunicar datos técnicos, como la
+                    dirección IP, al cargar recursos externos utilizados por la página.
+                  </li>
+                </ul>
+                <p class="text-secondary">
+                  No escribas contraseñas, datos bancarios, información médica ni otros datos sensibles en
+                  las notas del pedido, solicitudes especiales o reseñas.
+                </p>
+              </section>
+
+              <section class="mb-4">
+                <h3 class="h5 fw-bold">2. Para qué usamos la información</h3>
+                <ul>
+                  <li>Crear y proteger tu cuenta, verificar el correo y recuperar el acceso.</li>
+                  <li>Recibir, preparar, entregar y dar seguimiento a pedidos y reservaciones.</li>
+                  <li>Gestionar pagos registrados por el restaurante, aclaraciones y comprobantes fiscales que solicites.</li>
+                  <li>Administrar el programa de fidelización, sus sellos, recompensas e historial.</li>
+                  <li>Atender preguntas, reseñas, solicitudes de privacidad y prevenir usos indebidos.</li>
+                  <li>Cumplir obligaciones legales, fiscales y requerimientos de autoridades competentes.</li>
+                </ul>
+                <p>
+                  Las comunicaciones necesarias sobre tu cuenta, pedido, reservación o factura forman parte
+                  del servicio solicitado. Este aviso no constituye autorización para enviarte publicidad no
+                  relacionada; cualquier finalidad adicional que requiera consentimiento deberá solicitarse
+                  por separado cuando corresponda.
+                </p>
+              </section>
+
+              <section class="mb-4">
+                <h3 class="h5 fw-bold">3. Pagos y datos fiscales</h3>
+                <p>
+                  El sitio registra el método de pago elegido y los importes asociados a la operación. No
+                  solicita ni almacena el número completo de una tarjeta, su código de seguridad o NIP en el
+                  formulario de pedido. Si solicitas una factura, los datos fiscales se utilizan para
+                  tramitarla con los servicios tecnológicos de facturación y, cuando sea necesario, ante la
+                  autoridad fiscal.
+                </p>
+              </section>
+
+              <section class="mb-4">
+                <h3 class="h5 fw-bold">4. Proveedores y comunicaciones de datos</h3>
+                <p>
+                  Para operar la página, el restaurante puede apoyarse en proveedores de alojamiento y
+                  soporte tecnológico, envío de correos, imágenes y facturación. Cada proveedor debe acceder
+                  únicamente a la información necesaria para prestar el servicio correspondiente. También
+                  podremos comunicar datos a autoridades cuando exista una obligación legal o un requerimiento
+                  válido.
+                </p>
+                <p>
+                  Algunos servicios técnicos pueden procesar información desde otros países. Cuando una
+                  transferencia resulte aplicable, se realizará conforme a la legislación de protección de
+                  datos y con las salvaguardas que correspondan.
+                </p>
+              </section>
+
+              <section class="mb-4">
+                <h3 class="h5 fw-bold">5. Cookies y seguridad</h3>
+                <p>
+                  Se utilizan mecanismos técnicos necesarios para mantener la sesión, recordar el estado de
+                  acceso y proteger el funcionamiento del sitio. No uses un dispositivo compartido sin cerrar
+                  tu sesión. El restaurante aplica medidas administrativas y técnicas razonables; ningún
+                  medio de transmisión o almacenamiento puede garantizar seguridad absoluta.
+                </p>
+              </section>
+
+              <section class="mb-4">
+                <h3 class="h5 fw-bold">6. Conservación y control de tus datos</h3>
+                <p>
+                  Conservaremos la información mientras la cuenta esté activa o sea necesaria para prestar el
+                  servicio, resolver aclaraciones y cumplir obligaciones legales o fiscales. Al dejar de ser
+                  necesaria, se eliminará o se disociará conforme a las posibilidades técnicas y las reglas
+                  aplicables. La cancelación de una cuenta no elimina registros que deban conservarse por ley.
+                </p>
+                <p>
+                  Puedes solicitar el acceso, rectificación, cancelación u oposición al tratamiento de tus
+                  datos personales (derechos ARCO), así como revocar el consentimiento cuando proceda,
+                  escribiendo al correo de contacto indicado en este aviso. Incluye tu nombre, el correo o
+                  usuario de la cuenta, el derecho que deseas ejercer y la información necesaria para
+                  localizar tu solicitud. Podremos pedir datos razonables para verificar tu identidad y
+                  responderemos dentro de los plazos legales aplicables.
+                </p>
+              </section>
+
+              <section class="mb-2">
+                <h3 class="h5 fw-bold">7. Cambios a este aviso</h3>
+                <p class="mb-0">
+                  Si cambia la forma en que tratamos los datos o los servicios disponibles, publicaremos la
+                  versión actualizada en esta página. Última actualización: 26 de octubre de 2026.
+                </p>
+              </section>
+            </div>
+            <div class="modal-footer px-4 py-3">
+              <button type="button" class="btn btn-success px-4" data-bs-dismiss="modal">Entendido</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div
+        class="modal fade"
+        id="termsModal"
+        tabindex="-1"
+        aria-labelledby="termsModalTitle"
+        aria-hidden="true"
+      >
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-xl modal-fullscreen-md-down">
+          <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header bg-dark text-white px-4 py-3">
+              <div>
+                <p class="text-uppercase small fw-semibold text-success mb-1">Información legal</p>
+                <h2 class="modal-title fs-4 fw-bold" id="termsModalTitle">Términos y condiciones</h2>
+                <p class="small text-white-50 mb-0" th:text="${systemConfig.restaurantName}">Nombre del restaurante</p>
+              </div>
+              <button
+                type="button"
+                class="btn-close btn-close-white ms-3"
+                data-bs-dismiss="modal"
+                aria-label="Cerrar términos y condiciones"
+              ></button>
+            </div>
+            <div class="modal-body p-4 p-lg-5">
+              <p class="lead text-secondary">
+                Estas condiciones explican cómo utilizar la página, realizar pedidos y solicitar servicios
+                al restaurante.
+              </p>
+
+              <div class="alert alert-light border rounded-3 mb-4">
+                <strong th:text="${systemConfig.restaurantName}">Nombre del restaurante</strong>
+                <div th:text="${systemConfig.address}">Domicilio del restaurante</div>
+                <a th:href="|mailto:${systemConfig.email}|" th:text="${systemConfig.email}">correo@restaurante.mx</a>
+                ·
+                <a th:href="|tel:${systemConfig.phone}|" th:text="${systemConfig.phone}">5512345678</a>
+              </div>
+
+              <section class="mb-4">
+                <h3 class="h5 fw-bold">1. Uso de la página y cuentas</h3>
+                <p>
+                  La página permite consultar información del restaurante y, según disponibilidad, crear
+                  una cuenta, hacer pedidos, solicitar reservaciones, enviar reseñas y participar en el
+                  programa de fidelización. Para registrar una cuenta debes tener 18 años o más y proporcionar
+                  información correcta y actualizada. Mantén en secreto tu contraseña y avisa al restaurante
+                  si sospechas que alguien accedió a tu cuenta.
+                </p>
+                <p>
+                  No utilices el sitio para actividades ilegales, interferir con su funcionamiento, acceder
+                  sin autorización a cuentas o sistemas, ni enviar contenido ofensivo o información de otras
+                  personas sin permiso.
+                </p>
+              </section>
+
+              <section class="mb-4">
+                <h3 class="h5 fw-bold">2. Menú, precios y disponibilidad</h3>
+                <p>
+                  Los productos, descripciones, precios, promociones y horarios publicados pueden cambiar y
+                  dependen de disponibilidad. Los precios, cargos de entrega y condiciones aplicables se
+                  mostrarán antes de confirmar el pedido. Si hay una discrepancia o un producto deja de estar
+                  disponible, el restaurante te contactará para confirmar alternativas o resolver la
+                  operación conforme a la legislación aplicable.
+                </p>
+                <p>
+                  Si tienes alergias o restricciones alimentarias, comunícalas directamente al restaurante
+                  antes de ordenar y solicita confirmación sobre los ingredientes y la preparación.
+                </p>
+              </section>
+
+              <section class="mb-4">
+                <h3 class="h5 fw-bold">3. Pedidos, cambios y cancelaciones</h3>
+                <p>
+                  Enviar un pedido constituye una solicitud; el restaurante debe aceptarlo o confirmarlo
+                  para iniciar su preparación. Los tiempos de preparación y entrega son estimados. Para
+                  solicitar un cambio o cancelación, comunícate cuanto antes por los datos de contacto de
+                  esta página; la posibilidad dependerá del estado de preparación y de la legislación
+                  aplicable.
+                </p>
+                <p>
+                  Nada en estas condiciones limita los derechos que te reconozcan las leyes de protección al
+                  consumidor. Cualquier ajuste o devolución que proceda se atenderá de acuerdo con esas leyes
+                  y las circunstancias de la operación.
+                </p>
+              </section>
+
+              <section class="mb-4">
+                <h3 class="h5 fw-bold">4. Entregas y recogida</h3>
+                <p>
+                  Para una entrega, proporciona un domicilio y referencias correctos, y verifica que esté
+                  dentro de la zona de servicio indicada. El costo de envío, si aplica, se muestra antes de
+                  confirmar. Procura que una persona pueda recibir el pedido en el domicilio indicado. Si
+                  elegiste recogerlo, sigue las indicaciones y el horario comunicados por el restaurante.
+                </p>
+              </section>
+
+              <section class="mb-4">
+                <h3 class="h5 fw-bold">5. Reservaciones</h3>
+                <p>
+                  Una solicitud de reservación queda sujeta a confirmación del restaurante y a la
+                  disponibilidad de mesas. Indica correctamente la fecha, hora, número de comensales y un
+                  teléfono de contacto. Si se requiere alguna condición especial o depósito, el restaurante
+                  deberá informarlo antes de confirmar la reservación.
+                </p>
+              </section>
+
+              <section class="mb-4">
+                <h3 class="h5 fw-bold">6. Pagos y facturación</h3>
+                <p>
+                  Los medios de pago disponibles se muestran durante el pedido y pueden variar por
+                  restaurante. La página registra el método elegido y el importe, pero no solicita ni
+                  almacena el número completo de tarjeta, CVV o NIP en el formulario de pedido. Para
+                  solicitar un CFDI, deberás proporcionar los datos fiscales requeridos y verificar que sean
+                  correctos.
+                </p>
+              </section>
+
+              <section class="mb-4">
+                <h3 class="h5 fw-bold">7. Promociones y fidelización</h3>
+                <p>
+                  Cada promoción y recompensa está sujeta a sus requisitos, productos participantes,
+                  vigencia, horarios y demás condiciones indicadas en la página o en el programa de
+                  fidelización. Los sellos y recompensas no sustituyen dinero ni se aplican fuera de las
+                  reglas publicadas. El restaurante podrá corregir errores evidentes en la publicación y
+                  comunicará los cambios del programa en sus canales disponibles, respetando los derechos
+                  adquiridos y la legislación aplicable.
+                </p>
+              </section>
+
+              <section class="mb-4">
+                <h3 class="h5 fw-bold">8. Contenido y funcionamiento del sitio</h3>
+                <p>
+                  Los textos, fotografías, logotipos, menú y demás materiales pertenecen al restaurante o a
+                  sus respectivos titulares y no pueden copiarse para fines comerciales sin autorización.
+                  Se procura mantener el sitio disponible y actualizado, pero pueden ocurrir interrupciones
+                  por mantenimiento, conectividad o causas fuera del control razonable del restaurante.
+                </p>
+              </section>
+
+              <section class="mb-4">
+                <h3 class="h5 fw-bold">9. Privacidad y modificaciones</h3>
+                <p>
+                  El tratamiento de tus datos se explica en el Aviso de privacidad disponible en el pie de
+                  página. Podemos actualizar estas condiciones cuando cambien los servicios o requisitos
+                  legales. La versión vigente estará disponible en esta página.
+                </p>
+              </section>
+
+              <section class="mb-2">
+                <h3 class="h5 fw-bold">10. Legislación y contacto</h3>
+                <p class="mb-0">
+                  Estas condiciones se interpretan conforme a las leyes aplicables en México. Las
+                  controversias relacionadas con operaciones de consumo se atenderán ante las autoridades
+                  competentes, sin impedir el ejercicio de tus derechos. Para dudas sobre pedidos, reservas
+                  o estas condiciones, contacta a
+                  <strong th:text="${systemConfig.restaurantName}">Nombre del restaurante</strong> usando
+                  los datos indicados al inicio.
+                </p>
+              </section>
+            </div>
+            <div class="modal-footer px-4 py-3">
+              <button type="button" class="btn btn-success px-4" data-bs-dismiss="modal">Entendido</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </th:block>
+  </body>
+</html>

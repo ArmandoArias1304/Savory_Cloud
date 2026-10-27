@@ -1,0 +1,571 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title th:text="${globalSystemConfig.systemName + ' - Mi tarjeta'}">Mi tarjeta</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@300;400;500;600;700"
+      rel="stylesheet"
+    />
+    <div th:replace="~{fragments/theme :: themeResources}"></div>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: { DEFAULT: "#38e07b", dark: "#2bc866" },
+              "background-light": "#f8faf9",
+              "background-dark": "#0f1713",
+            },
+            fontFamily: { display: ["Work Sans", "system-ui", "sans-serif"] },
+          },
+        },
+      };
+    </script>
+    <style>
+      .loyalty-flip-scene {
+        perspective: 1400px;
+      }
+
+      .loyalty-flip-card {
+        position: relative;
+        height: 430px;
+        transform-style: preserve-3d;
+        transition: transform 0.75s cubic-bezier(0.2, 0.8, 0.2, 1);
+      }
+
+      #loyaltyFlip:checked ~ .loyalty-flip-scene .loyalty-flip-card {
+        transform: rotateY(180deg);
+      }
+
+      .loyalty-face {
+        position: absolute;
+        inset: 0;
+        border-radius: 1.75rem;
+        overflow: hidden;
+        backface-visibility: hidden;
+        -webkit-backface-visibility: hidden;
+        box-shadow: 0 24px 50px -20px rgba(0, 0, 0, 0.45);
+      }
+
+      .loyalty-face-back {
+        transform: rotateY(180deg);
+      }
+
+      /* Colores elegidos por el restaurante (variables puestas en la sección de la
+         tarjeta). El frente y el reverso usan el tono base y dos tonos más oscuros. */
+      .loyalty-face-front {
+        background-image: linear-gradient(
+          135deg,
+          var(--loyalty-front),
+          var(--loyalty-front-dark) 60%,
+          var(--loyalty-front-deep)
+        );
+      }
+
+      .loyalty-face-back {
+        background-image: linear-gradient(
+          135deg,
+          var(--loyalty-back),
+          var(--loyalty-back-dark) 60%,
+          var(--loyalty-back-deep)
+        );
+      }
+
+      .loyalty-dots {
+        background-image: radial-gradient(rgba(255, 255, 255, 0.22) 1.5px, transparent 1.5px);
+        background-size: 18px 18px;
+      }
+
+      .loyalty-shine {
+        background: radial-gradient(circle at 20% 15%, rgba(255, 255, 255, 0.28), transparent 45%);
+      }
+
+      .loyalty-card-title {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+
+      .loyalty-reward-text {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+
+      .loyalty-rewards-scroll {
+        max-height: 25.5rem;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(100, 116, 139, 0.55) transparent;
+        scrollbar-gutter: stable;
+      }
+
+      .loyalty-rewards-scroll::-webkit-scrollbar {
+        width: 8px;
+      }
+
+      .loyalty-rewards-scroll::-webkit-scrollbar-thumb {
+        background: rgba(100, 116, 139, 0.55);
+        border-radius: 999px;
+      }
+
+      .loyalty-rewards-scroll::-webkit-scrollbar-track {
+        background: transparent;
+      }
+
+      /* Historial de sellos: caja con scroll propio y barra siempre visible */
+      .loyalty-history-scroll {
+        scrollbar-width: thin;
+        scrollbar-color: rgba(100, 116, 139, 0.55) transparent;
+        scrollbar-gutter: stable;
+      }
+
+      .loyalty-history-scroll::-webkit-scrollbar {
+        width: 8px;
+      }
+
+      .loyalty-history-scroll::-webkit-scrollbar-thumb {
+        background: rgba(100, 116, 139, 0.55);
+        border-radius: 999px;
+      }
+
+      .loyalty-history-scroll::-webkit-scrollbar-track {
+        background: transparent;
+      }
+
+      .loyalty-history-toggle {
+        cursor: pointer;
+        list-style: none;
+      }
+
+      .loyalty-history-toggle::-webkit-details-marker {
+        display: none;
+      }
+
+      .loyalty-history-toggle-icon {
+        transition: transform 0.2s ease;
+      }
+
+      .loyalty-history-disclosure[open] .loyalty-history-toggle-icon {
+        transform: rotate(180deg);
+      }
+
+      @media (min-width: 640px) {
+        .loyalty-flip-card {
+          height: 400px;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .loyalty-flip-card {
+          transition: none;
+        }
+      }
+    </style>
+  </head>
+  <body class="bg-gradient-to-br from-background-light to-gray-50 dark:from-background-dark dark:to-gray-900 font-display min-h-screen text-gray-800 dark:text-gray-200">
+    <nav class="bg-white/90 dark:bg-slate-900/90 border-b border-gray-200 dark:border-slate-700 sticky top-0 z-20 backdrop-blur">
+      <div class="max-w-5xl mx-auto px-4 sm:px-6">
+        <div class="flex flex-wrap items-center justify-between gap-3 min-h-16 py-2">
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-primary text-3xl">loyalty</span>
+            <div>
+              <p class="font-bold leading-tight" th:text="${globalSystemConfig.systemName}">Restaurante</p>
+              <p class="text-xs text-gray-500">Mi tarjeta de fidelidad</p>
+            </div>
+          </div>
+          <div class="flex flex-wrap items-center gap-2 text-sm">
+            <a th:href="@{/client/dashboard}" class="px-3 py-2 rounded-lg font-semibold hover:bg-gray-100 dark:hover:bg-slate-800">Inicio</a>
+            <a th:href="@{/client/orders}" class="px-3 py-2 rounded-lg font-semibold hover:bg-gray-100 dark:hover:bg-slate-800">Mis pedidos</a>
+            <a th:href="@{/client/profile}" class="px-3 py-2 rounded-lg font-semibold hover:bg-gray-100 dark:hover:bg-slate-800">Mi perfil</a>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <main class="max-w-5xl mx-auto px-4 sm:px-6 py-8">
+      <div th:if="${program.stampCycleDeadline != null and stampCycleOpen}"
+           class="mb-5 rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 p-4 text-sm text-amber-900 dark:text-amber-200">
+        Tus sellos y recompensas se pueden usar hasta el
+        <strong th:text="${#temporals.format(program.stampCycleDeadline, 'dd/MM/yyyy')}">31/12/2026</strong>.
+        Después de esa fecha, el saldo se reiniciará.
+      </div>
+      <div th:if="${stampCycleOpen == false}"
+           class="mb-5 rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-100 dark:bg-slate-800 p-4 text-sm text-gray-700 dark:text-gray-300">
+        El ciclo de sellos terminó y tu saldo se reinició. El restaurante aún debe configurar el siguiente ciclo.
+      </div>
+      <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+        <!-- Card: frente y reverso (cupones) -->
+        <section
+          class="lg:col-span-3"
+          th:style="|--loyalty-front: ${program.effectiveCardFrontColor}; --loyalty-front-dark: ${program.cardFrontDarkColor}; --loyalty-front-deep: ${program.cardFrontDeepColor}; --loyalty-back: ${program.effectiveCardBackColor}; --loyalty-back-dark: ${program.cardBackDarkColor}; --loyalty-back-deep: ${program.cardBackDeepColor}|"
+          th:with="hasLogo=${globalSystemConfig != null and globalSystemConfig.systemLogoUrl != null and !globalSystemConfig.systemLogoUrl.isEmpty()},
+                   logoUrl=${globalSystemConfig != null ? globalSystemConfig.systemLogoUrl : null},
+                   initial=${globalSystemConfig != null and globalSystemConfig.systemName != null and !globalSystemConfig.systemName.isEmpty() ? #strings.substring(globalSystemConfig.systemName, 0, 1) : 'S'}"
+        >
+          <input
+            type="checkbox"
+            id="loyaltyFlip"
+            class="sr-only"
+            aria-label="Girar la tarjeta para ver los cupones"
+          />
+
+          <label for="loyaltyFlip" class="loyalty-flip-scene block cursor-pointer select-none">
+            <div class="loyalty-flip-card">
+              <!-- FRENTE -->
+              <div class="loyalty-face loyalty-face-front text-white">
+                <div class="absolute inset-0 loyalty-dots opacity-60"></div>
+                <div class="absolute inset-0 loyalty-shine"></div>
+
+                <div class="relative h-full flex flex-col p-6 sm:p-8">
+                  <div class="flex items-center justify-between gap-3">
+                    <p class="text-[10px] uppercase tracking-[0.35em] text-white/80">
+                      Programa de fidelidad
+                    </p>
+                    <span class="material-symbols-outlined text-white/80">autorenew</span>
+                  </div>
+
+                  <div class="flex-1 flex flex-col items-center justify-center text-center">
+                    <div class="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-white shadow-2xl ring-8 ring-white/25 flex items-center justify-center overflow-hidden">
+                      <img
+                        th:if="${hasLogo}"
+                        th:src="${@cloudinaryUrl.logoHero(logoUrl)}"
+                        th:alt="${globalSystemConfig.systemName}"
+                        class="w-16 h-16 sm:w-20 sm:h-20 object-contain"
+                      />
+                      <span
+                        th:unless="${hasLogo}"
+                        class="text-4xl sm:text-5xl font-extrabold"
+                        th:style="'color: ' + ${program.cardFrontDeepColor}"
+                        th:text="${initial}"
+                      >
+                        R
+                      </span>
+                    </div>
+
+                    <h1
+                      class="loyalty-card-title mt-4 text-2xl sm:text-3xl font-extrabold tracking-tight leading-tight"
+                      th:text="${program.effectiveCardTitle}"
+                    >
+                      Tarjeta de fidelidad
+                    </h1>
+                    <p class="text-sm text-white/85 mt-1" th:text="${globalSystemConfig.systemName}">
+                      Restaurante
+                    </p>
+                  </div>
+
+                  <div
+                    class="rounded-xl bg-white/95 px-4 py-2.5 flex items-center justify-between gap-3"
+                    th:style="'color: ' + ${program.cardFrontDeepColor}"
+                  >
+                    <div class="min-w-0">
+                      <p class="text-[9px] uppercase tracking-[0.3em] font-semibold opacity-70">
+                        Cliente
+                      </p>
+                      <p class="font-bold truncate" th:text="${customer.fullName}">Ana López</p>
+                    </div>
+                    <span class="shrink-0 rounded-full bg-black/5 px-2.5 py-1 text-xs font-bold">
+                      <span th:text="${account.safeBalance()}">0</span> sellos
+                    </span>
+                  </div>
+
+                  <p class="text-center text-[11px] text-white/85 mt-3 flex items-center justify-center gap-1">
+                    <span class="material-symbols-outlined text-sm">touch_app</span>
+                    Toca la tarjeta para ver tus cupones
+                  </p>
+                </div>
+              </div>
+
+              <!-- REVERSO: cupones con el logo del restaurante -->
+              <div class="loyalty-face loyalty-face-back text-white">
+                <div class="absolute inset-0 loyalty-dots opacity-40"></div>
+
+                <div class="relative h-full flex flex-col p-6 sm:p-7">
+                  <div class="flex items-center justify-between gap-3">
+                    <div class="flex items-center gap-2 min-w-0">
+                      <div class="w-9 h-9 rounded-full bg-white/95 flex items-center justify-center overflow-hidden shrink-0">
+                        <img
+                          th:if="${hasLogo}"
+                          th:src="${@cloudinaryUrl.logoSmall(logoUrl)}"
+                          th:alt="${globalSystemConfig.systemName}"
+                          class="w-6 h-6 object-contain"
+                        />
+                        <span
+                          th:unless="${hasLogo}"
+                          class="font-extrabold text-sm"
+                          th:style="'color: ' + ${program.cardBackDeepColor}"
+                          th:text="${initial}"
+                        >
+                          R
+                        </span>
+                      </div>
+                      <p class="font-semibold truncate" th:text="${globalSystemConfig.systemName}">
+                        Restaurante
+                      </p>
+                    </div>
+                    <span class="text-[10px] uppercase tracking-[0.25em] text-white/70 shrink-0">
+                      Cupones
+                    </span>
+                  </div>
+
+                  <h2 class="mt-3 text-2xl sm:text-3xl font-extrabold leading-tight">
+                    ¡Completa tu tarjeta!
+                  </h2>
+                  <p class="loyalty-reward-text text-sm text-white/85 mt-1" th:text="${program.effectiveRewardText}">
+                    Completa tu tarjeta y disfruta una recompensa.
+                  </p>
+
+                  <div class="flex-1 flex flex-col justify-center min-h-0">
+                    <div class="grid grid-cols-5 gap-2 sm:gap-3 justify-items-center max-h-44 overflow-y-auto pr-1">
+                      <span
+                        th:each="i : ${#numbers.sequence(1, program.stampsRequired)}"
+                        class="w-11 h-11 sm:w-12 sm:h-12 rounded-full flex items-center justify-center"
+                        th:classappend="${i <= account.safeBalance() ? 'bg-white shadow-md' : 'bg-white/15 border border-white/40'}"
+                      >
+                        <th:block th:if="${i <= account.safeBalance()}">
+                          <img
+                            th:if="${hasLogo}"
+                            th:src="${@cloudinaryUrl.logoSmall(logoUrl)}"
+                            alt=""
+                            class="w-7 h-7 sm:w-8 sm:h-8 object-contain"
+                          />
+                          <span
+                            th:unless="${hasLogo}"
+                            class="font-extrabold text-sm"
+                            th:style="'color: ' + ${program.cardBackDeepColor}"
+                            th:text="${initial}"
+                          >
+                            R
+                          </span>
+                        </th:block>
+                      </span>
+                    </div>
+                  </div>
+
+                  <div class="flex items-end justify-between gap-3">
+                    <div>
+                      <p class="text-sm font-semibold">
+                        <span th:text="${account.safeBalance()}">0</span> de
+                        <span th:text="${program.stampsRequired}">10</span> sellos
+                      </p>
+                      <p
+                        class="text-xs text-white/80"
+                        th:text="${account.safeBalance() >= program.stampsRequired ? '¡Tarjeta completa! Pide tu recompensa en caja.' : 'Te faltan ' + (program.stampsRequired - account.safeBalance()) + ' sello(s) para completarla.'}"
+                      ></p>
+                    </div>
+                    <span class="material-symbols-outlined text-white/80">flip_to_front</span>
+                  </div>
+
+                  <p class="text-[11px] text-white/75 mt-2">
+                    Un sello por compra pagada que cumpla las reglas. Pide en caja que registren tu
+                    tarjeta.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </label>
+        </section>
+
+        <!-- Catálogo de recompensas -->
+        <section
+          class="lg:col-span-2 bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 overflow-hidden flex flex-col"
+        >
+          <div class="px-5 pt-5 pb-4 border-b border-gray-100 dark:border-slate-700">
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <h2 class="text-lg font-bold flex items-center gap-2 text-gray-900 dark:text-white">
+                  <span class="material-symbols-outlined text-primary">redeem</span>
+                  Recompensas disponibles
+                </h2>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                  Canjéalas en caja cuando tengas los sellos.
+                </p>
+              </div>
+              <span
+                class="shrink-0 inline-flex items-center justify-center min-w-8 h-8 px-2 rounded-full bg-primary/10 text-primary text-sm font-bold"
+                th:text="${#lists.size(rewards)}"
+                >0</span
+              >
+            </div>
+          </div>
+
+          <div th:if="${#lists.isEmpty(rewards)}" class="px-6 py-10 text-center">
+            <span class="material-symbols-outlined text-4xl text-gray-300 dark:text-slate-600"
+              >redeem</span
+            >
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">
+              El restaurante todavía no publicó recompensas.
+            </p>
+          </div>
+
+          <div
+            th:unless="${#lists.isEmpty(rewards)}"
+            class="loyalty-rewards-scroll p-4 space-y-3"
+            aria-label="Lista de recompensas disponibles"
+          >
+            <article
+              th:each="reward : ${rewards}"
+              class="group rounded-2xl border p-3 transition-colors"
+              th:classappend="${account.safeBalance() >= reward.stampsCost ? 'border-primary/40 bg-primary/5 dark:bg-primary/10' : 'border-gray-200 dark:border-slate-700 bg-gray-50/60 dark:bg-slate-900/30'}"
+            >
+              <div class="flex gap-3">
+                <!-- Imagen del producto; si no tiene, un respaldo con el ícono -->
+                <div
+                  class="relative w-20 h-20 shrink-0 rounded-xl overflow-hidden bg-white dark:bg-slate-700 ring-1 ring-black/5"
+                >
+                  <img
+                    th:if="${reward.itemMenu != null and reward.itemMenu.imageUrl != null and !reward.itemMenu.imageUrl.isEmpty()}"
+                    th:src="${@cloudinaryUrl.card(reward.itemMenu.imageUrl)}"
+                    th:srcset="${@cloudinaryUrl.cardSrcset(reward.itemMenu.imageUrl)}"
+                    sizes="80px"
+                    th:alt="${reward.name}"
+                    loading="lazy"
+                    class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                  />
+                  <div
+                    th:unless="${reward.itemMenu != null and reward.itemMenu.imageUrl != null and !reward.itemMenu.imageUrl.isEmpty()}"
+                    class="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/20 via-primary/10 to-transparent"
+                  >
+                    <span class="material-symbols-outlined text-3xl text-primary/70">redeem</span>
+                  </div>
+                </div>
+
+                <div class="min-w-0 flex-1">
+                  <div class="flex items-start justify-between gap-2">
+                    <div class="min-w-0">
+                      <p
+                        class="font-semibold text-gray-900 dark:text-white leading-snug"
+                        th:text="${reward.name}"
+                      >
+                        Café gratis
+                      </p>
+                      <p
+                        class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate"
+                        th:text="${reward.displayValue}"
+                      >
+                        1 × Café
+                      </p>
+                    </div>
+                    <span
+                      class="shrink-0 inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-bold text-primary"
+                    >
+                      <span class="material-symbols-outlined text-sm">stars</span>
+                      <span th:text="${reward.stampsCost}">5</span>
+                    </span>
+                  </div>
+
+                  <div
+                    th:if="${reward.itemMenu != null and reward.itemMenu.isCombo}"
+                    class="mt-1.5 flex flex-wrap items-center gap-1.5"
+                  >
+                    <span
+                      class="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-700 dark:bg-amber-900/30 dark:text-amber-300"
+                    >
+                      <span class="material-symbols-outlined text-xs">lunch_dining</span>
+                      Combo
+                    </span>
+                  </div>
+
+                  <p
+                    th:if="${reward.description != null and !reward.description.isEmpty()}"
+                    class="loyalty-reward-text text-xs text-gray-500 dark:text-gray-400 mt-1.5"
+                    th:text="${reward.description}"
+                  >
+                    Válido en tu próxima visita
+                  </p>
+                </div>
+              </div>
+
+              <div class="mt-3">
+                <div class="flex items-center justify-between gap-2 text-[11px] mb-1">
+                  <span
+                    class="font-semibold"
+                    th:classappend="${account.safeBalance() >= reward.stampsCost ? 'text-primary' : 'text-gray-500 dark:text-gray-400'}"
+                    th:text="${account.safeBalance() >= reward.stampsCost ? '¡Ya puedes canjearla!' : 'Te faltan ' + (reward.stampsCost - account.safeBalance()) + ' sello(s)'}"
+                  >
+                    ¡Ya puedes canjearla!
+                  </span>
+                  <span class="text-gray-400 dark:text-gray-500">
+                    <span
+                      th:text="${account.safeBalance() >= reward.stampsCost ? reward.stampsCost : account.safeBalance()}"
+                      >3</span
+                    >
+                    / <span th:text="${reward.stampsCost}">5</span>
+                  </span>
+                </div>
+                <div class="h-1.5 overflow-hidden rounded-full bg-gray-200/80 dark:bg-slate-700">
+                  <div
+                    class="h-full rounded-full bg-primary transition-all duration-300"
+                    th:style="|width: ${account.safeBalance() >= reward.stampsCost ? 100 : (account.safeBalance() * 100 / reward.stampsCost)}%|"
+                  ></div>
+                </div>
+              </div>
+            </article>
+          </div>
+        </section>
+      </div>
+
+      <!-- History -->
+      <details class="loyalty-history-disclosure group mt-6 bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-5">
+        <summary class="loyalty-history-toggle flex flex-wrap items-center justify-between gap-2">
+          <h2 class="text-lg font-bold flex items-center gap-2">
+            <span class="material-symbols-outlined text-primary">history</span>
+            Historial de sellos
+          </h2>
+          <span class="inline-flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+            <span
+              th:if="${recentEvents != null and #lists.size(recentEvents) > 5}"
+              class="inline-flex items-center gap-1"
+            >
+              <span class="material-symbols-outlined text-sm">swipe_vertical</span>
+              Desliza para ver todo
+            </span>
+            <span>Mostrar / ocultar</span>
+            <span class="loyalty-history-toggle-icon material-symbols-outlined">expand_more</span>
+          </span>
+        </summary>
+        <div class="mt-4">
+          <div th:if="${#lists.isEmpty(recentEvents)}" class="text-sm text-gray-500 dark:text-gray-400">
+            Todavía no tienes movimientos. ¡Tu primera compra suma!
+          </div>
+          <div
+            th:unless="${#lists.isEmpty(recentEvents)}"
+            class="loyalty-history-scroll divide-y divide-gray-100 dark:divide-slate-700 max-h-80 overflow-y-auto pr-1"
+          >
+            <div th:each="event : ${recentEvents}" class="py-3 flex items-center justify-between gap-4">
+              <div>
+                <p class="font-medium" th:text="${event.eventType.displayName}">Sello ganado</p>
+                <p th:if="${event.order != null}" class="text-xs text-gray-500"
+                   th:text="|Pedido: ${event.order.orderNumber}|"></p>
+                <p th:if="${event.redemption != null and event.redemption.reward != null}" class="text-xs text-gray-500"
+                   th:text="|Recompensa: ${event.redemption.reward.name}|"></p>
+                <p class="text-xs text-gray-500" th:text="${event.reason}"></p>
+              </div>
+              <div class="text-right">
+                <p class="font-bold" th:classappend="${event.stamps > 0 ? 'text-green-600' : 'text-red-500'}"
+                   th:text="${(event.stamps > 0 ? '+' : '') + event.stamps}">+1</p>
+                <p class="text-xs text-gray-500" th:text="${#tz.format(event.createdAt, 'dd/MM/yyyy HH:mm')}"></p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </details>
+
+      <p th:if="${program.terms != null and !program.terms.isEmpty()}"
+         class="text-xs text-gray-500 dark:text-gray-400 mt-4 whitespace-pre-line" th:text="${program.terms}"></p>
+    </main>
+  </body>
+</html>

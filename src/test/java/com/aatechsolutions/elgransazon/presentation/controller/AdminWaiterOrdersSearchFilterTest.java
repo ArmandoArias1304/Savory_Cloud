@@ -105,7 +105,9 @@ class AdminWaiterOrdersSearchFilterTest {
                 mock(ReservationService.class),
                 dateTimeService,
                 mock(CashRegisterService.class),
-                mock(OrderTransferService.class));
+                mock(OrderTransferService.class),
+                mock(com.aatechsolutions.elgransazon.application.service.CustomerService.class),
+                mock(com.aatechsolutions.elgransazon.application.service.CustomerAddressService.class));
 
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 // Las aserciones leen el modelo: no hace falta pintar HTML.

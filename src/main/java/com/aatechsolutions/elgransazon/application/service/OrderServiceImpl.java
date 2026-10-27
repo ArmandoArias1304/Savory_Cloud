@@ -1,5 +1,6 @@
 package com.aatechsolutions.elgransazon.application.service;
 
+import com.aatechsolutions.elgransazon.application.event.OrderPaidEvent;
 import com.aatechsolutions.elgransazon.domain.entity.*;
 import com.aatechsolutions.elgransazon.domain.repository.*;
 import com.aatechsolutions.elgransazon.infrastructure.context.CompanyContext;
@@ -7,6 +8,7 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.dao.CannotAcquireLockException;
 import org.springframework.stereotype.Service;
@@ -76,6 +78,15 @@ public class OrderServiceImpl implements OrderService {
     // staff Employee for ownership assignment of preparedBy / preparedByBarista.
     @Autowired
     private EmployeeService employeeService;
+
+    /** Publishes side-effect events after the order transaction commits. */
+    @Autowired
+    private ApplicationEventPublisher eventPublisher;
+
+    /** Restores loyalty stamps when a reward order is cancelled. */
+    @Autowired
+    @Lazy
+    private LoyaltyRedemptionService loyaltyRedemptionService;
 
     // Constructor with @Lazy for ReservationService to break circular dependency
     public OrderServiceImpl(
@@ -484,6 +495,7 @@ public class OrderServiceImpl implements OrderService {
 
         // Update basic fields
         existingOrder.setOrderType(newOrderType);
+        existingOrder.setCustomer(updatedOrder.getCustomer());
         existingOrder.setCustomerName(updatedOrder.getCustomerName());
         existingOrder.setCustomerPhone(updatedOrder.getCustomerPhone());
         existingOrder.setDeliveryAddress(updatedOrder.getDeliveryAddress());
@@ -553,6 +565,7 @@ public class OrderServiceImpl implements OrderService {
 
         // Update basic fields ONLY (NO items, NO stock manipulation)
         existingOrder.setOrderType(newOrderType);
+        existingOrder.setCustomer(updatedOrder.getCustomer());
         existingOrder.setCustomerName(updatedOrder.getCustomerName());
         existingOrder.setCustomerPhone(updatedOrder.getCustomerPhone());
         existingOrder.setDeliveryAddress(updatedOrder.getDeliveryAddress());
@@ -687,6 +700,7 @@ public class OrderServiceImpl implements OrderService {
         }
 
         Order cancelledOrder = orderRepository.save(order);
+        loyaltyRedemptionService.restoreForCancelledOrder(cancelledOrder.getIdOrder(), cancelledBy);
         log.info("Order cancelled successfully: {} (was in {} status)", 
                  cancelledOrder.getOrderNumber(), currentStatus.getDisplayName());
         
@@ -884,6 +898,10 @@ public class OrderServiceImpl implements OrderService {
 
         Order savedOrder = orderRepository.save(order);
         log.info("Order status changed: {} -> {}", oldStatus, newStatus);
+
+        if (newStatus == OrderStatus.PAID) {
+            eventPublisher.publishEvent(new OrderPaidEvent(savedOrder.getIdOrder(), updatedBy));
+        }
 
         // Send WebSocket notification for status change
         try {

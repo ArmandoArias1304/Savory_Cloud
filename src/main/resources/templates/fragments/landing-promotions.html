@@ -1,0 +1,341 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+  <head>
+    <meta charset="utf-8" />
+    <title>Promociones de la landing</title>
+  </head>
+  <body>
+    <!-- ========================================
+         SECCIÓN DE PROMOCIONES (landing)
+         ========================================
+
+         Una tarjeta por promoción anunciada. La lista llega en
+         `${landingPromotions}`: promociones activas y dentro de sus fechas,
+         SIN importar la hora del día. Una promoción de viernes 18:00 a 21:00
+         se anuncia también el miércoles, para que el cliente la vea hoy y
+         vuelva cuando aplique. La tarjeta imprime días y horario para que se
+         sepa cuándo vale; el descuento real se sigue calculando con
+         Promotion.isValidNow() al cobrar.
+
+         El acento de cada establecimiento se pasa como color y lo consume
+         /css/landing-promotions.css con la variable --promo-accent.
+
+         Uso en la landing:
+         <div th:replace="~{fragments/landing-promotions :: promotions(${landingPromotions}, '#38e07b')}"></div>
+    ======================================== -->
+
+    <section
+      th:fragment="promotions(promotions, accent)"
+      id="promociones"
+      class="promo-showcase"
+      th:if="${!#lists.isEmpty(promotions)}"
+      th:style="'--promo-accent: ' + ${accent}"
+      aria-labelledby="promoShowcaseTitle"
+    >
+      <div class="promo-showcase__inner">
+        <header class="promo-showcase__header">
+          <p class="promo-showcase__eyebrow">
+            <i class="fas fa-tags"></i>
+            Promociones
+          </p>
+          <h2 class="promo-showcase__title" id="promoShowcaseTitle">
+            Ofertas para compartir
+          </h2>
+          <p class="promo-showcase__subtitle">
+            Vigentes por tiempo limitado. Revisa los días y el horario de cada
+            promoción antes de tu visita.
+          </p>
+        </header>
+
+        <div
+          class="promo-showcase__grid"
+          th:classappend="${#lists.size(promotions) == 1
+            ? ' promo-grid-single'
+            : (#lists.size(promotions) == 2 ? ' promo-grid-couple' : '')}"
+        >
+          <article
+            class="promo-tile"
+            th:each="promo : ${promotions}"
+            th:with="fallback=${promo.promotionType.name() == 'BUY_X_PAY_Y'
+              ? 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=800&q=80'
+              : (promo.promotionType.name() == 'PERCENTAGE_DISCOUNT'
+                ? 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=800&q=80'
+                : 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=800&q=80')},
+              image=${!#strings.isEmpty(promo.imageUrl)} ? ${promo.imageUrl} : ${fallback}"
+          >
+            <div class="promo-tile__media">
+              <img
+                class="promo-tile__image"
+                th:src="${image}"
+                th:alt="${promo.name}"
+                loading="lazy"
+              />
+              <span class="promo-tile__label" th:text="${promo.displayLabel}">
+                2x1
+              </span>
+              <span
+                class="promo-tile__kind"
+                th:text="${promo.promotionType.displayName}"
+              >
+                Compra X Paga Y
+              </span>
+            </div>
+
+            <div class="promo-tile__body">
+              <h3 class="promo-tile__title" th:text="${promo.name}">
+                Nombre de la promoción
+              </h3>
+              <p
+                class="promo-tile__description"
+                th:if="${!#strings.isEmpty(promo.description)}"
+                th:text="${promo.description}"
+              >
+                Descripción de la promoción
+              </p>
+
+              <ul class="promo-tile__meta">
+                <li class="promo-tile__meta-row">
+                  <i class="fas fa-clock"></i>
+                  <span th:text="${promo.scheduleLabel}">Todos los días</span>
+                </li>
+                <li class="promo-tile__meta-row">
+                  <i class="fas fa-calendar-check"></i>
+                  <span>
+                    Del
+                    <span
+                      th:text="${#temporals.format(promo.startDate, 'dd/MM/yyyy')}"
+                      >01/10/2026</span
+                    >
+                    al
+                    <span
+                      th:text="${#temporals.format(promo.endDate, 'dd/MM/yyyy')}"
+                      >31/10/2026</span
+                    >
+                  </span>
+                </li>
+              </ul>
+
+              <div
+                class="promo-tile__items"
+                th:if="${!#lists.isEmpty(promo.items)}"
+              >
+                <span
+                  class="promo-tile__chip"
+                  th:each="item, iterStat : ${promo.items}"
+                  th:if="${iterStat.index < 3}"
+                  th:text="${item.name}"
+                >
+                  Platillo
+                </span>
+                <span
+                  class="promo-tile__chip promo-tile__chip--more"
+                  th:if="${#lists.size(promo.items) > 3}"
+                  th:text="${'+' + (#lists.size(promo.items) - 3) + ' más'}"
+                >
+                  +1 más
+                </span>
+              </div>
+
+              <a th:href="@{/home/menu}" class="promo-tile__cta">
+                Ver el menú
+                <i class="fas fa-arrow-right"></i>
+              </a>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================
+         ANUNCIOS DE PROMOCIÓN (modal con carrusel)
+         ========================================
+
+         Se muestran al entrar a la página, una promoción a la vez. Con una
+         sola promoción no hay flechas ni puntos; con varias, el JS
+         (js/landing-promotions.js) las recorre con flechas, puntos, teclado y
+         deslizamiento. La X (o Esc, o el fondo) los cierra.
+
+         Empieza oculto con `hidden` para no tapar la página si el JS no
+         carga; el JS es quien lo muestra.
+
+         Uso, al final del body:
+         <div th:replace="~{fragments/landing-promotions :: announcements(${landingPromotions}, '#38e07b')}"></div>
+    ======================================== -->
+
+    <div
+      th:fragment="announcements(promotions, accent)"
+      id="promoAnnouncements"
+      class="promo-announcements"
+      th:if="${!#lists.isEmpty(promotions)}"
+      th:style="'--promo-accent: ' + ${accent}"
+      th:attr="data-promo-count=${#lists.size(promotions)}"
+      data-promo-announcements
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="promoAnnouncementsTitle"
+      aria-hidden="true"
+      hidden
+    >
+      <div class="promo-announcements__dialog" data-promo-modal-dialog>
+        <h2 class="promo-announcements__sr" id="promoAnnouncementsTitle">
+          Promociones del restaurante
+        </h2>
+
+        <button
+          type="button"
+          class="promo-announcements__close"
+          data-promo-close
+          aria-label="Cerrar los anuncios"
+        >
+          <i class="fas fa-xmark"></i>
+        </button>
+
+        <div class="promo-announcements__stage">
+          <article
+            class="promo-announcement"
+            th:each="promo, iterStat : ${promotions}"
+            th:classappend="${iterStat.first} ? 'is-active'"
+            th:attr="data-promo-slide=${iterStat.index},
+                     aria-hidden=${!iterStat.first}"
+            th:with="fallback=${promo.promotionType.name() == 'BUY_X_PAY_Y'
+              ? 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=900&q=80'
+              : (promo.promotionType.name() == 'PERCENTAGE_DISCOUNT'
+                ? 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=900&q=80'
+                : 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=900&q=80')},
+              image=${!#strings.isEmpty(promo.imageUrl)} ? ${promo.imageUrl} : ${fallback}"
+          >
+            <div class="promo-announcement__media">
+              <img
+                class="promo-announcement__image"
+                th:src="${image}"
+                th:alt="${promo.name}"
+              />
+              <span
+                class="promo-announcement__label"
+                th:text="${promo.displayLabel}"
+                >2x1</span
+              >
+            </div>
+
+            <div class="promo-announcement__body">
+              <p class="promo-announcement__eyebrow">
+                <i class="fas fa-bullhorn"></i>
+                Promoción
+              </p>
+              <h3 class="promo-announcement__title" th:text="${promo.name}">
+                Nombre de la promoción
+              </h3>
+              <p
+                class="promo-announcement__description"
+                th:if="${!#strings.isEmpty(promo.description)}"
+                th:text="${promo.description}"
+              >
+                Descripción de la promoción
+              </p>
+
+              <div
+                class="promo-announcement__items"
+                th:if="${!#lists.isEmpty(promo.items)}"
+              >
+                <p class="promo-announcement__items-label">
+                  <i class="fas fa-utensils"></i>
+                  Artículos incluidos
+                </p>
+                <ul class="promo-announcement__item-list">
+                  <li
+                    class="promo-announcement__item"
+                    th:each="item : ${promo.items}"
+                    th:text="${item.name}"
+                  >
+                    Platillo
+                  </li>
+                </ul>
+              </div>
+
+              <p class="promo-announcement__schedule">
+                <i class="fas fa-clock"></i>
+                <span th:text="${promo.scheduleLabel}">Todos los días</span>
+              </p>
+              <p class="promo-announcement__validity">
+                Válida del
+                <span
+                  th:text="${#temporals.format(promo.startDate, 'dd/MM/yyyy')}"
+                  >01/10/2026</span
+                >
+                al
+                <span
+                  th:text="${#temporals.format(promo.endDate, 'dd/MM/yyyy')}"
+                  >31/10/2026</span
+                >
+              </p>
+
+              <div class="promo-announcement__actions">
+                <a th:href="@{/home/menu}" class="promo-announcement__cta">
+                  Ver el menú
+                </a>
+                <a
+                  href="#promociones"
+                  class="promo-announcement__link"
+                  data-promo-close
+                >
+                  Ver todas las promociones
+                </a>
+              </div>
+            </div>
+          </article>
+        </div>
+
+        <div
+          class="promo-announcements__nav"
+          data-promo-nav
+          th:if="${#lists.size(promotions) > 1}"
+        >
+          <button
+            type="button"
+            class="promo-announcements__arrow"
+            data-promo-prev
+            aria-label="Promoción anterior"
+          >
+            <i class="fas fa-chevron-left"></i>
+          </button>
+
+          <div
+            class="promo-announcements__dots"
+            data-promo-dots
+            role="tablist"
+            aria-label="Promociones"
+          >
+            <button
+              type="button"
+              class="promo-announcements__dot"
+              th:each="promo, iterStat : ${promotions}"
+              th:classappend="${iterStat.first} ? 'is-active'"
+              th:attr="data-promo-dot=${iterStat.index},
+                       aria-label='Promoción ' + ${iterStat.count} + ': ' + ${promo.name},
+                       aria-selected=${iterStat.first}"
+              role="tab"
+            ></button>
+          </div>
+
+          <button
+            type="button"
+            class="promo-announcements__arrow"
+            data-promo-next
+            aria-label="Promoción siguiente"
+          >
+            <i class="fas fa-chevron-right"></i>
+          </button>
+        </div>
+
+        <p
+          class="promo-announcements__counter"
+          data-promo-counter
+          th:if="${#lists.size(promotions) > 1}"
+        >
+          Promoción 1 de
+          <span th:text="${#lists.size(promotions)}">4</span>
+        </p>
+      </div>
+    </div>
+  </body>
+</html>

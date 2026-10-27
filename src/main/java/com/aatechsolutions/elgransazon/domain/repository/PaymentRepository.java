@@ -108,6 +108,9 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
            "  AND p.facturamaCfdiId IS NULL " +
            "  AND p.facturaGlobalCfdiId IS NULL " +
            "  AND (p.facturaGlobalExcluida IS NULL OR p.facturaGlobalExcluida = false) " +
+           // Un canje de fidelización de $0.00 no se factura: sus cuentas quedan fuera
+           // de la factura global (el pedido con importe real sí se factura normal).
+           "  AND (p.order.loyaltyRedemption IS NULL OR p.order.total > 0) " +
            "ORDER BY p.paidAt ASC")
     List<Payment> findPaidPendingGlobalInvoiceByDateRange(
             @Param("company") Company company,

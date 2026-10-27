@@ -366,17 +366,23 @@
             <div
               class="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-800"
             >
-              <div class="flex items-center gap-2">
+              <div class="flex flex-wrap items-center gap-2">
                 <span class="material-symbols-outlined text-primary text-2xl"
                   >receipt_long</span
                 >
                 <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
                   Historial de Ventas (<span th:text="${totalCount}">0</span>)
                 </h3>
+                <!-- Vista de tabla / tarjetas: la elección se recuerda y la
+                     aplica SalesView (js/sales-view.js). -->
+                <div
+                  class="ml-auto"
+                  th:replace="~{fragments/orders-view-toggle :: toggle('sales')}"
+                ></div>
               </div>
             </div>
 
-            <div class="table-responsive">
+            <div id="salesTableView" class="table-responsive">
               <table class="w-full text-sm text-left">
                 <thead
                   class="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700"
@@ -443,10 +449,23 @@
                 <tbody
                   class="stagger-rows divide-y divide-gray-200 dark:divide-gray-700"
                   th:if="${!sales.empty}"
+                  th:with="methodView=${methodFilterActive == true}"
                 >
                   <tr
                     th:each="sale : ${sales}"
                     th:data-sale-id="${sale.idOrder}"
+                    th:data-sale-number="${sale.orderNumber}"
+                    th:data-sale-when="${sale.paidAt != null ? #tz.format(sale.paidAt, 'dd/MM/yyyy hh:mm a') : (sale.updatedAt != null ? #tz.format(sale.updatedAt, 'dd/MM/yyyy hh:mm a') : #tz.format(sale.createdAt, 'dd/MM/yyyy hh:mm a'))}"
+                    th:data-sale-type="${sale.orderType != null ? sale.orderType.name() : ''}"
+                    th:data-sale-type-label="${sale.orderType != null ? sale.orderType.displayName : ''}"
+                    th:data-sale-payment="${sale.hasMixedPaymentMethods() ? sale.paymentMethodsDisplayWithAmounts : sale.paymentMethodsDisplay}"
+                    th:data-sale-paid-by="${sale.paidBy != null ? (sale.paidBy.nombre + ' ' + sale.paidBy.apellido) : ''}"
+                    th:data-sale-waiter="${sale.employee != null ? (sale.employee.nombre + ' ' + sale.employee.apellido) : ''}"
+                    th:data-sale-subtotal-label="${methodView ? 'Monto del método' : 'Subtotal'}"
+                    th:data-sale-subtotal="${methodView ? #numbers.formatCurrency(methodAmounts.get(sale.idOrder)) : sale.formattedTotal}"
+                    th:data-sale-tip="${methodView ? '—' : (sale.formattedTip ?: '$0.00')}"
+                    th:data-sale-total="${methodView ? #numbers.formatCurrency(methodAmounts.get(sale.idOrder)) : sale.formattedTotalWithTip}"
+                    th:data-sale-href="@{/admin/orders/view/{id}(id=${sale.idOrder})}"
                     class="hover:bg-gray-50 dark:hover:bg-gray-800 transition"
                   >
                     <td
@@ -549,7 +568,7 @@
                     <td class="px-6 py-4 whitespace-nowrap text-center">
                       <span
                         th:if="${sale.isFullyInvoiced()}"
-                        class="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400"
+                        class="sale-invoice-badge inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400"
                         title="La venta ya tiene comprobante fiscal: factura individual, factura global o facturada fuera del sistema"
                       >
                         <span class="material-symbols-outlined text-sm"
@@ -559,7 +578,7 @@
                       </span>
                       <span
                         th:unless="${sale.isFullyInvoiced()}"
-                        class="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400"
+                        class="sale-invoice-badge inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400"
                         title="La venta todavía no tiene comprobante fiscal"
                       >
                         <span class="material-symbols-outlined text-sm"
@@ -569,11 +588,11 @@
                       </span>
                       <div
                         th:if="${sale.isPartiallyInvoiced()}"
-                        class="text-[10px] text-gray-500 dark:text-gray-400 mt-1"
+                        class="sale-invoice-note text-[10px] text-gray-500 dark:text-gray-400 mt-1"
                         th:text="${sale.invoicedUnitCount + ' de ' + sale.invoiceableUnitCount + ' cuentas'}"
                       ></div>
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-center">
+                    <td class="sale-actions-cell px-6 py-4 whitespace-nowrap text-center">
                       <div class="flex items-center justify-center gap-2">
                         <a
                           th:href="@{/admin/orders/view/{id}(id=${sale.idOrder})}"
@@ -587,9 +606,10 @@
 
                         <!-- Generate self-invoice link: only while the sale has no link yet
                              and nothing forbids invoicing it (already invoiced, amparada by
-                             the factura global or excluded from it). -->
+                             the factura global or excluded from it). A $0.00 loyalty
+                             redemption has nothing to invoice: no QR. -->
                         <button
-                          th:if="${billingEnabled and sale.hasInvoiceLinkPending()}"
+                          th:if="${billingEnabled and sale.hasInvoiceLinkPending() and !sale.zeroLoyaltyRedemption}"
                           sec:authorize="hasAnyRole('ROLE_ADMIN', 'ROLE_MANAGER')"
                           type="button"
                           class="btn-generate-invoice-link inline-flex items-center justify-center w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-200 dark:hover:bg-emerald-900/50 transition-colors"
@@ -629,6 +649,21 @@
                   </tr>
                 </tbody>
               </table>
+            </div>
+
+            <!-- VISTA DE TARJETAS: mismo contenido que la tabla, construida desde
+                 sus filas por SalesView, para no duplicar montos ni reglas. -->
+            <div id="salesCardsView" class="hidden p-4 sm:p-6">
+              <p
+                id="salesCardsEmpty"
+                class="hidden py-10 text-center text-sm text-gray-500 dark:text-gray-400"
+              >
+                No se encontraron ventas con los filtros seleccionados.
+              </p>
+              <div
+                id="salesCards"
+                class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4"
+              ></div>
             </div>
 
             <!-- Pagination Controls -->
@@ -912,6 +947,12 @@
         }
       });
       /*]]>*/
+    </script>
+
+    <!-- Vista de tabla / tarjetas de las ventas -->
+    <script th:src="@{/js/sales-view.js}"></script>
+    <script>
+      SalesView.init({ viewKey: "salesView" });
     </script>
 
     <!-- Sidebar Scripts Fragment -->

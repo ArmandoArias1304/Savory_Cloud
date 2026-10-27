@@ -55,6 +55,10 @@ public class ClientController {
     private final ItemMenuComplementRepository itemMenuComplementRepository;
     private final ItemMenuComboItemRepository itemMenuComboItemRepository;
     private final DateTimeService dateTimeService;
+    private final LoyaltyProgramService loyaltyProgramService;
+    private final LoyaltyRewardService loyaltyRewardService;
+    private final LoyaltyAccountService loyaltyAccountService;
+    private final FeatureAccessService featureAccessService;
 
     public ClientController(
             @Qualifier("customerOrderService") OrderService orderService,
@@ -71,7 +75,11 @@ public class ClientController {
             ComplementRepository complementRepository,
             ItemMenuComplementRepository itemMenuComplementRepository,
             ItemMenuComboItemRepository itemMenuComboItemRepository,
-            DateTimeService dateTimeService) {
+            DateTimeService dateTimeService,
+            LoyaltyProgramService loyaltyProgramService,
+            LoyaltyRewardService loyaltyRewardService,
+            LoyaltyAccountService loyaltyAccountService,
+            FeatureAccessService featureAccessService) {
         this.orderService = orderService;
         this.itemMenuService = itemMenuService;
         this.categoryService = categoryService;
@@ -87,6 +95,10 @@ public class ClientController {
         this.itemMenuComplementRepository = itemMenuComplementRepository;
         this.itemMenuComboItemRepository = itemMenuComboItemRepository;
         this.dateTimeService = dateTimeService;
+        this.loyaltyProgramService = loyaltyProgramService;
+        this.loyaltyRewardService = loyaltyRewardService;
+        this.loyaltyAccountService = loyaltyAccountService;
+        this.featureAccessService = featureAccessService;
     }
 
     /**
@@ -140,6 +152,35 @@ public class ClientController {
             model.addAttribute("errorMessage", "Error al cargar el dashboard: " + e.getMessage());
             return "error";
         }
+    }
+
+    /**
+     * Customer loyalty card: stamp balance and catalog of available rewards.
+     * Only reachable when the restaurant has the loyalty add-on enabled.
+     */
+    @GetMapping("/loyalty")
+    public String showLoyalty(Authentication authentication, Model model,
+                              RedirectAttributes redirectAttributes) {
+        Customer customer = getAuthenticatedCustomer(authentication);
+        Company company = CompanyContext.requireCurrentCompany();
+
+        if (!featureAccessService.isEnabled(company, FeatureKey.LOYALTY)) {
+            redirectAttributes.addFlashAttribute("errorMessage",
+                    "El programa de fidelización no está disponible en este restaurante.");
+            return "redirect:/client/dashboard";
+        }
+
+        LoyaltyProgram program = loyaltyProgramService.getOrCreate(company);
+        LoyaltyAccount account = loyaltyAccountService.getOrCreate(company, customer);
+
+        model.addAttribute("customer", customer);
+        model.addAttribute("program", program);
+        model.addAttribute("stampCycleOpen", loyaltyProgramService.isCycleOpen(company));
+        model.addAttribute("account", account);
+        model.addAttribute("rewards", loyaltyRewardService.findActive(company));
+        model.addAttribute("recentEvents", loyaltyAccountService.recentEvents(account));
+        model.addAttribute("activeMenu", "loyalty");
+        return "client/loyalty";
     }
 
     /**

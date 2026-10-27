@@ -6,10 +6,12 @@ import com.aatechsolutions.elgransazon.domain.repository.CustomerRepository;
 import com.aatechsolutions.elgransazon.domain.repository.EmployeeRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -47,6 +49,23 @@ public class CustomerServiceImpl implements CustomerService {
     public Optional<Customer> findByIdAndCompany(Long id, Company company) {
         log.debug("Finding customer by ID: {} and company: {}", id, company.getIdCompany());
         return customerRepository.findByIdCustomerAndCompany(id, company);
+    }
+
+    @Override
+    public Optional<Customer> findActiveByIdAndCompany(Long id, Company company) {
+        return findByIdAndCompany(id, company).filter(Customer::isActive);
+    }
+
+    @Override
+    public List<Customer> searchActiveByPhone(Company company, String phone) {
+        if (company == null || phone == null) {
+            return Collections.emptyList();
+        }
+        String digits = phone.replaceAll("\\D", "");
+        if (digits.length() < 4) {
+            return Collections.emptyList();
+        }
+        return customerRepository.searchActiveByCompanyAndPhone(company, digits, PageRequest.of(0, 8));
     }
 
     @Override

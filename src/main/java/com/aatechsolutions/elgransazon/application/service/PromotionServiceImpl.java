@@ -111,6 +111,16 @@ public class PromotionServiceImpl implements PromotionService {
     }
 
     @Override
+    public List<Promotion> findActiveForLanding() {
+        log.debug("Finding active promotions for the landing page (daily time window ignored)");
+        Company currentCompany = CompanyContext.requireCurrentCompany();
+        // Same dates and active flag the discount uses; the time window and the weekday
+        // are only used when the promotion is applied, not to announce it.
+        return promotionRepository.findActivePromotionsForDateByCompany(
+                currentCompany, dateTimeService.todayLocal());
+    }
+
+    @Override
     public List<Promotion> findByType(PromotionType type) {
         log.debug("Finding promotions by type: {}", type);
         Company currentCompany = CompanyContext.requireCurrentCompany();

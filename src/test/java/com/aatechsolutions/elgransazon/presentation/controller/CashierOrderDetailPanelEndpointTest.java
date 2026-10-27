@@ -82,7 +82,8 @@ class CashierOrderDetailPanelEndpointTest {
                 mock(WebSocketNotificationService.class),
                 mock(DateTimeService.class),
                 mock(ReservationService.class),
-                mock(CashRegisterService.class));
+                mock(CashRegisterService.class),
+                mock(com.aatechsolutions.elgransazon.application.service.CustomerService.class));
 
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 // Las aserciones leen el nombre de vista y el modelo: no hace falta pintar HTML.

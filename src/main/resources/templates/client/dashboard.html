@@ -400,6 +400,32 @@
           </div>
         </a>
 
+        <!-- CARD: Mi tarjeta de fidelidad (add-on opcional) -->
+        <a
+          th:if="${@featureAccessService.isEnabled('LOYALTY')}"
+          href="/client/loyalty"
+          class="dashboard-card block rounded-3xl bg-white dark:bg-gray-900 shadow-lg hover:shadow-2xl border border-gray-200 dark:border-gray-800 p-6 sm:p-8 text-center animate-fadeInUp"
+          style="animation-delay: 0.28s"
+        >
+          <div class="flex flex-col items-center">
+            <div class="mb-4">
+              <span
+                class="material-symbols-outlined text-6xl sm:text-7xl text-pink-500"
+              >
+                loyalty
+              </span>
+            </div>
+            <h3
+              class="text-lg sm:text-xl font-bold text-gray-900 dark:text-white mb-2"
+            >
+              Mi Tarjeta
+            </h3>
+            <p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+              Consulta tus sellos y recompensas disponibles
+            </p>
+          </div>
+        </a>
+
         <!-- CARD 3: Mi Perfil -->
         <a
           href="/client/profile"

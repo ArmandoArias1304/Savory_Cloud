@@ -84,6 +84,8 @@ public class EmployeeController {
         long rolesCount = allRoles.size();
         
         model.addAttribute("employees", employees);
+        // La tarjeta del empleado oculta las acciones que no le corresponden al usuario
+        model.addAttribute("canManageEmployees", currentUser.hasRole(Role.ADMIN));
         model.addAttribute("allShifts", allShifts);
         model.addAttribute("allRoles", allRoles);
         model.addAttribute("totalCount", totalCount);

@@ -117,7 +117,12 @@
                 Visualiza los clientes registrados en la plataforma E-Commerce
               </p>
             </div>
-            <div class="flex items-center gap-2">
+            <div class="flex flex-wrap items-center gap-2">
+              <!-- Vista de tabla / tarjetas: la elección se recuerda y la
+                   aplica CustomersView (js/customers-view.js). -->
+              <div
+                th:replace="~{fragments/orders-view-toggle :: toggle('customers')}"
+              ></div>
               <span
                 class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20 text-primary font-semibold text-sm"
               >
@@ -436,9 +441,10 @@
             </div>
           </div>
 
-          <!-- CUSTOMERS TABLE (Desktop) -->
+          <!-- CUSTOMERS TABLE -->
           <div
-            class="hidden lg:block rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-lg overflow-hidden"
+            id="customersTableView"
+            class="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-lg overflow-hidden"
           >
             <div class="table-responsive">
               <table class="w-full text-sm">
@@ -517,6 +523,14 @@
                     th:data-phone="${customer.phone}"
                     th:data-status="${customer.active ? 'active' : 'inactive'}"
                     th:data-verified="${customer.emailVerified ? 'verified' : 'unverified'}"
+                    th:data-customer-id="${customer.idCustomer}"
+                    th:data-customer-name="${customer.fullName}"
+                    th:data-customer-username="${customer.username}"
+                    th:data-customer-email="${customer.email}"
+                    th:data-customer-phone="${customer.phone}"
+                    th:data-customer-status="${customer.active ? 'active' : 'inactive'}"
+                    th:data-customer-since="${customer.createdAt != null ? #tz.format(customer.createdAt, 'dd/MM/yyyy HH:mm') : 'N/A'}"
+                    th:data-customer-last-access="${customer.lastAccess != null ? #tz.format(customer.lastAccess, 'dd/MM/yyyy HH:mm') : 'Sin acceso'}"
                   >
                     <!-- Customer Name & Avatar -->
                     <td class="py-4 px-6">
@@ -572,7 +586,7 @@
                     <td class="py-4 px-6 text-center">
                       <span
                         th:if="${customer.emailVerified}"
-                        class="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 rounded-full text-xs font-semibold"
+                        class="customer-verified-badge inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 rounded-full text-xs font-semibold"
                       >
                         <span class="material-symbols-outlined text-sm"
                           >verified</span
@@ -581,7 +595,7 @@
                       </span>
                       <span
                         th:unless="${customer.emailVerified}"
-                        class="inline-flex items-center gap-1 px-2.5 py-1 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400 rounded-full text-xs font-semibold"
+                        class="customer-verified-badge inline-flex items-center gap-1 px-2.5 py-1 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400 rounded-full text-xs font-semibold"
                       >
                         <span class="material-symbols-outlined text-sm"
                           >pending</span
@@ -594,7 +608,7 @@
                     <td class="py-4 px-6 text-center">
                       <span
                         th:if="${customer.active}"
-                        class="inline-flex items-center gap-1 px-2.5 py-1 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 rounded-full text-xs font-semibold"
+                        class="customer-status-badge inline-flex items-center gap-1 px-2.5 py-1 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 rounded-full text-xs font-semibold"
                       >
                         <span
                           class="w-1.5 h-1.5 bg-green-500 rounded-full"
@@ -603,7 +617,7 @@
                       </span>
                       <span
                         th:unless="${customer.active}"
-                        class="inline-flex items-center gap-1 px-2.5 py-1 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 rounded-full text-xs font-semibold"
+                        class="customer-status-badge inline-flex items-center gap-1 px-2.5 py-1 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 rounded-full text-xs font-semibold"
                       >
                         <span
                           class="w-1.5 h-1.5 bg-red-500 rounded-full"
@@ -640,7 +654,7 @@
                     </td>
 
                     <!-- Actions -->
-                    <td class="py-4 px-6 text-center">
+                    <td class="customer-actions-cell py-4 px-6 text-center">
                       <div class="flex items-center justify-center gap-2">
                         <!-- View Details -->
                         <button
@@ -684,192 +698,19 @@
             </div>
           </div>
 
-          <!-- CUSTOMERS CARDS (Mobile/Tablet) -->
-          <div class="stagger-rows lg:hidden space-y-4">
-            <!-- Empty State -->
-            <div
-              th:if="${#lists.isEmpty(customers)}"
-              class="bg-white dark:bg-gray-900 rounded-2xl shadow-lg p-12 text-center border border-gray-200 dark:border-gray-800"
+          <!-- VISTA DE TARJETAS: mismo contenido que la tabla, construida desde
+               sus filas por CustomersView, para no duplicar estados ni botones. -->
+          <div id="customersCardsView" class="hidden">
+            <p
+              id="customersCardsEmpty"
+              class="hidden rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 py-10 text-center text-gray-500 dark:text-gray-400"
             >
-              <span
-                class="material-symbols-outlined text-6xl text-gray-300 dark:text-gray-600 mb-4 block"
-                >person_off</span
-              >
-              <p class="text-gray-600 dark:text-gray-400 text-lg">
-                No se encontraron clientes
-              </p>
-            </div>
-
-            <!-- Customer Card -->
+              No se encontraron clientes con los filtros seleccionados.
+            </p>
             <div
-              th:each="customer : ${customers}"
-              class="customer-row bg-white dark:bg-gray-900 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 overflow-hidden hover:shadow-xl transition-all"
-              th:data-name="${customer.fullName.toLowerCase()}"
-              th:data-email="${customer.email.toLowerCase()}"
-              th:data-username="${customer.username.toLowerCase()}"
-              th:data-phone="${customer.phone}"
-              th:data-status="${customer.active ? 'active' : 'inactive'}"
-              th:data-verified="${customer.emailVerified ? 'verified' : 'unverified'}"
-            >
-              <div class="p-5">
-                <div class="flex items-start justify-between mb-4">
-                  <!-- Customer Info -->
-                  <div class="flex items-center gap-3">
-                    <div
-                      class="w-12 h-12 bg-gradient-to-br from-primary to-primary-dark rounded-full flex items-center justify-center text-white font-bold text-lg shadow-lg flex-shrink-0"
-                      th:text="${customer.fullName.substring(0,1).toUpperCase()}"
-                    >
-                      C
-                    </div>
-                    <div>
-                      <h3
-                        class="font-bold text-gray-900 dark:text-white text-base"
-                        th:text="${customer.fullName}"
-                      >
-                        Cliente
-                      </h3>
-                      <span
-                        class="text-xs font-mono text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-md"
-                        th:text="'@' + ${customer.username}"
-                      >
-                        @usuario
-                      </span>
-                    </div>
-                  </div>
-
-                  <!-- Status Badges -->
-                  <div class="flex flex-col gap-1.5 items-end">
-                    <span
-                      th:if="${customer.active}"
-                      class="inline-flex items-center gap-1 px-2.5 py-1 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 rounded-full text-xs font-semibold"
-                    >
-                      <span
-                        class="w-1.5 h-1.5 bg-green-500 rounded-full"
-                      ></span>
-                      Activo
-                    </span>
-                    <span
-                      th:unless="${customer.active}"
-                      class="inline-flex items-center gap-1 px-2.5 py-1 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 rounded-full text-xs font-semibold"
-                    >
-                      <span class="w-1.5 h-1.5 bg-red-500 rounded-full"></span>
-                      Inactivo
-                    </span>
-                    <span
-                      th:if="${customer.emailVerified}"
-                      class="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 rounded-full text-xs font-semibold"
-                    >
-                      <span class="material-symbols-outlined text-sm"
-                        >verified</span
-                      >
-                      Verificado
-                    </span>
-                    <span
-                      th:unless="${customer.emailVerified}"
-                      class="inline-flex items-center gap-1 px-2.5 py-1 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400 rounded-full text-xs font-semibold"
-                    >
-                      <span class="material-symbols-outlined text-sm"
-                        >pending</span
-                      >
-                      Pendiente
-                    </span>
-                  </div>
-                </div>
-
-                <!-- Details Grid -->
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
-                  <div class="flex items-center gap-2">
-                    <span
-                      class="material-symbols-outlined text-gray-400 dark:text-gray-500 text-lg"
-                      >email</span
-                    >
-                    <span
-                      class="text-sm text-gray-700 dark:text-gray-300 truncate"
-                      th:text="${customer.email}"
-                      >email@email.com</span
-                    >
-                  </div>
-                  <div class="flex items-center gap-2">
-                    <span
-                      class="material-symbols-outlined text-gray-400 dark:text-gray-500 text-lg"
-                      >phone</span
-                    >
-                    <span
-                      class="text-sm text-gray-700 dark:text-gray-300"
-                      th:text="${customer.phone}"
-                      >0000000000</span
-                    >
-                  </div>
-                  <div class="flex items-center gap-2">
-                    <span
-                      class="material-symbols-outlined text-gray-400 dark:text-gray-500 text-lg"
-                      >calendar_today</span
-                    >
-                    <span
-                      class="text-xs text-gray-500 dark:text-gray-400"
-                      th:text="${customer.createdAt != null ? #tz.format(customer.createdAt, 'dd/MM/yyyy HH:mm') : 'N/A'}"
-                      >Registro</span
-                    >
-                  </div>
-                  <div class="flex items-center gap-2">
-                    <span
-                      class="material-symbols-outlined text-gray-400 dark:text-gray-500 text-lg"
-                      >schedule</span
-                    >
-                    <span
-                      th:if="${customer.lastAccess != null}"
-                      class="text-xs text-gray-500 dark:text-gray-400"
-                      th:text="${#tz.format(customer.lastAccess, 'dd/MM/yyyy HH:mm')}"
-                    >
-                      Último acceso
-                    </span>
-                    <span
-                      th:unless="${customer.lastAccess != null}"
-                      class="text-xs text-gray-400 dark:text-gray-600 italic"
-                    >
-                      Sin acceso
-                    </span>
-                  </div>
-                </div>
-
-                <!-- Actions -->
-                <div
-                  class="flex items-center gap-2 pt-3 border-t border-gray-100 dark:border-gray-800"
-                >
-                  <button
-                    th:onclick="'viewCustomer(' + ${customer.idCustomer} + ')'"
-                    class="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40 rounded-xl text-sm font-medium transition-colors"
-                  >
-                    <span class="material-symbols-outlined text-lg"
-                      >visibility</span
-                    >
-                    Ver Detalles
-                  </button>
-                  <button
-                    sec:authorize="hasRole('ROLE_ADMIN')"
-                    th:if="${customer.active}"
-                    th:onclick="'toggleCustomerStatus(' + ${customer.idCustomer} + ', false)'"
-                    class="flex items-center justify-center gap-2 px-3 py-2 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-xl text-sm font-medium transition-colors"
-                  >
-                    <span class="material-symbols-outlined text-lg"
-                      >person_off</span
-                    >
-                    Desactivar
-                  </button>
-                  <button
-                    sec:authorize="hasRole('ROLE_ADMIN')"
-                    th:unless="${customer.active}"
-                    th:onclick="'toggleCustomerStatus(' + ${customer.idCustomer} + ', true)'"
-                    class="flex items-center justify-center gap-2 px-3 py-2 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/40 rounded-xl text-sm font-medium transition-colors"
-                  >
-                    <span class="material-symbols-outlined text-lg"
-                      >how_to_reg</span
-                    >
-                    Activar
-                  </button>
-                </div>
-              </div>
-            </div>
+              id="customersCards"
+              class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4"
+            ></div>
           </div>
         </div>
       </main>
@@ -970,6 +811,10 @@
 
         const visibleCountEl = document.getElementById("visibleCount");
         if (visibleCountEl) visibleCountEl.textContent = visible;
+
+        // Las tarjetas se construyen desde las filas: se rehacen con el filtro ya
+        // aplicado, para que las dos vistas no muestren cosas distintas.
+        if (window.CustomersView) CustomersView.render();
       }
 
       searchFilter.addEventListener("input", applyFilters);
@@ -1195,6 +1040,12 @@
           }
         });
       }
+    </script>
+
+    <!-- Vista de tabla / tarjetas de los clientes -->
+    <script th:src="@{/js/customers-view.js}"></script>
+    <script>
+      CustomersView.init({ viewKey: "customersView" });
     </script>
   </body>
 </html>

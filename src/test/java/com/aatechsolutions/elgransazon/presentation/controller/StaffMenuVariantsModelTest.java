@@ -74,7 +74,8 @@ class StaffMenuVariantsModelTest {
                 mock(WebSocketNotificationService.class),
                 mock(DateTimeService.class),
                 mock(ReservationService.class),
-                mock(CashRegisterService.class));
+                mock(CashRegisterService.class),
+                mock(com.aatechsolutions.elgransazon.application.service.CustomerService.class));
         prepare();
 
         ExtendedModelMap model = new ExtendedModelMap();

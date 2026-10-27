@@ -39,6 +39,18 @@ public interface PromotionService {
     List<Promotion> findActivePromotions();
 
     /**
+     * Promotions the landing page can announce: active, within their start/end dates,
+     * <b>ignoring the daily time window and the weekday</b>.
+     *
+     * <p>A promotion that runs "viernes 18:00 a 21:00" is worth showing on Wednesday:
+     * the client reads it today and comes back on Friday. Applying the discount at
+     * checkout still goes through {@link Promotion#isValidNow()}, so showing it never
+     * gives away a price outside the schedule. The card prints the days and the time
+     * window so the client knows when it applies.</p>
+     */
+    List<Promotion> findActiveForLanding();
+
+    /**
      * Find promotions by type
      */
     List<Promotion> findByType(PromotionType type);

@@ -29,7 +29,7 @@ import java.util.Map;
 @AllArgsConstructor
 @Builder
 @EqualsAndHashCode(of = {"idOrder"})
-@ToString(exclude = {"company", "table", "employee", "preparedBy", "paidBy", "deliveredBy", "transferredFrom", "transferRequestedTo", "orderDetails", "payments", "paymentTenders"})
+@ToString(exclude = {"company", "table", "employee", "preparedBy", "paidBy", "deliveredBy", "transferredFrom", "transferRequestedTo", "orderDetails", "payments", "paymentTenders", "loyaltyRedemption"})
 public class Order implements Serializable {
 
     @Id
@@ -108,6 +108,41 @@ public class Order implements Serializable {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_customer", nullable = true)
     private Customer customer;
+
+    // ========== Loyalty (optional) ==========
+
+    /**
+     * Redemption used by this order. Non-null means this is a loyalty
+     * redemption order: it must be closed without collecting money and it
+     * never earns stamps.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "loyalty_redemption_id", nullable = true)
+    private LoyaltyRedemption loyaltyRedemption;
+
+    /** Staff member who linked the sale to a registered customer. */
+    @Size(max = 100, message = "El usuario que asignó la fidelización no puede exceder 100 caracteres")
+    @Column(name = "loyalty_assigned_by", length = 100)
+    private String loyaltyAssignedBy;
+
+    @Column(name = "loyalty_assigned_at")
+    private LocalDateTime loyaltyAssignedAt;
+
+    public boolean isLoyaltyRedemption() {
+        return loyaltyRedemption != null;
+    }
+
+    /**
+     * A pure reward order: its only lines are the $0.00 redemption items, so there
+     * is nothing to collect. The loyalty counter closes it with "Cerrar sin cobro".
+     *
+     * <p>A bill that mixes a redemption with paid items keeps a total &gt; 0 and is
+     * charged at the normal payment screen, like any other bill.</p>
+     */
+    public boolean isZeroLoyaltyRedemption() {
+        return isLoyaltyRedemption()
+                && (total == null || total.compareTo(BigDecimal.ZERO) == 0);
+    }
 
     // Employee who prepared the order (chef)
     @ManyToOne(fetch = FetchType.LAZY)
@@ -436,7 +471,8 @@ public class Order implements Serializable {
      * the button only shows up where the server would actually generate something.</p>
      */
     public boolean canGenerateInvoiceLink() {
-        return isMissing(autofacturaKey) && !isInvoiced();
+        // A $0.00 loyalty reward order has nothing to invoice: no QR, no autofactura.
+        return isMissing(autofacturaKey) && !isInvoiced() && !isZeroLoyaltyRedemption();
     }
 
     /**

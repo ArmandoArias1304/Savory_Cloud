@@ -73,6 +73,17 @@ public interface CustomerService {
      * Check if phone exists within company
      */
     boolean existsByPhoneAndCompany(String phone, Company company);
+
+    /**
+     * Active customers of one company whose phone contains the typed digits.
+     * Returns an empty list until at least 4 digits are provided.
+     */
+    List<Customer> searchActiveByPhone(Company company, String phone);
+
+    /**
+     * Active customer of this company, or empty if missing/inactive.
+     */
+    Optional<Customer> findActiveByIdAndCompany(Long id, Company company);
     
     /**
      * Check if username exists in employees table for a specific company

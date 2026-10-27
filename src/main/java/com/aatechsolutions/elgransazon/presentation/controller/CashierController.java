@@ -49,6 +49,7 @@ public class CashierController {
     private final DateTimeService dateTimeService;
     private final ReservationService reservationService;
     private final CashRegisterService cashRegisterService;
+    private final CustomerService customerService;
 
     public CashierController(
             @Qualifier("cashierOrderService") CashierOrderServiceImpl cashierOrderService,
@@ -64,7 +65,8 @@ public class CashierController {
             WebSocketNotificationService wsNotificationService,
             DateTimeService dateTimeService,
             ReservationService reservationService,
-            CashRegisterService cashRegisterService) {
+            CashRegisterService cashRegisterService,
+            CustomerService customerService) {
         this.cashierOrderService = cashierOrderService;
         this.adminOrderService = adminOrderService;
         this.restaurantTableService = restaurantTableService;
@@ -79,6 +81,7 @@ public class CashierController {
         this.dateTimeService = dateTimeService;
         this.reservationService = reservationService;
         this.cashRegisterService = cashRegisterService;
+        this.customerService = customerService;
     }
 
     /**
@@ -549,6 +552,7 @@ public class CashierController {
             @RequestParam(required = false) String customerPhone,
             @RequestParam(required = false) String deliveryAddress,
             @RequestParam(required = false) String deliveryReferences,
+            @RequestParam(required = false) Long customerId,
             @RequestParam(required = false) java.math.BigDecimal deliveryCost,
             Authentication authentication,
             Model model,
@@ -645,6 +649,7 @@ public class CashierController {
             model.addAttribute("customerPhone", customerPhone);
             model.addAttribute("deliveryAddress", deliveryAddress);
             model.addAttribute("deliveryReferences", deliveryReferences);
+            model.addAttribute("customerId", customerId);
             // For DELIVERY orders, prefill from form value or config default; otherwise 0
             java.math.BigDecimal effectiveDeliveryCost;
             if (type == OrderType.DELIVERY) {
@@ -686,6 +691,7 @@ public class CashierController {
             @RequestParam(value = "comments", required = false) List<String> comments,
             @RequestParam(value = "promotionPrices", required = false) List<String> promotionPrices,
             @RequestParam(value = "promotionIds", required = false) List<String> promotionIds,
+            @RequestParam(value = "customerId", required = false) Long customerId,
             Authentication authentication,
             RedirectAttributes redirectAttributes) {
         
@@ -734,6 +740,7 @@ public class CashierController {
 
             // Set audit fields
             order.setCreatedBy(username);
+            attachRegisteredCustomer(order, customerId);
 
             // Create the order
             Order createdOrder = cashierOrderService.create(order, orderDetails);
@@ -755,6 +762,20 @@ public class CashierController {
                 "Error al crear el pedido: " + e.getMessage());
             return "redirect:/cashier/orders/select-table";
         }
+    }
+
+    private void attachRegisteredCustomer(Order order, Long customerId) {
+        order.setCustomer(null);
+        if (customerId == null) {
+            return;
+        }
+        Company company = CompanyContext.requireCurrentCompany();
+        Customer customer = customerService.findActiveByIdAndCompany(customerId, company)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "No se encontró una cuenta activa con esos datos"));
+        order.setCustomer(customer);
+        order.setCustomerName(customer.getFullName());
+        order.setCustomerPhone(customer.getPhone());
     }
 
     /**
@@ -2009,4 +2030,3 @@ public class CashierController {
         }
     }
 }
-

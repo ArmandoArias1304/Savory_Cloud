@@ -44,6 +44,7 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
      */
     @Query("SELECT o FROM Order o " +
            "LEFT JOIN FETCH o.employee " +
+           "LEFT JOIN FETCH o.customer " +
            "LEFT JOIN FETCH o.preparedBy " +
            "LEFT JOIN FETCH o.paidBy " +
            "LEFT JOIN FETCH o.table " +
@@ -114,6 +115,16 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
            "AND o.status NOT IN ('CANCELLED', 'DELIVERED', 'PAID') " +
            "ORDER BY o.createdAt DESC")
     List<Order> findActiveOrdersWithEmployeeByTableId(@Param("tableId") Long tableId);
+
+    /**
+     * Open dine-in bills of one company, used by the loyalty redemption screen so
+     * a waiter can attach the free items to the table that is already open.
+     */
+    @Query("SELECT o FROM Order o LEFT JOIN FETCH o.table LEFT JOIN FETCH o.customer " +
+           "WHERE o.company = :company AND o.orderType = 'DINE_IN' " +
+           "AND o.status NOT IN ('CANCELLED', 'DELIVERED', 'PAID') " +
+           "ORDER BY o.table.tableNumber ASC, o.createdAt ASC")
+    List<Order> findOpenDineInOrdersByCompany(@Param("company") Company company);
 
     /**
      * Find all orders by employee ID
@@ -393,6 +404,9 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
            "  AND o.facturamaCfdiId IS NULL " +
            "  AND o.facturaGlobalCfdiId IS NULL " +
            "  AND (o.facturaGlobalExcluida IS NULL OR o.facturaGlobalExcluida = false) " +
+           // Un canje de fidelización de $0.00 no es una operación facturable: no entra
+           // a la factura global (ni como concepto ni en los totales del panel).
+           "  AND (o.loyaltyRedemption IS NULL OR o.total > 0) " +
            "  AND NOT EXISTS (SELECT p2 FROM Payment p2 WHERE p2.order = o) " +
            "ORDER BY o.paidAt ASC")
     List<Order> findPaidOrdersPendingGlobalInvoiceByDateRange(

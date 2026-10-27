@@ -18,7 +18,6 @@ import com.aatechsolutions.elgransazon.domain.entity.DayOfWeek;
 import com.aatechsolutions.elgransazon.domain.entity.EmployeeMonthlyStats;
 import com.aatechsolutions.elgransazon.domain.entity.ItemMenu;
 import com.aatechsolutions.elgransazon.domain.entity.Promotion;
-import com.aatechsolutions.elgransazon.domain.entity.PromotionType;
 import com.aatechsolutions.elgransazon.domain.entity.Review;
 import com.aatechsolutions.elgransazon.domain.entity.SocialNetwork;
 import com.aatechsolutions.elgransazon.domain.entity.SystemConfiguration;
@@ -133,19 +132,11 @@ public class HomeController {
         boolean hasCustomerModule = licenseService.hasCustomerModuleAccess();
         model.addAttribute("hasCustomerModule", hasCustomerModule);
         
-        // Load active promotions (one of each type)
-        Promotion promoCombo = promotionService.findActiveByType(PromotionType.BUY_X_PAY_Y)
-            .stream().findFirst().orElse(null);
-        
-        Promotion promoPercent = promotionService.findActiveByType(PromotionType.PERCENTAGE_DISCOUNT)
-            .stream().findFirst().orElse(null);
-        
-        Promotion promoFixed = promotionService.findActiveByType(PromotionType.FIXED_AMOUNT_DISCOUNT)
-            .stream().findFirst().orElse(null);
-        
-        model.addAttribute("promoCombo", promoCombo);
-        model.addAttribute("promoPercent", promoPercent);
-        model.addAttribute("promoFixed", promoFixed);
+        // Promociones para la landing: se anuncian mientras estén activas y dentro de sus
+        // fechas, sin importar la hora del día. La tarjeta imprime los días y el horario,
+        // y el descuento se sigue aplicando solo cuando la promoción está vigente.
+        List<Promotion> landingPromotions = promotionService.findActiveForLanding();
+        model.addAttribute("landingPromotions", landingPromotions);
         
         // Load approved reviews for testimonials section
         List<Review> approvedReviews = reviewService.getApprovedReviews();

@@ -70,6 +70,8 @@ public class OrderController {
     private final DateTimeService dateTimeService;
     private final CashRegisterService cashRegisterService;
     private final OrderTransferService orderTransferService;
+    private final CustomerService customerService;
+    private final CustomerAddressService customerAddressService;
 
     /**
      * Constructor with dependency injection
@@ -104,7 +106,9 @@ public class OrderController {
             ReservationService reservationService,
             DateTimeService dateTimeService,
             CashRegisterService cashRegisterService,
-            OrderTransferService orderTransferService) {
+            OrderTransferService orderTransferService,
+            CustomerService customerService,
+            CustomerAddressService customerAddressService) {
         
         this.chefOrderService = chefOrderService; // Store direct reference
         this.parrilleroOrderService = parrilleroOrderService; // Store direct reference
@@ -138,6 +142,8 @@ public class OrderController {
         this.dateTimeService = dateTimeService;
         this.cashRegisterService = cashRegisterService;
         this.orderTransferService = orderTransferService;
+        this.customerService = customerService;
+        this.customerAddressService = customerAddressService;
     }
 
     /**
@@ -744,6 +750,39 @@ public class OrderController {
     }
 
     /**
+     * Phone lookup of registered customers for the staff order form.
+     * Search is scoped to the current company and only returns active accounts.
+     */
+    @GetMapping("/customers/by-phone")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> searchRegisteredCustomersByPhone(
+            @PathVariable String role,
+            @RequestParam(required = false) String phone,
+            Authentication authentication) {
+        validateRole(role, authentication);
+        Company company = CompanyContext.requireCurrentCompany();
+        List<Customer> matches = customerService.searchActiveByPhone(company, phone);
+        List<Map<String, Object>> customers = new ArrayList<>();
+        for (Customer customer : matches) {
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("id", customer.getIdCustomer());
+            row.put("fullName", customer.getFullName());
+            row.put("phone", customer.getPhone());
+            List<CustomerAddress> addresses =
+                    customerAddressService.getAddressesByCustomerId(customer.getIdCustomer());
+            CustomerAddress address = addresses.isEmpty() ? null : addresses.get(0);
+            row.put("address", address != null ? address.getAddress() : "");
+            row.put("reference", address != null ? address.getReference() : "");
+            row.put("latitude", address != null ? address.getLatitude() : null);
+            row.put("longitude", address != null ? address.getLongitude() : null);
+            customers.add(row);
+        }
+        Map<String, Object> body = new HashMap<>();
+        body.put("customers", customers);
+        return ResponseEntity.ok(body);
+    }
+
+    /**
      * Show menu items selection with cart
      */
     @GetMapping("/menu")
@@ -755,6 +794,7 @@ public class OrderController {
             @RequestParam(required = false) String customerPhone,
             @RequestParam(required = false) String deliveryAddress,
             @RequestParam(required = false) String deliveryReferences,
+            @RequestParam(required = false) Long customerId,
             @RequestParam(required = false) java.math.BigDecimal deliveryCost,
             Authentication authentication,
             Model model,
@@ -859,6 +899,7 @@ public class OrderController {
         model.addAttribute("customerPhone", customerPhone);
         model.addAttribute("deliveryAddress", deliveryAddress);
         model.addAttribute("deliveryReferences", deliveryReferences);
+        model.addAttribute("customerId", customerId);
         // For DELIVERY orders, prefill from form value or config default; otherwise 0
         java.math.BigDecimal effectiveDeliveryCost;
         if (type == OrderType.DELIVERY) {
@@ -1345,6 +1386,9 @@ public class OrderController {
             String deliveryAddress = (String) requestData.get("deliveryAddress");
             String deliveryReferences = (String) requestData.get("deliveryReferences");
             Object deliveryCostRaw = requestData.get("deliveryCost");
+            Long customerId = parseOptionalLong(requestData.get("customerId"));
+            Double deliveryLatitude = parseOptionalDouble(requestData.get("deliveryLatitude"));
+            Double deliveryLongitude = parseOptionalDouble(requestData.get("deliveryLongitude"));
 
             OrderType orderType = orderTypeStr != null ? OrderType.valueOf(orderTypeStr) : OrderType.DINE_IN;
             if (waiterBlockedFromOrderType(role, orderType)) {
@@ -1366,6 +1410,9 @@ public class OrderController {
             order.setCustomerPhone(customerPhone);
             order.setDeliveryAddress(deliveryAddress);
             order.setDeliveryReferences(deliveryReferences);
+            order.setDeliveryLatitude(deliveryLatitude);
+            order.setDeliveryLongitude(deliveryLongitude);
+            attachRegisteredCustomer(order, customerId);
             // Delivery cost: only meaningful for DELIVERY (service layer also enforces this)
             if (orderType == OrderType.DELIVERY) {
                 java.math.BigDecimal dc;
@@ -1486,6 +1533,7 @@ public class OrderController {
             @RequestParam(value = "comments", required = false) List<String> comments,
             @RequestParam(value = "promotionPrices", required = false) List<String> promotionPrices,
             @RequestParam(value = "promotionIds", required = false) List<String> promotionIds,
+            @RequestParam(value = "customerId", required = false) Long customerId,
             Authentication authentication,
             Model model,
             RedirectAttributes redirectAttributes) {
@@ -1582,6 +1630,7 @@ public class OrderController {
 
             // Set audit fields
             order.setCreatedBy(username);
+            attachRegisteredCustomer(order, customerId);
 
             // Create order
             Order created = orderService.create(order, orderDetails);
@@ -1746,6 +1795,7 @@ public class OrderController {
             BindingResult bindingResult,
             @RequestParam(value = "employeeId", required = false) Long employeeId,
             @RequestParam(value = "tableId", required = false) Long tableId,
+            @RequestParam(value = "customerId", required = false) Long customerId,
             Authentication authentication,
             Model model,
             RedirectAttributes redirectAttributes) {
@@ -1825,6 +1875,7 @@ public class OrderController {
 
             // Set audit fields
             order.setUpdatedBy(username);
+            attachRegisteredCustomer(order, customerId);
 
             // Update ONLY basic order info (no items, no stock manipulation)
             // Items are managed separately via add-items and delete-item endpoints
@@ -4449,6 +4500,54 @@ public class OrderController {
         stats.put("othersCollectedRevenue", othersCollectedRevenue);
         
         return stats;
+    }
+
+    /**
+     * Links a registered customer to a staff-created order so loyalty stamps
+     * can be awarded on payment. Name and phone always come from the account.
+     */
+    private void attachRegisteredCustomer(Order order, Long customerId) {
+        if (customerId == null) {
+            order.setCustomer(null);
+            return;
+        }
+        Company company = CompanyContext.requireCurrentCompany();
+        Customer customer = customerService.findActiveByIdAndCompany(customerId, company)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "No se encontró una cuenta activa con esos datos"));
+        order.setCustomer(customer);
+        order.setCustomerName(customer.getFullName());
+        order.setCustomerPhone(customer.getPhone());
+    }
+
+    private Long parseOptionalLong(Object raw) {
+        if (raw == null) {
+            return null;
+        }
+        String value = raw.toString().trim();
+        if (value.isEmpty() || "null".equalsIgnoreCase(value)) {
+            return null;
+        }
+        try {
+            return Long.valueOf(value);
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Cliente inválido");
+        }
+    }
+
+    private Double parseOptionalDouble(Object raw) {
+        if (raw == null) {
+            return null;
+        }
+        String value = raw.toString().trim();
+        if (value.isEmpty() || "null".equalsIgnoreCase(value)) {
+            return null;
+        }
+        try {
+            return Double.valueOf(value);
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 }
 

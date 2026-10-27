@@ -2,6 +2,7 @@ package com.aatechsolutions.elgransazon.domain.repository;
 
 import com.aatechsolutions.elgransazon.domain.entity.Company;
 import com.aatechsolutions.elgransazon.domain.entity.Customer;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -61,6 +62,31 @@ public interface CustomerRepository extends JpaRepository<Customer, Long> {
      * Find all active customers by company
      */
     List<Customer> findByCompanyAndActiveTrue(Company company);
+
+    /**
+     * Loyalty picker: search active customers of one company by name or phone.
+     * Always scoped by company and limited by the caller to avoid leaking the
+     * customer directory or returning an unbounded list.
+     */
+    @Query("SELECT c FROM Customer c " +
+           "WHERE c.company = :company AND c.active = true " +
+           "AND (LOWER(c.fullName) LIKE LOWER(CONCAT('%', :term, '%')) " +
+           "     OR c.phone LIKE CONCAT('%', :term, '%')) " +
+           "ORDER BY c.fullName ASC")
+    List<Customer> searchActiveByCompany(@Param("company") Company company,
+                                         @Param("term") String term,
+                                         Pageable pageable);
+
+    /**
+     * Staff order form: find active customers of one company by phone digits only.
+     */
+    @Query("SELECT c FROM Customer c " +
+           "WHERE c.company = :company AND c.active = true " +
+           "AND c.phone LIKE CONCAT('%', :phone, '%') " +
+           "ORDER BY c.fullName ASC")
+    List<Customer> searchActiveByCompanyAndPhone(@Param("company") Company company,
+                                                 @Param("phone") String phone,
+                                                 Pageable pageable);
     
     /**
      * Find customer by ID and company (for security validation)

@@ -153,6 +153,13 @@ class SidebarCategoriesRenderTest {
                 "minimizado debe quedar como riel de iconos, no desaparecer");
         assertTrue(html.contains("elgransazon-sidebar-collapsed"),
                 "la preferencia debe persistir entre páginas");
+        assertTrue(html.contains("id=\"sidebarScroll\""),
+                "el menú debe tener un contenedor de desplazamiento identificable");
+        assertTrue(html.contains("elgransazon-sidebar-scroll-top"),
+                "la posición del menú debe conservarse al navegar entre páginas");
+        assertTrue(html.contains("sessionStorage.setItem")
+                        && html.contains("scrollContainer.scrollTop = Number(storedScrollTop)"),
+                "el desplazamiento se guarda al navegar y se restaura al cargar");
         assertTrue(html.contains("class=\"nav-label\">Cocina")
                         && html.contains("class=\"nav-label\">Cerrar Sesión"),
                 "los rótulos de los módulos y el de cerrar sesión deben poder ocultarse");

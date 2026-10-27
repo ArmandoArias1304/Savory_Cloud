@@ -690,6 +690,13 @@
                         th:text="${order.status.displayName}"
                       >
                       </span>
+                      <p
+                        th:if="${order.zeroLoyaltyRedemption and order.status.name() != 'PAID'}"
+                        class="mt-1 text-[11px] font-semibold text-amber-600 dark:text-amber-400"
+                        title="Pedido de canje ($0.00): no se cobra. Caja lo cierra en Canjear con «Cerrar sin cobro»."
+                      >
+                        Canje · no se cobra
+                      </p>
                     </td>
 
                     <!-- Actions -->
@@ -782,9 +789,10 @@
                           <i th:unless="${anyInPrep}" class="fas fa-play"></i>
                         </button>
 
-                        <!-- Pay (full-order settlement: all items DELIVERED and no prior partial charges) -->
+                        <!-- Pay (full-order settlement: all items DELIVERED and no prior partial charges).
+                             Un pedido de canje de $0.00 no se cobra: caja lo cierra en la pantalla Canjear. -->
                         <a
-                          th:if="${waiterDeliveryCanCollect and order.paymentMethod != null and order.paymentMethod.name() != 'CASH' and order.paymentMethod.name() != 'TRANSFER' and order.readyToCharge}"
+                          th:if="${waiterDeliveryCanCollect and !order.zeroLoyaltyRedemption and order.paymentMethod != null and order.paymentMethod.name() != 'CASH' and order.paymentMethod.name() != 'TRANSFER' and order.readyToCharge}"
                           th:href="@{/waiter/payments/form/{id}(id=${order.idOrder})}"
                           class="p-2 rounded-lg bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/40 transition-all"
                           title="Procesar Pago"
@@ -794,7 +802,7 @@
 
                         <!-- Cash/Transfer Payment - Disabled (show message, only when waiter collection enabled) -->
                         <button
-                          th:if="${waiterDeliveryCanCollect and order.status.name() == 'DELIVERED' && (order.paymentMethod.name() == 'CASH' || order.paymentMethod.name() == 'TRANSFER')}"
+                          th:if="${waiterDeliveryCanCollect and !order.zeroLoyaltyRedemption and order.status.name() == 'DELIVERED' && (order.paymentMethod.name() == 'CASH' || order.paymentMethod.name() == 'TRANSFER')}"
                           class="p-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-600 cursor-not-allowed"
                           disabled
                           title="Los pagos en efectivo y transferencia solo pueden ser procesados por el cajero"
@@ -804,12 +812,22 @@
 
                         <!-- Dividir cuenta por persona / cobrar a la persona que se va (solo ítems ENTREGADOS) -->
                         <a
-                          th:if="${waiterDeliveryCanCollect and order.paymentMethod != null and order.paymentMethod.name() != 'CASH' and order.paymentMethod.name() != 'TRANSFER' and order.canCollectDeparture()}"
+                          th:if="${waiterDeliveryCanCollect and !order.zeroLoyaltyRedemption and order.paymentMethod != null and order.paymentMethod.name() != 'CASH' and order.paymentMethod.name() != 'TRANSFER' and order.canCollectDeparture()}"
                           th:href="@{/waiter/payments/form/{id}(id=${order.idOrder}, split='items')}"
                           class="p-2 rounded-lg bg-teal-50 dark:bg-teal-900/20 text-teal-600 dark:text-teal-400 hover:bg-teal-100 dark:hover:bg-teal-900/40 transition-all"
                           title="Cobrar a la persona que se va (solo los ítems ya entregados)"
                         >
                           <i class="fas fa-users"></i>
+                        </a>
+
+                        <!-- Canje: no se cobra. Lleva a Canjear; caja lo cierra con "Cerrar sin cobro". -->
+                        <a
+                          th:if="${order.zeroLoyaltyRedemption and order.status.name() != 'PAID' and order.status.name() != 'CANCELLED'}"
+                          th:href="@{/loyalty}"
+                          class="p-2 rounded-lg bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-all"
+                          title="Pedido de canje ($0.00): no se cobra. Caja lo cierra en Canjear con «Cerrar sin cobro»."
+                        >
+                          <i class="fas fa-gift"></i>
                         </a>
 
                         <!-- Cancel (PENDING, IN_PREPARATION, READY) -->
@@ -940,6 +958,7 @@
                             <i class="fas fa-receipt"></i>
                           </a>
                           <a
+                            th:if="${!order.zeroLoyaltyRedemption}"
                             th:href="@{/autofactura/{key}(key=${payment.autofacturaKey})}"
                             class="p-1.5 rounded-lg bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 hover:bg-purple-100 dark:hover:bg-purple-900/40 transition-all"
                             title="Autofactura de esta cuenta"

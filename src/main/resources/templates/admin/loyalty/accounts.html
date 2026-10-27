@@ -1,0 +1,143 @@
+<!doctype html>
+<html
+  lang="es"
+  xmlns:th="http://www.thymeleaf.org"
+  xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title th:text="${globalSystemConfig.systemName + ' - Tarjetas de fidelización'}">
+      Tarjetas de fidelización
+    </title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@300;400;500;600;700"
+      rel="stylesheet"
+    />
+    <div th:replace="~{fragments/theme :: themeResources}"></div>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: { DEFAULT: "#38e07b", dark: "#2bc866" },
+              "background-light": "#f8faf9",
+              "background-dark": "#0f1713",
+            },
+            fontFamily: { display: ["Work Sans", "system-ui", "sans-serif"] },
+          },
+        },
+      };
+    </script>
+    <div th:replace="~{fragments/sidebar :: sidebarStyles}"></div>
+  </head>
+  <body
+    class="bg-gradient-to-br from-background-light to-gray-50 dark:from-background-dark dark:to-gray-900 font-display text-gray-800 dark:text-gray-200 overflow-hidden"
+  >
+    <div th:replace="~{fragments/sidebar :: menuControls}"></div>
+
+    <div class="flex min-h-screen h-screen overflow-hidden">
+      <div th:replace="~{fragments/sidebar :: sidebar(activeMenu='loyalty')}"></div>
+
+      <main class="flex-1 overflow-y-auto h-screen">
+        <div class="p-4 sm:p-6 lg:p-8 pt-20 lg:pt-8 pb-32">
+          <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6 sm:mb-8">
+            <div>
+              <h2 class="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white mb-1 flex items-center gap-3">
+                <span class="material-symbols-outlined text-3xl sm:text-4xl text-primary">style</span>
+                Tarjetas de clientes
+              </h2>
+              <p class="text-sm sm:text-base text-gray-600 dark:text-gray-400">
+                Saldo de sellos por cliente. Cada ajuste manual queda registrado en el historial.
+              </p>
+            </div>
+            <a th:href="@{/admin/loyalty}"
+               class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-300 dark:border-slate-600 font-semibold hover:bg-white dark:hover:bg-slate-800">
+              <span class="material-symbols-outlined">arrow_back</span>
+              Configuración
+            </a>
+          </div>
+
+          <div th:if="${successMessage}" class="mb-6 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl">
+            <p class="text-green-800 dark:text-green-300" th:text="${successMessage}"></p>
+          </div>
+          <div th:if="${errorMessage}" class="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
+            <p class="text-red-800 dark:text-red-300" th:text="${errorMessage}"></p>
+          </div>
+
+          <div class="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-6">
+            <div th:if="${#lists.isEmpty(accounts)}" class="text-center py-12 text-gray-500 dark:text-gray-400">
+              <span class="material-symbols-outlined text-5xl mb-3">style</span>
+              <p class="font-semibold text-gray-700 dark:text-gray-300">Todavía no hay tarjetas</p>
+              <p class="text-sm mt-1">Se crean automáticamente cuando un cliente registrado acumula o canjea sellos.</p>
+            </div>
+
+            <div th:unless="${#lists.isEmpty(accounts)}" class="overflow-x-auto">
+              <table class="min-w-full text-sm">
+                <thead>
+                  <tr class="text-left text-xs uppercase tracking-wider text-gray-500 border-b border-gray-200 dark:border-slate-700">
+                    <th class="py-3 pr-4">Cliente</th>
+                    <th class="py-3 pr-4">Teléfono</th>
+                    <th class="py-3 pr-4">Sellos</th>
+                    <th class="py-3 pr-4">Acumulados</th>
+                    <th class="py-3 pr-4">Última actividad</th>
+                    <th sec:authorize="hasRole('ROLE_ADMIN')" class="py-3">Ajuste manual</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr th:each="account : ${accounts}" class="border-b border-gray-100 dark:border-slate-700/60 align-top">
+                    <td class="py-4 pr-4">
+                      <p class="font-semibold text-gray-900 dark:text-white" th:text="${account.customer.fullName}"></p>
+                      <p class="text-xs text-gray-500" th:text="${'@' + account.customer.username}"></p>
+                    </td>
+                    <td class="py-4 pr-4" th:text="${account.customer.phone}"></td>
+                    <td class="py-4 pr-4">
+                      <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-primary/10 text-primary font-bold">
+                        <span class="material-symbols-outlined text-base">loyalty</span>
+                        <span th:text="${account.safeBalance() + ' / ' + program.stampsRequired}">0 / 10</span>
+                      </span>
+                    </td>
+                    <td class="py-4 pr-4">
+                      <p th:text="${account.safeLifetimeEarned() + ' ganados'}"></p>
+                      <p class="text-xs text-gray-500" th:text="${account.safeLifetimeRedeemed() + ' canjeados'}"></p>
+                    </td>
+                    <td class="py-4 pr-4 text-gray-500"
+                        th:text="${account.lastEarnedAt != null ? #tz.format(account.lastEarnedAt, 'dd/MM/yyyy HH:mm') : 'Sin movimientos'}"></td>
+                    <td sec:authorize="hasRole('ROLE_ADMIN')" class="py-4">
+                      <form th:action="@{/admin/loyalty/accounts/{id}/adjust(id=${account.id})}" method="post"
+                            class="flex flex-col sm:flex-row gap-2">
+                        <input type="number" name="delta" required
+                               class="w-24 rounded-lg border-gray-300 dark:border-slate-600 dark:bg-slate-900 text-sm"
+                               placeholder="+1 / -1" />
+                        <input type="text" name="reason" maxlength="255"
+                               class="flex-1 min-w-[140px] rounded-lg border-gray-300 dark:border-slate-600 dark:bg-slate-900 text-sm"
+                               placeholder="Motivo" />
+                        <button type="submit"
+                                class="px-3 py-1.5 rounded-lg bg-gray-900 dark:bg-white text-white dark:text-gray-900 font-semibold text-xs hover:opacity-90">
+                          Aplicar
+                        </button>
+                      </form>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-4">
+            Los ajustes manuales solo los puede hacer un administrador. Para corregir un error usa un ajuste;
+            nunca se edita un movimiento anterior.
+          </p>
+        </div>
+      </main>
+    </div>
+  </body>
+</html>

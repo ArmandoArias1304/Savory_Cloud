@@ -1,0 +1,919 @@
+<!doctype html>
+<html
+  lang="es"
+  xmlns:th="http://www.thymeleaf.org"
+  xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title th:text="${globalSystemConfig.systemName + ' - Canjear recompensas'}">Canjear recompensas</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@300;400;500;600;700"
+      rel="stylesheet"
+    />
+    <div th:replace="~{fragments/theme :: themeResources}"></div>
+    <div th:if="${layout == 'admin'}" th:replace="~{fragments/sidebar :: sidebarStyles}"></div>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <!-- Confirmaciones del personal (cerrar sin cobro) -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: { DEFAULT: "#38e07b", dark: "#2bc866" },
+              "background-light": "#f8faf9",
+              "background-dark": "#0f1713",
+            },
+            fontFamily: { display: ["Work Sans", "system-ui", "sans-serif"] },
+          },
+        },
+      };
+    </script>
+  </head>
+  <body
+    class="bg-gradient-to-br from-background-light to-gray-50 dark:from-background-dark dark:to-gray-900 font-display min-h-screen text-gray-800 dark:text-gray-200"
+    th:classappend="${layout == 'admin'} ? 'overflow-hidden' : ''"
+  >
+    <th:block th:if="${layout == 'admin'}">
+      <div th:replace="~{fragments/sidebar :: menuControls}"></div>
+    </th:block>
+
+    <div
+      class="flex min-h-screen"
+      th:classappend="${layout == 'admin'} ? 'h-screen overflow-hidden' : ''"
+    >
+      <th:block th:if="${layout == 'admin'}">
+        <div th:replace="~{fragments/sidebar :: sidebar(activeMenu='redeem')}"></div>
+      </th:block>
+
+      <main
+        class="flex-1 min-w-0"
+        th:classappend="${layout == 'admin'} ? 'overflow-y-auto h-screen' : ''"
+      >
+        <!-- Top bar for cashier / waiter (admin and manager use the sidebar) -->
+        <nav
+          th:unless="${layout == 'admin'}"
+          class="bg-gradient-to-r from-primary to-primary-dark shadow-lg"
+        >
+          <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex flex-wrap items-center justify-between gap-3 min-h-16 py-2">
+              <div class="flex items-center gap-3">
+                <span class="material-symbols-outlined text-white text-3xl">loyalty</span>
+                <div>
+                  <p
+                    class="text-white font-bold text-lg leading-tight"
+                    th:text="${globalSystemConfig.systemName}"
+                  >
+                    Restaurante
+                  </p>
+                  <p class="text-white/80 text-xs">
+                    Canjear recompensas ·
+                    <span th:text="${layout == 'waiter' ? 'Mesero' : 'Caja'}">Caja</span>
+                  </p>
+                </div>
+              </div>
+              <div class="flex flex-wrap items-center gap-2">
+                <a
+                  th:if="${layout == 'waiter'}"
+                  th:href="@{/waiter/orders}"
+                  class="inline-flex items-center gap-1 px-3 py-2 rounded-lg bg-white/15 text-white text-sm font-semibold hover:bg-white/25"
+                >
+                  <span class="material-symbols-outlined text-lg">receipt_long</span> Pedidos
+                </a>
+                <a
+                  th:if="${layout == 'waiter'}"
+                  th:href="@{/waiter/dashboard}"
+                  class="inline-flex items-center gap-1 px-3 py-2 rounded-lg bg-white/15 text-white text-sm font-semibold hover:bg-white/25"
+                >
+                  <span class="material-symbols-outlined text-lg">home</span> Inicio
+                </a>
+                <a
+                  th:if="${layout == 'cashier'}"
+                  th:href="@{/cashier/orders}"
+                  class="inline-flex items-center gap-1 px-3 py-2 rounded-lg bg-white/15 text-white text-sm font-semibold hover:bg-white/25"
+                >
+                  <span class="material-symbols-outlined text-lg">receipt_long</span> Pedidos
+                </a>
+                <a
+                  th:if="${layout == 'cashier'}"
+                  th:href="@{/cashier/dashboard}"
+                  class="inline-flex items-center gap-1 px-3 py-2 rounded-lg bg-white/15 text-white text-sm font-semibold hover:bg-white/25"
+                >
+                  <span class="material-symbols-outlined text-lg">home</span> Inicio
+                </a>
+              </div>
+            </div>
+          </div>
+        </nav>
+
+        <div
+          class="p-4 sm:p-6 lg:p-8"
+          th:classappend="${layout == 'admin'} ? 'pt-20 lg:pt-8 pb-32' : 'max-w-7xl mx-auto'"
+        >
+          <div th:if="${successMessage}" class="mb-5 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl">
+            <p class="text-green-800 dark:text-green-300" th:text="${successMessage}"></p>
+          </div>
+          <div th:if="${errorMessage}" class="mb-5 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
+            <p class="text-red-800 dark:text-red-300" th:text="${errorMessage}"></p>
+          </div>
+          <div th:if="${stampCycleOpen == false}"
+               class="mb-5 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-800 rounded-xl">
+            <p class="font-semibold text-amber-900 dark:text-amber-200">El ciclo de sellos venció</p>
+            <p class="text-sm text-amber-800 dark:text-amber-300 mt-1">
+              Los saldos se reiniciaron a cero. Un administrador debe configurar una nueva fecha límite o quitar el límite para volver a acumular y canjear.
+            </p>
+          </div>
+          <div th:if="${program.stampCycleDeadline != null and stampCycleOpen}"
+               class="mb-5 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl text-sm text-blue-900 dark:text-blue-200">
+            Sellos válidos hasta
+            <strong th:text="${#temporals.format(program.stampCycleDeadline, 'dd/MM/yyyy')}">31/12/2026</strong>.
+          </div>
+
+          <div class="mb-6">
+            <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+              <span class="material-symbols-outlined text-3xl text-primary">redeem</span>
+              Canjear recompensas
+            </h1>
+            <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+              Busca al cliente por nombre o teléfono, revisa sus sellos y arma el canje con los
+              artículos que va a llevar.
+            </p>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Search -->
+            <section class="lg:col-span-1 bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-5">
+              <h2 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2 mb-1">
+                <span class="material-symbols-outlined text-primary">person_search</span>
+                Buscar cliente
+              </h2>
+              <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                Por nombre o teléfono registrado.
+              </p>
+
+              <form th:action="@{/loyalty}" method="get" class="flex gap-2">
+                <input
+                  type="text"
+                  name="term"
+                  th:value="${term}"
+                  placeholder="Nombre o teléfono"
+                  class="flex-1 rounded-xl border-gray-300 dark:border-slate-600 dark:bg-slate-900"
+                />
+                <button
+                  type="submit"
+                  class="px-4 py-2 rounded-xl bg-primary text-white font-semibold hover:bg-primary-dark"
+                >
+                  <span class="material-symbols-outlined align-middle">search</span>
+                </button>
+              </form>
+
+              <div
+                th:if="${searchResults != null and #lists.isEmpty(searchResults)}"
+                class="mt-4 text-sm text-gray-500"
+              >
+                No se encontraron clientes activos con ese dato. El cliente debe tener una cuenta
+                registrada para acumular y canjear sellos.
+              </div>
+
+              <div
+                th:if="${searchResults != null and !#lists.isEmpty(searchResults)}"
+                class="mt-4 space-y-2"
+              >
+                <a
+                  th:each="customer : ${searchResults}"
+                  th:href="@{/loyalty(customerId=${customer.id}, term=${term}, orderId=${selectedOrderId})}"
+                  class="flex items-center justify-between gap-3 p-3 rounded-xl border border-gray-200 dark:border-slate-700 hover:border-primary hover:bg-primary/5 transition-colors"
+                  th:classappend="${selectedCustomer != null and selectedCustomer.idCustomer == customer.id} ? 'border-primary bg-primary/5' : ''"
+                >
+                  <div class="min-w-0">
+                    <p class="font-semibold truncate" th:text="${customer.fullName}"></p>
+                    <p class="text-xs text-gray-500" th:text="${customer.phone}"></p>
+                  </div>
+                  <span class="shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/10 text-primary font-bold text-sm">
+                    <span class="material-symbols-outlined text-base">star</span>
+                    <span th:text="${customer.balance}">0</span>
+                  </span>
+                </a>
+              </div>
+            </section>
+
+            <!-- Customer card, catalog and basket -->
+            <section class="lg:col-span-2 bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-5 sm:p-6">
+              <div th:if="${selectedCustomer == null}" class="text-center py-14 text-gray-500 dark:text-gray-400">
+                <span class="material-symbols-outlined text-6xl mb-3 text-primary/50">style</span>
+                <p class="font-semibold text-gray-700 dark:text-gray-300">Selecciona un cliente</p>
+                <p class="text-sm mt-1">
+                  Busca por nombre o teléfono para ver sus sellos y armar el canje.
+                </p>
+              </div>
+
+              <div th:if="${selectedCustomer != null}">
+                <div class="flex flex-wrap items-start justify-between gap-3 mb-5">
+                  <div>
+                    <p class="text-xs uppercase tracking-wider text-primary font-semibold">
+                      Tarjeta de fidelidad
+                    </p>
+                    <h2
+                      class="text-2xl font-bold text-gray-900 dark:text-white"
+                      th:text="${selectedCustomer.fullName}"
+                    ></h2>
+                    <p
+                      class="text-sm text-gray-500"
+                      th:text="${selectedCustomer.phone + ' · @' + selectedCustomer.username}"
+                    ></p>
+                  </div>
+                  <div class="text-right">
+                    <p
+                      class="text-3xl font-extrabold text-primary"
+                      th:text="${selectedAccount != null ? selectedAccount.safeBalance() : 0}"
+                    >
+                      0
+                    </p>
+                    <p class="text-xs text-gray-500">sellos disponibles</p>
+                  </div>
+                </div>
+
+                <div class="flex flex-wrap gap-1.5 mb-3">
+                  <span
+                    th:each="i : ${#numbers.sequence(1, program.stampsRequired)}"
+                    class="w-8 h-8 rounded-full flex items-center justify-center"
+                    th:classappend="${selectedAccount != null and i <= selectedAccount.safeBalance() ? 'bg-primary text-white' : 'bg-gray-100 text-gray-400 dark:bg-slate-700 dark:text-slate-500'}"
+                  >
+                    <span class="material-symbols-outlined text-base">star</span>
+                  </span>
+                </div>
+
+                <p class="text-sm text-gray-600 dark:text-gray-400 mb-5">
+                  <span th:text="${selectedAccount != null ? selectedAccount.safeBalance() : 0}">0</span>
+                  sello(s) ·
+                  <span class="font-semibold text-primary" th:text="${affordableRewards}">0</span>
+                  de
+                  <span th:text="${#lists.size(rewards)}">0</span>
+                  recompensa(s) del catálogo a su alcance ahora.
+                </p>
+
+                <div
+                  th:if="${selectedAccount == null}"
+                  class="mb-5 p-3 rounded-xl bg-orange-50 dark:bg-orange-900/20 text-sm text-orange-800 dark:text-orange-300"
+                >
+                  Este cliente aún no tiene movimientos. Puede empezar a acumular con su próxima
+                  compra pagada.
+                </div>
+
+                <div class="grid grid-cols-1 xl:grid-cols-5 gap-5">
+                  <!-- Catalog -->
+                  <div class="xl:col-span-3">
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-1 flex items-center gap-2">
+                      <span class="material-symbols-outlined text-primary">local_offer</span>
+                      Recompensas disponibles
+                    </h3>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                      Toca "Agregar" para sumar artículos al canje. Cada recompensa descuenta sus
+                      sellos y manda el producto a la estación que lo prepara.
+                    </p>
+
+                    <div th:if="${#lists.isEmpty(rewards)}" class="text-sm text-gray-500">
+                      El administrador todavía no configuró recompensas.
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div
+                        th:each="reward : ${rewards}"
+                        class="rounded-xl border border-gray-200 dark:border-slate-700 p-4 flex flex-col gap-2"
+                        th:attr="data-reward-id=${reward.id},
+                                 data-reward-name=${reward.name},
+                                 data-reward-cost=${reward.stampsCost},
+                                 data-reward-units=${reward.safeFreeQuantity()},
+                                 data-reward-item=${reward.itemMenu != null ? reward.itemMenu.name : reward.name}"
+                      >
+                        <div class="flex items-start justify-between gap-2">
+                          <div class="min-w-0">
+                            <p
+                              class="font-semibold text-gray-900 dark:text-white"
+                              th:text="${reward.name}"
+                            >
+                              Café gratis
+                            </p>
+                            <p class="text-xs text-gray-500" th:text="${reward.displayValue}">
+                              1 × Café
+                            </p>
+                          </div>
+                          <span class="shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/10 text-primary font-bold text-xs">
+                            <span class="material-symbols-outlined text-sm">star</span>
+                            <span th:text="${reward.stampsCost}">5</span>
+                          </span>
+                        </div>
+
+                        <p
+                          th:if="${selectedAccount != null and selectedAccount.safeBalance() < reward.stampsCost}"
+                          class="text-xs text-orange-600 dark:text-orange-400"
+                          th:text="${'Le faltan ' + (reward.stampsCost - selectedAccount.safeBalance()) + ' sello(s)'}"
+                        ></p>
+
+                        <button
+                          type="button"
+                          th:attr="data-add-reward=${reward.id}"
+                          class="mt-auto inline-flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-primary text-white text-sm font-semibold hover:bg-primary-dark"
+                        >
+                          <span class="material-symbols-outlined text-base">add_shopping_cart</span>
+                          Agregar
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Basket -->
+                  <div class="xl:col-span-2">
+                    <form
+                      id="redeemForm"
+                      th:action="@{/loyalty/redeem}"
+                      method="post"
+                      class="rounded-xl border-2 border-primary/30 bg-primary/5 dark:bg-primary/10 p-4"
+                    >
+                      <input type="hidden" name="customerId" th:value="${selectedCustomer.idCustomer}" />
+                      <input type="hidden" name="items" id="itemsInput" value="" />
+
+                      <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-1 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-primary">shopping_basket</span>
+                        Canje
+                      </h3>
+
+                      <div class="mt-2">
+                        <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">
+                          Destino del canje
+                        </label>
+                        <select
+                          name="orderId"
+                          class="w-full rounded-lg border-gray-300 dark:border-slate-600 dark:bg-slate-900 text-sm"
+                        >
+                          <option value="">Pedido nuevo sin mesa ($0.00)</option>
+                          <option
+                            th:each="open : ${openOrders}"
+                            th:value="${open.orderId}"
+                            th:text="${open.tableLabel + ' · ' + open.customerName + ' · #' + open.orderNumber}"
+                            th:selected="${selectedOrderId != null and selectedOrderId == open.orderId}"
+                          ></option>
+                        </select>
+                        <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-1">
+                          Si eliges una cuenta abierta, los artículos se agregan a esa cuenta y
+                          salen a cocina/barra como cualquier otro pedido. Un pedido nuevo de
+                          $0.00 lo cierra caja sin cobro cuando esté listo.
+                        </p>
+                      </div>
+
+                      <div id="cartEmpty" class="py-6 text-center text-sm text-gray-500 dark:text-gray-400">
+                        <span class="material-symbols-outlined text-3xl text-primary/50">shopping_basket</span>
+                        <p class="mt-1">Todavía no agregaste recompensas.</p>
+                      </div>
+
+                      <div id="cartLines" class="mt-2"></div>
+
+                      <div class="mt-3 pt-3 border-t border-primary/20 flex items-center justify-between text-sm">
+                        <span class="text-gray-600 dark:text-gray-300">Total a canjear</span>
+                        <span class="font-bold text-primary">
+                          <span id="cartTotal">0</span> sello(s)
+                        </span>
+                      </div>
+                      <div class="flex items-center justify-between text-sm">
+                        <span class="text-gray-600 dark:text-gray-300">Saldo restante</span>
+                        <span class="font-semibold">
+                          <span id="cartRemaining">0</span> sello(s)
+                        </span>
+                      </div>
+
+                      <p
+                        id="cartWarning"
+                        class="hidden mt-2 text-xs font-semibold text-red-600 dark:text-red-400"
+                      ></p>
+
+                      <button
+                        type="submit"
+                        id="redeemSubmit"
+                        disabled
+                        class="mt-4 w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-white font-bold hover:bg-primary-dark disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        <span class="material-symbols-outlined">redeem</span>
+                        Canjear y mandar a preparar
+                      </button>
+                    </form>
+
+
+                  </div>
+                </div>
+
+                <div th:if="${recentEvents != null and !#lists.isEmpty(recentEvents)}" class="mt-6">
+                  <h3 class="text-sm font-semibold uppercase tracking-wider text-gray-500 mb-2">
+                    Últimos movimientos
+                  </h3>
+                  <div class="divide-y divide-gray-100 dark:divide-slate-700">
+                    <div
+                      th:each="event : ${recentEvents}"
+                      class="py-2 flex items-center justify-between gap-3 text-sm"
+                    >
+                      <div>
+                        <p class="font-medium" th:text="${event.eventType.displayName}">Sello ganado</p>
+                        <p th:if="${event.order != null}" class="text-xs text-gray-500"
+                           th:text="|Pedido: ${event.order.orderNumber}|"></p>
+                        <p th:if="${event.redemption != null and event.redemption.reward != null}" class="text-xs text-gray-500"
+                           th:text="|Recompensa: ${event.redemption.reward.name}|"></p>
+                        <p class="text-xs text-gray-500" th:text="${event.reason}"></p>
+                      </div>
+                      <div class="text-right">
+                        <p
+                          class="font-bold"
+                          th:classappend="${event.stamps > 0 ? 'text-green-600' : 'text-red-500'}"
+                          th:text="${(event.stamps > 0 ? '+' : '') + event.stamps}"
+                        >
+                          +1
+                        </p>
+                        <p class="text-xs text-gray-500" th:text="${#tz.format(event.createdAt, 'dd/MM/yyyy HH:mm')}"></p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
+
+          <!-- Standalone $0 reward orders still to be closed.
+               Cada fila lleva su estado y se refresca en vivo por WebSocket cuando
+               cocina, barra o parrilla avanzan el pedido. -->
+          <section
+            id="rewardOrdersSection"
+            th:if="${showSettlement and pendingRewardOrders != null and !#lists.isEmpty(pendingRewardOrders)}"
+            class="mt-6 bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-5 sm:p-6"
+          >
+            <div class="flex flex-wrap items-start justify-between gap-3 mb-4">
+              <div>
+                <h2 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2 mb-1">
+                  <span class="material-symbols-outlined text-primary">pending_actions</span>
+                  Pedidos de recompensa por cerrar
+                </h2>
+                <p class="text-sm text-gray-500 dark:text-gray-400">
+                  Son pedidos de $0.00. Entrega el artículo y ciérralos aquí cuando estén listos, sin
+                  pasar por caja. El estado se actualiza solo cuando cocina, barra o parrilla lo avanzan.
+                </p>
+              </div>
+              <button
+                type="button"
+                id="rewardOrdersRefresh"
+                class="hidden inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 text-xs font-semibold hover:bg-amber-200 dark:hover:bg-amber-900/50"
+              >
+                <span class="material-symbols-outlined text-base">sync</span>
+                Hay cambios · Actualizar
+              </button>
+            </div>
+
+            <div id="rewardOrdersList" class="space-y-2">
+              <div
+                th:each="rewardOrder : ${pendingRewardOrders}"
+                class="reward-order-row flex flex-wrap items-center justify-between gap-3 p-3 rounded-xl border border-gray-200 dark:border-slate-700 transition-all"
+                th:attr="data-order-id=${rewardOrder.orderId},data-order-number=${rewardOrder.orderNumber},data-status=${rewardOrder.statusCode}"
+              >
+                <div class="min-w-0">
+                  <p class="font-semibold text-gray-900 dark:text-white">
+                    <span th:text="${'#' + rewardOrder.orderNumber}">#ORD-1</span>
+                    <span class="text-gray-400">·</span>
+                    <span th:text="${rewardOrder.rewardName}">Café gratis</span>
+                  </p>
+                  <p class="text-xs text-gray-500" th:text="${rewardOrder.customerName}">Ana López</p>
+                </div>
+                <div class="flex items-center gap-3">
+                  <span
+                    class="reward-order-status inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-700 dark:bg-slate-700 dark:text-gray-200"
+                    th:text="${rewardOrder.statusLabel}"
+                  >
+                    Listo
+                  </span>
+                  <form
+                    class="reward-settle"
+                    th:classappend="${rewardOrder.canBeSettled} ? '' : 'hidden'"
+                    th:action="@{/loyalty/orders/{id}/settle(id=${rewardOrder.orderId})}"
+                    method="post"
+                  >
+                    <button
+                      type="submit"
+                      class="inline-flex items-center gap-1 px-3 py-2 rounded-lg bg-primary text-white text-sm font-semibold hover:bg-primary-dark"
+                      th:attr="data-order-number=${rewardOrder.orderNumber},data-reward=${rewardOrder.rewardName}"
+                    >
+                      <span class="material-symbols-outlined text-base">task_alt</span>
+                      Cerrar sin cobro
+                    </button>
+                  </form>
+                  <span
+                    class="reward-pending text-xs text-gray-500 dark:text-gray-400"
+                    th:classappend="${rewardOrder.canBeSettled} ? 'hidden' : ''"
+                  >
+                    Esperando a que esté listo
+                  </span>
+                </div>
+              </div>
+            </div>
+
+          </section>
+        </div>
+      </main>
+    </div>
+
+    <th:block th:if="${layout == 'admin'}">
+      <div th:replace="~{fragments/sidebar :: sidebarScripts}"></div>
+    </th:block>
+
+    <script th:if="${selectedCustomer != null}" th:inline="javascript">
+      (function () {
+        const available = /*[[${selectedAccount != null ? selectedAccount.safeBalance() : 0}]]*/ 0;
+        const catalog = {};
+
+        document.querySelectorAll("[data-reward-id]").forEach(function (card) {
+          const id = card.getAttribute("data-reward-id");
+          catalog[id] = {
+            name: card.getAttribute("data-reward-name") || "",
+            item: card.getAttribute("data-reward-item") || "",
+            cost: parseInt(card.getAttribute("data-reward-cost"), 10) || 0,
+            units: parseInt(card.getAttribute("data-reward-units"), 10) || 1,
+          };
+        });
+
+        const cart = new Map();
+        const linesEl = document.getElementById("cartLines");
+        const emptyEl = document.getElementById("cartEmpty");
+        const totalEl = document.getElementById("cartTotal");
+        const remainingEl = document.getElementById("cartRemaining");
+        const itemsInput = document.getElementById("itemsInput");
+        const submitBtn = document.getElementById("redeemSubmit");
+        const warningEl = document.getElementById("cartWarning");
+
+        function smallButton(label, handler) {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.textContent = label;
+          button.className =
+            "w-7 h-7 rounded-lg border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-200 hover:border-primary hover:text-primary";
+          button.addEventListener("click", handler);
+          return button;
+        }
+
+        function change(id, delta) {
+          const current = cart.get(id) || 0;
+          const next = Math.min(10, current + delta);
+          if (next <= 0) {
+            cart.delete(id);
+          } else {
+            cart.set(id, next);
+          }
+          render();
+        }
+
+        function render() {
+          linesEl.replaceChildren();
+          let total = 0;
+
+          cart.forEach(function (quantity, id) {
+            const reward = catalog[id];
+            if (!reward) {
+              return;
+            }
+            const lineTotal = reward.cost * quantity;
+            total += lineTotal;
+
+            const row = document.createElement("div");
+            row.className =
+              "flex items-start justify-between gap-2 py-2 border-b border-gray-100 dark:border-slate-700";
+
+            const info = document.createElement("div");
+            info.className = "min-w-0";
+            const name = document.createElement("p");
+            name.className = "font-medium text-sm text-gray-900 dark:text-white truncate";
+            name.textContent = reward.name;
+            const detail = document.createElement("p");
+            detail.className = "text-xs text-gray-500";
+            detail.textContent = reward.units * quantity + " × " + reward.item;
+            info.append(name, detail);
+
+            const controls = document.createElement("div");
+            controls.className = "flex items-center gap-1 shrink-0";
+            const quantityLabel = document.createElement("span");
+            quantityLabel.className = "w-6 text-center text-sm font-semibold";
+            quantityLabel.textContent = quantity;
+            controls.append(
+              smallButton("−", function () {
+                change(id, -1);
+              }),
+              quantityLabel,
+              smallButton("+", function () {
+                change(id, 1);
+              }),
+              smallButton("✕", function () {
+                cart.delete(id);
+                render();
+              })
+            );
+
+            const price = document.createElement("p");
+            price.className = "text-sm font-bold text-primary shrink-0";
+            price.textContent = lineTotal + " ★";
+
+            row.append(info, controls, price);
+            linesEl.appendChild(row);
+          });
+
+          const remaining = available - total;
+          emptyEl.style.display = cart.size === 0 ? "block" : "none";
+          totalEl.textContent = total;
+          remainingEl.textContent = remaining;
+          remainingEl.className = remaining < 0 ? "font-bold text-red-600" : "font-semibold";
+
+          if (cart.size > 0 && remaining < 0) {
+            warningEl.textContent = "Te faltan " + Math.abs(remaining) + " sello(s) para este canje.";
+            warningEl.classList.remove("hidden");
+          } else {
+            warningEl.textContent = "";
+            warningEl.classList.add("hidden");
+          }
+
+          const parts = [];
+          cart.forEach(function (quantity, id) {
+            parts.push(id + ":" + quantity);
+          });
+          itemsInput.value = parts.join(",");
+          submitBtn.disabled = cart.size === 0 || remaining < 0;
+        }
+
+        document.querySelectorAll("[data-add-reward]").forEach(function (button) {
+          button.addEventListener("click", function () {
+            const id = button.getAttribute("data-add-reward");
+            cart.set(id, Math.min(10, (cart.get(id) || 0) + 1));
+            render();
+          });
+        });
+
+        render();
+      })();
+    </script>
+
+    <!-- Confirmación al cerrar sin cobro y estado en vivo de los pedidos de recompensa:
+         cocina, barra y parrilla avisan por WebSocket cuando el pedido cambia de estado. -->
+    <script th:inline="javascript">
+      window.loyaltyStaffConfig = {
+        companyId: /*[[${companyId != null ? companyId : 0}]]*/ 0,
+        settlementEnabled: /*[[${showSettlement}]]*/ false,
+      };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+    <script>
+      (function () {
+        const config = window.loyaltyStaffConfig || { companyId: 0, settlementEnabled: false };
+
+        function swalTheme() {
+          return document.documentElement.classList.contains("dark")
+            ? { background: "#1e293b", color: "#e2e8f0" }
+            : {};
+        }
+
+        function escapeHtml(value) {
+          return String(value == null ? "" : value).replace(/[&<>"']/g, function (character) {
+            return {
+              "&": "&amp;",
+              "<": "&lt;",
+              ">": "&gt;",
+              '"': "&quot;",
+              "'": "&#39;",
+            }[character];
+          });
+        }
+
+        /* ---------- 1) Confirmación antes de cerrar un pedido sin cobro ---------- */
+        document.querySelectorAll("form.reward-settle").forEach(function (form) {
+          form.addEventListener("submit", function (event) {
+            event.preventDefault();
+            const button = form.querySelector("button[type='submit']");
+            const orderNumber = button ? button.dataset.orderNumber : "";
+            const reward = button ? button.dataset.reward : "";
+
+            if (typeof Swal === "undefined") {
+              HTMLFormElement.prototype.submit.call(form);
+              return;
+            }
+
+            Swal.fire(
+              Object.assign(
+                {
+                  title: "¿Cerrar el pedido sin cobro?",
+                  html:
+                    '<p class="text-sm">El pedido <strong>#' +
+                    escapeHtml(orderNumber) +
+                    "</strong>" +
+                    (reward ? " (<em>" + escapeHtml(reward) + "</em>)" : "") +
+                    " se cerrará como <strong>pagado en $0.00</strong> y ya no se podrá cobrar.</p>",
+                  icon: "question",
+                  showCancelButton: true,
+                  confirmButtonText: "Sí, cerrar sin cobro",
+                  cancelButtonText: "Cancelar",
+                  confirmButtonColor: "#38e07b",
+                  cancelButtonColor: "#64748b",
+                  reverseButtons: true,
+                  focusCancel: true,
+                },
+                swalTheme()
+              )
+            ).then(function (result) {
+              if (!result.isConfirmed) {
+                return;
+              }
+              // Se envía el formulario sin volver a pasar por este mismo aviso.
+              HTMLFormElement.prototype.submit.call(form);
+            });
+          });
+        });
+
+        /* ---------- 2) Estado en vivo de los pedidos de recompensa ---------- */
+        if (!config.settlementEnabled || !config.companyId) {
+          return;
+        }
+
+        const section = document.getElementById("rewardOrdersSection");
+        const list = document.getElementById("rewardOrdersList");
+        const refreshButton = document.getElementById("rewardOrdersRefresh");
+        const announcedOrders = new Set();
+
+        const STATUS_LABELS = {
+          TO_ACCEPT: "Por aceptar",
+          PENDING: "Pendiente",
+          IN_PREPARATION: "En preparación",
+          READY: "Listo",
+          ON_THE_WAY: "En camino",
+          DELIVERED: "Entregado",
+          PAID: "Pagado",
+          CANCELLED: "Cancelado",
+        };
+
+        function showRefreshHint(orderNumber) {
+          if (refreshButton) {
+            refreshButton.classList.remove("hidden");
+            return;
+          }
+          if (typeof Swal === "undefined" || announcedOrders.has(orderNumber)) {
+            return;
+          }
+          announcedOrders.add(orderNumber);
+          Swal.fire(
+            Object.assign(
+              {
+                toast: true,
+                position: "top-end",
+                icon: "info",
+                title: "Nuevo pedido de recompensa #" + (orderNumber || ""),
+                text: "Actualiza la pantalla para verlo en la lista.",
+                showConfirmButton: true,
+                confirmButtonText: "Actualizar",
+                timer: 12000,
+                timerProgressBar: true,
+              },
+              swalTheme()
+            )
+          ).then(function (result) {
+            if (result.isConfirmed) {
+              window.location.reload();
+            }
+          });
+        }
+
+        function applyStatus(row, status) {
+          const badge = row.querySelector(".reward-order-status");
+          if (badge) {
+            badge.textContent = STATUS_LABELS[status] || status;
+          }
+
+          const ready = status === "READY" || status === "DELIVERED";
+          const settleForm = row.querySelector(".reward-settle");
+          const pendingNote = row.querySelector(".reward-pending");
+          if (settleForm) {
+            settleForm.classList.toggle("hidden", !ready);
+          }
+          if (pendingNote) {
+            pendingNote.classList.toggle("hidden", ready);
+          }
+          row.setAttribute("data-status", status);
+
+          // Recién listo: se resalta un momento para que caja lo note.
+          if (ready) {
+            row.classList.add("ring-2", "ring-primary/50");
+            setTimeout(function () {
+              row.classList.remove("ring-2", "ring-primary/50");
+            }, 5000);
+          }
+        }
+
+        function handleNotification(notification) {
+          if (!notification || notification.orderId == null || !notification.status) {
+            return;
+          }
+          const status = notification.status;
+          const isZeroOrder = notification.total != null && Number(notification.total) === 0;
+          // Un pedido que se cierra o cancela no es "nuevo": no hay nada que avisar.
+          const isNewZeroOrder =
+            isZeroOrder && status !== "PAID" && status !== "CANCELLED";
+
+          if (!list || !section) {
+            if (isNewZeroOrder) {
+              showRefreshHint(notification.orderNumber);
+            }
+            return;
+          }
+
+          const row = list.querySelector('[data-order-id="' + notification.orderId + '"]');
+          if (!row) {
+            if (isNewZeroOrder) {
+              showRefreshHint(notification.orderNumber);
+            }
+            return;
+          }
+
+          if (status === "PAID" || status === "CANCELLED") {
+            row.remove();
+            if (!list.querySelector(".reward-order-row")) {
+              section.classList.add("hidden");
+            }
+            return;
+          }
+
+          applyStatus(row, status);
+        }
+
+        let stompClient = null;
+        let reconnectAttempts = 0;
+        let reconnectDelay = 1000;
+        const MAX_RECONNECT_ATTEMPTS = 10;
+        const MAX_RECONNECT_DELAY = 30000;
+
+        function connectOrderUpdates() {
+          if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+            return;
+          }
+
+          const socket = new SockJS("/ws");
+          stompClient = Stomp.over(socket);
+          stompClient.debug = null;
+
+          stompClient.connect(
+            {},
+            function () {
+              reconnectAttempts = 0;
+              reconnectDelay = 1000;
+
+              ["/topic/admin/kitchen/", "/topic/orders/detail/"].forEach(function (base) {
+                stompClient.subscribe(base + config.companyId, function (message) {
+                  try {
+                    handleNotification(JSON.parse(message.body));
+                  } catch (error) {
+                    // Un mensaje ilegible no debe tumbar la suscripción.
+                  }
+                });
+              });
+            },
+            function () {
+              reconnectAttempts += 1;
+              if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+                const delay = Math.min(
+                  reconnectDelay * Math.pow(2, reconnectAttempts - 1),
+                  MAX_RECONNECT_DELAY
+                );
+                setTimeout(connectOrderUpdates, delay);
+              }
+            }
+          );
+        }
+
+        if (refreshButton) {
+          refreshButton.addEventListener("click", function () {
+            window.location.reload();
+          });
+        }
+
+        window.addEventListener("beforeunload", function () {
+          if (stompClient && stompClient.connected) {
+            try {
+              stompClient.disconnect();
+            } catch (error) {
+              // ignorar
+            }
+          }
+        });
+
+        if (typeof SockJS !== "undefined" && typeof Stomp !== "undefined") {
+          connectOrderUpdates();
+        }
+      })();
+    </script>
+  </body>
+</html>

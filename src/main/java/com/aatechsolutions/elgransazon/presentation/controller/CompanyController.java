@@ -2,7 +2,10 @@ package com.aatechsolutions.elgransazon.presentation.controller;
 
 import com.aatechsolutions.elgransazon.application.service.CompanyService;
 import com.aatechsolutions.elgransazon.application.service.FacturamaService;
+import com.aatechsolutions.elgransazon.application.service.FeatureAccessService;
 import com.aatechsolutions.elgransazon.domain.entity.Company;
+import com.aatechsolutions.elgransazon.domain.entity.FeatureKey;
+import com.aatechsolutions.elgransazon.domain.entity.SystemLicense;
 import com.aatechsolutions.elgransazon.domain.entity.FacturamaConfig;
 import com.aatechsolutions.elgransazon.domain.repository.CompanyRepository;
 import com.aatechsolutions.elgransazon.domain.repository.GlobalInvoiceRepository;
@@ -43,6 +46,7 @@ public class CompanyController {
     private final OrderRepository orderRepository;
     private final PaymentRepository paymentRepository;
     private final GlobalInvoiceRepository globalInvoiceRepository;
+    private final FeatureAccessService featureAccessService;
 
     /**
      * List all companies with pagination
@@ -205,7 +209,79 @@ public class CompanyController {
                 + globalInvoiceRepository.countByCompany(company);
         model.addAttribute("totalCfdis", totalCfdis);
 
+        // Optional add-ons sold separately from the main license.
+        model.addAttribute("loyaltyFeature",
+                featureAccessService.find(company, FeatureKey.LOYALTY).orElse(null));
+        model.addAttribute("featureKeys", FeatureKey.values());
+
         return "programmer/companies/view";
+    }
+
+    /** Enable (or re-enable) the loyalty add-on for a company. */
+    @PostMapping("/{id}/features/loyalty/enable")
+    public String enableLoyalty(@PathVariable Long id,
+                                @RequestParam(defaultValue = "1") int months,
+                                @RequestParam(required = false) BigDecimal price,
+                                @RequestParam(required = false) String notes,
+                                Authentication authentication,
+                                RedirectAttributes redirectAttributes) {
+        try {
+            if (months < 1 || months > 60) {
+                throw new IllegalArgumentException("La vigencia debe estar entre 1 y 60 meses");
+            }
+            Company company = companyRepository.findById(id)
+                    .orElseThrow(() -> new IllegalArgumentException("Empresa no encontrada"));
+            if (company.getSystemLicense() == null
+                    || company.getSystemLicense().getPackageType() != SystemLicense.PackageType.ECOMMERCE) {
+                throw new IllegalStateException(
+                        "La fidelización es un add-on del paquete ECOMMERCE. Cambia el paquete de la empresa primero.");
+            }
+            featureAccessService.enable(company, FeatureKey.LOYALTY,
+                    java.time.LocalDateTime.now().plusMonths(months),
+                    price, "MONTHLY", notes, authentication.getName());
+            redirectAttributes.addFlashAttribute("success",
+                    "Add-on de fidelización activado por " + months + " mes(es).");
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            redirectAttributes.addFlashAttribute("error", e.getMessage());
+        }
+        return "redirect:/programmer/companies/" + id;
+    }
+
+    /** Extend an existing loyalty add-on. */
+    @PostMapping("/{id}/features/loyalty/renew")
+    public String renewLoyalty(@PathVariable Long id,
+                               @RequestParam(defaultValue = "1") int months,
+                               @RequestParam(required = false) BigDecimal price,
+                               Authentication authentication,
+                               RedirectAttributes redirectAttributes) {
+        try {
+            Company company = companyRepository.findById(id)
+                    .orElseThrow(() -> new IllegalArgumentException("Empresa no encontrada"));
+            featureAccessService.renew(company, FeatureKey.LOYALTY, months, price, authentication.getName());
+            redirectAttributes.addFlashAttribute("success",
+                    "Add-on de fidelización renovado por " + months + " mes(es).");
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            redirectAttributes.addFlashAttribute("error", e.getMessage());
+        }
+        return "redirect:/programmer/companies/" + id;
+    }
+
+    /** Disable the loyalty add-on without deleting any customer data. */
+    @PostMapping("/{id}/features/loyalty/disable")
+    public String disableLoyalty(@PathVariable Long id,
+                                 @RequestParam(required = false) String reason,
+                                 Authentication authentication,
+                                 RedirectAttributes redirectAttributes) {
+        try {
+            Company company = companyRepository.findById(id)
+                    .orElseThrow(() -> new IllegalArgumentException("Empresa no encontrada"));
+            featureAccessService.disable(company, FeatureKey.LOYALTY, reason, authentication.getName());
+            redirectAttributes.addFlashAttribute("success",
+                    "Add-on de fidelización desactivado. Los datos de los clientes se conservan.");
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            redirectAttributes.addFlashAttribute("error", e.getMessage());
+        }
+        return "redirect:/programmer/companies/" + id;
     }
 
     /**

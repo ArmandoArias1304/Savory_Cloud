@@ -88,6 +88,10 @@ public class SecurityConfig {
                                                 .requestMatchers("/internal-production/**")
                                                 .hasAnyRole("ADMIN", "MANAGER", "CHEF")
                                                 .requestMatchers("/admin/**").hasAnyRole("ADMIN", "MANAGER")
+                                                // Canje de fidelización: pantalla compartida por meseros,
+                                                // caja, gerentes y administradores.
+                                                .requestMatchers("/loyalty", "/loyalty/**")
+                                                .hasAnyRole("WAITER", "CASHIER", "ADMIN", "MANAGER")
                                                 .requestMatchers("/waiter/**").hasRole("WAITER")
                                                 .requestMatchers("/chef/**", "/barista/**", "/parrillero/**")
                                                 .hasAnyRole("CHEF", "BARISTA", "PARRILLERO")
