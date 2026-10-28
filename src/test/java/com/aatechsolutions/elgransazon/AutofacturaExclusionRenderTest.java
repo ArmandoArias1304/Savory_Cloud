@@ -71,6 +71,7 @@ class AutofacturaExclusionRenderTest {
                 .idPayment(2L)
                 .paymentFolio("PAY-1")
                 .total(new BigDecimal("75.00"))
+                .paymentMethod(PaymentMethodType.CASH)
                 .paidAt(LocalDateTime.now())
                 .autofacturaKey("payment-key")
                 .facturaGlobalExcluida(excluded)
@@ -135,6 +136,8 @@ class AutofacturaExclusionRenderTest {
 
         assertTrue(html.contains(FORM_MARKER), "the self-invoice form should render");
         assertFalse(html.contains(EXCLUDED_HEADING), "the excluded notice should not render");
+        assertTrue(html.contains("Método de pago"), "whole-order summary should show payment method");
+        assertTrue(html.contains("Efectivo"), "whole-order summary should show the recorded method");
     }
 
     @Test
@@ -143,5 +146,7 @@ class AutofacturaExclusionRenderTest {
 
         assertTrue(html.contains(FORM_MARKER), "the self-invoice form should render");
         assertFalse(html.contains(EXCLUDED_HEADING), "the excluded notice should not render");
+        assertTrue(html.contains("Método de pago"), "split-account summary should show payment method");
+        assertTrue(html.contains("Efectivo"), "split-account summary should show the recorded method");
     }
 }

@@ -545,6 +545,125 @@ html.ui-glass .dash-card.dash-card-accent:hover {
     inset 0 1px 0 rgba(255, 255, 255, 0.6);
 }
 
+.stat-amount {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: clamp(1.4rem, 2.5vw, 2.4rem);
+  line-height: 1.1;
+  letter-spacing: -0.04em;
+  font-weight: 800;
+  word-break: break-word;
+}
+
+.stat-amount--accent {
+  color: #ffffff;
+  text-shadow: 0 1px 0 rgba(15, 23, 42, 0.06);
+}
+
+.popular-item-row {
+  position: relative;
+  padding: 0.25rem 0.15rem 0.25rem 0;
+  opacity: 0;
+  animation: popular-item-in 0.6s cubic-bezier(0.2, 0.9, 0.2, 1) forwards;
+  animation-delay: var(--bar-delay, 0s);
+  transition: transform 0.25s ease, filter 0.25s ease;
+}
+
+.popular-item-row:hover {
+  transform: translateX(4px);
+  filter: saturate(1.06);
+}
+
+.popular-item-rank {
+  position: relative;
+  transform: scale(1);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.popular-item-row:hover .popular-item-rank {
+  transform: scale(1.04) translateY(-1px);
+}
+
+.popular-item-name {
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.popular-item-track {
+  position: relative;
+  box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.08);
+}
+
+.popular-item-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 0;
+  max-width: 100%;
+  opacity: 0.95;
+  animation: popular-fill-grow 1.15s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation-delay: calc(var(--bar-delay, 0s) + 0.1s);
+  box-shadow: 0 0 18px rgba(56, 224, 123, 0.2);
+}
+
+.popular-item-count {
+  line-height: 1;
+  letter-spacing: -0.04em;
+  transition: transform 0.25s ease;
+}
+
+.popular-item-row:hover .popular-item-count {
+  transform: scale(1.04);
+}
+
+.popular-item-label {
+  margin-top: 0.15rem;
+}
+
+@keyframes popular-item-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes popular-fill-grow {
+  from {
+    width: 0;
+    opacity: 0.4;
+  }
+  to {
+    width: var(--bar-width, 0%);
+    opacity: 1;
+  }
+}
+
+@media (max-width: 640px) {
+  .stat-amount {
+    font-size: clamp(1.2rem, 6vw, 2rem);
+    letter-spacing: -0.03em;
+  }
+
+  .popular-item-row {
+    gap: 0.75rem;
+  }
+
+  .popular-item-name {
+    font-size: 0.95rem;
+  }
+
+  .popular-item-count {
+    font-size: 1.2rem;
+  }
+}
+
 /* ---------- Modo oscuro ---------- */
 html.dark.ui-glass .dash-canvas::before {
   background:

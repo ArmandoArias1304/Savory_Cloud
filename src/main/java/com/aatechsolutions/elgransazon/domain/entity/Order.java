@@ -29,7 +29,7 @@ import java.util.Map;
 @AllArgsConstructor
 @Builder
 @EqualsAndHashCode(of = {"idOrder"})
-@ToString(exclude = {"company", "table", "employee", "preparedBy", "paidBy", "deliveredBy", "transferredFrom", "transferRequestedTo", "orderDetails", "payments", "paymentTenders", "loyaltyRedemption"})
+@ToString(exclude = {"company", "table", "employee", "preparedBy", "paidBy", "deliveredBy", "transferredFrom", "transferRequestedTo", "orderDetails", "payments", "paymentTenders", "paymentMethodCorrections", "loyaltyRedemption"})
 public class Order implements Serializable {
 
     @Id
@@ -191,6 +191,11 @@ public class Order implements Serializable {
     @SQLRestriction("id_payment IS NULL")
     @Builder.Default
     private List<PaymentTender> paymentTenders = new ArrayList<>();
+
+    @OneToMany(mappedBy = "order", fetch = FetchType.LAZY)
+    @OrderBy("changedAt DESC")
+    @Builder.Default
+    private List<PaymentMethodCorrection> paymentMethodCorrections = new ArrayList<>();
 
     /**
      * True when this order was paid through split accounts (1..N Payment rows).

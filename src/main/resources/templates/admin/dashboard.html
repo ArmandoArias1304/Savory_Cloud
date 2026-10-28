@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="es">
   <head>
     <meta charset="utf-8" />
@@ -370,10 +370,10 @@
                   Ingresos Totales
                 </p>
                 <p
-                  class="text-2xl sm:text-3xl font-bold text-white counter-animate"
-                  th:text="${stats.totalHistoricalRevenue != null ? '$' + #numbers.formatDecimal(stats.totalHistoricalRevenue, 1, 2) : '$0.00'}"
+                  class="stat-amount stat-amount--accent text-white counter-animate"
+                  th:text="${stats.totalHistoricalRevenue != null ? '$' + T(java.lang.String).format(T(java.util.Locale).forLanguageTag('en-US'), '%,.2f', stats.totalHistoricalRevenue) : '$0.00'}"
                 >
-                  $4,500
+                  $4,500.00
                 </p>
                 <p class="text-xs text-white/70 mt-1">Desde el inicio</p>
               </div>
@@ -417,38 +417,41 @@
                   <!-- Loop through popular items from database -->
                   <div
                     th:each="item, iterStat : ${stats.popularItems}"
-                    class="flex items-center gap-3 sm:gap-4"
+                    class="popular-item-row flex items-center gap-3 sm:gap-4"
+                    th:style="'--bar-width: ' + ${item.percentage} + '%; --bar-delay: ' + ${iterStat.index} + 's'"
                   >
                     <div
-                      th:class="'w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br ' + ${item.badgeGradient} + ' rounded-xl flex items-center justify-center text-white font-bold shadow-lg flex-shrink-0'"
+                      th:class="'popular-item-rank w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br ' + ${item.badgeGradient} + ' rounded-xl flex items-center justify-center text-white font-bold shadow-lg flex-shrink-0'"
                       th:classappend="${item.rank == 1} ? 'shadow-primary/30' : (${item.rank == 2} ? 'shadow-blue-500/30' : (${item.rank == 3} ? 'shadow-purple-500/30' : 'shadow-orange-500/30'))"
                     >
                       <span th:text="${item.rank}">1</span>
                     </div>
                     <div class="flex-1 min-w-0">
-                      <p
-                        class="font-semibold text-sm sm:text-base text-gray-800 dark:text-gray-200 mb-2"
-                        th:text="${item.itemName}"
-                      >
-                        Nombre del plato
-                      </p>
+                      <div class="mb-2 flex items-center justify-between gap-3">
+                        <p
+                          class="popular-item-name font-semibold text-sm sm:text-base text-gray-800 dark:text-gray-200"
+                          th:text="${item.itemName}"
+                        >
+                          Nombre del plato
+                        </p>
+                      </div>
                       <div
-                        class="relative w-full bg-gray-200 dark:bg-gray-800 rounded-full h-2.5 sm:h-3 overflow-hidden"
+                        class="popular-item-track relative w-full bg-gray-200 dark:bg-gray-800 rounded-full h-3 sm:h-4 overflow-hidden"
                       >
                         <div
-                          th:class="'progress-bar absolute top-0 left-0 h-full rounded-full ' + (${item.rank == 1} ? 'bg-gradient-to-r from-primary to-primary-dark shadow-glow' : (${item.rank == 2} ? 'bg-gradient-to-r from-blue-400 to-blue-600' : (${item.rank == 3} ? 'bg-gradient-to-r from-purple-400 to-purple-600' : 'bg-gradient-to-r from-orange-400 to-orange-600')))"
+                          th:class="'popular-item-fill progress-bar absolute top-0 left-0 h-full rounded-full ' + (${item.rank == 1} ? 'bg-gradient-to-r from-primary to-primary-dark shadow-glow' : (${item.rank == 2} ? 'bg-gradient-to-r from-blue-400 to-blue-600' : (${item.rank == 3} ? 'bg-gradient-to-r from-purple-400 to-purple-600' : 'bg-gradient-to-r from-orange-400 to-orange-600')))"
                           th:style="'width: ' + ${item.percentage} + '%'"
                         ></div>
                       </div>
                     </div>
                     <div class="text-right flex-shrink-0">
                       <p
-                        th:class="'text-xl sm:text-2xl font-bold text-' + ${item.color}"
+                        th:class="'popular-item-count text-xl sm:text-2xl font-bold text-' + ${item.color}"
                         th:text="${item.orderCount}"
                       >
                         0
                       </p>
-                      <p class="text-xs text-gray-500 dark:text-gray-400">
+                      <p class="popular-item-label text-xs text-gray-500 dark:text-gray-400">
                         órdenes
                       </p>
                     </div>

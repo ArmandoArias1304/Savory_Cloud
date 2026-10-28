@@ -240,6 +240,13 @@
               <span class="text-sm text-gray-500 dark:text-gray-400">Fecha</span>
               <span class="text-gray-900 dark:text-white" th:text="${#tz.format(payment != null ? payment.paidAt : order.createdAt, 'dd/MM/yyyy HH:mm')}"></span>
             </div>
+            <div class="flex justify-between gap-4">
+              <span class="text-sm text-gray-500 dark:text-gray-400">Método de pago</span>
+              <span
+                class="text-right font-medium text-gray-900 dark:text-white"
+                th:text="${payment != null ? payment.paymentMethodsDisplay : order.paymentMethodsDisplay}"
+              ></span>
+            </div>
           </div>
 
           <!-- Items -->
