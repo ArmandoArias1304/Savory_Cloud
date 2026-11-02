@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="es" xmlns:th="http://www.thymeleaf.org">
   <head>
     <meta charset="utf-8" />
@@ -511,6 +511,7 @@
                     th:data-order-table="${order.table != null ? order.table.tableNumber : ''}"
                     th:data-order-type="${order.orderType != null ? order.orderType.name() : ''}"
                     th:data-order-type-label="${order.orderType != null ? order.orderType.displayName : ''}"
+                    th:data-order-preparation="${order.estimatedPreparationLabel ?: ''}"
                     th:data-order-customer="${order.customerName}"
                     th:data-order-payment="${order.paymentMethodsDisplay}"
                     th:data-order-total="${'$ ' + #numbers.formatDecimal(order.total, 1, 2)}"
@@ -1029,7 +1030,7 @@
                 <span th:text="${(currentPage - 1) * pageSize + 1}">1</span> -
                 <span
                   th:text="${T(java.lang.Math).min(currentPage * pageSize, totalElements)}"
-                  >15</span
+                  >16</span
                 >
                 de <span th:text="${totalElements}">0</span> pedidos
               </div>
@@ -2034,5 +2035,6 @@
 
     <!-- Script del Sistema de Temas -->
     <div th:replace="~{fragments/theme :: themeScript}"></div>
+    <div th:replace="~{fragments/waiter-navigation :: navigation}"></div>
   </body>
 </html>

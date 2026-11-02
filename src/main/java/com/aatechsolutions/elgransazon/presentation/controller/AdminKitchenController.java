@@ -103,7 +103,7 @@ public class AdminKitchenController {
         };
         
         // Pagination
-        int pageSize = 15;
+        int pageSize = 16;
         int totalOrders = displayOrders.size();
         int totalPages = Math.max(1, (int) Math.ceil((double) totalOrders / pageSize));
         int currentPage = Math.max(0, Math.min(page, totalPages - 1));
@@ -181,7 +181,7 @@ public class AdminKitchenController {
             .toList();
         
         // Pagination
-        int pageSize = 15;
+        int pageSize = 16;
         int totalOrders = filteredOrders.size();
         int totalPages = (int) Math.ceil((double) totalOrders / pageSize);
         int currentPage = Math.max(0, Math.min(page, totalPages - 1));

@@ -185,6 +185,14 @@ class CashierOrdersCardsViewTest {
         assertTrue(page.contains("function closeOrderDetailPanel()"), "cerrarlo");
         assertTrue(page.contains("/cashier/orders/${orderId}/detail-panel"),
                 "el endpoint que sirve el panel (fragments/order-detail-panel)");
+        assertTrue(page.contains("row.getAttribute(\"data-order-preparation\")"),
+                "la tarjeta incluye el tiempo estimado de preparación");
+        assertTrue(page.contains("th:data-order-preparation=\"${order.estimatedPreparationLabel ?: ''}\""),
+                "las dos tablas publican el tiempo que lee la tarjeta");
+        assertTrue(readTemplate(Path.of(
+                        "src/main/resources/templates/fragments/order-detail-panel.html"))
+                        .contains("Tiempo estimado de preparación:"),
+                "el modal también muestra el tiempo estimado");
         assertTrue(page.contains("event.target.closest(\"a, button\")"),
                 "los botones de la tarjeta no abren el modal");
         assertTrue(page.contains("event.key === \"Escape\""), "y con Escape");

@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<html lang="es" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -290,9 +290,17 @@
       /*]]>*/
 
       // ── State ──
+      var AGENT_ID =
+        sessionStorage.getItem("printerAgentId") ||
+        (window.crypto && crypto.randomUUID
+          ? crypto.randomUUID()
+          : Date.now().toString(36) + Math.random().toString(36).slice(2));
+      sessionStorage.setItem("printerAgentId", AGENT_ID);
       var printers = {}; // { KITCHEN: "HP TM-T20", BAR: "...", PARRILLERO: "..." }
       var qzConnected = false;
       var stompClient = null;
+      var agentActivated = false;
+      var agentHeartbeat = null;
 
       // ── Helpers ──
       function log(msg, type) {
@@ -799,7 +807,69 @@
         }
       }
 
+      async function activatePrinterAgent(force) {
+        var response = await fetch("/api/printer-agent/activate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ agentId: AGENT_ID, force: force }),
+        });
+
+        if (response.status === 409) {
+          var activeAgent = await response.json();
+          var confirmation = await Swal.fire({
+            icon: "warning",
+            title: "Ya hay un agente de impresión activo",
+            text:
+              (activeAgent.activeUsername || "Otra persona") +
+              " ya tiene un agente prendido en este restaurante. Activar otro podría duplicar la impresión.",
+            showCancelButton: true,
+            confirmButtonText: "Activar de todos modos",
+            cancelButtonText: "Cancelar",
+            confirmButtonColor: "#dc2626",
+            reverseButtons: true,
+          });
+          if (!confirmation.isConfirmed) {
+            setWsStatus(false, "Agente no activado");
+            log("Activación cancelada para evitar impresiones duplicadas", "warn");
+            return;
+          }
+          return activatePrinterAgent(true);
+        }
+
+        if (!response.ok) {
+          throw new Error("No se pudo verificar el agente activo (HTTP " + response.status + ")");
+        }
+
+        agentActivated = true;
+        agentHeartbeat = setInterval(sendAgentHeartbeat, 30000);
+        log("Agente de impresión activado", "success");
+        loadPrinters();
+        connectQZ();
+        connectWebSocket();
+      }
+
+      async function sendAgentHeartbeat() {
+        try {
+          var response = await fetch(
+            "/api/printer-agent/heartbeat?agentId=" + encodeURIComponent(AGENT_ID),
+            { method: "POST" },
+          );
+          if (!response.ok) {
+            log("No se pudo renovar la sesión del agente (HTTP " + response.status + ")", "warn");
+          }
+        } catch (e) {
+          log("No se pudo renovar la sesión del agente: " + e, "warn");
+        }
+      }
+
       window.addEventListener("beforeunload", function () {
+        if (agentHeartbeat) clearInterval(agentHeartbeat);
+        if (agentActivated) {
+          navigator.sendBeacon(
+            "/api/printer-agent/deactivate?agentId=" + encodeURIComponent(AGENT_ID),
+            new Blob(),
+          );
+        }
         if (stompClient && stompClient.connected) stompClient.disconnect();
         if (qzConnected && qz.websocket.isActive()) qz.websocket.disconnect();
       });
@@ -1050,10 +1120,20 @@
             "w-2 h-2 rounded-full bg-blue-400 inline-block";
           document.getElementById("ticketStatusText").textContent = "Guardada";
         }
-        loadPrinters();
-        connectQZ();
-        connectWebSocket();
+        setWsStatus(false, "Verificando si ya hay otro agente activo...");
+        activatePrinterAgent(false).catch(function (error) {
+          setWsStatus(false, "No se pudo activar el agente de impresión");
+          log(error.message || String(error), "error");
+          Swal.fire({
+            icon: "error",
+            title: "No se pudo activar el agente",
+            text: error.message || "Ocurrió un error al verificar los agentes activos.",
+          });
+        });
       });
     </script>
+    <th:block sec:authorize="hasRole('ROLE_CASHIER')">
+      <div th:replace="~{fragments/cashier-navigation :: navigation}"></div>
+    </th:block>
   </body>
 </html>

@@ -2,6 +2,7 @@ package com.aatechsolutions.elgransazon;
 
 import com.aatechsolutions.elgransazon.domain.entity.Company;
 import com.aatechsolutions.elgransazon.domain.entity.Employee;
+import com.aatechsolutions.elgransazon.domain.entity.ItemMenu;
 import com.aatechsolutions.elgransazon.domain.entity.Order;
 import com.aatechsolutions.elgransazon.domain.entity.OrderDetail;
 import com.aatechsolutions.elgransazon.domain.entity.OrderDetailComplement;
@@ -102,6 +103,37 @@ class OrderDetailPanelRenderTest {
         assertTrue(html.contains("$250.00"), "total del pedido");
         assertTrue(html.contains("Ana López"), "cliente");
         assertTrue(html.contains("Atendido por"), "quién atiende la mesa");
+    }
+
+    @Test
+    void laCabeceraRespetaElTipoCuandoElPedidoNoTieneMesa() {
+        Order order = orderedAtTable(7);
+        order.setTable(null);
+        order.setOrderType(OrderType.TAKEOUT);
+
+        String html = renderPanel(order);
+
+        assertTrue(html.contains("Para pasar a recoger"), "muestra el tipo del pedido");
+        assertTrue(html.contains("shopping_bag"), "usa el icono de recoger");
+        assertFalse(flat(html).contains(">Sin mesa</span"),
+                "no sustituye el tipo por el texto genérico");
+    }
+
+    @Test
+    void elPanelMuestraElTiempoEstimadoDePreparacion() {
+        Order order = orderedAtTable(7);
+        ItemMenu menuItem = new ItemMenu();
+        menuItem.setIdItemMenu(91L);
+        menuItem.setPreparationTimeMinutes(25);
+        OrderDetail tacos = detail("Tacos al pastor", 1, "50.00");
+        tacos.setItemMenu(menuItem);
+        order.addOrderDetail(tacos);
+
+        String html = renderPanel(order);
+
+        assertTrue(flat(html).contains("Tiempo estimado de preparación:"),
+                "el modal identifica el tiempo estimado");
+        assertTrue(html.contains("≈ 25 min"), "el estimado se calcula de los platillos de la orden");
     }
 
     @Test

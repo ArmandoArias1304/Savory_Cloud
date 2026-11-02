@@ -611,7 +611,6 @@
           const reservedNow = card.getAttribute("data-reserved-now") === "true";
           const minutesUntil = card.getAttribute("data-minutes-until");
           const avgConsumption = card.getAttribute("data-avg-consumption");
-          const occupiedBy = card.getAttribute("data-occupied-by");
 
           card.addEventListener("click", function () {
             // Handle CONFLICT status
@@ -638,8 +637,8 @@
               showTableNotAvailable(
                 status,
                 blockedByReservation,
+                tableId,
                 tableNumber,
-                occupiedBy,
               );
             }
           });
@@ -921,33 +920,18 @@
       function showTableNotAvailable(
         status,
         blockedByReservation,
+        tableId,
         tableNumber,
-        occupiedBy,
       ) {
+        if (status === "OCCUPIED" && window.TableOccupancyModal) {
+          window.TableOccupancyModal.show(tableId, tableNumber);
+          return;
+        }
+
         let message =
           "Esta mesa no está disponible en este momento. Por favor selecciona otra mesa.";
 
-        if (status === "OCCUPIED") {
-          let employeeInfo = occupiedBy
-            ? '<br><br><span class="inline-flex items-center gap-1"><span class="material-symbols-outlined text-base align-middle">person</span> <strong>Atendida por:</strong> ' +
-              occupiedBy +
-              "</span>"
-            : "";
-          Swal.fire({
-            icon: "warning",
-            title: "Mesa no disponible",
-            html:
-              "La <strong>Mesa " +
-              tableNumber +
-              "</strong> está ocupada actualmente." +
-              employeeInfo +
-              "<br><br>Por favor selecciona otra mesa.",
-            confirmButtonColor: "#38e07b",
-            confirmButtonText: "Entendido",
-            customClass: getSwalDarkModeClasses(),
-          });
-          return;
-        } else if (blockedByReservation) {
+        if (blockedByReservation) {
           message =
             "Esta mesa tiene una reservación próxima y no hay suficiente tiempo para completar un pedido. Por favor selecciona otra mesa.";
         } else if (status === "OUT_OF_SERVICE") {
@@ -965,6 +949,13 @@
         });
       }
     </script>
+
+    <!-- Modal de mesa ocupada -->
+    <div th:replace="~{fragments/occupied-table-modal :: modal}"></div>
+    <script th:inline="javascript">
+      window.__occupiedTables = /*[[${occupiedTableInfoMap}]]*/ {};
+    </script>
+    <script th:src="@{/js/table-occupancy-modal.js}"></script>
 
     <!-- Script del Sistema de Temas -->
     <div th:replace="~{fragments/theme :: themeScript}"></div>

@@ -193,6 +193,8 @@ class SalesCardsViewTest {
         assertTrue(html.contains("data-sale-type=\"DELIVERY\""), "the card shows the sale type");
         assertTrue(html.contains("data-sale-type-label=\""), "the card shows the type in words");
         assertTrue(html.contains("data-sale-payment=\""), "the card shows how it was paid");
+        assertTrue(html.contains("data-sale-split-count=\"0\""),
+                "regular sales are not marked as split payments");
         assertTrue(html.contains("data-sale-paid-by=\"Carla Cajera\""),
                 "the card shows who collected the payment");
         assertTrue(html.contains("data-sale-waiter=\"Mario Mesero\""),
@@ -226,6 +228,8 @@ class SalesCardsViewTest {
 
         String html = render(List.of(split));
 
+        assertTrue(html.contains("data-sale-split-count=\"2\""),
+                "the card receives the number of separate accounts");
         assertTrue(html.contains("sale-invoice-badge"),
                 "the card copies the server-side invoice badge");
         assertTrue(html.contains("sale-invoice-note"),
@@ -290,6 +294,12 @@ class SalesCardsViewTest {
         assertTrue(script.contains(".sale-invoice-note")
                         && template.contains("sale-invoice-note"),
                 "the split-bill note the card copies must be marked in the row");
+        assertTrue(script.contains("attr(row, \"split-count\")")
+                        && script.contains("cobros separados"),
+                "the card should clearly indicate split payments and the number of people");
+        assertTrue(script.contains("searchParams.set(\"returnTo\"")
+                        && script.contains("data-sale-href"),
+                "detail links from sales keep the current list URL");
         assertTrue(script.contains("salesCardsView") && script.contains("salesCardsEmpty"),
                 "the script must know the containers the page renders");
     }

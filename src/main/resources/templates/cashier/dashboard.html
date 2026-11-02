@@ -228,7 +228,10 @@
     </nav>
 
     <!-- MAIN CONTENT -->
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 pb-32">
+    <div
+      id="cashierDashboard"
+      class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 pb-32"
+    >
       <!-- WELCOME CARD -->
       <div
         class="rounded-3xl bg-white dark:bg-gray-900 shadow-xl p-8 sm:p-12 text-center mb-8 sm:mb-12 border border-gray-200 dark:border-gray-800 animate-scaleIn"
@@ -583,5 +586,40 @@
 
     <!-- Script del Sistema de Temas -->
     <div th:replace="~{fragments/theme :: themeScript}"></div>
+    <script>
+      document.addEventListener("DOMContentLoaded", async function () {
+        try {
+          const response = await fetch("/api/printer-agent/status");
+          if (!response.ok) {
+            throw new Error("No se pudo comprobar el agente de impresión (HTTP " + response.status + ").");
+          }
+          const status = await response.json();
+          if (status.active) return;
+
+          const result = await Swal.fire({
+            icon: "warning",
+            title: "No hay un agente de impresión activo",
+            text: "Activa el agente en la computadora conectada a las impresoras para que las comandas se impriman automáticamente.",
+            confirmButtonText: "Activar agente",
+            cancelButtonText: "Ahora no",
+            showCancelButton: true,
+            reverseButtons: true,
+            confirmButtonColor: "#38e07b",
+          });
+          if (result.isConfirmed) {
+            window.location.href = "/printer-agent";
+          }
+        } catch (error) {
+          console.error("No se pudo consultar el agente de impresión:", error);
+          Swal.fire({
+            icon: "error",
+            title: "No se pudo verificar el agente",
+            text: error.message || "Intenta actualizar la página.",
+            confirmButtonText: "Entendido",
+          });
+        }
+      });
+    </script>
+    <div th:replace="~{fragments/cashier-navigation :: navigation}"></div>
   </body>
 </html>

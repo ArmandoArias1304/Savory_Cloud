@@ -47,6 +47,7 @@
  * Atributos que lee de cada fila (todos opcionales salvo data-order-id):
  *   data-order-id,  data-order-number, data-order-when,   data-order-table,
  *   data-order-type, data-order-type-label, data-order-customer,
+ *   data-order-preparation,
  *   data-order-payment, data-order-status, data-order-total,
  *   data-order-taken-by, data-order-created-by, data-order-tip,
  *   data-order-accounts, data-order-href
@@ -306,6 +307,20 @@
           attr(row, "payment"),
         ),
       );
+    }
+
+    var preparation = attr(row, "preparation");
+    if (preparation) {
+      var preparationChip = el(
+        "span",
+        "mt-1 inline-flex items-center gap-1 rounded-full bg-indigo-100 dark:bg-indigo-900/40 px-2.5 py-1 text-[11px] font-bold text-indigo-700 dark:text-indigo-300",
+      );
+      preparationChip.appendChild(
+        el("span", "material-symbols-outlined !text-sm", "timer"),
+      );
+      preparationChip.appendChild(el("span", null, preparation));
+      preparationChip.title = "Tiempo estimado de preparación";
+      meta.appendChild(preparationChip);
     }
 
     middle.appendChild(meta);

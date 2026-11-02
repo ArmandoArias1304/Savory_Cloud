@@ -75,6 +75,14 @@
           <div class="max-w-4xl mx-auto">
             <!-- HEADER -->
             <div class="mb-6 sm:mb-8">
+              <a
+                th:if="${promotion.idPromotion != null}"
+                th:href="@{/admin/promotions}"
+                class="mb-4 inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
+              >
+                <span class="material-symbols-outlined text-lg">arrow_back</span>
+                Volver a promociones
+              </a>
               <h2
                 class="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white mb-1"
                 th:text="${promotion.idPromotion != null ? 'Editar Promoción' : 'Nueva Promoción'}"

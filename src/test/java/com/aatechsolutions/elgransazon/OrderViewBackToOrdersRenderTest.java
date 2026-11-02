@@ -111,6 +111,18 @@ class OrderViewBackToOrdersRenderTest {
         }
     }
 
+    @Test
+    @DisplayName("Desde ventas, los botones de regreso conservan filtros y página")
+    void theBackButtonsReturnToTheFilteredSalesList() {
+        String returnUrl = "/admin/sales?startDate=2026-10-01&paymentMethod=CASH&page=3";
+        String html = renderView("admin", null, returnUrl);
+
+        for (String label : List.of("Volver a Pedidos", "Volver al Listado")) {
+            assertTrue(returnUrl.equals(hrefOf(backLink(html, label, "admin"))),
+                    "\"" + label + "\" conserva el estado de la lista de ventas");
+        }
+    }
+
     /** El enlace que lleva ese rótulo, desde su {@code <a>} hasta su cierre. */
     private static String backLink(String html, String label, String role) {
         int labelIndex = html.indexOf(label);
@@ -145,6 +157,10 @@ class OrderViewBackToOrdersRenderTest {
      * como lo pone el advice global ({@code volverA}) cuando el navegador manda un {@code Referer}.
      */
     private String renderView(String role, String origin) {
+        return renderView(role, origin, "/" + role + "/orders");
+    }
+
+    private String renderView(String role, String origin, String orderListBackUrl) {
         Order order = new Order();
         order.setIdOrder(110L);
         order.setOrderNumber("ORD-20261015-110");
@@ -188,6 +204,7 @@ class OrderViewBackToOrdersRenderTest {
         variables.put("orderDetails", order.getOrderDetails());
         variables.put("currentUsername", "meseroA");
         variables.put("currentRole", role);
+        variables.put("orderListBackUrl", orderListBackUrl);
         if (origin != null) {
             variables.put("volverA", origin);
         }

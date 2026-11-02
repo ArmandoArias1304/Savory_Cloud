@@ -48,6 +48,7 @@ public class TicketPdfService {
     // Ticket width in points (58mm = 164 points, 80mm = 226 points)
     private static final float TICKET_WIDTH = 226f; // 80mm
     private static final float MARGIN = 10f;
+    private static final float AUTOINVOICE_SECTION_HEIGHT = 200f;
 
     /**
      * Generate PDF ticket for an order
@@ -544,8 +545,7 @@ public class TicketPdfService {
         // Fiscal disclaimer / Autofactura billing info
         // A zero-total order cannot be invoiced (SAT does not allow CFDI for $0),
         // so we only show the QR / autofactura link when there is an actual amount to invoice.
-        boolean canInvoice = order.getTotal() != null && order.getTotal().compareTo(BigDecimal.ZERO) > 0;
-        if (canInvoice && order.getAutofacturaKey() != null && !order.getAutofacturaKey().isBlank()) {
+        if (hasAutofacturaQr(order.getTotal(), order.getAutofacturaKey())) {
             // Order has an autofactura key — show billing section with QR code
             document.add(new Paragraph("━━━━━━━━━━━━━━━━━━━━━━━━━━")
                     .setTextAlignment(TextAlignment.CENTER)
@@ -981,8 +981,7 @@ public class TicketPdfService {
         document.add(visitAgain);
 
         // Fiscal disclaimer / Autofactura billing info
-        boolean canInvoice = payment.getTotal() != null && payment.getTotal().compareTo(BigDecimal.ZERO) > 0;
-        if (canInvoice && payment.getAutofacturaKey() != null && !payment.getAutofacturaKey().isBlank()) {
+        if (hasAutofacturaQr(payment.getTotal(), payment.getAutofacturaKey())) {
             document.add(new Paragraph("━━━━━━━━━━━━━━━━━━━━━━━━━━")
                     .setTextAlignment(TextAlignment.CENTER)
                     .setMarginTop(3)
@@ -1094,6 +1093,9 @@ public class TicketPdfService {
     private float calculateEstimatedHeight(Payment payment) {
         // +30 for the table number and the "Cobrado por" line
         float baseHeight = 500f; // header + account folio + totals + footer
+        if (hasAutofacturaQr(payment.getTotal(), payment.getAutofacturaKey())) {
+            baseHeight += AUTOINVOICE_SECTION_HEIGHT;
+        }
         float itemHeight = 15f;
         float commentHeight = 10f;
         float complementHeight = 10f;
@@ -1230,6 +1232,9 @@ public class TicketPdfService {
     private float calculateEstimatedHeight(Order order) {
         // +30 for the table number and the "Cobrado por" line
         float baseHeight = 450f; // Base height for header, footer, etc. (increased for header row)
+        if (hasAutofacturaQr(order.getTotal(), order.getAutofacturaKey())) {
+            baseHeight += AUTOINVOICE_SECTION_HEIGHT;
+        }
         float itemHeight = 15f; // Height per item
         float commentHeight = 10f; // Height for comments
         float complementHeight = 10f; // Height per complement
@@ -1256,6 +1261,13 @@ public class TicketPdfService {
         }
         
         return baseHeight;
+    }
+
+    private boolean hasAutofacturaQr(BigDecimal total, String autofacturaKey) {
+        return total != null
+                && total.compareTo(BigDecimal.ZERO) > 0
+                && autofacturaKey != null
+                && !autofacturaKey.isBlank();
     }
 
     /**

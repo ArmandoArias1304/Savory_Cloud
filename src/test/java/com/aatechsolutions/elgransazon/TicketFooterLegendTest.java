@@ -30,6 +30,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -112,6 +113,22 @@ class TicketFooterLegendTest {
         assertTrue(accountTicket.contains(CUSTOM_LINE_2), accountTicket);
     }
 
+    @Test
+    @DisplayName("El QR de autofactura no separa las leyendas en otra página del PDF")
+    void invoiceQrKeepsFooterLegendsOnOnePage() throws Exception {
+        configure(CUSTOM_LINE_1, CUSTOM_LINE_2);
+
+        Order invoiceOrder = order();
+        invoiceOrder.setAutofacturaKey("order-key");
+        invoiceOrder.setSelfInvoiceUrl("https://example.com/autofactura/order-key");
+        assertEquals(1, pdfPageCount(pdfService().generateTicket(invoiceOrder)));
+
+        Payment invoiceAccount = account();
+        invoiceAccount.setAutofacturaKey("payment-key");
+        invoiceAccount.setSelfInvoiceUrl("https://example.com/autofactura/payment-key");
+        assertEquals(1, pdfPageCount(pdfService().generateTicket(invoiceAccount)));
+    }
+
     // ========== Respaldo cuando la leyenda está vacía ==========
 
     @Test
@@ -172,6 +189,12 @@ class TicketFooterLegendTest {
                 text.append(PdfTextExtractor.getTextFromPage(pdfDoc.getPage(page))).append('\n');
             }
             return text.toString();
+        }
+    }
+
+    private int pdfPageCount(byte[] pdf) throws Exception {
+        try (PdfDocument pdfDoc = new PdfDocument(new PdfReader(new ByteArrayInputStream(pdf)))) {
+            return pdfDoc.getNumberOfPages();
         }
     }
 

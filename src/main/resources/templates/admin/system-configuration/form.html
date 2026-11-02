@@ -1674,11 +1674,8 @@
                   </div>
 
                   <!-- LIVE TICKET PREVIEW ---------------------------------------------
-                       Mirrors what TicketEscPosService prints on 58 mm paper (and
-                       TicketPdfService in the PDF): same order of blocks, same
-                       legends, same 32/42-column layout. Every value is read from
-                       the fields on the left; the sample order is fake and no
-                       order is created. -->
+                       Mirrors the PDF ticket layout. Every configurable value is
+                       read from the fields on the left; the sample order is fake. -->
                   <aside
                     id="ticketPreviewPanel"
                     class="xl:col-span-1 xl:sticky xl:top-24"
@@ -1697,7 +1694,7 @@
                             class="material-symbols-outlined text-primary text-lg"
                             >receipt_long</span
                           >
-                          Así se verá el ticket
+                          Así se verá el ticket PDF
                         </h4>
                         <div
                           class="flex items-center gap-1 rounded-lg bg-gray-100 dark:bg-gray-800 p-0.5 text-[11px] font-semibold"
@@ -1722,25 +1719,24 @@
                       <div class="p-4 bg-gray-100 dark:bg-gray-800/60 overflow-x-auto">
                         <div
                           id="ticketPaper"
-                          class="mx-auto bg-white text-gray-900 rounded-md border border-gray-300 shadow-sm px-2 py-4"
+                          class="mx-auto bg-white text-gray-900 rounded-none border border-gray-300 shadow-sm"
                           style="
                             width: 100%;
                             max-width: 302px;
-                            font-family: 'Courier New', ui-monospace, monospace;
-                            font-size: 10px;
-                            line-height: 1.45;
-                            letter-spacing: -0.35px;
+                            box-sizing: border-box;
+                            font-family: Arial, Helvetica, sans-serif;
+                            font-size: 10.67px;
+                            line-height: 1.2;
+                            padding: 13px;
                           "
                         >
-                          <!-- Logo with the print intensity (grayscale + contrast) -->
-                          <div class="flex justify-center mb-1">
+                          <div class="flex justify-center mb-2">
                             <img
                               th:if="${configuration.restaurantLogoUrl != null && !configuration.restaurantLogoUrl.isEmpty()}"
                               id="ticketPreviewLogo"
                               th:src="${@cloudinaryUrl.logoSmall(configuration.restaurantLogoUrl)}"
                               alt="Logo en el ticket"
-                              class="h-14 object-contain"
-                              th:style="'filter: grayscale(1) contrast(' + ${configuration.ticketLogoOpacity / 50.0} + ')'"
+                              class="h-20 object-contain"
                             />
                             <span
                               th:if="${configuration.restaurantLogoUrl == null || configuration.restaurantLogoUrl.isEmpty()}"
@@ -1758,10 +1754,11 @@
                         class="px-4 py-3 border-t border-gray-200 dark:border-gray-800 space-y-2"
                       >
                         <p class="text-xs text-gray-500 dark:text-gray-400">
-                          Así se imprime el ticket térmico de 58 mm. El folio, los
+                          Así se genera el ticket PDF de 80 mm. El folio, los
                           platillos y los importes son de ejemplo; el nombre, la
                           dirección, el RFC, el teléfono, el logo, el IVA y las
-                          leyendas cambian aquí mientras escribes.
+                          leyendas cambian aquí mientras escribes. La intensidad
+                          configurada del logo se aplica al ticket térmico.
                         </p>
                         <ul class="text-xs text-gray-500 dark:text-gray-400 space-y-1">
                           <li class="flex gap-1">
@@ -1839,6 +1836,63 @@
                 th:action="@{/admin/system-configuration/business-hours/update}"
                 method="post"
               >
+                <div
+                  class="mb-5 rounded-xl border border-primary/20 bg-primary/5 p-4 dark:bg-primary/10"
+                >
+                  <p class="text-sm font-semibold text-gray-900 dark:text-white">
+                    Aplicar el mismo horario a todos los días
+                  </p>
+                  <p class="mt-1 text-xs text-gray-600 dark:text-gray-400">
+                    Elige la apertura y el cierre y aplícalos sin cambiar qué
+                    días están marcados como cerrados.
+                  </p>
+                  <div class="mt-3 flex flex-wrap items-end gap-3">
+                    <div>
+                      <label
+                        for="allDaysOpenTime"
+                        class="mb-1 block text-xs font-medium text-gray-700 dark:text-gray-300"
+                      >
+                        Apertura
+                      </label>
+                      <input
+                        type="time"
+                        id="allDaysOpenTime"
+                        class="rounded-lg border border-gray-200 bg-white px-3 py-2 text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                      />
+                    </div>
+                    <div>
+                      <label
+                        for="allDaysCloseTime"
+                        class="mb-1 block text-xs font-medium text-gray-700 dark:text-gray-300"
+                      >
+                        Cierre
+                      </label>
+                      <input
+                        type="time"
+                        id="allDaysCloseTime"
+                        class="rounded-lg border border-gray-200 bg-white px-3 py-2 text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      id="applyHoursToAllDays"
+                      onclick="applyBusinessHoursToAllDays()"
+                      class="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 font-semibold text-white transition-colors hover:bg-primary-dark"
+                    >
+                      <span class="material-symbols-outlined text-lg"
+                        >content_copy</span
+                      >
+                      Aplicar a todos
+                    </button>
+                  </div>
+                  <p
+                    id="allDaysHoursError"
+                    class="mt-2 hidden text-sm text-red-600 dark:text-red-400"
+                    role="alert"
+                  >
+                    Selecciona la hora de apertura y la hora de cierre.
+                  </p>
+                </div>
                 <div
                   class="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-800"
                 >
@@ -1931,6 +1985,26 @@
                   </button>
                 </div>
               </form>
+              <script>
+                function applyBusinessHoursToAllDays() {
+                  const openTime = document.getElementById("allDaysOpenTime").value;
+                  const closeTime = document.getElementById("allDaysCloseTime").value;
+                  const error = document.getElementById("allDaysHoursError");
+
+                  if (!openTime || !closeTime) {
+                    error.classList.remove("hidden");
+                    return;
+                  }
+
+                  error.classList.add("hidden");
+                  document
+                    .querySelectorAll('input[name^="openTime_"]')
+                    .forEach((input) => (input.value = openTime));
+                  document
+                    .querySelectorAll('input[name^="closeTime_"]')
+                    .forEach((input) => (input.value = closeTime));
+                }
+              </script>
             </div>
           </div>
 
@@ -2225,10 +2299,6 @@
                   role="img"
                   aria-label="Vista previa del QR de la página principal"
                 ></canvas>
-                <p
-                  class="text-xs text-gray-400 dark:text-gray-500 break-all text-center"
-                  id="qr-landing-url"
-                ></p>
                 <button
                   type="button"
                   onclick="downloadQR('qr-landing-card', 'qr-pagina-principal.png')"
@@ -2266,10 +2336,6 @@
                   role="img"
                   aria-label="Vista previa del QR del menú digital"
                 ></canvas>
-                <p
-                  class="text-xs text-gray-400 dark:text-gray-500 break-all text-center"
-                  id="qr-menu-url"
-                ></p>
                 <button
                   type="button"
                   onclick="downloadQR('qr-menu-card', 'qr-menu-digital.png')"
@@ -3323,11 +3389,6 @@
         window.downloadQR = downloadQR;
 
         document.addEventListener("DOMContentLoaded", function () {
-          var landingUrlLabel = document.getElementById("qr-landing-url");
-          var menuUrlLabel = document.getElementById("qr-menu-url");
-          if (landingUrlLabel) landingUrlLabel.textContent = landingUrl;
-          if (menuUrlLabel) menuUrlLabel.textContent = menuUrl;
-
           syncControls();
 
           if (bgInput) {
@@ -3387,10 +3448,9 @@
             { name: "Papas a la francesa", qty: 1, total: 90 },
           ],
         };
-        // The sample lines above add up to this (IVA included), so the totals,
-        // the IVA and the amount in words always match each other.
+        // The sample lines above add up to this (IVA included), so the totals
+        // stay consistent with the displayed items.
         var SAMPLE_GROSS = 464.0;
-        var SEPARATOR = "-".repeat(32);
 
         var mode = "qr";
         var qrCache = null;
@@ -3416,51 +3476,60 @@
           return "$" + n.toFixed(2);
         }
 
-        // Same 16 / 10 / 16 = 42 columns as TicketEscPosService.padColumns3
-        function padRight(text, width) {
-          text = text.substring(0, width);
-          return text + " ".repeat(width - text.length);
-        }
-
-        function padLeft(text, width) {
-          text = text.substring(0, width);
-          return " ".repeat(width - text.length) + text;
-        }
-
-        function padCenter(text, width) {
-          text = text.substring(0, width);
-          var padding = width - text.length;
-          var left = Math.floor(padding / 2);
-          return " ".repeat(left) + text + " ".repeat(padding - left);
-        }
-
-        function itemRow(name, qty, total) {
-          return padRight(name, 16) + padCenter(String(qty), 10) + padLeft(total, 16);
-        }
-
         function line(container, text, options) {
           options = options || {};
-          var classes = [];
-          if (options.pre) classes.push("whitespace-pre");
-          if (options.center) classes.push("text-center");
-          if (options.bold) classes.push("font-bold");
-          if (options.small) classes.push("text-[10px]");
-          if (options.big) classes.push("text-[15px]", "leading-tight");
-
-          var node = el("div", classes.join(" "));
+          var classes = options.center ? "text-center" : "";
+          if (options.bold) classes += " font-bold";
+          var node = el("div", classes);
+          if (options.small) node.style.fontSize = "9.33px";
+          if (options.medium) node.style.fontSize = "12px";
+          if (options.big) node.style.fontSize = "16px";
+          if (options.restaurant) node.style.fontSize = "18.67px";
+          if (options.footer) node.style.fontSize = "13.33px";
+          if (options.tiny) node.style.fontSize = "8px";
+          if (options.muted) classes += " text-gray-500";
+          node.className = classes;
+          if (options.marginTop) node.style.marginTop = options.marginTop;
+          if (options.marginBottom) node.style.marginBottom = options.marginBottom;
           node.textContent = text === "" ? "\u00A0" : text;
           container.appendChild(node);
           return node;
         }
 
-        // Label on the left, amount on the right: what ALIGN_RIGHT + padding looks
-        // like on paper.
+        function separator(container, marginTop, marginBottom) {
+          var rule = el("div", "border-t border-gray-500");
+          rule.style.marginTop = marginTop || "5px";
+          rule.style.marginBottom = marginBottom || "5px";
+          container.appendChild(rule);
+        }
+
+        function itemRow(container, name, qty, total, header) {
+          var row = el("div", "flex items-start");
+          row.style.fontSize = "9.33px";
+          row.style.padding = "1px 0";
+          var product = el("span", header ? "font-bold" : "");
+          product.style.width = "50%";
+          product.textContent = name;
+          var quantity = el("span", header ? "font-bold text-center" : "text-center");
+          quantity.style.width = "16.67%";
+          quantity.textContent = String(qty);
+          var amount = el("span", header ? "font-bold text-right" : "text-right");
+          amount.style.width = "33.33%";
+          amount.textContent = total;
+          row.appendChild(product);
+          row.appendChild(quantity);
+          row.appendChild(amount);
+          container.appendChild(row);
+        }
+
         function totalRow(container, label, amount, options) {
           options = options || {};
           var row = el(
             "div",
             "flex justify-between gap-3" + (options.bold ? " font-bold" : ""),
           );
+          row.style.padding = "2.67px 0";
+          if (options.bold) row.style.fontSize = "13.33px";
           var left = el("span");
           left.textContent = label;
           var right = el("span");
@@ -3470,22 +3539,35 @@
           container.appendChild(row);
         }
 
+        function infoLine(container, label, value, marginBottom) {
+          var row = el("div", "text-center");
+          row.style.marginBottom = marginBottom || "0";
+          var labelNode = el("span", "font-bold");
+          labelNode.textContent = label;
+          var valueNode = el("span");
+          valueNode.textContent = value;
+          row.appendChild(labelNode);
+          row.appendChild(valueNode);
+          container.appendChild(row);
+        }
+
         function qrBlock() {
-          var wrap = el("div", "flex justify-center my-1");
+          var wrap = el("div", "flex justify-center");
+          wrap.style.margin = "5px 0";
           var key = "qr@" + window.location.origin;
           if (qrCache && qrCacheKey === key) {
             wrap.appendChild(qrCache);
             return wrap;
           }
 
-          var holder = el("div", "bg-white p-1");
+          var holder = el("div", "bg-white");
           wrap.appendChild(holder);
           if (typeof QRCode !== "undefined") {
             try {
               new QRCode(holder, {
                 text: window.location.origin + "/autofactura/ejemplo",
-                width: 92,
-                height: 92,
+                width: 107,
+                height: 107,
                 colorDark: "#111827",
                 colorLight: "#ffffff",
                 correctLevel: QRCode.CorrectLevel.M,
@@ -3499,16 +3581,9 @@
           }
 
           holder.className =
-            "w-[92px] h-[92px] border border-dashed border-gray-400 flex items-center justify-center text-center text-[9px] text-gray-500";
+            "w-[107px] h-[107px] border border-dashed border-gray-400 flex items-center justify-center text-center text-[9px] text-gray-500";
           holder.textContent = "QR de autofactura";
           return wrap;
-        }
-
-        function applyLogoIntensity() {
-          var logo = document.getElementById("ticketPreviewLogo");
-          if (!logo) return;
-          var intensity = parseFloat(fieldValue("ticketLogoOpacity", "50")) || 50;
-          logo.style.filter = "grayscale(1) contrast(" + intensity / 50 + ")";
         }
 
         function render() {
@@ -3521,42 +3596,57 @@
           line(container, fieldValue("restaurantName"), {
             center: true,
             bold: true,
-            big: true,
+            restaurant: true,
+            marginTop: "6.67px",
+            marginBottom: "4px",
           });
           fieldValue("address")
             .split("\n")
-            .forEach(function (part) {
-              line(container, part, { center: true, small: true });
+            .forEach(function (part, index) {
+              line(container, part, { center: true, marginTop: index === 0 ? "2.67px" : "0" });
             });
           var rfc = fieldValue("rfc").trim();
-          if (rfc) line(container, "RFC: " + rfc, { center: true, small: true });
-          line(container, "Tel: " + fieldValue("phone"), { center: true, small: true });
+          if (rfc) line(container, "RFC: " + rfc, { center: true, marginTop: "2.67px" });
+          line(container, "Tel: " + fieldValue("phone"), {
+            center: true,
+            marginTop: "2.67px",
+            marginBottom: "6.67px",
+          });
 
-          line(container, SEPARATOR, { center: true });
-          line(container, "ORDEN: " + SAMPLE.folio, { center: true, bold: true, big: true });
-          line(container, SAMPLE.table, { center: true, bold: true });
+          separator(container, "5px", "5px");
+          line(container, "ORDEN: " + SAMPLE.folio, {
+            center: true,
+            bold: true,
+            big: true,
+            marginBottom: "6.67px",
+          });
+          line(container, SAMPLE.table, {
+            center: true,
+            bold: true,
+            medium: true,
+            marginBottom: "4px",
+          });
 
           // ── Detalle ──
-          line(container, SEPARATOR, { center: true });
-          line(container, "DETALLE DEL PEDIDO", { center: true, bold: true });
-          line(container, itemRow("Producto", "Cant", "Total"), { pre: true, bold: true });
+          separator(container, "4px", "4px");
+          line(container, "DETALLE DEL PEDIDO", {
+            center: true,
+            bold: true,
+            medium: true,
+            marginBottom: "6.67px",
+          });
+          itemRow(container, "Producto", "Cant", "Total", true);
 
           SAMPLE.items.forEach(function (item) {
-            line(container, itemRow(item.name, item.qty, money(item.total)), { pre: true });
-            if (item.comment) line(container, "  -> " + item.comment, { pre: true });
+            itemRow(container, item.name, item.qty, money(item.total));
+            if (item.comment) line(container, "↳ " + item.comment, { small: true });
             (item.complements || []).forEach(function (complement) {
-              line(
-                container,
-                itemRow("  +  " + complement.name, complement.qty, money(complement.total)),
-                { pre: true },
-              );
+              itemRow(container, "+ " + complement.name, complement.qty, money(complement.total));
             });
           });
 
-          line(container, SEPARATOR, { center: true });
-
-          // ── Totales: the item lines already include IVA, exactly like the
-          //    printed ticket (subtotal + IVA = total). ──
+          // ── Totals ──
+          separator(container, "4px", "4px");
           var rateLabel = fieldValue("taxRate", "16.00");
           var rate = parseFloat(rateLabel);
           if (!isFinite(rate)) rate = 0;
@@ -3566,33 +3656,53 @@
           totalRow(container, "IVA (" + rateLabel + "%):", money(tax));
           totalRow(container, "TOTAL:", money(SAMPLE_GROSS), { bold: true });
 
-          line(container, SAMPLE.totalInWords, { center: true, small: true });
-          line(
-            container,
-            "Tipo: " +
-              SAMPLE.orderType +
-              " | Pago: " +
-              SAMPLE.payment +
-              " " +
-              money(SAMPLE_GROSS),
-            { center: true, small: true },
-          );
-          line(container, "Cliente: " + SAMPLE.customer, { center: true, small: true });
-          line(container, "Atendido por: " + SAMPLE.servedBy, { center: true, small: true });
-          line(container, "Cobrado por: " + SAMPLE.chargedBy, { center: true, small: true });
+          line(container, SAMPLE.totalInWords, {
+            center: true,
+            small: true,
+            marginTop: "2.67px",
+            marginBottom: "4px",
+          });
+          var orderInfo = el("div", "text-center");
+          orderInfo.style.marginTop = "6.67px";
+          [
+            ["Tipo: ", SAMPLE.orderType],
+            [" | Pago: ", SAMPLE.payment + " " + money(SAMPLE_GROSS)],
+          ].forEach(function (part) {
+            var label = el("span", "font-bold");
+            label.textContent = part[0];
+            var value = el("span");
+            value.textContent = part[1];
+            orderInfo.appendChild(label);
+            orderInfo.appendChild(value);
+          });
+          container.appendChild(orderInfo);
+          infoLine(container, "Cliente: ", SAMPLE.customer);
+          infoLine(container, "Atendido por: ", SAMPLE.servedBy, "6.67px");
+          infoLine(container, "Cobrado por: ", SAMPLE.chargedBy, "6.67px");
 
-          line(container, SEPARATOR, { center: true });
-          line(container, "Pagado: " + SAMPLE.paidAt, { center: true, small: true });
-          line(container, SEPARATOR, { center: true });
+          separator(container, "6.67px", "4px");
+          line(container, "Pagado: " + SAMPLE.paidAt, { center: true });
+          separator(container, "5px", "5px");
 
           // ── Leyendas configurables ──
-          line(container, fieldValue("ticketFooterLine1"), { center: true, bold: true });
-          line(container, fieldValue("ticketFooterLine2"), { center: true, small: true });
+          line(container, fieldValue("ticketFooterLine1"), {
+            center: true,
+            bold: true,
+            footer: true,
+            marginTop: "6.67px",
+          });
+          line(container, fieldValue("ticketFooterLine2"), {
+            center: true,
+            marginTop: "2.67px",
+            marginBottom: "6.67px",
+          });
 
-          line(container, SEPARATOR, { center: true });
+          separator(container, "5px", "5px");
           if (mode === "qr") {
-            line(container, "Facture este ticket", { center: true, small: true });
-            line(container, "escaneando el codigo QR:", { center: true, small: true });
+            line(container, "Facture este ticket escaneando el código QR:", {
+              center: true,
+              small: true,
+            });
             container.appendChild(qrBlock());
             line(container, "Facture antes del " + SAMPLE.deadline, {
               center: true,
@@ -3607,10 +3717,10 @@
           }
           line(container, "by " + ((panel && panel.dataset.systemName) || ""), {
             center: true,
-            small: true,
+            tiny: true,
+            muted: true,
+            marginBottom: "13.33px",
           });
-
-          applyLogoIntensity();
         }
 
         function schedule() {
@@ -3647,7 +3757,6 @@
             "rfc",
             "phone",
             "taxRate",
-            "ticketLogoOpacity",
             "ticketFooterLine1",
             "ticketFooterLine2",
           ].forEach(function (id) {
@@ -3669,19 +3778,6 @@
               paintModeButtons();
               render();
             });
-
-          // The 25% / 50% / 75% presets move the slider programmatically and that
-          // does not fire "input", so the ticket logo is refreshed from there too.
-          var originalSetOpacity = window.setOpacity;
-          if (typeof originalSetOpacity === "function") {
-            window.setOpacity = function (val) {
-              originalSetOpacity(val);
-              schedule();
-            };
-          }
-
-          var logo = document.getElementById("ticketPreviewLogo");
-          if (logo) logo.addEventListener("load", applyLogoIntensity);
 
           paintModeButtons();
           render();

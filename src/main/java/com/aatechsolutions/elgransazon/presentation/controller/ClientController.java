@@ -350,7 +350,7 @@ public class ClientController {
                     .count();
             
             // Server-side pagination
-            int pageSize = 15;
+            int pageSize = 16;
             int totalElements = orders.size();
             int totalPages = (int) Math.ceil((double) totalElements / pageSize);
             if (totalPages == 0) totalPages = 1;

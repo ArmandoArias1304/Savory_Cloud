@@ -184,5 +184,12 @@ class PromotionScheduleTest {
         assertTrue(html.contains("Lun"), "the selected days should be rendered");
         assertTrue(html.contains("🕒 07:00 a 12:00"), "the time window should be rendered");
         assertTrue(html.contains("🕒 Todo el día"), "a promotion without a window applies all day");
+        assertTrue(html.contains("id=\"promotionsTableView\""), "the table view remains available");
+        assertTrue(html.contains("id=\"promotionsCardsView\""), "the card view is available");
+        assertTrue(html.contains("data-promotion-view=\"cards\""), "the view toggle includes cards");
+        assertTrue(html.contains("Café de la mañana 2x1"), "promotions render in the card view");
+        assertTrue(html.contains("data-promotion-view-details"), "promotions can be opened in a detail modal");
+        assertTrue(html.contains("id=\"promotionDetailModal\""), "the promotion detail modal is rendered");
+        assertTrue(html.contains("Artículos incluidos"), "the modal includes promotion items");
     }
 }

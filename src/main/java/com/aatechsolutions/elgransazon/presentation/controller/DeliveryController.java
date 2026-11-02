@@ -141,7 +141,7 @@ public class DeliveryController {
         SystemConfiguration config = configurationService.getConfiguration();
         
         // Server-side pagination
-        int pageSize = 15;
+        int pageSize = 16;
         int totalElements = readyOrders.size();
         int totalPages = (int) Math.ceil((double) totalElements / pageSize);
         if (totalPages == 0) totalPages = 1;
@@ -204,7 +204,7 @@ public class DeliveryController {
             completedOrders.size(), paidOrders.size(), cancelledOrders.size(), username);
         
         // Server-side pagination
-        int pageSize = 15;
+        int pageSize = 16;
         int totalElements = completedOrders.size();
         int totalPages = (int) Math.ceil((double) totalElements / pageSize);
         if (totalPages == 0) totalPages = 1;

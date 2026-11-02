@@ -271,6 +271,55 @@
         </div>
       </div>
 
+      <div
+        class="rounded-3xl bg-white dark:bg-gray-900 shadow-xl p-6 sm:p-8 mb-8 border border-gray-200 dark:border-gray-800 animate-fadeInUp"
+        style="animation-delay: 0.08s"
+      >
+        <div class="flex items-center gap-3 mb-4">
+          <div class="p-3 rounded-xl bg-primary/10 dark:bg-primary/20">
+            <span class="material-symbols-outlined text-2xl text-primary">
+              touch_app
+            </span>
+          </div>
+          <h2 class="text-2xl font-bold text-gray-900 dark:text-white">
+            Navegación rápida
+          </h2>
+        </div>
+        <div
+          class="flex items-center justify-between gap-4 p-4 rounded-xl bg-gray-50 dark:bg-gray-800"
+        >
+          <div class="flex items-center gap-3">
+            <span
+              class="material-symbols-outlined text-2xl text-gray-700 dark:text-gray-300"
+            >
+              ads_click
+            </span>
+            <div>
+              <p class="font-semibold text-gray-900 dark:text-white">
+                Botón de navegación radial
+              </p>
+              <p
+                class="text-sm text-gray-600 dark:text-gray-400"
+                id="waiter-navigation-description"
+              >
+                Mantén pulsado el botón lateral y arrastra a una vista
+              </p>
+            </div>
+          </div>
+          <label class="relative inline-flex shrink-0 items-center cursor-pointer">
+            <input
+              type="checkbox"
+              id="waiter-navigation-switch"
+              class="sr-only peer"
+              aria-label="Activar o desactivar el botón de navegación radial"
+            />
+            <div
+              class="w-14 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/20 dark:peer-focus:ring-primary/40 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:start-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all dark:border-gray-600 peer-checked:bg-primary"
+            ></div>
+          </label>
+        </div>
+      </div>
+
       <!-- INFORMATION CARDS -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
         <!-- Contact Information -->
@@ -575,7 +624,40 @@
             themeDescription.textContent = "Cambia entre modo claro y oscuro";
           }
         });
+
+        const navigationSwitch = document.getElementById(
+          "waiter-navigation-switch",
+        );
+        const navigationDescription = document.getElementById(
+          "waiter-navigation-description",
+        );
+        const navigationPreferenceKey =
+          "elgransazon-waiter-navigation-enabled";
+        navigationSwitch.checked =
+          localStorage.getItem(navigationPreferenceKey) !== "false";
+        navigationDescription.textContent = navigationSwitch.checked
+          ? "Mantén pulsado el botón lateral y arrastra a una vista"
+          : "El botón lateral está desactivado";
+
+        navigationSwitch.addEventListener("change", function () {
+          localStorage.setItem(
+            navigationPreferenceKey,
+            String(navigationSwitch.checked),
+          );
+          navigationDescription.textContent = navigationSwitch.checked
+            ? "Mantén pulsado el botón lateral y arrastra a una vista"
+            : "El botón lateral está desactivado";
+          window.dispatchEvent(
+            new CustomEvent("navigation-tool-preference-change", {
+              detail: {
+                profile: "waiter",
+                enabled: navigationSwitch.checked,
+              },
+            }),
+          );
+        });
       });
     </script>
+    <div th:replace="~{fragments/waiter-navigation :: navigation}"></div>
   </body>
 </html>

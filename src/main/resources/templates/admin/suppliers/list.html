@@ -71,13 +71,18 @@
                 Gestiona los proveedores de ingredientes
               </p>
             </div>
-            <a
-              th:href="@{/admin/suppliers/new}"
-              class="flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl bg-gradient-to-r from-primary to-primary-dark text-white font-semibold hover:shadow-lg hover:shadow-primary/30 transition-all shadow-md"
-            >
-              <span class="material-symbols-outlined">add</span>
-              <span>Nuevo Proveedor</span>
-            </a>
+            <div class="flex flex-wrap items-center gap-2">
+              <div
+                th:replace="~{fragments/orders-view-toggle :: toggle('suppliers')}"
+              ></div>
+              <a
+                th:href="@{/admin/suppliers/new}"
+                class="flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl bg-gradient-to-r from-primary to-primary-dark text-white font-semibold hover:shadow-lg hover:shadow-primary/30 transition-all shadow-md"
+              >
+                <span class="material-symbols-outlined">add</span>
+                <span>Nuevo Proveedor</span>
+              </a>
+            </div>
           </div>
 
           <!-- ALERTS -->
@@ -316,6 +321,7 @@
 
           <!-- SUPPLIERS TABLE -->
           <div
+            id="suppliersTableView"
             class="bg-white dark:bg-gray-900 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 overflow-hidden"
           >
             <div class="overflow-x-auto">
@@ -374,6 +380,13 @@
                   </tr>
                   <tr
                     th:each="supplier : ${suppliers}"
+                    th:data-supplier-id="${supplier.idSupplier}"
+                    th:data-supplier-name="${supplier.name}"
+                    th:data-supplier-contact="${supplier.contactPerson ?: ''}"
+                    th:data-supplier-phone="${supplier.phone ?: ''}"
+                    th:data-supplier-email="${supplier.email ?: ''}"
+                    th:data-supplier-address="${supplier.address ?: ''}"
+                    th:data-supplier-notes="${supplier.notes ?: ''}"
                     class="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                     th:classappend="${!supplier.active} ? 'opacity-50 bg-gray-100 dark:bg-gray-800/50' : ''"
                   >
@@ -458,7 +471,7 @@
                     <td class="px-6 py-4">
                       <span
                         th:if="${supplier.active}"
-                        class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400"
+                        class="supplier-status-badge inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400"
                       >
                         <span class="material-symbols-outlined text-sm"
                           >check_circle</span
@@ -467,7 +480,7 @@
                       </span>
                       <span
                         th:unless="${supplier.active}"
-                        class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400"
+                        class="supplier-status-badge inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400"
                       >
                         <span class="material-symbols-outlined text-sm"
                           >cancel</span
@@ -476,7 +489,7 @@
                       </span>
                     </td>
                     <td class="px-6 py-4">
-                      <div class="flex items-center justify-center gap-2">
+                      <div class="supplier-actions-cell flex items-center justify-center gap-2">
                         <a
                           th:href="@{/admin/suppliers/{id}/edit(id=${supplier.idSupplier})}"
                           class="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
@@ -546,12 +559,156 @@
               </table>
             </div>
           </div>
+
+          <div id="suppliersCardsView" class="hidden">
+            <p
+              id="suppliersCardsEmpty"
+              class="hidden rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 py-10 text-center text-gray-500 dark:text-gray-400"
+            >
+              No hay proveedores registrados.
+            </p>
+            <div
+              id="suppliersCards"
+              class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4"
+            ></div>
+          </div>
         </div>
       </main>
     </div>
 
+    <div
+      id="supplierDetailModal"
+      class="fixed inset-0 z-50 hidden items-center justify-center p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="supplierDetailTitle"
+    >
+      <button
+        type="button"
+        class="absolute inset-0 h-full w-full cursor-default bg-black/50 backdrop-blur-sm"
+        aria-label="Cerrar información del proveedor"
+        onclick="SuppliersView.closeDetails()"
+      ></button>
+      <section
+        class="relative max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-2xl"
+      >
+        <header
+          class="flex items-start justify-between gap-4 border-b border-gray-100 dark:border-gray-800 p-5 sm:p-6"
+        >
+          <div class="min-w-0">
+            <p
+              class="text-xs font-semibold uppercase tracking-wide text-primary"
+            >
+              Información del proveedor
+            </p>
+            <h2
+              id="supplierDetailTitle"
+              class="mt-1 break-words text-xl sm:text-2xl font-bold text-gray-900 dark:text-white"
+            ></h2>
+            <p
+              id="supplierDetailContact"
+              class="mt-1 text-sm text-gray-500 dark:text-gray-400"
+            ></p>
+          </div>
+          <button
+            type="button"
+            class="rounded-lg p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800"
+            aria-label="Cerrar"
+            onclick="SuppliersView.closeDetails()"
+          >
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </header>
+        <div class="space-y-5 p-5 sm:p-6">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div class="rounded-xl bg-gray-50 dark:bg-gray-800/60 p-4">
+              <p
+                class="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500"
+              >
+                Teléfono
+              </p>
+              <p
+                id="supplierDetailPhone"
+                class="mt-1 break-words text-sm text-gray-800 dark:text-gray-200"
+              ></p>
+            </div>
+            <div class="rounded-xl bg-gray-50 dark:bg-gray-800/60 p-4">
+              <p
+                class="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500"
+              >
+                Correo electrónico
+              </p>
+              <p
+                id="supplierDetailEmail"
+                class="mt-1 break-words text-sm text-gray-800 dark:text-gray-200"
+              ></p>
+            </div>
+            <div class="rounded-xl bg-gray-50 dark:bg-gray-800/60 p-4 sm:col-span-2">
+              <p
+                class="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500"
+              >
+                Dirección
+              </p>
+              <p
+                id="supplierDetailAddress"
+                class="mt-1 whitespace-pre-line break-words text-sm text-gray-800 dark:text-gray-200"
+              ></p>
+            </div>
+          </div>
+          <div>
+            <p
+              class="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500"
+            >
+              Categorías
+            </p>
+            <div id="supplierDetailCategories" class="flex flex-wrap gap-2"></div>
+          </div>
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p
+                class="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500"
+              >
+                Valoración
+              </p>
+              <div id="supplierDetailRating"></div>
+            </div>
+            <div id="supplierDetailStatus"></div>
+          </div>
+          <div
+            id="supplierDetailNotesSection"
+            class="hidden rounded-xl bg-gray-50 dark:bg-gray-800/60 p-4"
+          >
+            <p
+              class="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500"
+            >
+              Notas
+            </p>
+            <p
+              id="supplierDetailNotes"
+              class="mt-1 whitespace-pre-line break-words text-sm text-gray-800 dark:text-gray-200"
+            ></p>
+          </div>
+        </div>
+        <footer
+          class="flex justify-end border-t border-gray-100 dark:border-gray-800 p-4 sm:px-6"
+        >
+          <a
+            id="supplierDetailEdit"
+            class="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 font-semibold text-white hover:bg-primary-dark transition-colors"
+          >
+            <span class="material-symbols-outlined text-lg">edit</span>
+            Editar proveedor
+          </a>
+        </footer>
+      </section>
+    </div>
+
     <!-- Sidebar Scripts Fragment -->
     <div th:replace="~{fragments/sidebar :: sidebarScripts}"></div>
+    <script th:src="@{/js/suppliers-view.js}"></script>
+    <script>
+      SuppliersView.init({ viewKey: "suppliersView" });
+    </script>
 
     <script>
       // Confirm deactivate supplier

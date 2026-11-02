@@ -7,6 +7,7 @@
   <head>
     <!-- SIDEBAR CSS Fragment -->
     <th:block th:fragment="sidebarStyles">
+      <link rel="stylesheet" th:href="@{/css/keyboard-shortcuts.css}" />
       <style>
         .nav-item {
           transition: all 0.2s ease;
@@ -721,6 +722,7 @@
     <!-- SIDEBAR JAVASCRIPT Fragment -->
     <th:block th:fragment="sidebarScripts">
       <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+      <script th:src="@{/js/keyboard-shortcuts.js}" defer></script>
       <script>
         // Sidebar toggle (guarded: pages that include this fragment without the
         // sidebar markup, e.g. fullscreen order-menu, must not throw).

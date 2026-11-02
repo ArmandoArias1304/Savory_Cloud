@@ -113,6 +113,26 @@
     });
   }
 
+  function preserveSalesReturnUrl() {
+    var table = document.getElementById(settings.table);
+    if (!table) {
+      return;
+    }
+
+    var returnTo = window.location.pathname + window.location.search;
+    table.querySelectorAll("tr[data-sale-id]").forEach(function (row) {
+      var detailUrl = new URL(attr(row, "href"), window.location.origin);
+      detailUrl.searchParams.set("returnTo", returnTo);
+      var href = detailUrl.pathname + detailUrl.search;
+      row.setAttribute("data-sale-href", href);
+
+      var detailLink = row.querySelector('a[href*="/admin/orders/view/"]');
+      if (detailLink) {
+        detailLink.href = href;
+      }
+    });
+  }
+
   function applyView() {
     var view = storedView();
     var table = document.getElementById(settings.table);
@@ -121,6 +141,7 @@
     if (table) {
       table.classList.toggle("hidden", view === "grid");
     }
+
     if (wrapper) {
       wrapper.classList.toggle("hidden", view !== "grid");
     }
@@ -239,6 +260,17 @@
       "mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-gray-500 dark:text-gray-400",
     );
     when.appendChild(el("span", null, attr(row, "when")));
+
+    var splitCount = Number(attr(row, "split-count"));
+    if (Number.isFinite(splitCount) && splitCount > 1) {
+      when.appendChild(
+        el(
+          "span",
+          "rounded-full bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 font-semibold text-blue-700 dark:text-blue-300",
+          splitCount + " cobros separados · " + splitCount + " personas",
+        ),
+      );
+    }
 
     // El estado de facturación se copia del servidor para no duplicar aquí
     // sus colores ni sus reglas (facturada, pendiente, cuentas parciales).
@@ -417,6 +449,7 @@
       });
     });
 
+    preserveSalesReturnUrl();
     applyView();
   }
 

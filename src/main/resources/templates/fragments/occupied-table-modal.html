@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+  <body>
+    <!-- ========================================
+         FRAGMENTO - MODAL DE MESA OCUPADA
+         ========================================
+
+         Se incluye en las tres vistas de selección de mesa (mesero, cajero y
+         admin/gerente). El JavaScript compartido
+         (static/js/table-occupancy-modal.js) rellena los ids con el resumen que
+         el controlador dejó en window.__occupiedTables.
+
+         USO, antes de los scripts de la página:
+
+         <div th:replace="~{fragments/occupied-table-modal :: modal}"></div>
+
+         Ids que el JavaScript espera encontrar:
+           #occupiedTableModal            el modal, oculto con la clase "hidden"
+           #occupiedTableModalTitle       "Mesa N"
+           #occupiedTableWaiterName       nombre del mesero/empleado
+           #occupiedTableWaiterInitials   iniciales para el avatar
+           #occupiedTableOrderNumber      número de pedido
+           #occupiedTableOpenedAt         hora de apertura
+           #occupiedTableElapsed          tiempo transcurrido
+           #occupiedTableItems            número de artículos
+           #occupiedTableStatus           estado del pedido
+           #occupiedTableTotal            total actual
+           #occupiedTableCustomer         cliente
+         Los elementos con [data-occupied-close] cierran el modal.
+    ======================================== -->
+
+    <div
+      th:fragment="modal"
+      id="occupiedTableModal"
+      class="hidden fixed inset-0 z-[100] overflow-y-auto"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="occupiedTableModalTitle"
+    >
+      <style>
+        #occupiedTableModal:not(.hidden) .occupied-table-card {
+          animation: occupied-table-pop 0.18s ease-out;
+        }
+        @keyframes occupied-table-pop {
+          from {
+            opacity: 0;
+            transform: translateY(10px) scale(0.985);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          #occupiedTableModal:not(.hidden) .occupied-table-card {
+            animation: none;
+          }
+        }
+        /* El botón radial vive por encima de las páginas; mientras el modal
+           explica la ocupación no debe asomar ni recibir clics. */
+        body.occupied-table-modal-open .keyboard-shortcuts-trigger {
+          display: none !important;
+        }
+      </style>
+
+      <div
+        class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm"
+        data-occupied-close
+      ></div>
+
+      <div class="relative flex min-h-full items-center justify-center p-3 sm:p-6">
+        <div
+          class="occupied-table-card relative w-full max-w-lg overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-2xl dark:border-gray-800 dark:bg-gray-900"
+        >
+          <div
+            class="h-1.5 w-full bg-gradient-to-r from-amber-400 via-orange-500 to-amber-400"
+          ></div>
+
+          <div class="flex items-start justify-between gap-3 px-5 pb-3 pt-4">
+            <div class="flex min-w-0 items-center gap-3">
+              <div
+                class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-300"
+              >
+                <span class="material-symbols-outlined text-2xl"
+                  >table_restaurant</span
+                >
+              </div>
+              <div class="min-w-0">
+                <div class="flex flex-wrap items-center gap-2">
+                  <h3
+                    id="occupiedTableModalTitle"
+                    class="text-xl font-bold text-gray-900 dark:text-white"
+                  >
+                    Mesa
+                  </h3>
+                  <span
+                    class="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-700 dark:bg-amber-900/30 dark:text-amber-300"
+                  >
+                    <span class="h-1.5 w-1.5 rounded-full bg-amber-500"></span>
+                    Ocupada
+                  </span>
+                </div>
+                <p class="text-sm text-gray-500 dark:text-gray-400">
+                  Esta mesa ya tiene un pedido abierto.
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              class="rounded-xl p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+              data-occupied-close
+              aria-label="Cerrar"
+              title="Cerrar"
+            >
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </div>
+
+          <div class="space-y-3 px-5 pb-4">
+            <!-- Quién la atiende -->
+            <div
+              class="flex items-center gap-3 rounded-2xl border border-gray-200 bg-gray-50 p-3 dark:border-gray-800 dark:bg-gray-800/50"
+            >
+              <div
+                id="occupiedTableWaiterInitials"
+                class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary/15 text-sm font-bold text-primary"
+              >
+                --
+              </div>
+              <div class="min-w-0 flex-1">
+                <p
+                  class="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500"
+                >
+                  Atendida por
+                </p>
+                <p
+                  id="occupiedTableWaiterName"
+                  class="truncate text-base font-semibold text-gray-900 dark:text-white"
+                >
+                  —
+                </p>
+              </div>
+              <span class="material-symbols-outlined text-gray-300 dark:text-gray-600"
+                >person</span
+              >
+            </div>
+
+            <!-- Datos del pedido -->
+            <div class="grid grid-cols-2 gap-2.5">
+              <div
+                class="rounded-2xl border border-gray-200 bg-white p-3 dark:border-gray-800 dark:bg-gray-900"
+              >
+                <p
+                  class="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500"
+                >
+                  Pedido
+                </p>
+                <p
+                  id="occupiedTableOrderNumber"
+                  class="mt-0.5 truncate text-sm font-bold text-gray-900 dark:text-white"
+                >
+                  —
+                </p>
+              </div>
+              <div
+                class="rounded-2xl border border-gray-200 bg-white p-3 dark:border-gray-800 dark:bg-gray-900"
+              >
+                <p
+                  class="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500"
+                >
+                  Abrió
+                </p>
+                <p
+                  id="occupiedTableOpenedAt"
+                  class="mt-0.5 text-sm font-bold text-gray-900 dark:text-white"
+                >
+                  —
+                </p>
+              </div>
+              <div
+                class="rounded-2xl border border-gray-200 bg-white p-3 dark:border-gray-800 dark:bg-gray-900"
+              >
+                <p
+                  class="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500"
+                >
+                  Tiempo ocupada
+                </p>
+                <p
+                  id="occupiedTableElapsed"
+                  class="mt-0.5 text-sm font-bold text-gray-900 dark:text-white"
+                >
+                  —
+                </p>
+              </div>
+              <div
+                class="rounded-2xl border border-gray-200 bg-white p-3 dark:border-gray-800 dark:bg-gray-900"
+              >
+                <p
+                  class="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500"
+                >
+                  Artículos
+                </p>
+                <p
+                  id="occupiedTableItems"
+                  class="mt-0.5 text-sm font-bold text-gray-900 dark:text-white"
+                >
+                  —
+                </p>
+              </div>
+            </div>
+
+            <!-- Estado y total -->
+            <div
+              class="flex items-center justify-between gap-3 rounded-2xl border border-gray-200 bg-gray-50 p-3 dark:border-gray-800 dark:bg-gray-800/50"
+            >
+              <div>
+                <p
+                  class="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500"
+                >
+                  Estado del pedido
+                </p>
+                <span
+                  id="occupiedTableStatus"
+                  class="mt-1 inline-flex items-center rounded-full bg-gray-100 px-2.5 py-1 text-xs font-bold text-gray-700 dark:bg-gray-700 dark:text-gray-200"
+                >
+                  —
+                </span>
+              </div>
+              <div class="text-right">
+                <p
+                  class="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500"
+                >
+                  Total del pedido
+                </p>
+                <p
+                  id="occupiedTableTotal"
+                  class="text-xl font-extrabold tracking-tight text-gray-900 dark:text-white"
+                >
+                  $0.00
+                </p>
+              </div>
+            </div>
+
+            <!-- Cliente -->
+            <div
+              class="flex items-start gap-2 rounded-2xl border border-gray-200 bg-white p-3 dark:border-gray-800 dark:bg-gray-900"
+            >
+              <span
+                class="material-symbols-outlined text-lg text-gray-400 dark:text-gray-500"
+                >person_outline</span
+              >
+              <div class="min-w-0">
+                <p
+                  class="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500"
+                >
+                  Cliente
+                </p>
+                <p
+                  id="occupiedTableCustomer"
+                  class="truncate text-sm font-semibold text-gray-800 dark:text-gray-100"
+                >
+                  —
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div
+            class="flex justify-end border-t border-gray-200 px-5 py-3 dark:border-gray-800"
+          >
+            <button
+              type="button"
+              class="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-100 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
+              data-occupied-close
+            >
+              Cerrar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

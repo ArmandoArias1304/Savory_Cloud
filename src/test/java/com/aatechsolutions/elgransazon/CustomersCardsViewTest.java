@@ -2,6 +2,7 @@ package com.aatechsolutions.elgransazon;
 
 import com.aatechsolutions.elgransazon.domain.entity.Customer;
 import com.aatechsolutions.elgransazon.domain.entity.GlobalSystemConfig;
+import com.aatechsolutions.elgransazon.domain.entity.SystemConfiguration;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -123,6 +124,8 @@ class CustomersCardsViewTest {
         AbstractContext ctx = webContext();
         ctx.setVariable("globalSystemConfig",
                 GlobalSystemConfig.builder().systemName("Test").systemLogoUrl(null).build());
+        ctx.setVariable("systemConfig",
+                SystemConfiguration.builder().restaurantName("El Gran Sazón").build());
         ctx.setVariable("customers", customers);
         ctx.setVariable("currentFilter", "ALL");
         ctx.setVariable("searchTerm", "");
@@ -201,6 +204,20 @@ class CustomersCardsViewTest {
                 "the administrator keeps the deactivate action");
         assertFalse(html.contains("CUSTOMERS CARDS (Mobile/Tablet)"),
                 "the old mobile-only cards must be gone: there is only one card implementation");
+    }
+
+    @Test
+    void customerDetailsOfferWhatsAppWithFormalPersonalizedMessage() {
+        String html = render(customers());
+
+        assertTrue(html.contains("data-restaurant-name=\"El Gran Sazón\""),
+                "the modal must expose the restaurant name for the personalized greeting");
+        assertTrue(html.contains("id=\"customerWhatsAppLink\"")
+                        && html.contains("Contactar por WhatsApp"),
+                "the customer detail must render a WhatsApp contact button");
+        assertTrue(html.contains("https://wa.me/${digits}?text=${encodeURIComponent(message)}")
+                        && html.contains("Hola, ${name}. Le saludamos de parte de ${restaurant}."),
+                "the WhatsApp link must contain a URL-encoded formal message personalized by customer and restaurant");
     }
 
     @Test

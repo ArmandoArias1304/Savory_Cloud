@@ -1683,5 +1683,39 @@
         setInterval(tick, 1000);
       })();
     </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", async function () {
+        try {
+          const response = await fetch("/api/printer-agent/status");
+          if (!response.ok) {
+            throw new Error("No se pudo comprobar el agente de impresión (HTTP " + response.status + ").");
+          }
+          const status = await response.json();
+          if (status.active) return;
+
+          const result = await Swal.fire({
+            icon: "warning",
+            title: "No hay un agente de impresión activo",
+            text: "Activa el agente en la computadora conectada a las impresoras para que las comandas se impriman automáticamente.",
+            confirmButtonText: "Activar agente",
+            cancelButtonText: "Ahora no",
+            showCancelButton: true,
+            reverseButtons: true,
+            confirmButtonColor: "#38e07b",
+          });
+          if (result.isConfirmed) {
+            window.location.href = "/printer-agent";
+          }
+        } catch (error) {
+          console.error("No se pudo consultar el agente de impresión:", error);
+          Swal.fire({
+            icon: "error",
+            title: "No se pudo verificar el agente",
+            text: error.message || "Intenta actualizar la página.",
+            confirmButtonText: "Entendido",
+          });
+        }
+      });
+    </script>
   </body>
 </html>

@@ -1,5 +1,6 @@
 package com.aatechsolutions.elgransazon.presentation.controller;
 
+import com.aatechsolutions.elgransazon.application.dto.OccupiedTableInfoDTO;
 import com.aatechsolutions.elgransazon.application.service.*;
 import com.aatechsolutions.elgransazon.domain.entity.*;
 import com.aatechsolutions.elgransazon.infrastructure.context.CompanyContext;
@@ -7,6 +8,7 @@ import com.aatechsolutions.elgransazon.util.CashRegisterAlertSupport;
 import com.aatechsolutions.elgransazon.util.DeliveryStatusSupport;
 import com.aatechsolutions.elgransazon.util.MenuSizeVariants;
 import com.aatechsolutions.elgransazon.util.OrderSearchSupport;
+import com.aatechsolutions.elgransazon.util.TableOccupancySupport;
 import jakarta.servlet.http.HttpSession;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -291,7 +293,7 @@ public class CashierController {
         PaymentMethodType[] paymentMethods = PaymentMethodType.values();
 
         // ========== Pagination ==========
-        int pageSize = 15;
+        int pageSize = 16;
         int myTotalElements = myOrders.size();
         int myTotalPages = (int) Math.ceil((double) myTotalElements / pageSize);
         if (myTotalPages == 0) myTotalPages = 1;
@@ -464,7 +466,13 @@ public class CashierController {
             }
         }
 
+        // Quién tiene cada mesa ocupada, para el modal que explica el bloqueo.
+        Map<Long, OccupiedTableInfoDTO> occupiedTableInfoMap = TableOccupancySupport.build(
+                allTables, "cashier", authentication.getName(), true,
+                orderRepository, dateTimeService);
+
         model.addAttribute("tables", allTables);
+        model.addAttribute("occupiedTableInfoMap", occupiedTableInfoMap);
         model.addAttribute("canBeUsedMap", canBeUsedMap);
         model.addAttribute("blockedByReservationMap", blockedByReservationMap);
         model.addAttribute("usableWithReservationMap", usableWithReservationMap);

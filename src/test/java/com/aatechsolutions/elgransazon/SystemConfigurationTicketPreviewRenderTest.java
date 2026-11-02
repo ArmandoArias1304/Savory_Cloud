@@ -140,6 +140,27 @@ class SystemConfigurationTicketPreviewRenderTest {
                 "the QR / no QR switch should render");
         assertTrue(html.contains("data-system-name=\"Test\""),
                 "the system branding line comes from the page model");
+        assertFalse(html.contains("id=\"qr-landing-url\"")
+                        || html.contains("id=\"qr-menu-url\""),
+                "QR destinations should not be displayed below their preview cards");
+        assertTrue(html.contains("Así se verá el ticket PDF")
+                        && html.contains("font-family: Arial, Helvetica, sans-serif")
+                        && html.contains("Facture este ticket escaneando el código QR:"),
+                "the preview should follow the PDF ticket typography and invoice footer");
+    }
+
+    @Test
+    void businessHoursCanBeAppliedToEveryDayWithoutChangingClosedDays() {
+        String html = render(configuration(null, null, null, 50));
+
+        assertTrue(html.contains("id=\"allDaysOpenTime\"")
+                        && html.contains("id=\"allDaysCloseTime\"")
+                        && html.contains("id=\"applyHoursToAllDays\""),
+                "the shared opening and closing times must be available");
+        assertTrue(html.contains("function applyBusinessHoursToAllDays()")
+                        && html.contains("input[name^=\"openTime_\"]")
+                        && html.contains("input[name^=\"closeTime_\"]"),
+                "the action updates each day's hours independently of its closed toggle");
     }
 
     @Test

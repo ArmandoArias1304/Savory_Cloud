@@ -1,11 +1,13 @@
 package com.aatechsolutions.elgransazon.presentation.controller;
 
+import com.aatechsolutions.elgransazon.application.dto.OccupiedTableInfoDTO;
 import com.aatechsolutions.elgransazon.application.service.*;
 import com.aatechsolutions.elgransazon.domain.entity.*;
 import com.aatechsolutions.elgransazon.infrastructure.context.CompanyContext;
 import com.aatechsolutions.elgransazon.util.CashRegisterAlertSupport;
 import com.aatechsolutions.elgransazon.util.DeliveryStatusSupport;
 import com.aatechsolutions.elgransazon.util.OrderSearchSupport;
+import com.aatechsolutions.elgransazon.util.TableOccupancySupport;
 import jakarta.servlet.http.HttpSession;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -382,7 +384,7 @@ public class OrderController {
         PaymentMethodType[] paymentMethods = PaymentMethodType.values();
 
         // Server-side pagination
-        int pageSize = 15;
+        int pageSize = 16;
         int totalElements = orders.size();
         int totalPages = (int) Math.ceil((double) totalElements / pageSize);
         if (totalPages == 0) totalPages = 1;
@@ -581,7 +583,13 @@ public class OrderController {
             }
         }
 
+        // Quién tiene cada mesa ocupada, para el modal que explica el bloqueo.
+        Map<Long, OccupiedTableInfoDTO> occupiedTableInfoMap = TableOccupancySupport.build(
+                allTables, role, authentication.getName(), !"waiter".equalsIgnoreCase(role),
+                orderRepository, dateTimeService);
+
         model.addAttribute("tables", allTables);
+        model.addAttribute("occupiedTableInfoMap", occupiedTableInfoMap);
         model.addAttribute("canBeUsedMap", canBeUsedMap);
         model.addAttribute("blockedByReservationMap", blockedByReservationMap);
         model.addAttribute("usableWithReservationMap", usableWithReservationMap);
@@ -1915,6 +1923,7 @@ public class OrderController {
     public String viewOrder(
             @PathVariable String role,
             @PathVariable Long id,
+            @RequestParam(required = false) String returnTo,
             Authentication authentication,
             Model model,
             RedirectAttributes redirectAttributes) {
@@ -1931,12 +1940,22 @@ public class OrderController {
                     model.addAttribute("order", order);
                     model.addAttribute("orderDetails", order.getOrderDetails());
                     model.addAttribute("currentRole", role);
+                    model.addAttribute("orderListBackUrl",
+                            isAdminSalesReturnUrl(role, returnTo) ? returnTo : "/" + role + "/orders");
                     return role + "/orders/view";
                 })
                 .orElseGet(() -> {
                     redirectAttributes.addFlashAttribute("errorMessage", "Pedido no encontrado");
                     return "redirect:/" + role + "/orders";
                 });
+    }
+
+    private boolean isAdminSalesReturnUrl(String role, String returnTo) {
+        return "admin".equals(role)
+                && returnTo != null
+                && returnTo.startsWith("/admin/sales")
+                && (returnTo.length() == "/admin/sales".length()
+                    || returnTo.charAt("/admin/sales".length()) == '?');
     }
 
     /**
@@ -4550,7 +4569,5 @@ public class OrderController {
         }
     }
 }
-
-
 
 

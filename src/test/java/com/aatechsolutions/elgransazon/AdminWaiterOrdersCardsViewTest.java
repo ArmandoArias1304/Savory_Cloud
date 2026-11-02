@@ -60,7 +60,7 @@ class AdminWaiterOrdersCardsViewTest {
      * incompleta en una de las dos vistas.
      */
     private static final List<String> ATRIBUTOS_COMUNES = List.of(
-            "id", "number", "when", "table", "type", "type-label", "customer",
+            "id", "number", "when", "table", "type", "type-label", "preparation", "customer",
             "payment", "total", "href");
 
     private TemplateEngine engine;

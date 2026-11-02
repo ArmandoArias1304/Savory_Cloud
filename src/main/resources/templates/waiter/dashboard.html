@@ -228,7 +228,10 @@
     </nav>
 
     <!-- MAIN CONTENT -->
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 pb-32">
+    <div
+      id="waiterDashboard"
+      class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 pb-32"
+    >
       <!-- WELCOME CARD -->
       <div
         class="rounded-3xl bg-white dark:bg-gray-900 shadow-xl p-8 sm:p-12 text-center mb-8 sm:mb-12 border border-gray-200 dark:border-gray-800 animate-scaleIn"
@@ -558,5 +561,6 @@
 
     <!-- Script del Sistema de Temas -->
     <div th:replace="~{fragments/theme :: themeScript}"></div>
+    <div th:replace="~{fragments/waiter-navigation :: navigation}"></div>
   </body>
 </html>

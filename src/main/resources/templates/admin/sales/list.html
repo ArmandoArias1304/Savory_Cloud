@@ -459,6 +459,7 @@
                     th:data-sale-type="${sale.orderType != null ? sale.orderType.name() : ''}"
                     th:data-sale-type-label="${sale.orderType != null ? sale.orderType.displayName : ''}"
                     th:data-sale-payment="${sale.hasMixedPaymentMethods() ? sale.paymentMethodsDisplayWithAmounts : sale.paymentMethodsDisplay}"
+                    th:data-sale-split-count="${sale.isSplitOrder() ? sale.payments.size() : 0}"
                     th:data-sale-paid-by="${sale.paidBy != null ? (sale.paidBy.nombre + ' ' + sale.paidBy.apellido) : ''}"
                     th:data-sale-waiter="${sale.employee != null ? (sale.employee.nombre + ' ' + sale.employee.apellido) : ''}"
                     th:data-sale-subtotal-label="${methodView ? 'Monto del método' : 'Subtotal'}"
@@ -676,7 +677,7 @@
                 <span th:text="${(currentPage - 1) * pageSize + 1}">1</span> a
                 <span
                   th:text="${currentPage * pageSize > totalElements ? totalElements : currentPage * pageSize}"
-                  >15</span
+                  >16</span
                 >
                 de <span th:text="${totalElements}">0</span> ventas
               </div>

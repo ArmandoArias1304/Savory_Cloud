@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="es" xmlns:th="http://www.thymeleaf.org">
   <head>
     <meta charset="utf-8" />
@@ -535,6 +535,7 @@
                   <tr
                     th:data-order-id="${order.idOrder}"
                     th:data-order-type="${order.orderType.name()}"
+                    th:data-order-preparation="${order.estimatedPreparationLabel ?: ''}"
                     class="border-b border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
                   >
                     <!-- Order Number -->
@@ -710,7 +711,7 @@
                 <span th:text="${(currentPage - 1) * pageSize + 1}">1</span> -
                 <span
                   th:text="${currentPage * pageSize > totalElements ? totalElements : currentPage * pageSize}"
-                  >15</span
+                  >16</span
                 >
                 de <span th:text="${totalElements}">0</span> pedidos
               </div>
@@ -834,6 +835,7 @@
                   <tr
                     th:data-order-id="${order.idOrder}"
                     th:data-order-type="${order.orderType.name()}"
+                    th:data-order-preparation="${order.estimatedPreparationLabel ?: ''}"
                     class="border-b border-gray-200 dark:border-gray-800 hover:bg-orange-50/50 dark:hover:bg-orange-900/10 transition-colors"
                   >
                     <!-- Order Number -->
@@ -1010,7 +1012,7 @@
                 -
                 <span
                   th:text="${globalCurrentPage * pageSize > globalTotalElements ? globalTotalElements : globalCurrentPage * pageSize}"
-                  >15</span
+                  >16</span
                 >
                 de <span th:text="${globalTotalElements}">0</span> pedidos
               </div>
@@ -2190,6 +2192,21 @@
           paymentPill.classList.add("mt-1", "inline-flex", "text-[11px]");
           meta.appendChild(paymentPill);
         }
+        const preparationLabel = row.getAttribute("data-order-preparation");
+        if (preparationLabel) {
+          const preparationChip = document.createElement("span");
+          preparationChip.className =
+            "mt-1 inline-flex items-center gap-1 rounded-full bg-indigo-100 dark:bg-indigo-900/40 px-2.5 py-1 text-[11px] font-bold text-indigo-700 dark:text-indigo-300";
+          preparationChip.title = "Tiempo estimado de preparación";
+          const preparationIcon = document.createElement("span");
+          preparationIcon.className = "material-symbols-outlined !text-sm";
+          preparationIcon.textContent = "timer";
+          const preparationText = document.createElement("span");
+          preparationText.textContent = preparationLabel;
+          preparationChip.appendChild(preparationIcon);
+          preparationChip.appendChild(preparationText);
+          meta.appendChild(preparationChip);
+        }
         const total = document.createElement("p");
         total.className =
           "text-lg font-bold text-gray-900 dark:text-white whitespace-nowrap";
@@ -2479,5 +2496,6 @@
       })();
       /*]]>*/
     </script>
+    <div th:replace="~{fragments/cashier-navigation :: navigation}"></div>
   </body>
 </html>

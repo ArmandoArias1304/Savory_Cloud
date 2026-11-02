@@ -915,5 +915,11 @@
         }
       })();
     </script>
+    <th:block th:if="${layout == 'waiter'}">
+      <div th:replace="~{fragments/waiter-navigation :: navigation}"></div>
+    </th:block>
+    <th:block th:if="${layout == 'cashier'}">
+      <div th:replace="~{fragments/cashier-navigation :: navigation}"></div>
+    </th:block>
   </body>
 </html>

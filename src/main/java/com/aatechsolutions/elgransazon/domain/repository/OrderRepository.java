@@ -117,6 +117,26 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     List<Order> findActiveOrdersWithEmployeeByTableId(@Param("tableId") Long tableId);
 
     /**
+     * Active orders of several tables with the relationships needed to explain who
+     * is occupying them (waiter, customer and item count) in a single query.
+     *
+     * <p>Used by the table-selection screen. It deliberately does not filter by the
+     * current waiter: any employee must be able to see who has the table; the caller
+     * decides whether the order link is available for their role.</p>
+     */
+    @Query("SELECT DISTINCT o FROM Order o " +
+           "LEFT JOIN FETCH o.employee " +
+           "LEFT JOIN FETCH o.customer " +
+           "LEFT JOIN FETCH o.table " +
+           "LEFT JOIN FETCH o.orderDetails " +
+           "WHERE o.company = :company AND o.table.id IN :tableIds " +
+           "AND o.status NOT IN ('CANCELLED', 'DELIVERED', 'PAID') " +
+           "ORDER BY o.createdAt DESC")
+    List<Order> findActiveOrdersWithDetailsByTableIds(
+            @Param("company") Company company,
+            @Param("tableIds") Collection<Long> tableIds);
+
+    /**
      * Open dine-in bills of one company, used by the loyalty redemption screen so
      * a waiter can attach the free items to the table that is already open.
      */

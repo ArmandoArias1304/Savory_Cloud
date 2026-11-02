@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+  <body>
+    <th:block th:fragment="navigation">
+      <span
+        id="waiterShortcutConfig"
+        th:attr="data-loyalty-enabled=${@licenseService.hasCustomerModuleAccess() and @featureAccessService.isEnabled('LOYALTY')},
+                 data-system-logo-url=${globalSystemConfig != null and globalSystemConfig.systemLogoUrl != null and !globalSystemConfig.systemLogoUrl.isEmpty() ? @cloudinaryUrl.logoSmall(globalSystemConfig.systemLogoUrl) : ''},
+                 data-system-name=${globalSystemConfig != null and globalSystemConfig.systemName != null ? globalSystemConfig.systemName : 'SavoryCloud'}"
+        hidden
+      ></span>
+      <link rel="stylesheet" th:href="@{/css/keyboard-shortcuts.css}" />
+      <script th:src="@{/js/keyboard-shortcuts.js}" defer></script>
+      <script>
+        document.body.dataset.shortcutsProfile = "waiter";
+      </script>
+    </th:block>
+  </body>
+</html>

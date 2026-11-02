@@ -269,7 +269,7 @@ public class ChefController {
             .count();
         
         // Server-side pagination
-        int pageSize = 15;
+        int pageSize = 16;
         int totalElements = workingOrders.size();
         int totalPages = (int) Math.ceil((double) totalElements / pageSize);
         if (totalPages == 0) totalPages = 1;
@@ -391,7 +391,7 @@ public class ChefController {
             .count();
         
         // Server-side pagination
-        int pageSize = 15;
+        int pageSize = 16;
         int totalElements = completedOrders.size();
         int totalPages = (int) Math.ceil((double) totalElements / pageSize);
         if (totalPages == 0) totalPages = 1;

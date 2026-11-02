@@ -1,0 +1,561 @@
+:root {
+  --ks-accent: #38e07b;
+  --ks-accent-strong: #16a34a;
+  --ks-accent-deep: #047857;
+  --ks-ink: #0f172a;
+  --ks-muted: #475569;
+}
+
+/* ============================================================
+   Botón lateral (disparador del menú radial)
+   ============================================================ */
+
+.keyboard-shortcuts-trigger {
+  position: fixed;
+  top: 50%;
+  right: 0;
+  z-index: 70;
+  display: flex;
+  width: 3rem;
+  height: 4.35rem;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-right: 0;
+  border-radius: 1.1rem 0 0 1.1rem;
+  background:
+    radial-gradient(120% 120% at 0% 0%, rgba(255, 255, 255, 0.38), transparent 46%),
+    linear-gradient(165deg, #4ade80 0%, #22c55e 48%, #16a34a 100%);
+  color: #052e16;
+  cursor: pointer;
+  box-shadow:
+    0 0 0 4px rgba(56, 224, 123, 0.16),
+    0 12px 30px rgba(15, 23, 42, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  transform: translateY(-50%);
+  transition:
+    width 0.22s ease,
+    box-shadow 0.22s ease,
+    filter 0.22s ease;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.keyboard-shortcuts-trigger[hidden] {
+  display: none;
+}
+
+.keyboard-shortcuts-trigger:hover {
+  width: 3.4rem;
+  filter: brightness(1.04);
+  box-shadow:
+    0 0 0 5px rgba(56, 224, 123, 0.22),
+    0 16px 36px rgba(15, 23, 42, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.55);
+}
+
+.keyboard-shortcuts-trigger:focus-visible {
+  outline: 3px solid rgba(56, 224, 123, 0.6);
+  outline-offset: 3px;
+}
+
+.keyboard-shortcuts-trigger.is-wheel-open {
+  z-index: 100;
+  width: 3.4rem;
+}
+
+.dark .keyboard-shortcuts-trigger {
+  border-color: rgba(255, 255, 255, 0.36);
+  box-shadow:
+    0 0 0 4px rgba(56, 224, 123, 0.2),
+    0 12px 32px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+.waiter-wheel-trigger-logo {
+  width: 1.7rem;
+  height: 1.7rem;
+  padding: 0.1rem;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9);
+  object-fit: contain;
+  pointer-events: none;
+  -webkit-user-drag: none;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.waiter-wheel-trigger-arrow {
+  position: absolute;
+  right: 0.12rem;
+  bottom: 0.2rem;
+  display: grid;
+  place-items: center;
+  width: 1.15rem;
+  height: 1.15rem;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.92);
+  color: #065f46;
+  font-size: 0.95rem;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.2);
+}
+
+/* ============================================================
+   Fondo del menú radial
+   ============================================================ */
+
+.keyboard-shortcuts-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: rgba(15, 23, 42, 0.45);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.keyboard-shortcuts-backdrop.is-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.waiter-wheel-backdrop {
+  z-index: 80;
+  background:
+    radial-gradient(
+      120% 100% at 100% 50%,
+      rgba(6, 78, 59, 0.26) 0%,
+      rgba(2, 6, 23, 0.62) 54%,
+      rgba(2, 6, 23, 0.78) 100%
+    );
+  -webkit-backdrop-filter: blur(3px) saturate(0.92);
+  backdrop-filter: blur(3px) saturate(0.92);
+}
+
+/* ============================================================
+   Contenedor del menú radial
+   ============================================================ */
+
+.waiter-navigation-wheel {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: block;
+  color: var(--ks-ink);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    opacity 0.2s ease,
+    visibility 0.2s ease;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+body.waiter-wheel-dragging,
+body.waiter-wheel-dragging * {
+  -webkit-user-select: none !important;
+  user-select: none !important;
+  -webkit-touch-callout: none !important;
+  cursor: grabbing !important;
+}
+
+.waiter-navigation-wheel.is-open {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Arco guía detrás de las opciones */
+.waiter-navigation-wheel::before {
+  content: "";
+  position: absolute;
+  top: var(--wheel-center-y, 50%);
+  left: var(--wheel-center-x, 100%);
+  width: calc(var(--wheel-radius, 150px) * 2 + 4rem);
+  height: calc(var(--wheel-radius, 150px) * 2 + 4rem);
+  border: 1px dashed rgba(56, 224, 123, 0.38);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+
+.waiter-navigation-wheel.is-open::before {
+  opacity: 1;
+}
+
+/* Encabezado flotante */
+.waiter-wheel-header {
+  position: absolute;
+  top: max(1rem, env(safe-area-inset-top));
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  max-width: min(28rem, 92vw);
+  padding: 0.45rem 1rem 0.45rem 0.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--ks-ink);
+  box-shadow:
+    0 16px 40px rgba(2, 6, 23, 0.24),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  transform: translateX(-50%);
+}
+
+.waiter-wheel-header-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 2.1rem;
+  height: 2.1rem;
+  border-radius: 50%;
+  background: linear-gradient(150deg, #4ade80, #16a34a);
+  color: #052e16;
+  font-size: 1.15rem;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45);
+}
+
+.waiter-wheel-heading {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.1rem;
+  line-height: 1.1;
+}
+
+.waiter-wheel-title {
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  color: #0f172a;
+}
+
+.waiter-wheel-subtitle {
+  overflow: hidden;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  color: #64748b;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.dark .waiter-wheel-header {
+  border-color: rgba(148, 163, 184, 0.32);
+  background: rgba(15, 23, 42, 0.88);
+  box-shadow:
+    0 16px 40px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(148, 163, 184, 0.18);
+}
+
+.dark .waiter-wheel-title {
+  color: #f8fafc;
+}
+
+.dark .waiter-wheel-subtitle {
+  color: #94a3b8;
+}
+
+/* Pista inferior */
+.waiter-wheel-hint {
+  position: absolute;
+  bottom: max(1.1rem, env(safe-area-inset-bottom));
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.9rem;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.58);
+  color: rgba(255, 255, 255, 0.94);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  opacity: 0;
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  transform: translateX(-50%);
+  transition: opacity 0.25s ease 0.1s;
+}
+
+.waiter-wheel-hint .material-symbols-outlined {
+  font-size: 0.95rem;
+  color: var(--ks-accent);
+}
+
+.waiter-navigation-wheel.is-open .waiter-wheel-hint {
+  opacity: 1;
+}
+
+/* ============================================================
+   Opciones del menú radial
+   ============================================================ */
+
+.waiter-wheel-option {
+  position: absolute;
+  top: var(--wheel-center-y);
+  left: var(--wheel-center-x);
+  display: flex;
+  width: clamp(4.2rem, 16vw, 4.9rem);
+  min-height: clamp(4.2rem, 16vw, 4.9rem);
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.28rem;
+  padding: 0.42rem 0.34rem 0.36rem;
+  border: 1px solid rgba(255, 255, 255, 0.78);
+  border-radius: 1.35rem;
+  background: linear-gradient(
+    165deg,
+    rgba(255, 255, 255, 0.99) 0%,
+    rgba(241, 245, 249, 0.96) 100%
+  );
+  color: #0f172a;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.85),
+    0 12px 26px rgba(2, 6, 23, 0.24),
+    0 0 0 1px rgba(15, 23, 42, 0.04);
+  touch-action: none;
+  pointer-events: auto;
+  transform: translate(
+    calc(-50% + var(--wheel-x)),
+    calc(-50% + var(--wheel-y))
+  );
+  transition:
+    background-color 0.14s ease,
+    border-color 0.14s ease,
+    box-shadow 0.14s ease,
+    scale 0.14s ease;
+}
+
+.waiter-wheel-option .material-symbols-outlined {
+  display: grid;
+  place-items: center;
+  width: 2.15rem;
+  height: 2.15rem;
+  border-radius: 0.8rem;
+  background: rgba(22, 163, 74, 0.11);
+  color: #15803d;
+  font-size: 1.3rem;
+  box-shadow: inset 0 0 0 1px rgba(22, 163, 74, 0.14);
+  transition:
+    background-color 0.14s ease,
+    color 0.14s ease;
+}
+
+.waiter-wheel-option > span:last-child {
+  max-width: 100%;
+  color: #334155;
+  font-size: clamp(0.56rem, 2vw, 0.64rem);
+  font-weight: 800;
+  line-height: 1.12;
+  text-align: center;
+}
+
+.dark .waiter-wheel-option {
+  border-color: rgba(148, 163, 184, 0.32);
+  background: linear-gradient(
+    165deg,
+    rgba(30, 41, 59, 0.98) 0%,
+    rgba(15, 23, 42, 0.98) 100%
+  );
+  color: #f8fafc;
+  box-shadow:
+    inset 0 1px 0 rgba(148, 163, 184, 0.16),
+    0 14px 30px rgba(0, 0, 0, 0.45);
+}
+
+.dark .waiter-wheel-option .material-symbols-outlined {
+  background: rgba(56, 224, 123, 0.14);
+  color: #6ee7b7;
+  box-shadow: inset 0 0 0 1px rgba(56, 224, 123, 0.18);
+}
+
+.dark .waiter-wheel-option > span:last-child {
+  color: #e2e8f0;
+}
+
+/* Tecla de acceso rápido (solo cajero) */
+.waiter-wheel-key {
+  position: absolute;
+  top: 0.32rem;
+  right: 0.32rem;
+  display: inline-flex;
+  min-width: 1.05rem;
+  height: 1.05rem;
+  align-items: center;
+  justify-content: center;
+  padding: 0 0.22rem;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  border-radius: 0.32rem;
+  background: rgba(255, 255, 255, 0.92);
+  color: #64748b;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.52rem;
+  font-weight: 800;
+  line-height: 1;
+  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.08);
+}
+
+.dark .waiter-wheel-key {
+  border-color: rgba(148, 163, 184, 0.36);
+  background: rgba(15, 23, 42, 0.72);
+  color: #cbd5e1;
+}
+
+/* Vista actual */
+.waiter-wheel-option.is-current {
+  border-color: rgba(22, 163, 74, 0.6);
+  background: linear-gradient(165deg, #f0fdf4 0%, #dcfce7 100%);
+  color: #052e16;
+  box-shadow:
+    0 0 0 3px rgba(56, 224, 123, 0.2),
+    0 16px 32px rgba(2, 6, 23, 0.22);
+}
+
+.waiter-wheel-option.is-current::after {
+  content: "Actual";
+  position: absolute;
+  top: -0.5rem;
+  left: 50%;
+  padding: 0.1rem 0.42rem;
+  border-radius: 999px;
+  background: linear-gradient(150deg, #22c55e, #15803d);
+  color: #ffffff;
+  font-size: 0.48rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  line-height: 1.2;
+  text-transform: uppercase;
+  white-space: nowrap;
+  box-shadow: 0 4px 10px rgba(21, 128, 61, 0.35);
+  transform: translateX(-50%);
+}
+
+.waiter-wheel-option.is-current .material-symbols-outlined {
+  background: #16a34a;
+  color: #ffffff;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+}
+
+.waiter-wheel-option.is-current > span:last-child {
+  color: #065f46;
+}
+
+.dark .waiter-wheel-option.is-current {
+  border-color: rgba(56, 224, 123, 0.6);
+  background: linear-gradient(165deg, #064e3b 0%, #065f46 100%);
+  color: #ecfdf5;
+  box-shadow:
+    0 0 0 3px rgba(56, 224, 123, 0.22),
+    0 16px 32px rgba(0, 0, 0, 0.4);
+}
+
+.dark .waiter-wheel-option.is-current > span:last-child {
+  color: #d1fae5;
+}
+
+/* Opción resaltada al arrastrar */
+.waiter-wheel-option.is-highlighted,
+.waiter-wheel-option:focus-visible {
+  z-index: 2;
+  border-color: rgba(22, 163, 74, 0.85);
+  background: linear-gradient(165deg, #ffffff 0%, #ecfdf5 100%);
+  color: #052e16;
+  outline: none;
+  box-shadow:
+    0 0 0 4px rgba(56, 224, 123, 0.32),
+    0 22px 44px rgba(2, 6, 23, 0.32);
+  scale: 1.1;
+}
+
+.waiter-wheel-option.is-highlighted .material-symbols-outlined,
+.waiter-wheel-option:focus-visible .material-symbols-outlined {
+  background: #16a34a;
+  color: #ffffff;
+}
+
+.dark .waiter-wheel-option.is-highlighted,
+.dark .waiter-wheel-option:focus-visible {
+  border-color: rgba(110, 231, 183, 0.85);
+  background: linear-gradient(165deg, #1e293b 0%, #064e3b 100%);
+  color: #ecfdf5;
+}
+
+/* Entrada escalonada de las opciones */
+@keyframes waiterWheelOptionIn {
+  from {
+    opacity: 0;
+    translate: 14px 8px;
+    filter: blur(2px);
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+    filter: blur(0);
+  }
+}
+
+.waiter-navigation-wheel.is-open .waiter-wheel-option {
+  animation: waiterWheelOptionIn 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: calc(var(--wheel-index, 0) * 24ms);
+}
+
+/* ============================================================
+   Panel de atajos (administrador)
+   ============================================================ */
+
+.keyboard-shortcuts-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  z-index: 90;
+  display: flex;
+  width: min(24rem, 92vw);
+  height: 100dvh;
+  flex-direction: column;
+  border-left: 1px solid rgba(148, 163, 184, 0.25);
+  background: #fff;
+  color: #111827;
+  box-shadow: -16px 0 40px rgba(15, 23, 42, 0.22);
+  transform: translateX(100%);
+  transition: transform 0.25s ease;
+}
+
+.keyboard-shortcuts-panel.is-open {
+  transform: translateX(0);
+}
+
+.dark .keyboard-shortcuts-panel {
+  background: #111827;
+  color: #f9fafb;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .keyboard-shortcuts-trigger,
+  .keyboard-shortcuts-backdrop,
+  .keyboard-shortcuts-panel,
+  .waiter-navigation-wheel,
+  .waiter-wheel-option,
+  .waiter-wheel-header,
+  .waiter-wheel-hint {
+    transition: none;
+  }
+
+  .waiter-navigation-wheel.is-open .waiter-wheel-option {
+    animation: none;
+  }
+}

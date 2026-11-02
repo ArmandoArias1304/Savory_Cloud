@@ -709,7 +709,7 @@
             </p>
             <div
               id="customersCards"
-              class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4"
+              class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
             ></div>
           </div>
         </div>
@@ -719,6 +719,7 @@
     <!-- Customer Detail Modal -->
     <div
       id="customerDetailModal"
+      th:attr="data-restaurant-name=${systemConfig != null ? systemConfig.restaurantName : ''}"
       class="fixed inset-0 z-50 hidden items-center justify-center p-4"
     >
       <div
@@ -880,7 +881,12 @@
                     <span class="material-symbols-outlined text-gray-400 dark:text-gray-500">phone</span>
                     <div>
                       <p class="text-xs text-gray-500 dark:text-gray-400">Teléfono</p>
-                      <p class="text-sm font-medium text-gray-900 dark:text-white">${c.phone}</p>
+                      <p class="text-sm font-medium text-gray-900 dark:text-white">${c.phone || "No registrado"}</p>
+                      <a id="customerWhatsAppLink" target="_blank" rel="noopener noreferrer"
+                         class="hidden mt-2 inline-flex items-center gap-2 rounded-lg bg-green-600 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-green-700">
+                        <span class="material-symbols-outlined text-lg">chat</span>
+                        Contactar por WhatsApp
+                      </a>
                     </div>
                   </div>
                   <div class="grid grid-cols-2 gap-3">
@@ -901,6 +907,17 @@
                   </div>
                 </div>
               `;
+
+              const whatsappLink = modalBody.querySelector("#customerWhatsAppLink");
+              const whatsappUrl = buildCustomerWhatsAppUrl(
+                c.phone,
+                c.fullName,
+                modal.dataset.restaurantName,
+              );
+              if (whatsappUrl) {
+                whatsappLink.href = whatsappUrl;
+                whatsappLink.classList.remove("hidden");
+              }
             } else {
               modalBody.innerHTML = `
                 <div class="text-center py-8">
@@ -918,6 +935,20 @@
               </div>
             `;
           });
+      }
+
+      function buildCustomerWhatsAppUrl(phone, customerName, restaurantName) {
+        let digits = String(phone || "").replace(/\D/g, "");
+        if (digits.length === 10) digits = "52" + digits;
+        if (digits.length < 10 || digits.length > 15) return null;
+
+        const restaurant = (restaurantName || "").trim() || "nuestro restaurante";
+        const name = (customerName || "").trim() || "cliente";
+        const message =
+          `Hola, ${name}. Le saludamos de parte de ${restaurant}. ` +
+          "Nos ponemos a su disposición para atender cualquier duda o brindarle apoyo. " +
+          `Quedamos atentos a sus comentarios. Saludos cordiales, equipo de ${restaurant}.`;
+        return `https://wa.me/${digits}?text=${encodeURIComponent(message)}`;
       }
 
       function closeModal() {

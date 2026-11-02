@@ -545,7 +545,12 @@
             if (canUse) {
               checkActiveReservationAndSelect(tableId, tableNumber);
             } else {
-              showTableNotAvailable(status, blockedByReservation);
+              showTableNotAvailable(
+                status,
+                blockedByReservation,
+                tableId,
+                tableNumber,
+              );
             }
           });
         });
@@ -759,7 +764,17 @@
         window.location.href = url;
       }
 
-      function showTableNotAvailable(status, blockedByReservation) {
+      function showTableNotAvailable(
+        status,
+        blockedByReservation,
+        tableId,
+        tableNumber,
+      ) {
+        if (status === "OCCUPIED" && window.TableOccupancyModal) {
+          window.TableOccupancyModal.show(tableId, tableNumber);
+          return;
+        }
+
         let message =
           "Esta mesa no está disponible en este momento. Por favor selecciona otra mesa.";
 
@@ -844,7 +859,15 @@
       }
     </script>
 
+    <!-- Modal de mesa ocupada -->
+    <div th:replace="~{fragments/occupied-table-modal :: modal}"></div>
+    <script th:inline="javascript">
+      window.__occupiedTables = /*[[${occupiedTableInfoMap}]]*/ {};
+    </script>
+    <script th:src="@{/js/table-occupancy-modal.js}"></script>
+
     <!-- Script del Sistema de Temas -->
     <div th:replace="~{fragments/theme :: themeScript}"></div>
+    <div th:replace="~{fragments/waiter-navigation :: navigation}"></div>
   </body>
 </html>

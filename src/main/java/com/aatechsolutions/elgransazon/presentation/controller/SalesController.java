@@ -177,7 +177,7 @@ public class SalesController {
         PaymentMethodType[] paymentMethods = PaymentMethodType.values();
 
         // Server-side pagination
-        int pageSize = 15;
+        int pageSize = 16;
         int totalElements = paidOrders.size();
         int totalPages = (int) Math.ceil((double) totalElements / pageSize);
         if (totalPages == 0) totalPages = 1;
