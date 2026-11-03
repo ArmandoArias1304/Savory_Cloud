@@ -2188,6 +2188,7 @@
                      qrMenuUrl=@{/home/menu}"
             th:attr="data-restaurant-name=${qrRestaurantName},
                      data-restaurant-logo=${qrHasLogo ? qrLogoUrl : ''},
+                     data-restaurant-logo-version=${qrHasLogo ? configuration.restaurantLogoUrl : ''},
                      data-landing-url=${qrLandingUrl},
                      data-menu-url=${qrMenuUrl}"
           >
@@ -3041,6 +3042,14 @@
         var brandName =
           (section && section.dataset.restaurantName) || "SavoryCloud";
         var brandLogo = (section && section.dataset.restaurantLogo) || "";
+        var logoVersion =
+          (section && section.dataset.restaurantLogoVersion) || "";
+        if (brandLogo && logoVersion) {
+          brandLogo +=
+            (brandLogo.indexOf("?") === -1 ? "?" : "&") +
+            "v=" +
+            encodeURIComponent(logoVersion);
+        }
         var logoImage = null;
         var design = loadDesign();
 

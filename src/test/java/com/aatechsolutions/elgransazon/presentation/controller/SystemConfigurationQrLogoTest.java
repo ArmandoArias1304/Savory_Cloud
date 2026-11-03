@@ -72,6 +72,7 @@ class SystemConfigurationQrLogoTest {
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertArrayEquals(bytes, response.getBody());
         assertEquals(MediaType.IMAGE_PNG, response.getHeaders().getContentType());
+        assertEquals("no-store", response.getHeaders().getCacheControl());
     }
 
     @Test

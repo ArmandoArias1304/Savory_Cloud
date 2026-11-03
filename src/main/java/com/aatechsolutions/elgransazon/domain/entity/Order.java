@@ -12,9 +12,11 @@ import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * Order entity representing customer orders in the restaurant
@@ -29,7 +31,7 @@ import java.util.Map;
 @AllArgsConstructor
 @Builder
 @EqualsAndHashCode(of = {"idOrder"})
-@ToString(exclude = {"company", "table", "employee", "preparedBy", "paidBy", "deliveredBy", "transferredFrom", "transferRequestedTo", "orderDetails", "payments", "paymentTenders", "paymentMethodCorrections", "loyaltyRedemption"})
+@ToString(exclude = {"company", "table", "joinedTableRows", "employee", "preparedBy", "paidBy", "deliveredBy", "transferredFrom", "transferRequestedTo", "orderDetails", "payments", "paymentTenders", "paymentMethodCorrections", "loyaltyRedemption"})
 public class Order implements Serializable {
 
     @Id
@@ -96,6 +98,115 @@ public class Order implements Serializable {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_table", nullable = true)
     private RestaurantTable table;
+
+    // ========== Mesas unidas (fase 1) ==========
+    // `table` sigue siendo la mesa PRINCIPAL: los tickets, reportes y todas las
+    // vistas existentes siguen leyendo esa referencia sin cambios. Aquí solo se
+    // guardan las mesas EXTRA cuando el salón junta varias mesas para una sola
+    // cuenta. Un pedido normal deja esta colección vacía.
+
+    @OneToMany(mappedBy = "parentOrder", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @Builder.Default
+    private List<OrderTable> joinedTableRows = new ArrayList<>();
+
+    /**
+     * Vincula una mesa física adicional a este pedido. La mesa principal NO se
+     * agrega aquí: se conserva en {@link #table}.
+     */
+    public void addJoinedTable(RestaurantTable joinedTable) {
+        if (joinedTable == null || joinedTable.getId() == null) {
+            return;
+        }
+        if (this.table != null && joinedTable.getId().equals(this.table.getId())) {
+            return;
+        }
+        boolean alreadyJoined = this.joinedTableRows.stream()
+                .map(OrderTable::getTable)
+                .filter(Objects::nonNull)
+                .anyMatch(t -> joinedTable.getId().equals(t.getId()));
+        if (alreadyJoined) {
+            return;
+        }
+        OrderTable row = OrderTable.builder()
+                .parentOrder(this)
+                .table(joinedTable)
+                .build();
+        this.joinedTableRows.add(row);
+    }
+
+    /**
+     * True cuando el pedido ocupa más de una mesa física.
+     */
+    public boolean hasJoinedTables() {
+        return joinedTableRows != null && !joinedTableRows.isEmpty();
+    }
+
+    /**
+     * Mesas extra del pedido, ordenadas por número de mesa.
+     */
+    public List<RestaurantTable> getJoinedTables() {
+        if (joinedTableRows == null || joinedTableRows.isEmpty()) {
+            return List.of();
+        }
+        return joinedTableRows.stream()
+                .map(OrderTable::getTable)
+                .filter(Objects::nonNull)
+                .sorted(Comparator.comparing(RestaurantTable::getTableNumber,
+                        Comparator.nullsLast(Integer::compareTo)))
+                .toList();
+    }
+
+    /**
+     * Todas las mesas físicas que ocupa el pedido: la principal primero y luego las
+     * unidas. Es la lista que deben usar la ocupación, la liberación y los tickets.
+     */
+    public List<RestaurantTable> getGroupTables() {
+        List<RestaurantTable> tables = new ArrayList<>();
+        if (this.table != null) {
+            tables.add(this.table);
+        }
+        for (RestaurantTable joined : getJoinedTables()) {
+            boolean duplicate = this.table != null && this.table.getId() != null
+                    && this.table.getId().equals(joined.getId());
+            if (!duplicate) {
+                tables.add(joined);
+            }
+        }
+        return tables;
+    }
+
+    /**
+     * Números de mesa para mostrar en tickets y vistas: "4" o "4+7".
+     */
+    public String getTableNumberLabel() {
+        if (this.table == null) {
+            return "";
+        }
+        List<Integer> numbers = new ArrayList<>();
+        if (this.table.getTableNumber() != null) {
+            numbers.add(this.table.getTableNumber());
+        }
+        for (RestaurantTable joined : getJoinedTables()) {
+            if (joined.getTableNumber() != null) {
+                numbers.add(joined.getTableNumber());
+            }
+        }
+        numbers = numbers.stream().distinct().sorted().toList();
+        return numbers.stream().map(String::valueOf).collect(java.util.stream.Collectors.joining("+"));
+    }
+
+    /**
+     * Etiqueta lista para pantalla: "Mesa #4" para un pedido normal o "Mesa 4+7"
+     * cuando el salón unió mesas.
+     */
+    public String getTableDisplayName() {
+        if (this.table == null) {
+            return "";
+        }
+        return hasJoinedTables()
+                ? "Mesa " + getTableNumberLabel()
+                : "Mesa #" + this.table.getTableNumber();
+    }
 
     // Employee who created/took the order (typically a waiter)
     // NOTE: This is nullable to support customer-created orders

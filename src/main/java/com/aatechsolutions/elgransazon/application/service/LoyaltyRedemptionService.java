@@ -322,7 +322,7 @@ public class LoyaltyRedemptionService {
                         order.getIdOrder(),
                         order.getOrderNumber(),
                         order.getTable() != null
-                                ? "Mesa " + order.getTable().getTableNumber()
+                                ? "Mesa " + order.getTableNumberLabel()
                                 : "Sin mesa",
                         order.getCustomer() != null
                                 ? order.getCustomer().getFullName()
@@ -565,7 +565,7 @@ public class LoyaltyRedemptionService {
 
     private String describeOrder(Order order) {
         return order.getTable() != null
-                ? "la mesa " + order.getTable().getTableNumber()
+                ? "la mesa " + order.getTableNumberLabel()
                 : "el pedido " + order.getOrderNumber();
     }
 

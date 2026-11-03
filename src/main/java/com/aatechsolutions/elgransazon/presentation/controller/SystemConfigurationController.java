@@ -27,7 +27,6 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-import java.time.Duration;
 import java.time.LocalTime;
 import java.util.*;
 
@@ -85,7 +84,7 @@ public class SystemConfigurationController {
             MediaType contentType = image.getHeaders().getContentType();
             return ResponseEntity.ok()
                     .contentType(contentType != null ? contentType : MediaType.IMAGE_PNG)
-                    .cacheControl(CacheControl.maxAge(Duration.ofMinutes(30)).cachePrivate())
+                    .cacheControl(CacheControl.noStore())
                     .body(image.getBody());
         } catch (Exception e) {
             log.warn("No se pudo obtener el logo del restaurante para el QR: {}", e.getMessage());

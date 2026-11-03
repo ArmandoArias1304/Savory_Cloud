@@ -35,6 +35,13 @@ public class OrderNotificationDTO {
     private String orderTypeLabel;
 
     private Integer tableNumber;
+
+    /**
+     * Etiqueta completa de las mesas del pedido ("4" o "4+7"). Las pantallas de aviso la
+     * prefieren sobre {@link #tableNumber} para no ocultar las mesas unidas.
+     */
+    private String tableLabel;
+
     private BigDecimal total;
     private LocalDateTime createdAt;
     private Integer itemCount;

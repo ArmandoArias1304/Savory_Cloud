@@ -83,6 +83,23 @@ class TicketTableAndCashierTest {
     }
 
     @Test
+    @DisplayName("Un pedido con mesas unidas imprime la etiqueta completa 4+7")
+    void ticketsShowJoinedTablesLabel() throws Exception {
+        RestaurantTable primary = RestaurantTable.builder()
+                .id(7L).tableNumber(7).capacity(6).build();
+        RestaurantTable joined = RestaurantTable.builder()
+                .id(4L).tableNumber(4).capacity(6).build();
+        Order joinedOrder = order(OrderType.DINE_IN, primary);
+        joinedOrder.addJoinedTable(joined);
+
+        String thermal = escPosPrint(joinedOrder);
+        String pdf = pdfPrint(joinedOrder);
+
+        assertTrue(thermal.contains("Mesa: 4+7"), thermal);
+        assertTrue(pdf.contains("Mesa: 4+7"), pdf);
+    }
+
+    @Test
     @DisplayName("Sin mesa (para llevar) el ticket no imprime mesa, pero sí al cobrador")
     void thermalOrderTicketOmitsTableWhenThereIsNone() throws Exception {
         String ticket = escPosPrint(order(OrderType.TAKEOUT, null));

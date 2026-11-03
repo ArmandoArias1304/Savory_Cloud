@@ -1132,6 +1132,7 @@ public class WebSocketNotificationService {
                 // su tipo, y ahí nadie debe inventarse la traducción.
                 .orderTypeLabel(order.getOrderType() != null ? order.getOrderType().getDisplayName() : null)
                 .tableNumber(order.getTable() != null ? order.getTable().getTableNumber() : null)
+                .tableLabel(order.getTable() != null ? order.getTableNumberLabel() : null)
                 .total(order.getTotal())
                 .createdAt(order.getCreatedAt())
                 .itemCount(order.getOrderDetails() != null ? order.getOrderDetails().size() : 0)

@@ -2859,7 +2859,8 @@
         min-width: 350px;
         max-width: 350px;
         width: 350px;
-        height: 280px;
+        min-height: 280px;
+        height: auto;
         background: white;
         border-radius: 20px;
         padding: 30px 25px;
@@ -2925,11 +2926,7 @@
         color: #555;
         line-height: 1.6;
         font-style: italic;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        display: -webkit-box;
-        -webkit-line-clamp: 4;
-        -webkit-box-orient: vertical;
+        overflow-wrap: anywhere;
         flex: 1;
       }
 
@@ -3000,7 +2997,8 @@
           min-width: 320px;
           max-width: 320px;
           width: 320px;
-          height: 280px;
+          min-height: 280px;
+          height: auto;
         }
 
         .testimonios-title {
@@ -3013,18 +3011,15 @@
           min-width: 300px;
           max-width: 300px;
           width: 300px;
-          height: 280px;
+          min-height: 280px;
+          height: auto;
           padding: 25px 20px;
         }
 
         .testimonio-texto {
           font-size: 0.9rem;
           line-height: 1.5;
-          overflow: hidden;
-          display: -webkit-box;
-          -webkit-line-clamp: 4;
-          line-clamp: 4;
-          -webkit-box-orient: vertical;
+          overflow-wrap: anywhere;
         }
 
         .testimonio-avatar {

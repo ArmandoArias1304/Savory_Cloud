@@ -1074,7 +1074,8 @@ public class TicketPdfService {
         if (table == null || table.getTableNumber() == null) {
             return null;
         }
-        return "Mesa: " + table.getTableNumber();
+        // "Mesa: 4" o "Mesa: 4+7" cuando el pedido tiene mesas unidas.
+        return "Mesa: " + order.getTableNumberLabel();
     }
 
     /**

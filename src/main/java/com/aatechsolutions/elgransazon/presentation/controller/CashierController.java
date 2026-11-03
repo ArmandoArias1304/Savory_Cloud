@@ -160,7 +160,8 @@ public class CashierController {
         if (tableId != null) {
             final Long finalTableId = tableId;
             myOrders = myOrders.stream()
-                .filter(o -> o.getTable() != null && o.getTable().getId().equals(finalTableId))
+                .filter(o -> o.getGroupTables().stream()
+                        .anyMatch(t -> t.getId() != null && t.getId().equals(finalTableId)))
                 .collect(Collectors.toList());
         }
         if (status != null) {
@@ -220,7 +221,8 @@ public class CashierController {
         if (tableId != null) {
             final Long finalTableId = tableId;
             unpaidOrders = unpaidOrders.stream()
-                .filter(o -> o.getTable() != null && o.getTable().getId().equals(finalTableId))
+                .filter(o -> o.getGroupTables().stream()
+                        .anyMatch(t -> t.getId() != null && t.getId().equals(finalTableId)))
                 .collect(Collectors.toList());
         }
         if (status != null) {
@@ -498,6 +500,7 @@ public class CashierController {
     @GetMapping("/orders/customer-info")
     public String customerInfoForm(
             @RequestParam(required = false) Long tableId,
+            @RequestParam(required = false) String tableIds,
             @RequestParam(required = false) Long reservationId,
             @RequestParam String orderType,
             Authentication authentication,
@@ -509,19 +512,28 @@ public class CashierController {
         try {
             OrderType type = OrderType.valueOf(orderType);
             
-            // Validate table for DINE_IN orders
+            // Validate table(s) for DINE_IN orders: one table or a physically joined group
             Reservation linkedReservation = null;
-            if (type == OrderType.DINE_IN && tableId != null) {
-                RestaurantTable table = restaurantTableService.findById(tableId)
-                    .orElseThrow(() -> new IllegalArgumentException("Mesa no encontrada"));
-                
-                if (!cashierOrderService.isTableAvailableForOrder(tableId)) {
-                    redirectAttributes.addFlashAttribute("errorMessage", 
-                        "La mesa seleccionada no está disponible para pedidos");
+            List<RestaurantTable> selectedTables = List.of();
+            String selectedTableIds = null;
+            if (type == OrderType.DINE_IN) {
+                selectedTables = resolveTables(tableIds, tableId);
+                if (selectedTables.isEmpty()) {
+                    redirectAttributes.addFlashAttribute("errorMessage",
+                        "Debe seleccionar una mesa para pedidos en restaurante");
                     return "redirect:/cashier/orders/select-table";
                 }
-                
-                model.addAttribute("selectedTable", table);
+                for (RestaurantTable groupTable : selectedTables) {
+                    if (!cashierOrderService.isTableAvailableForOrder(groupTable.getId())) {
+                        redirectAttributes.addFlashAttribute("errorMessage",
+                            "La mesa #" + groupTable.getTableNumber() + " no está disponible para pedidos");
+                        return "redirect:/cashier/orders/select-table";
+                    }
+                }
+                selectedTableIds = selectedTables.stream()
+                        .map(t -> String.valueOf(t.getId()))
+                        .collect(Collectors.joining(","));
+                model.addAttribute("selectedTable", selectedTables.get(0));
 
                 // If there's a linked reservation, get its details for pre-filling
                 if (reservationId != null) {
@@ -535,6 +547,10 @@ public class CashierController {
             
             model.addAttribute("orderType", type);
             model.addAttribute("tableId", tableId);
+            model.addAttribute("selectedTables", selectedTables);
+            model.addAttribute("selectedTableIds", selectedTableIds);
+            model.addAttribute("tableLabel", tableLabel(selectedTables));
+            model.addAttribute("totalCapacity", totalCapacity(selectedTables));
             model.addAttribute("linkedReservation", linkedReservation);
             model.addAttribute("currentRole", "cashier");
             // Expose system configuration so DELIVERY block can prefill deliveryCost
@@ -543,8 +559,12 @@ public class CashierController {
             return "cashier/orders/order-customer-info";
             
         } catch (IllegalArgumentException e) {
-            log.warn("Invalid order type: {}", orderType);
-            redirectAttributes.addFlashAttribute("errorMessage", "Tipo de orden inválido");
+            log.warn("Invalid order type or table: {}", orderType);
+            String message = e.getMessage() != null
+                    && e.getMessage().toLowerCase().contains("mesa")
+                    ? e.getMessage()
+                    : "Tipo de orden inválido";
+            redirectAttributes.addFlashAttribute("errorMessage", message);
             return "redirect:/cashier/orders/select-table";
         }
     }
@@ -556,6 +576,7 @@ public class CashierController {
     public String menuSelection(
             @RequestParam String orderType,
             @RequestParam(required = false) Long tableId,
+            @RequestParam(required = false) String tableIds,
             @RequestParam(required = false) String customerName,
             @RequestParam(required = false) String customerPhone,
             @RequestParam(required = false) String deliveryAddress,
@@ -581,11 +602,18 @@ public class CashierController {
                 }
             }
             
-            // Get table info if DINE_IN
+            // Get table info if DINE_IN: one table or a physically joined group
             RestaurantTable selectedTable = null;
-            if (type == OrderType.DINE_IN && tableId != null) {
-                selectedTable = restaurantTableService.findById(tableId)
-                    .orElse(null);
+            List<RestaurantTable> selectedTables = List.of();
+            List<Long> joinedTableIds = List.of();
+            if (type == OrderType.DINE_IN) {
+                selectedTables = resolveTables(tableIds, tableId);
+                if (!selectedTables.isEmpty()) {
+                    selectedTable = selectedTables.get(0);
+                    joinedTableIds = selectedTables.stream()
+                            .map(RestaurantTable::getId)
+                            .toList();
+                }
             }
             
             // Update availability for all items based on current stock
@@ -653,6 +681,10 @@ public class CashierController {
             
             model.addAttribute("orderType", type);
             model.addAttribute("selectedTable", selectedTable);
+            model.addAttribute("selectedTables", selectedTables);
+            model.addAttribute("joinedTableIds", joinedTableIds);
+            model.addAttribute("tableLabel", tableLabel(selectedTables));
+            model.addAttribute("totalCapacity", totalCapacity(selectedTables));
             model.addAttribute("customerName", customerName);
             model.addAttribute("customerPhone", customerPhone);
             model.addAttribute("deliveryAddress", deliveryAddress);
@@ -694,6 +726,7 @@ public class CashierController {
             BindingResult bindingResult,
             @RequestParam(value = "employeeId", required = true) Long employeeId,
             @RequestParam(value = "tableId", required = false) Long tableId,
+            @RequestParam(value = "tableIds", required = false) String tableIds,
             @RequestParam(value = "itemIds", required = false) List<Long> itemIds,
             @RequestParam(value = "quantities", required = false) List<Integer> quantities,
             @RequestParam(value = "comments", required = false) List<String> comments,
@@ -721,11 +754,13 @@ public class CashierController {
                 .orElseThrow(() -> new IllegalArgumentException("Empleado no encontrado con ID: " + employeeId));
             order.setEmployee(employee);
             
-            // Set table if provided (required for DINE_IN)
-            if (tableId != null) {
-                RestaurantTable table = restaurantTableService.findById(tableId)
-                    .orElseThrow(() -> new IllegalArgumentException("Mesa no encontrada con ID: " + tableId));
-                order.setTable(table);
+            // Set table(s) if provided (required for DINE_IN)
+            List<RestaurantTable> selectedOrderTables = resolveTables(tableIds, tableId);
+            if (!selectedOrderTables.isEmpty()) {
+                if (order.getOrderType() != OrderType.DINE_IN) {
+                    throw new IllegalArgumentException("Solo los pedidos para comer aquí pueden unir mesas");
+                }
+                applyTablesToOrder(order, selectedOrderTables);
             }
             
             // Build order details
@@ -734,7 +769,8 @@ public class CashierController {
             if (orderDetails.isEmpty()) {
                 redirectAttributes.addFlashAttribute("errorMessage", "Debe agregar al menos un item al pedido");
                 return "redirect:/cashier/orders/menu?orderType=" + order.getOrderType() + 
-                       (tableId != null ? "&tableId=" + tableId : "");
+                       (tableId != null ? "&tableId=" + tableId : "") +
+                       (tableIds != null && !tableIds.isBlank() ? "&tableIds=" + tableIds : "");
             }
 
             // Validate dine-in-only items: only allowed for DINE_IN orders
@@ -2036,5 +2072,85 @@ public class CashierController {
             redirectAttributes.addFlashAttribute("errorMessage", "Error al cargar el ranking");
             return "redirect:/cashier/dashboard";
         }
+    }
+
+    /**
+     * Mesas del flujo de caja: acepta el valor del formulario ("4" o "4,7") y el
+     * respaldo de una sola mesa (tableId) de los enlaces anteriores.
+     */
+    private List<RestaurantTable> resolveTables(String tableIdsRaw, Long legacyTableId) {
+        List<Long> ids = parseTableIds(tableIdsRaw);
+        if (ids.isEmpty() && legacyTableId != null) {
+            ids = List.of(legacyTableId);
+        }
+        if (ids.isEmpty()) {
+            return List.of();
+        }
+        if (ids.size() > 8) {
+            throw new IllegalArgumentException("No se pueden unir más de 8 mesas en un pedido");
+        }
+        List<RestaurantTable> tables = new ArrayList<>();
+        for (Long id : ids) {
+            RestaurantTable table = restaurantTableService.findById(id)
+                    .orElseThrow(() -> new IllegalArgumentException("Mesa no encontrada: " + id));
+            boolean duplicate = tables.stream().anyMatch(t -> t.getId().equals(table.getId()));
+            if (!duplicate) {
+                tables.add(table);
+            }
+        }
+        return tables;
+    }
+
+    private List<Long> parseTableIds(String raw) {
+        if (raw == null || raw.trim().isEmpty() || "null".equalsIgnoreCase(raw.trim())) {
+            return List.of();
+        }
+        List<Long> ids = new ArrayList<>();
+        for (String part : raw.split(",")) {
+            String text = part.trim();
+            if (text.isEmpty()) {
+                continue;
+            }
+            try {
+                ids.add(Long.valueOf(text));
+            } catch (NumberFormatException e) {
+                throw new IllegalArgumentException("Mesa inválida: " + text);
+            }
+        }
+        return ids.stream().distinct().toList();
+    }
+
+    private void applyTablesToOrder(Order order, List<RestaurantTable> tables) {
+        if (tables == null || tables.isEmpty()) {
+            return;
+        }
+        order.setTable(tables.get(0));
+        for (int i = 1; i < tables.size(); i++) {
+            order.addJoinedTable(tables.get(i));
+        }
+    }
+
+    private String tableLabel(List<RestaurantTable> tables) {
+        if (tables == null || tables.isEmpty()) {
+            return "";
+        }
+        return tables.stream()
+                .map(RestaurantTable::getTableNumber)
+                .filter(Objects::nonNull)
+                .distinct()
+                .sorted()
+                .map(String::valueOf)
+                .collect(Collectors.joining("+"));
+    }
+
+    private int totalCapacity(List<RestaurantTable> tables) {
+        if (tables == null) {
+            return 0;
+        }
+        return tables.stream()
+                .map(RestaurantTable::getCapacity)
+                .filter(Objects::nonNull)
+                .mapToInt(Integer::intValue)
+                .sum();
     }
 }

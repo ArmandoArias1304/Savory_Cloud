@@ -174,12 +174,13 @@
                     <p
                       class="text-sm font-semibold text-gray-900 dark:text-white"
                     >
-                      Mesa #<span th:text="${selectedTable.tableNumber}"
-                        >1</span
+                      <span
+                        th:text="${tableLabel != null and !#strings.isEmpty(tableLabel) ? 'Mesa ' + tableLabel : 'Mesa #' + selectedTable.tableNumber}"
+                        >Mesa #1</span
                       >
                       <span
                         class="text-xs font-normal text-gray-500"
-                        th:text="'(' + ${selectedTable.capacity} + ' personas)'"
+                        th:text="'(' + ${totalCapacity} + ' personas)'"
                       >
                         (4 personas)
                       </span>
@@ -219,6 +220,13 @@
                     type="hidden"
                     name="tableId"
                     th:value="${selectedTable.id}"
+                  />
+                  <!-- Mesas del grupo ("4" o "4,7"); el menú las conserva al crear el pedido -->
+                  <input
+                    th:if="${selectedTable != null}"
+                    type="hidden"
+                    name="tableIds"
+                    th:value="${selectedTableIds}"
                   />
 
                   <div class="space-y-6">

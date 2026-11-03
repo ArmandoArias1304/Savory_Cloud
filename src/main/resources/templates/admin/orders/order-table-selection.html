@@ -956,6 +956,8 @@
       window.__occupiedTables = /*[[${occupiedTableInfoMap}]]*/ {};
     </script>
     <script th:src="@{/js/table-occupancy-modal.js}"></script>
+    <!-- Selección múltiple: unir mesas físicas en un solo pedido -->
+    <script th:src="@{/js/union-tables.js}"></script>
 
     <!-- Script del Sistema de Temas -->
     <div th:replace="~{fragments/theme :: themeScript}"></div>

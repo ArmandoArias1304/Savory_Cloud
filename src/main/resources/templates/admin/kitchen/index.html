@@ -390,7 +390,7 @@
                   </span>
                   <span
                     class="font-semibold text-gray-900 dark:text-white"
-                    th:text="${order.orderType.name() == 'DINE_IN' ? 'Mesa ' + order.table.tableNumber : order.orderType.displayName}"
+                    th:text="${order.orderType.name() == 'DINE_IN' ? 'Mesa ' + order.tableNumberLabel : order.orderType.displayName}"
                   >
                     Mesa 5
                   </span>

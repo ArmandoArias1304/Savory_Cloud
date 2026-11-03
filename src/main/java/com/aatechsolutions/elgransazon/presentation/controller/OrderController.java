@@ -270,10 +270,11 @@ public class OrderController {
             orders = orderService.findAll(); // Already filtered by role in service implementation
         }
 
-        // Filter by table
+        // Filter by table (cualquier mesa del grupo, no solo la principal)
         if (tableId != null) {
             orders = orders.stream()
-                .filter(order -> order.getTable() != null && order.getTable().getId().equals(tableId))
+                .filter(order -> order.getGroupTables().stream()
+                        .anyMatch(t -> t.getId() != null && t.getId().equals(tableId)))
                 .collect(Collectors.toList());
         }
 
@@ -690,6 +691,7 @@ public class OrderController {
     public String customerInfoForm(
             @PathVariable String role,
             @RequestParam(required = false) Long tableId,
+            @RequestParam(required = false) String tableIds,
             @RequestParam(required = false) Long reservationId,
             @RequestParam String orderType,
             Authentication authentication,
@@ -718,23 +720,35 @@ public class OrderController {
             return "redirect:/waiter/orders/select-table";
         }
 
-        // If DINE_IN, validate table
+        // If DINE_IN, validate table(s): a single table or a physically joined group
         RestaurantTable selectedTable = null;
+        List<RestaurantTable> selectedTables = List.of();
+        String selectedTableIds = null;
         Reservation linkedReservation = null;
         if (type == OrderType.DINE_IN) {
-            if (tableId == null) {
+            try {
+                selectedTables = resolveTables(tableIds, tableId);
+            } catch (IllegalArgumentException e) {
+                redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+                return "redirect:/" + role + "/orders/select-table";
+            }
+            if (selectedTables.isEmpty()) {
                 redirectAttributes.addFlashAttribute("errorMessage", "Debe seleccionar una mesa para pedidos en restaurante");
                 return "redirect:/" + role + "/orders/select-table";
             }
-            
-            selectedTable = restaurantTableService.findById(tableId)
-                .orElseThrow(() -> new IllegalArgumentException("Mesa no encontrada"));
-            
-            // Validate table availability
-            if (!orderService.isTableAvailableForOrder(tableId)) {
-                redirectAttributes.addFlashAttribute("errorMessage", 
-                    "La mesa #" + selectedTable.getTableNumber() + " no está disponible");
-                return "redirect:/" + role + "/orders/select-table";
+
+            selectedTable = selectedTables.get(0);
+            selectedTableIds = selectedTables.stream()
+                    .map(t -> String.valueOf(t.getId()))
+                    .collect(Collectors.joining(","));
+
+            // Validate availability of EVERY table before asking for customer data
+            for (RestaurantTable groupTable : selectedTables) {
+                if (!orderService.isTableAvailableForOrder(groupTable.getId())) {
+                    redirectAttributes.addFlashAttribute("errorMessage",
+                        "La mesa #" + groupTable.getTableNumber() + " no está disponible");
+                    return "redirect:/" + role + "/orders/select-table";
+                }
             }
             
             // If there's a linked reservation, get its details
@@ -749,6 +763,10 @@ public class OrderController {
 
         model.addAttribute("orderType", type);
         model.addAttribute("selectedTable", selectedTable);
+        model.addAttribute("selectedTables", selectedTables);
+        model.addAttribute("selectedTableIds", selectedTableIds);
+        model.addAttribute("tableLabel", tableLabel(selectedTables));
+        model.addAttribute("totalCapacity", totalCapacity(selectedTables));
         model.addAttribute("linkedReservation", linkedReservation);
         model.addAttribute("currentRole", role);
         // Expose system configuration so DELIVERY block can prefill deliveryCost
@@ -798,6 +816,7 @@ public class OrderController {
             @PathVariable String role,
             @RequestParam String orderType,
             @RequestParam(required = false) Long tableId,
+            @RequestParam(required = false) String tableIds,
             @RequestParam(required = false) String customerName,
             @RequestParam(required = false) String customerPhone,
             @RequestParam(required = false) String deliveryAddress,
@@ -832,11 +851,23 @@ public class OrderController {
             return "redirect:/waiter/orders/select-table";
         }
 
-        // Get table info if DINE_IN
+        // Get table info if DINE_IN (one table or a physically joined group)
         RestaurantTable selectedTable = null;
-        if (type == OrderType.DINE_IN && tableId != null) {
-            selectedTable = restaurantTableService.findById(tableId)
-                .orElse(null);
+        List<RestaurantTable> selectedTables = List.of();
+        List<Long> joinedTableIds = List.of();
+        if (type == OrderType.DINE_IN) {
+            try {
+                selectedTables = resolveTables(tableIds, tableId);
+            } catch (IllegalArgumentException e) {
+                redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+                return "redirect:/" + role + "/orders/select-table";
+            }
+            if (!selectedTables.isEmpty()) {
+                selectedTable = selectedTables.get(0);
+                joinedTableIds = selectedTables.stream()
+                        .map(RestaurantTable::getId)
+                        .toList();
+            }
         }
 
         // Update availability for all items based on current stock
@@ -903,6 +934,10 @@ public class OrderController {
 
         model.addAttribute("orderType", type);
         model.addAttribute("selectedTable", selectedTable);
+        model.addAttribute("selectedTables", selectedTables);
+        model.addAttribute("joinedTableIds", joinedTableIds);
+        model.addAttribute("tableLabel", tableLabel(selectedTables));
+        model.addAttribute("totalCapacity", totalCapacity(selectedTables));
         model.addAttribute("customerName", customerName);
         model.addAttribute("customerPhone", customerPhone);
         model.addAttribute("deliveryAddress", deliveryAddress);
@@ -1033,8 +1068,13 @@ public class OrderController {
                 .collect(Collectors.toList());
 
         // Set model attributes - similar to new order but with existing order context
+        List<RestaurantTable> existingGroupTables = order.getGroupTables();
         model.addAttribute("orderType", order.getOrderType());
         model.addAttribute("selectedTable", order.getTable());
+        model.addAttribute("selectedTables", existingGroupTables);
+        model.addAttribute("joinedTableIds", existingGroupTables.stream().map(RestaurantTable::getId).toList());
+        model.addAttribute("tableLabel", tableLabel(existingGroupTables));
+        model.addAttribute("totalCapacity", totalCapacity(existingGroupTables));
         model.addAttribute("customerName", order.getCustomerName());
         model.addAttribute("customerPhone", order.getCustomerPhone());
         model.addAttribute("deliveryAddress", order.getDeliveryAddress());
@@ -1389,6 +1429,7 @@ public class OrderController {
             String paymentMethodStr = (String) requestData.get("paymentMethod");
             Long employeeId = requestData.get("employeeId") != null ? Long.valueOf(requestData.get("employeeId").toString()) : null;
             Long tableId = requestData.get("tableId") != null ? Long.valueOf(requestData.get("tableId").toString()) : null;
+            List<Long> requestedTableIds = parseTableIds(requestData.get("tableIds"));
             String customerName = (String) requestData.get("customerName");
             String customerPhone = (String) requestData.get("customerPhone");
             String deliveryAddress = (String) requestData.get("deliveryAddress");
@@ -1450,10 +1491,12 @@ public class OrderController {
                 order.setEmployee(employee);
             }
 
-            if (tableId != null) {
-                RestaurantTable table = restaurantTableService.findById(tableId)
-                    .orElseThrow(() -> new IllegalArgumentException("Mesa no encontrada con ID: " + tableId));
-                order.setTable(table);
+            List<RestaurantTable> orderTables = loadTables(requestedTableIds, tableId);
+            if (!orderTables.isEmpty()) {
+                if (orderType != OrderType.DINE_IN) {
+                    throw new IllegalArgumentException("Solo los pedidos para comer aquí pueden unir mesas");
+                }
+                applyTablesToOrder(order, orderTables);
             }
 
             // Parse items from JSON body
@@ -1536,6 +1579,7 @@ public class OrderController {
             BindingResult bindingResult,
             @RequestParam(value = "employeeId", required = true) Long employeeId,
             @RequestParam(value = "tableId", required = false) Long tableId,
+            @RequestParam(value = "tableIds", required = false) String tableIds,
             @RequestParam(value = "itemIds", required = false) List<Long> itemIds,
             @RequestParam(value = "quantities", required = false) List<Integer> quantities,
             @RequestParam(value = "comments", required = false) List<String> comments,
@@ -1589,6 +1633,7 @@ public class OrderController {
                     "El método de pago seleccionado (" + order.getPaymentMethod().getDisplayName() + ") no está habilitado");
                 return "redirect:/" + role + "/orders/menu?orderType=" + order.getOrderType().name() +
                     (tableId != null ? "&tableId=" + tableId : "") +
+                    (tableIds != null && !tableIds.isBlank() ? "&tableIds=" + tableIds : "") +
                     (order.getCustomerName() != null ? "&customerName=" + order.getCustomerName() : "") +
                     (order.getCustomerPhone() != null ? "&customerPhone=" + order.getCustomerPhone() : "");
             }
@@ -1599,10 +1644,12 @@ public class OrderController {
             order.setEmployee(employee);
             
             // Set table if provided
-            if (tableId != null) {
-                RestaurantTable table = restaurantTableService.findById(tableId)
-                    .orElseThrow(() -> new IllegalArgumentException("Mesa no encontrada con ID: " + tableId));
-                order.setTable(table);
+            List<RestaurantTable> selectedOrderTables = resolveTables(tableIds, tableId);
+            if (!selectedOrderTables.isEmpty()) {
+                if (createdType != OrderType.DINE_IN) {
+                    throw new IllegalArgumentException("Solo los pedidos para comer aquí pueden unir mesas");
+                }
+                applyTablesToOrder(order, selectedOrderTables);
             }
             
             // Build order details from form data
@@ -4567,6 +4614,114 @@ public class OrderController {
         } catch (NumberFormatException e) {
             return null;
         }
+    }
+
+    /**
+     * Parse the table ids of the "Unir mesas" flow. Accepts the comma-separated
+     * value of the HTML forms and the JSON array used by the async create.
+     */
+    private List<Long> parseTableIds(Object raw) {
+        if (raw == null) {
+            return List.of();
+        }
+        List<Long> ids = new ArrayList<>();
+        if (raw instanceof Collection<?> values) {
+            for (Object value : values) {
+                addTableId(ids, value);
+            }
+        } else {
+            String text = raw.toString().trim();
+            if (!text.isEmpty() && !"null".equalsIgnoreCase(text)) {
+                for (String part : text.split(",")) {
+                    addTableId(ids, part);
+                }
+            }
+        }
+        return ids.stream().distinct().toList();
+    }
+
+    private void addTableId(List<Long> ids, Object value) {
+        if (value == null) {
+            return;
+        }
+        String text = value.toString().trim();
+        if (text.isEmpty() || "null".equalsIgnoreCase(text)) {
+            return;
+        }
+        try {
+            ids.add(Long.valueOf(text));
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Mesa inválida: " + text);
+        }
+    }
+
+    private List<RestaurantTable> resolveTables(Object tableIdsRaw, Long legacyTableId) {
+        return loadTables(parseTableIds(tableIdsRaw), legacyTableId);
+    }
+
+    /**
+     * Loads the selected tables keeping the selection order (the first one becomes
+     * the primary table of the order). Every table is scoped to the current company
+     * by {@link RestaurantTableService#findById(Long)}.
+     */
+    private List<RestaurantTable> loadTables(List<Long> tableIds, Long legacyTableId) {
+        List<Long> ids = (tableIds != null && !tableIds.isEmpty())
+                ? tableIds
+                : (legacyTableId != null ? List.of(legacyTableId) : List.of());
+        if (ids.isEmpty()) {
+            return List.of();
+        }
+        if (ids.size() > 8) {
+            throw new IllegalArgumentException("No se pueden unir más de 8 mesas en un pedido");
+        }
+        List<RestaurantTable> tables = new ArrayList<>();
+        for (Long id : ids) {
+            RestaurantTable table = restaurantTableService.findById(id)
+                    .orElseThrow(() -> new IllegalArgumentException("Mesa no encontrada: " + id));
+            boolean duplicate = tables.stream().anyMatch(t -> t.getId().equals(table.getId()));
+            if (!duplicate) {
+                tables.add(table);
+            }
+        }
+        return tables;
+    }
+
+    /**
+     * Sets the primary table and attaches the extra tables to the order. A single
+     * table keeps the legacy behavior (no joined rows).
+     */
+    private void applyTablesToOrder(Order order, List<RestaurantTable> tables) {
+        if (tables == null || tables.isEmpty()) {
+            return;
+        }
+        order.setTable(tables.get(0));
+        for (int i = 1; i < tables.size(); i++) {
+            order.addJoinedTable(tables.get(i));
+        }
+    }
+
+    private String tableLabel(List<RestaurantTable> tables) {
+        if (tables == null || tables.isEmpty()) {
+            return "";
+        }
+        return tables.stream()
+                .map(RestaurantTable::getTableNumber)
+                .filter(Objects::nonNull)
+                .distinct()
+                .sorted()
+                .map(String::valueOf)
+                .collect(Collectors.joining("+"));
+    }
+
+    private int totalCapacity(List<RestaurantTable> tables) {
+        if (tables == null) {
+            return 0;
+        }
+        return tables.stream()
+                .map(RestaurantTable::getCapacity)
+                .filter(Objects::nonNull)
+                .mapToInt(Integer::intValue)
+                .sum();
     }
 }
 

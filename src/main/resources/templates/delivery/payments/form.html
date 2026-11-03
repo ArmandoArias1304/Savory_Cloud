@@ -202,7 +202,7 @@
                 </h1>
                 <p class="text-sm text-gray-600 dark:text-gray-400">
                   <span th:if="${order.table != null}">
-                    Mesa <span th:text="${order.table.tableNumber}"></span> -
+                    Mesa <span th:text="${order.tableNumberLabel}"></span> -
                   </span>
                   Pedido #<span th:text="${order.orderNumber}"></span>
                 </p>
@@ -648,10 +648,9 @@
                         th:if="${order.table != null}"
                       >
                         <span class="text-gray-600 dark:text-gray-400">Mesa:</span>
-                        <span class="font-semibold"
-                          >Mesa #<span
-                            th:text="${order.table.tableNumber}"
-                          ></span
+                        <span
+                          class="font-semibold"
+                          th:text="${order.tableNumberLabel}"
                         ></span>
                       </div>
                       <div

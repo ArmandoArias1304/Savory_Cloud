@@ -229,7 +229,7 @@
                 table_restaurant
               </span>
               <span
-                >#<span th:text="${selectedTable.tableNumber}">1</span></span
+                >#<span th:text="${tableLabel != null and !#strings.isEmpty(tableLabel) ? tableLabel : selectedTable.tableNumber}">1</span></span
               >
             </span>
 
@@ -503,8 +503,8 @@
                 Tipo de Pedido
               </span>
               <span th:if="${selectedTable != null}">
-                <span class="ml-2">- Mesa #</span
-                ><span th:text="${selectedTable.tableNumber}">1</span>
+                <span class="ml-2">- </span
+                ><span th:text="${tableLabel != null and !#strings.isEmpty(tableLabel) ? 'Mesa ' + tableLabel : 'Mesa #' + selectedTable.tableNumber}">Mesa #1</span>
               </span>
             </p>
           </div>
@@ -672,6 +672,7 @@
       const orderData = {
         orderType: /*[[${orderType.name()}]]*/ "DINE_IN",
         tableId: /*[[${selectedTable?.id}]]*/ null,
+        tableIds: /*[[${joinedTableIds}]]*/ [],
         customerName: /*[[${customerName}]]*/ null,
         customerPhone: /*[[${customerPhone}]]*/ null,
         customerId: /*[[${customerId}]]*/ null,

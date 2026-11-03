@@ -238,7 +238,12 @@ public class ComandaEscPosService {
         out.write(ALIGN_LEFT);
         out.write(SIZE_STRONG);
         if (order.getTable() != null) {
-            printWrapped(out, label("Mesa:"), LABEL_INDENT, "#" + order.getTable().getTableNumber());
+            // "#4" o "4+7": cocina/barra debe ver de inmediato que el pedido cubre
+            // varias mesas, sin un "#" delante de la etiqueta compuesta.
+            String tableValue = order.hasJoinedTables()
+                    ? order.getTableNumberLabel()
+                    : "#" + order.getTableNumberLabel();
+            printWrapped(out, label("Mesa:"), LABEL_INDENT, tableValue);
         }
         if (order.getOrderType() != null) {
             printWrapped(out, label("Tipo:"), LABEL_INDENT, order.getOrderType().getDisplayName());

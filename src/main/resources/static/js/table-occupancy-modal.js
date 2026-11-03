@@ -88,9 +88,15 @@
       return;
     }
 
+    // Con mesas unidas la ficha se comparte entre todas las mesas del grupo: se
+    // muestra la etiqueta completa ("Mesa 4+7") en lugar del número suelto.
+    var displayLabel =
+      info && info.tableLabel ? info.tableLabel : tableNumber;
     setText(
       "occupiedTableModalTitle",
-      tableNumber != null && tableNumber !== "" ? "Mesa " + tableNumber : "Mesa",
+      displayLabel != null && displayLabel !== ""
+        ? "Mesa " + displayLabel
+        : "Mesa",
     );
     setText("occupiedTableWaiterName", info.waiterName || "Sin mesero asignado");
     setText("occupiedTableWaiterInitials", info.waiterInitials || "?");

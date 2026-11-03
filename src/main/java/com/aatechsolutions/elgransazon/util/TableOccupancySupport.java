@@ -71,10 +71,16 @@ public final class TableOccupancySupport {
             if (order == null || order.getTable() == null || order.getTable().getId() == null) {
                 continue;
             }
+            OccupiedTableInfoDTO dto = toDto(order, role, username, canViewAnyOrder, dateTimeService);
             // Si por datos históricos hubiera más de un pedido activo en la misma mesa,
             // la consulta llega ordenada del más reciente al más antiguo y se conserva ese.
-            occupancy.putIfAbsent(order.getTable().getId(),
-                    toDto(order, role, username, canViewAnyOrder, dateTimeService));
+            // Con mesas unidas, la misma ficha se asocia a TODAS las mesas del grupo para
+            // que cualquier mesa secundaria explique qué pedido la está ocupando.
+            for (RestaurantTable groupTable : order.getGroupTables()) {
+                if (groupTable != null && groupTable.getId() != null) {
+                    occupancy.putIfAbsent(groupTable.getId(), dto);
+                }
+            }
         }
         return occupancy;
     }
@@ -139,7 +145,8 @@ public final class TableOccupancySupport {
                 itemCount,
                 order.getTotal(),
                 canViewOrder,
-                orderUrl);
+                orderUrl,
+                order.getTableNumberLabel());
     }
 
     private static String customerFullName(Customer customer) {

@@ -508,7 +508,7 @@
                     th:data-order-id="${order.idOrder}"
                     th:data-order-number="${order.orderNumber}"
                     th:data-order-when="${#tz.format(order.createdAt, 'dd/MM/yyyy') + ' ' + #tz.format(order.createdAt, 'HH:mm')}"
-                    th:data-order-table="${order.table != null ? order.table.tableNumber : ''}"
+                    th:data-order-table="${order.table != null ? order.tableNumberLabel : ''}"
                     th:data-order-type="${order.orderType != null ? order.orderType.name() : ''}"
                     th:data-order-type-label="${order.orderType != null ? order.orderType.displayName : ''}"
                     th:data-order-preparation="${order.estimatedPreparationLabel ?: ''}"
@@ -597,7 +597,7 @@
                       <span
                         th:if="${order.table != null}"
                         class="text-sm text-gray-900 dark:text-white"
-                        th:text="${'Mesa #' + order.table.tableNumber}"
+                        th:text="${order.tableDisplayName}"
                       ></span>
                       <span
                         th:if="${order.table == null}"

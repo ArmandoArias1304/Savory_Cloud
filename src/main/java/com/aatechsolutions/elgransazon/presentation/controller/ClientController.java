@@ -1845,8 +1845,8 @@ public class ClientController {
                 return "redirect:/client/review";
             }
             
-            if (comment.trim().length() > 500) {
-                redirectAttributes.addFlashAttribute("errorMessage", "El comentario no puede exceder 500 caracteres");
+            if (comment.trim().length() > 150) {
+                redirectAttributes.addFlashAttribute("errorMessage", "El comentario no puede exceder 150 caracteres");
                 return "redirect:/client/review";
             }
             

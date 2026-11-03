@@ -24,6 +24,7 @@ public record OccupiedTableInfoDTO(
         int itemCount,
         BigDecimal total,
         boolean canViewOrder,
-        String orderUrl
+        String orderUrl,
+        String tableLabel
 ) {
 }

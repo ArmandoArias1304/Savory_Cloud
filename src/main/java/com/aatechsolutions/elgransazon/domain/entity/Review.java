@@ -45,8 +45,8 @@ public class Review implements Serializable {
     private Integer rating;
 
     @NotBlank(message = "El comentario es requerido")
-    @Size(min = 10, max = 500, message = "El comentario debe tener entre 10 y 500 caracteres")
-    @Column(name = "comment", nullable = false, length = 500)
+    @Size(min = 10, max = 150, message = "El comentario debe tener entre 10 y 150 caracteres")
+    @Column(name = "comment", nullable = false, length = 500, columnDefinition = "varchar(500)")
     private String comment;
 
     @Enumerated(EnumType.STRING)

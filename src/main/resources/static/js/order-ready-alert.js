@@ -233,8 +233,14 @@
    * es lo único que lo identifica, y es lo que la persona que lo va a sacar necesita leer.
    */
   function where(notification) {
-    if (notification.tableNumber != null && notification.tableNumber !== "") {
-      return "Mesa " + notification.tableNumber;
+    // tableLabel llega como "4" o "4+7"; tableNumber se conserva como respaldo
+    // para avisos antiguos o de otras pantallas.
+    var tableLabel =
+      notification.tableLabel != null && notification.tableLabel !== ""
+        ? notification.tableLabel
+        : notification.tableNumber;
+    if (tableLabel != null && tableLabel !== "") {
+      return "Mesa " + tableLabel;
     }
     return notification.orderTypeLabel || "Para recoger";
   }

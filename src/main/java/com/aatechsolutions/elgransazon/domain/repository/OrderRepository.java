@@ -76,26 +76,32 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     /**
      * Find all orders by table ID
      */
-    @Query("SELECT o FROM Order o WHERE o.table.id = :tableId ORDER BY o.createdAt DESC")
+    @Query("SELECT o FROM Order o WHERE (o.table.id = :tableId " +
+           "OR EXISTS (SELECT ot.id FROM OrderTable ot WHERE ot.parentOrder = o AND ot.table.id = :tableId)) " +
+           "ORDER BY o.createdAt DESC")
     List<Order> findByTableId(@Param("tableId") Long tableId);
 
     /**
      * Count all orders (any status) linked to a table.
      * Used to decide whether a table can be deleted or only inactivated.
      */
-    @Query("SELECT COUNT(o) FROM Order o WHERE o.table.id = :tableId")
+    @Query("SELECT COUNT(o) FROM Order o WHERE (o.table.id = :tableId " +
+           "OR EXISTS (SELECT ot.id FROM OrderTable ot WHERE ot.parentOrder = o AND ot.table.id = :tableId))")
     long countOrdersByTableId(@Param("tableId") Long tableId);
 
     /**
      * Find all orders by table ID and company
      */
-    @Query("SELECT o FROM Order o WHERE o.table.id = :tableId AND o.company = :company ORDER BY o.createdAt DESC")
+    @Query("SELECT o FROM Order o WHERE (o.table.id = :tableId " +
+           "OR EXISTS (SELECT ot.id FROM OrderTable ot WHERE ot.parentOrder = o AND ot.table.id = :tableId)) " +
+           "AND o.company = :company ORDER BY o.createdAt DESC")
     List<Order> findByTableIdAndCompany(@Param("tableId") Long tableId, @Param("company") Company company);
 
     /**
      * Find active order by table (not cancelled, not delivered)
      */
-    @Query("SELECT o FROM Order o WHERE o.table.id = :tableId " +
+    @Query("SELECT o FROM Order o WHERE (o.table.id = :tableId " +
+           "OR EXISTS (SELECT ot.id FROM OrderTable ot WHERE ot.parentOrder = o AND ot.table.id = :tableId)) " +
            "AND o.status NOT IN ('CANCELLED', 'DELIVERED', 'PAID') " +
            "ORDER BY o.createdAt DESC")
     Optional<Order> findActiveOrderByTableId(@Param("tableId") Long tableId);
@@ -103,7 +109,9 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     /**
      * Find active order by table and company
      */
-    @Query("SELECT o FROM Order o WHERE o.table.id = :tableId AND o.company = :company " +
+    @Query("SELECT o FROM Order o WHERE (o.table.id = :tableId " +
+           "OR EXISTS (SELECT ot.id FROM OrderTable ot WHERE ot.parentOrder = o AND ot.table.id = :tableId)) " +
+           "AND o.company = :company " +
            "AND o.status NOT IN ('CANCELLED', 'DELIVERED', 'PAID') " +
            "ORDER BY o.createdAt DESC")
     Optional<Order> findActiveOrderByTableIdAndCompany(@Param("tableId") Long tableId, @Param("company") Company company);
@@ -111,7 +119,8 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     /**
      * Find active order by table with employee eagerly fetched
      */
-    @Query("SELECT o FROM Order o LEFT JOIN FETCH o.employee WHERE o.table.id = :tableId " +
+    @Query("SELECT o FROM Order o LEFT JOIN FETCH o.employee WHERE (o.table.id = :tableId " +
+           "OR EXISTS (SELECT ot.id FROM OrderTable ot WHERE ot.parentOrder = o AND ot.table.id = :tableId)) " +
            "AND o.status NOT IN ('CANCELLED', 'DELIVERED', 'PAID') " +
            "ORDER BY o.createdAt DESC")
     List<Order> findActiveOrdersWithEmployeeByTableId(@Param("tableId") Long tableId);
@@ -129,7 +138,8 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
            "LEFT JOIN FETCH o.customer " +
            "LEFT JOIN FETCH o.table " +
            "LEFT JOIN FETCH o.orderDetails " +
-           "WHERE o.company = :company AND o.table.id IN :tableIds " +
+           "WHERE o.company = :company AND (o.table.id IN :tableIds " +
+           "OR EXISTS (SELECT ot.id FROM OrderTable ot WHERE ot.parentOrder = o AND ot.table.id IN :tableIds)) " +
            "AND o.status NOT IN ('CANCELLED', 'DELIVERED', 'PAID') " +
            "ORDER BY o.createdAt DESC")
     List<Order> findActiveOrdersWithDetailsByTableIds(

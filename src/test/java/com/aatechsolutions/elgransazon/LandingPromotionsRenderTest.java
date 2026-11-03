@@ -221,6 +221,11 @@ class LandingPromotionsRenderTest {
         for (Path landing : LANDINGS) {
             String html = Files.readString(landing, StandardCharsets.UTF_8);
 
+            assertTrue(html.contains("height: auto;"),
+                    landing + " review cards must grow to show the full comment");
+            assertFalse(html.contains("-webkit-line-clamp: 4"),
+                    landing + " must not truncate approved customer reviews");
+
             assertTrue(html.contains("fragments/landing-promotions :: promotions(${landingPromotions}"),
                     landing + " must render the shared promotions section");
             int carouselPosition = html.indexOf("id=\"restaurantCarousel\"");

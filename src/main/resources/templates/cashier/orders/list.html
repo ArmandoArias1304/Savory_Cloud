@@ -565,7 +565,7 @@
                       <span
                         th:if="${order.table != null}"
                         class="text-sm text-gray-900 dark:text-white"
-                        th:text="${'Mesa #' + order.table.tableNumber}"
+                        th:text="${order.tableDisplayName}"
                       ></span>
                       <span
                         th:if="${order.table == null}"
@@ -865,7 +865,7 @@
                       <span
                         th:if="${order.table != null}"
                         class="text-sm text-gray-900 dark:text-white"
-                        th:text="${'Mesa #' + order.table.tableNumber}"
+                        th:text="${order.tableDisplayName}"
                       ></span>
                       <span
                         th:if="${order.table == null}"

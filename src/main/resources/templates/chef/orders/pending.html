@@ -437,7 +437,7 @@
                 <h3 class="text-xl font-bold text-gray-900 dark:text-white">
                   <span
                     th:if="${order.table != null}"
-                    th:text="'Mesa ' + ${order.table.tableNumber}"
+                    th:text="'Mesa ' + ${order.tableNumberLabel}"
                   ></span>
                   <span
                     th:if="${order.table == null && order.orderType.name() == 'TAKEOUT'}"

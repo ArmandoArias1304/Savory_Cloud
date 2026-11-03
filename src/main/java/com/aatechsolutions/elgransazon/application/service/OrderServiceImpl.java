@@ -155,14 +155,40 @@ public class OrderServiceImpl implements OrderService {
         
         // 2. Validate table availability (only if table is provided)
         RestaurantTable table = order.getTable();
+        List<RestaurantTable> groupTables = order.getGroupTables();
+
+        if (table != null && groupTables.size() > 1 && order.getOrderType() != OrderType.DINE_IN) {
+            throw new IllegalArgumentException(
+                "Solo los pedidos para comer aquí pueden unir mesas");
+        }
+
+        if (table != null && order.getOrderType() == OrderType.DINE_IN && !groupTables.isEmpty()) {
+            // Bloquear las filas antes de validar evita que dos meseros se queden al
+            // mismo tiempo con la misma mesa física. Se aplica también a una sola
+            // mesa para que un pedido normal no compita con uno de mesas unidas.
+            List<RestaurantTable> lockedTables = restaurantTableRepository.findAllByIdWithLock(
+                    groupTables.stream().map(RestaurantTable::getId).toList());
+            // El lock serializa las transacciones, pero la entidad ya podía estar en el
+            // contexto de persistencia (OSIV) con el estado leído ANTES de esperar el
+            // lock. Refrescarla es lo que hace que la validación vea el estado real.
+            lockedTables.forEach(entityManager::refresh);
+            Map<Long, RestaurantTable> lockedById = lockedTables.stream()
+                    .collect(Collectors.toMap(RestaurantTable::getId, t -> t));
+            groupTables = groupTables.stream()
+                    .map(t -> lockedById.getOrDefault(t.getId(), t))
+                    .toList();
+        }
+
         if (table != null) {
-            // Use RestaurantTableService to check if table can be used
-            // This considers: table status (AVAILABLE only), reservation blocking, and active orders
-            if (!restaurantTableService.canTableBeUsedForOrder(table.getId())) {
-                throw new IllegalStateException(
-                    String.format("La mesa #%d no está disponible, está bloqueada por una reservación próxima, o ya tiene un pedido activo", 
-                                  table.getTableNumber())
-                );
+            // This considers: table status (AVAILABLE only), reservation blocking, and active orders.
+            // Se valida cada mesa del grupo, no solo la principal.
+            for (RestaurantTable groupTable : groupTables) {
+                if (!restaurantTableService.canTableBeUsedForOrder(groupTable.getId())) {
+                    throw new IllegalStateException(
+                        String.format("La mesa #%d no está disponible, está bloqueada por una reservación próxima, o ya tiene un pedido activo",
+                                      groupTable.getTableNumber())
+                    );
+                }
             }
         }
 
@@ -307,18 +333,19 @@ public class OrderServiceImpl implements OrderService {
             order.updateStatusFromItems();
         }
 
-        // 10. Occupy table and handle reservation if applicable (only for DINE_IN)
+        // 10. Occupy every table of the group and handle reservations (only for DINE_IN)
         if (table != null && order.getOrderType() == OrderType.DINE_IN) {
-            // Table must be AVAILABLE at this point (validated in step 2)
-            // Change table status to OCCUPIED
-            table.setStatus(TableStatus.OCCUPIED);
-            table.setUpdatedBy(order.getCreatedBy());
-            restaurantTableRepository.save(table);
-            log.info("Table #{} changed to OCCUPIED", table.getTableNumber());
-            
-            // Check if there's a PENDING reservation for this table that should be completed
-            // If the order has a reservationId, complete that specific reservation
-            // Otherwise, check if there's an active PENDING reservation due now
+            // All tables must be AVAILABLE at this point (validated in step 2)
+            for (RestaurantTable groupTable : groupTables) {
+                groupTable.setStatus(TableStatus.OCCUPIED);
+                groupTable.setUpdatedBy(order.getCreatedBy());
+                restaurantTableRepository.save(groupTable);
+                log.info("Table #{} changed to OCCUPIED{}", groupTable.getTableNumber(),
+                         groupTables.size() > 1 ? " (mesa unida)" : "");
+            }
+
+            // Mesa principal: se conserva el vínculo de reservación que ya existía
+            // (la orden solo guarda un reservationId).
             Long reservationIdToComplete = order.getReservationId();
             if (reservationIdToComplete != null) {
                 // Complete the specific reservation linked to this order
@@ -329,19 +356,16 @@ public class OrderServiceImpl implements OrderService {
                     log.warn("Could not complete reservation #{}: {}", reservationIdToComplete, e.getMessage());
                 }
             } else {
-                // Check if there's a PENDING reservation that is due now (time has arrived)
-                reservationService.findFirstActivePendingReservationForTable(table.getId())
-                    .ifPresent(reservation -> {
-                        try {
-                            reservationService.markAsCompleted(reservation.getId(), order.getCreatedBy());
-                            order.setReservationId(reservation.getId()); // Link the reservation to the order
-                            log.info("Reservation #{} auto-completed (customer arrived at reserved time)", 
-                                     reservation.getId());
-                        } catch (Exception e) {
-                            log.warn("Could not auto-complete reservation #{}: {}", 
-                                     reservation.getId(), e.getMessage());
-                        }
-                    });
+                completeDueReservationForTable(order, table, true);
+            }
+
+            // Mesas unidas: si alguna tenía una reservación ya vencida, se completa
+            // para que no quede pendiente sobre una mesa que ya está en uso.
+            for (RestaurantTable groupTable : groupTables) {
+                if (table.getId() != null && table.getId().equals(groupTable.getId())) {
+                    continue;
+                }
+                completeDueReservationForTable(order, groupTable, false);
             }
         }
 
@@ -686,17 +710,9 @@ public class OrderServiceImpl implements OrderService {
         order.setUpdatedBy(cancelledBy);
         order.setUpdatedAt(java.time.LocalDateTime.now());
 
-        // Free table if applicable (DINE_IN only)
+        // Free every table of the group (DINE_IN only)
         if (order.getOrderType() == OrderType.DINE_IN) {
-            RestaurantTable table = order.getTable();
-            if (table != null && table.getStatus() == TableStatus.OCCUPIED) {
-                // Change table status back to AVAILABLE
-                table.setStatus(TableStatus.AVAILABLE);
-                table.setUpdatedBy(cancelledBy);
-                restaurantTableRepository.save(table);
-                log.info("Table #{} freed and marked as AVAILABLE after order cancellation", 
-                         table.getTableNumber());
-            }
+            releaseGroupTables(order, cancelledBy, "order cancellation");
         }
 
         Order cancelledOrder = orderRepository.save(order);
@@ -830,18 +846,10 @@ public class OrderServiceImpl implements OrderService {
             order.setPaidAt(LocalDateTime.now());
         }
 
-        // If order is marked as PAID, free the table
-        // NOTE: Table is NOT freed when DELIVERED - only when PAID
+        // If order is marked as PAID, free every table of the group
+        // NOTE: Tables are NOT freed when DELIVERED - only when PAID
         if (newStatus == OrderStatus.PAID && orderType == OrderType.DINE_IN) {
-            RestaurantTable table = order.getTable();
-            if (table != null && table.getStatus() == TableStatus.OCCUPIED) {
-                // Change table status back to AVAILABLE
-                table.setStatus(TableStatus.AVAILABLE);
-                table.setUpdatedBy(updatedBy);
-                restaurantTableRepository.save(table);
-                log.info("Table #{} freed and marked as AVAILABLE after order payment", 
-                         table.getTableNumber());
-            }
+            releaseGroupTables(order, updatedBy, "order payment");
         }
 
         // If order is marked as PAID, update employee monthly statistics
@@ -2375,6 +2383,54 @@ public class OrderServiceImpl implements OrderService {
     }
 
     /**
+     * Completa la primera reservación pendiente que ya venció para una mesa del
+     * grupo. La mesa principal conserva el reservationId de la orden; las mesas
+     * unidas solo se marcan como completadas.
+     */
+    private void completeDueReservationForTable(Order order, RestaurantTable restaurantTable,
+                                                boolean linkToOrder) {
+        if (restaurantTable == null || restaurantTable.getId() == null) {
+            return;
+        }
+        reservationService.findFirstActivePendingReservationForTable(restaurantTable.getId())
+            .ifPresent(reservation -> {
+                try {
+                    reservationService.markAsCompleted(reservation.getId(), order.getCreatedBy());
+                    if (linkToOrder) {
+                        order.setReservationId(reservation.getId());
+                    }
+                    log.info("Reservation #{} auto-completed for table #{}",
+                             reservation.getId(), restaurantTable.getTableNumber());
+                } catch (Exception e) {
+                    log.warn("Could not auto-complete reservation #{}: {}",
+                             reservation.getId(), e.getMessage());
+                }
+            });
+    }
+
+    /**
+     * Libera TODAS las mesas físicas del pedido. Debe usarse en cobro, cancelación
+     * y cualquier otro cierre: liberar solo la principal dejaría las mesas unidas
+     * ocupadas para siempre.
+     */
+    private void releaseGroupTables(Order order, String username, String reason) {
+        for (RestaurantTable groupTable : order.getGroupTables()) {
+            if (groupTable == null || groupTable.getId() == null) {
+                continue;
+            }
+            RestaurantTable freshTable = restaurantTableRepository.findById(groupTable.getId())
+                    .orElse(null);
+            if (freshTable != null && freshTable.getStatus() == TableStatus.OCCUPIED) {
+                freshTable.setStatus(TableStatus.AVAILABLE);
+                freshTable.setUpdatedBy(username);
+                restaurantTableRepository.save(freshTable);
+                log.info("Table #{} freed and marked as AVAILABLE after {}",
+                         freshTable.getTableNumber(), reason);
+            }
+        }
+    }
+
+    /**
      * Handle table changes when updating an order
      * Frees old table and occupies new table as needed
      * 
@@ -2393,6 +2449,15 @@ public class OrderServiceImpl implements OrderService {
         
         boolean oldWasDineIn = oldOrderType == OrderType.DINE_IN;
         boolean newIsDineIn = newOrderType == OrderType.DINE_IN;
+
+        // Fase 1: un pedido con mesas unidas no se puede mover a otra mesa ni cambiar
+        // de tipo (el cobro y la cancelación sí lo cierran y liberan todas).
+        if (order.hasJoinedTables()
+                && (!newIsDineIn || newTable == null || oldTable == null
+                    || !oldTable.getId().equals(newTable.getId()))) {
+            throw new IllegalStateException(
+                "Este pedido tiene mesas unidas: no se puede cambiar de mesa ni de tipo mientras esté abierto.");
+        }
         
         // Case 1: Old order had a table and was DINE_IN -> free the old table
         if (oldTable != null && oldWasDineIn) {

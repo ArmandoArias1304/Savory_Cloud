@@ -224,28 +224,39 @@
     // todo el ancho al número.
     var header = el("div", "flex items-start gap-3 px-4 pt-4");
 
-    var tableNumber = attr(row, "table").replace(/[^0-9]/g, "");
+    // data-order-table trae la etiqueta completa ("4" o "4+7"); no se deben
+    // recortar los dígitos porque se perderían las mesas unidas.
+    var tableLabel = attr(row, "table").trim();
+    var hasTable = tableLabel !== "";
+    var isJoinedTable = tableLabel.indexOf("+") !== -1;
     var typeCode = attr(row, "type");
     var typeBox = TYPE_BOX[typeCode] || TYPE_BOX.DINE_IN;
 
     var box = el(
       "div",
       "h-14 w-14 shrink-0 rounded-xl flex flex-col items-center justify-center " +
-        (tableNumber
+        (hasTable
           ? "bg-primary/10 dark:bg-primary/20 text-primary"
           : typeBox.style),
     );
-    box.title = tableNumber ? "Mesa " + tableNumber : attr(row, "type-label");
+    box.title = hasTable ? "Mesa " + tableLabel : attr(row, "type-label");
 
-    var captionText = tableNumber ? "Mesa" : typeBox.caption;
+    var captionText = hasTable ? "Mesa" : typeBox.caption;
     if (captionText) {
       box.appendChild(
         el("span", "text-[8px] uppercase tracking-wide font-bold", captionText),
       );
     }
-    if (tableNumber) {
+    if (hasTable) {
+      var tableFont = isJoinedTable
+        ? "text-[10px] leading-[1.05] break-all text-center px-0.5"
+        : "text-xl";
       box.appendChild(
-        el("span", "text-xl font-extrabold leading-none tabular-nums", tableNumber),
+        el(
+          "span",
+          tableFont + " font-extrabold leading-none tabular-nums",
+          tableLabel,
+        ),
       );
     } else {
       box.appendChild(

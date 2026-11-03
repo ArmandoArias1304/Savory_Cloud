@@ -3,11 +3,14 @@ package com.aatechsolutions.elgransazon.domain.repository;
 import com.aatechsolutions.elgransazon.domain.entity.Company;
 import com.aatechsolutions.elgransazon.domain.entity.RestaurantTable;
 import com.aatechsolutions.elgransazon.domain.entity.TableStatus;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -21,6 +24,16 @@ public interface RestaurantTableRepository extends JpaRepository<RestaurantTable
      * Find table by table number
      */
     Optional<RestaurantTable> findByTableNumber(Integer tableNumber);
+
+    /**
+     * Bloquea las filas de las mesas indicadas durante la transacción. Se usa al
+     * crear un pedido con mesas unidas para que dos meseros no puedan unir la misma
+     * mesa al mismo tiempo (una de las dos transacciones espera y luego falla la
+     * validación de disponibilidad).
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT t FROM RestaurantTable t WHERE t.id IN :ids ORDER BY t.id")
+    List<RestaurantTable> findAllByIdWithLock(@Param("ids") Collection<Long> ids);
 
     /**
      * Find all tables by status
