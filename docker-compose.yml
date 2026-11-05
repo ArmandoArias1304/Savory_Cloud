@@ -5,7 +5,15 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    mem_limit: 512m
+    mem_limit: 768m
+    # Heap explícito: por defecto la JVM toma 25% del límite del contenedor (128m con 512m)
+    # y el old gen se saturaba al 99.7%. 384m elimina la presión de GC.
+    entrypoint: ["java", "-Xms128m", "-Xmx384m", "-XX:MaxMetaspaceSize=192m", "-XX:+UseSerialGC", "-Duser.timezone=UTC", "-jar", "savorycloud.jar"]
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     ports:
       # Mapea el puerto definido en .env al puerto interno 8080 de Tomcat
       - "${API_PORT}:8080"
@@ -66,8 +74,24 @@ services:
     container_name: savorycloud_db
     # Use mysql_native_password so MariaDB client (Alpine) can authenticate for backups.
     # caching_sha2_password (MySQL 8 default) is not supported by mariadb-dump.
-    command: --default-authentication-plugin=mysql_native_password
-    mem_limit: 512m
+    command:
+      - --default-authentication-plugin=mysql_native_password
+      # --- Tuning para que MySQL 8 quepa cómodo en el contenedor ---
+      # performance_schema solo es telemetría interna: ahorra 100-200 MB.
+      - --performance-schema=OFF
+      # Pico real observado: 28 conexiones concurrentes.
+      - --max-connections=50
+      - --innodb-buffer-pool-size=128M
+      - --table-open-cache=400
+      - --tmp-table-size=32M
+      - --max-heap-table-size=32M
+      - --innodb-log-buffer-size=8M
+    mem_limit: 768m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     ports:
       # Solo accesible desde localhost — usar SSH tunnel para Workbench/DBeaver
       - "127.0.0.1:3307:${DB_PORT}"
