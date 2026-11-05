@@ -1006,6 +1006,10 @@
     <!-- License Expiration Warning -->
     <script th:inline="javascript">
       /*<![CDATA[*/
+      // Cola de alertas: la licencia siempre va primero. El aviso del agente de
+      // impresión espera a que esta promesa se resuelva (ver script más abajo).
+      window.licenseAlertPromise = Promise.resolve();
+
       document.addEventListener("DOMContentLoaded", function () {
         const showLicenseWarning = /*[[${showLicenseWarning}]]*/ false;
         const daysLeft = /*[[${daysLeft}]]*/ 0;
@@ -1031,7 +1035,7 @@
             icon = "warning";
           }
 
-          Swal.fire({
+          window.licenseAlertPromise = Swal.fire({
             title: title,
             html: `
               <div style="text-align: left;">
@@ -1693,6 +1697,10 @@
           const status = await response.json();
           if (status.active) return;
 
+          // Espera a que el usuario cierre la alerta de licencia (si se mostró)
+          // para que el aviso de impresora no la reemplace.
+          await (window.licenseAlertPromise || Promise.resolve());
+
           const result = await Swal.fire({
             icon: "warning",
             title: "No hay un agente de impresión activo",
@@ -1708,6 +1716,8 @@
           }
         } catch (error) {
           console.error("No se pudo consultar el agente de impresión:", error);
+          // Mismo orden: nunca tapar la alerta de licencia.
+          await (window.licenseAlertPromise || Promise.resolve());
           Swal.fire({
             icon: "error",
             title: "No se pudo verificar el agente",
