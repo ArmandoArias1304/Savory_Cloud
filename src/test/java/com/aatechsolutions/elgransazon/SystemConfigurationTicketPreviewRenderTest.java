@@ -2,7 +2,9 @@ package com.aatechsolutions.elgransazon;
 
 import com.aatechsolutions.elgransazon.domain.entity.DayOfWeek;
 import com.aatechsolutions.elgransazon.domain.entity.GlobalSystemConfig;
+import com.aatechsolutions.elgransazon.domain.entity.LicenseEvent;
 import com.aatechsolutions.elgransazon.domain.entity.SystemConfiguration;
+import com.aatechsolutions.elgransazon.domain.entity.SystemLicense;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -28,6 +30,7 @@ import org.thymeleaf.web.IWebExchange;
 import org.thymeleaf.web.servlet.JakartaServletWebApplication;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -147,6 +150,30 @@ class SystemConfigurationTicketPreviewRenderTest {
                         && html.contains("font-family: Arial, Helvetica, sans-serif")
                         && html.contains("Facture este ticket escaneando el código QR:"),
                 "the preview should follow the PDF ticket typography and invoice footer");
+    }
+
+    @Test
+    void paymentHistoryOffersReceiptDownloadForEachPayment() {
+        SystemConfiguration configuration = configuration(null, null, null, 50);
+        AbstractContext ctx = webContext(configuration);
+        baseModel(ctx, configuration);
+        ctx.setVariable("license", SystemLicense.builder()
+                .packageType(SystemLicense.PackageType.BASIC)
+                .expirationDate(LocalDateTime.of(2026, 12, 31, 23, 59))
+                .build());
+        ctx.setVariable("renewalsWithAmount", List.of(LicenseEvent.builder()
+                .id(42L)
+                .eventType(LicenseEvent.EventType.RENEWED)
+                .eventDate(LocalDateTime.of(2026, 11, 4, 21, 17))
+                .description("Renovación de licencia")
+                .amount(1591.0)
+                .months(12)
+                .build()));
+
+        String html = templateEngine.process("admin/system-configuration/form", ctx);
+
+        assertTrue(html.contains("Descargar PDF"));
+        assertTrue(html.contains("/admin/system-configuration/license-events/42/receipt"));
     }
 
     @Test

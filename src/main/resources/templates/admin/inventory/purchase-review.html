@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title th:text="${globalSystemConfig.systemName + ' - Revisar compra'}">
+      Revisar compra
+    </title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@300;400;500;600;700"
+      rel="stylesheet"
+    />
+    <div th:replace="~{fragments/theme :: themeResources}"></div>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: { extend: { fontFamily: { display: ["Work Sans"] } } },
+      };
+    </script>
+    <div th:replace="~{fragments/sidebar :: sidebarStyles}"></div>
+  </head>
+  <body
+    class="bg-gray-50 dark:bg-gray-950 font-display text-gray-800 dark:text-gray-100 overflow-hidden"
+  >
+    <div th:replace="~{fragments/sidebar :: menuControls}"></div>
+    <div class="flex min-h-screen h-screen overflow-hidden">
+      <div
+        th:replace="~{fragments/sidebar :: sidebar(activeMenu='inventory')}"
+      ></div>
+      <main class="flex-1 h-screen overflow-y-auto">
+        <div class="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8 pb-24">
+          <header class="border-b border-gray-200 pb-6 dark:border-gray-800">
+            <a
+              th:href="@{/admin/inventory/purchases}"
+              class="text-sm font-medium text-emerald-700 hover:underline dark:text-emerald-400"
+              >Compras</a
+            >
+            <h1 class="mt-2 text-2xl font-bold text-gray-950 dark:text-white">
+              Revisar conceptos
+            </h1>
+            <p
+              class="mt-2 text-sm text-gray-600 dark:text-gray-400"
+              th:text="${purchase.issuerName + ' · ' + purchase.issuerRfc + ' · ' + #temporals.format(purchase.issuedAt, 'dd/MM/yyyy')}"
+            ></p>
+            <p
+              class="mt-1 break-all font-mono text-xs text-gray-500"
+              th:text="${'UUID ' + purchase.uuid}"
+            ></p>
+          </header>
+
+          <div
+            th:if="${errorMessage}"
+            class="mt-6 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200"
+            th:text="${errorMessage}"
+          ></div>
+
+          <form
+            th:action="@{/admin/inventory/purchases/{id}/confirm(id=${purchase.id})}"
+            method="post"
+            class="mt-6"
+          >
+            <fieldset
+              class="mb-5 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
+            >
+              <legend
+                class="mb-2 text-sm font-semibold text-gray-900 dark:text-white"
+              >
+                Precio para el costo del inventario
+              </legend>
+              <div
+                class="inline-flex w-fit rounded-md border border-gray-300 p-1 dark:border-gray-700"
+              >
+                <label
+                  class="cursor-pointer rounded px-3 py-2 text-sm has-[:checked]:bg-gray-100 has-[:checked]:font-semibold dark:has-[:checked]:bg-gray-800"
+                >
+                  <input
+                    type="radio"
+                    name="includeVat"
+                    value="false"
+                    checked
+                    class="sr-only"
+                  />Precio sin IVA
+                </label>
+                <label
+                  class="cursor-pointer rounded px-3 py-2 text-sm has-[:checked]:bg-gray-100 has-[:checked]:font-semibold dark:has-[:checked]:bg-gray-800"
+                >
+                  <input
+                    type="radio"
+                    name="includeVat"
+                    value="true"
+                    class="sr-only"
+                  />Precio con IVA
+                </label>
+              </div>
+            </fieldset>
+            <div
+              class="overflow-x-auto border-y border-gray-200 dark:border-gray-800"
+            >
+              <table class="min-w-[1080px] w-full text-left text-sm">
+                <thead
+                  class="bg-gray-100 text-xs uppercase text-gray-600 dark:bg-gray-900 dark:text-gray-400"
+                >
+                  <tr>
+                    <th class="px-3 py-3 font-semibold">Concepto de factura</th>
+                    <th class="px-3 py-3 text-right font-semibold">Cantidad</th>
+                    <th class="px-3 py-3 font-semibold">Unidad XML</th>
+                    <th class="px-3 py-3 text-right font-semibold">
+                      Importe neto
+                    </th>
+                    <th class="px-3 py-3 text-right font-semibold">IVA XML</th>
+                    <th class="px-3 py-3 font-semibold">Ingrediente</th>
+                    <th class="px-3 py-3 font-semibold">
+                      Conversión a unidad de inventario
+                    </th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
+                  <tr th:each="line : ${purchase.lines}" class="align-top">
+                    <td class="w-64 px-3 py-4">
+                      <div
+                        class="font-medium text-gray-900 dark:text-white"
+                        th:text="${line.description}"
+                      ></div>
+                      <div
+                        class="mt-1 text-xs text-gray-500"
+                        th:if="${line.productCode != null and !line.productCode.isEmpty()}"
+                        th:text="${'Clave ' + line.productCode}"
+                      ></div>
+                      <input
+                        type="hidden"
+                        name="lineIds"
+                        th:value="${line.id}"
+                      />
+                    </td>
+                    <td
+                      class="whitespace-nowrap px-3 py-4 text-right tabular-nums"
+                      th:text="${#numbers.formatDecimal(line.purchasedQuantity, 1, 4)}"
+                    ></td>
+                    <td
+                      class="px-3 py-4 text-gray-600 dark:text-gray-300"
+                      th:text="${line.purchaseUnit != null and !line.purchaseUnit.isEmpty() ? line.purchaseUnit : 'Sin unidad'}"
+                    ></td>
+                    <td
+                      class="whitespace-nowrap px-3 py-4 text-right tabular-nums"
+                      th:text="${purchase.currency + ' ' + #numbers.formatDecimal(line.amount.subtract(line.discount), 1, 2)}"
+                    ></td>
+                    <td
+                      class="whitespace-nowrap px-3 py-4 text-right tabular-nums"
+                      th:text="${purchase.currency + ' ' + #numbers.formatDecimal(line.vatAmount != null ? line.vatAmount : 0, 1, 2)}"
+                    ></td>
+                    <td class="min-w-72 px-3 py-4">
+                      <label class="sr-only" th:for="${'ingredient-' + line.id}"
+                        >Ingrediente</label
+                      >
+                      <input
+                        type="search"
+                        th:attr="data-ingredient-search=${line.id}"
+                        placeholder="Buscar ingrediente..."
+                        class="mb-2 h-10 w-full rounded-md border border-gray-300 bg-white px-3 text-sm dark:border-gray-700 dark:bg-gray-900"
+                      />
+                      <select
+                        th:id="${'ingredient-' + line.id}"
+                        name="ingredientIds"
+                        required
+                        class="h-10 w-full rounded-md border border-gray-300 bg-white px-3 text-sm dark:border-gray-700 dark:bg-gray-900"
+                      >
+                        <option value="">Seleccionar ingrediente</option>
+                        <option
+                          th:each="ingredient : ${ingredients}"
+                          th:value="${ingredient.idIngredient}"
+                          th:text="${ingredient.name + ' · ' + ingredient.unitOfMeasure}"
+                          th:attr="data-search=${ingredient.name.toLowerCase() + ' ' + ingredient.unitOfMeasure.toLowerCase()}"
+                        ></option>
+                      </select>
+                    </td>
+                    <td class="min-w-64 px-3 py-4">
+                      <label class="sr-only" th:for="${'factor-' + line.id}"
+                        >Factor de conversión</label
+                      >
+                      <div class="flex items-center gap-2">
+                        <input
+                          th:id="${'factor-' + line.id}"
+                          name="conversionFactors"
+                          type="number"
+                          min="0.000001"
+                          step="0.000001"
+                          value="1"
+                          required
+                          th:attr="data-factor=${line.id}"
+                          class="h-10 w-32 rounded-md border border-gray-300 bg-white px-3 text-right tabular-nums dark:border-gray-700 dark:bg-gray-900"
+                        />
+                        <span class="max-w-36 text-xs text-gray-500"
+                          >unidades de inventario por unidad XML</span
+                        >
+                      </div>
+                      <output
+                        th:attr="data-preview=${line.id},data-quantity=${line.purchasedQuantity},data-amount=${line.amount.subtract(line.discount)},data-vat=${line.vatAmount != null ? line.vatAmount : 0},data-currency=${purchase.currency}"
+                        class="mt-2 block text-xs text-gray-500 dark:text-gray-400"
+                      ></output>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div
+              class="mt-5 flex flex-col gap-3 border-b border-gray-200 pb-6 dark:border-gray-800 sm:flex-row sm:items-center sm:justify-between"
+            >
+              <p class="text-sm text-gray-600 dark:text-gray-400">
+                Total de factura:
+                <strong
+                  class="text-gray-900 dark:text-white"
+                  th:text="${purchase.currency + ' ' + #numbers.formatDecimal(purchase.total, 1, 2)}"
+                ></strong>
+              </p>
+              <div class="flex flex-col-reverse gap-3 sm:flex-row">
+                <a
+                  th:href="@{/admin/inventory/purchases}"
+                  class="inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-900"
+                >
+                  <span class="material-symbols-outlined text-lg"
+                    >arrow_back</span
+                  >Volver
+                </a>
+                <button
+                  type="submit"
+                  class="inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-emerald-700 px-5 py-2 text-sm font-semibold text-white hover:bg-emerald-800"
+                >
+                  <span class="material-symbols-outlined text-lg"
+                    >inventory</span
+                  >Confirmar y actualizar stock
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </main>
+    </div>
+    <script>
+      document
+        .querySelectorAll("[data-ingredient-search]")
+        .forEach((search) => {
+          const select = document.getElementById(
+            `ingredient-${search.dataset.ingredientSearch}`,
+          );
+          search.addEventListener("input", () => {
+            const query = search.value.trim().toLocaleLowerCase();
+            Array.from(select.options)
+              .slice(1)
+              .forEach((option) => {
+                option.hidden =
+                  query.length > 0 && !option.dataset.search.includes(query);
+              });
+            if (select.selectedOptions[0]?.hidden) select.value = "";
+          });
+        });
+
+      document.querySelectorAll("[data-factor]").forEach((factor) => {
+        const preview = document.querySelector(
+          `[data-preview="${factor.dataset.factor}"]`,
+        );
+        const select = document.getElementById(
+          `ingredient-${factor.dataset.factor}`,
+        );
+        const updatePreview = () => {
+          const quantity = Number(preview.dataset.quantity);
+          const includeVat =
+            document.querySelector('input[name="includeVat"]:checked')
+              ?.value === "true";
+          const amount =
+            Number(preview.dataset.amount) +
+            (includeVat ? Number(preview.dataset.vat) : 0);
+          const multiplier = Number(factor.value);
+          if (!Number.isFinite(multiplier) || multiplier <= 0) {
+            preview.textContent = "Ingresa un factor mayor que cero.";
+            return;
+          }
+          const stockQuantity = quantity * multiplier;
+          const unitCost = amount / stockQuantity;
+          const selectedOption = select.selectedOptions[0];
+          const unit = selectedOption?.value
+            ? selectedOption.textContent.split(" · ").pop()
+            : "unidades";
+          const cost = new Intl.NumberFormat("es-MX", {
+            style: "currency",
+            currency: preview.dataset.currency,
+          }).format(unitCost);
+          const formatQuantity = (value) =>
+            value.toLocaleString("es-MX", { maximumFractionDigits: 3 });
+          preview.textContent = `${formatQuantity(quantity)} XML × ${formatQuantity(multiplier)} = ${formatQuantity(stockQuantity)} ${unit} · costo ${cost} por ${unit} · ${includeVat ? "con IVA" : "sin IVA"}`;
+        };
+        factor.addEventListener("input", updatePreview);
+        factor.addEventListener("change", updatePreview);
+        select.addEventListener("change", updatePreview);
+        updatePreview();
+      });
+
+      document
+        .querySelectorAll('input[name="includeVat"]')
+        .forEach((option) => {
+          option.addEventListener("change", () => {
+            document
+              .querySelectorAll("[data-factor]")
+              .forEach((factor) => factor.dispatchEvent(new Event("input")));
+          });
+        });
+    </script>
+  </body>
+</html>

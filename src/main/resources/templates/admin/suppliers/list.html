@@ -360,7 +360,9 @@
                     </th>
                   </tr>
                 </thead>
-                <tbody class="stagger-rows divide-y divide-gray-200 dark:divide-gray-800">
+                <tbody
+                  class="stagger-rows divide-y divide-gray-200 dark:divide-gray-800"
+                >
                   <tr th:if="${#lists.isEmpty(suppliers)}">
                     <td
                       colspan="6"
@@ -489,7 +491,9 @@
                       </span>
                     </td>
                     <td class="px-6 py-4">
-                      <div class="supplier-actions-cell flex items-center justify-center gap-2">
+                      <div
+                        class="supplier-actions-cell flex items-center justify-center gap-2"
+                      >
                         <a
                           th:href="@{/admin/suppliers/{id}/edit(id=${supplier.idSupplier})}"
                           class="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
@@ -643,7 +647,9 @@
                 class="mt-1 break-words text-sm text-gray-800 dark:text-gray-200"
               ></p>
             </div>
-            <div class="rounded-xl bg-gray-50 dark:bg-gray-800/60 p-4 sm:col-span-2">
+            <div
+              class="rounded-xl bg-gray-50 dark:bg-gray-800/60 p-4 sm:col-span-2"
+            >
               <p
                 class="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500"
               >
@@ -661,7 +667,10 @@
             >
               Categorías
             </p>
-            <div id="supplierDetailCategories" class="flex flex-wrap gap-2"></div>
+            <div
+              id="supplierDetailCategories"
+              class="flex flex-wrap gap-2"
+            ></div>
           </div>
           <div class="flex flex-wrap items-center justify-between gap-3">
             <div>

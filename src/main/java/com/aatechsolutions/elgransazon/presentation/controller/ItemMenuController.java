@@ -164,7 +164,6 @@ public class ItemMenuController {
         // nombre del restaurante.
         model.addAttribute("menuFooterText", MenuStyle.footerFor(
                 menuConfiguration == null ? null : menuConfiguration.getRestaurantName()));
-
         return "admin/menu-items/list";
     }
 

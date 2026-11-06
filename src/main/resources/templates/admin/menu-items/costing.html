@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+  <head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title th:text="${globalSystemConfig.systemName + ' - Costeo por platillo'}">Costeo por platillo</title>
+    <link crossorigin="" href="https://fonts.gstatic.com/" rel="preconnect" />
+    <link href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@300;400;500;600;700" rel="stylesheet" />
+
+    <!-- Sistema de Temas (Modo Claro/Oscuro) -->
+    <div th:replace="~{fragments/theme :: themeResources}"></div>
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#38e07b",
+              "primary-dark": "#2bc866",
+              "background-light": "#f8faf9",
+              "background-dark": "#0f1713",
+            },
+            fontFamily: { display: ["Work Sans"] },
+          },
+        },
+      };
+    </script>
+
+    <div th:replace="~{fragments/sidebar :: sidebarStyles}"></div>
+  </head>
+  <body class="bg-gradient-to-br from-background-light to-gray-50 dark:from-background-dark dark:to-gray-900 font-display text-gray-800 dark:text-gray-200 overflow-hidden">
+    <div th:replace="~{fragments/sidebar :: menuControls}"></div>
+
+    <div class="flex min-h-screen h-screen overflow-hidden">
+      <div th:replace="~{fragments/sidebar :: sidebar(activeMenu='menu')}"></div>
+
+      <main class="flex-1 overflow-y-auto h-screen">
+        <div class="p-4 sm:p-6 lg:p-8 pt-20 md:pt-20 lg:pt-8 pb-32">
+          <!-- HEADER -->
+          <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6 sm:mb-8">
+            <div>
+              <h1 class="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white mb-1">
+                Costeo por platillo
+              </h1>
+              <p class="text-sm sm:text-base text-gray-600 dark:text-gray-400">
+                Cuánto cuesta preparar cada platillo y cuánto deja, con el costo promedio de tus compras
+              </p>
+            </div>
+            <a
+              th:href="@{/admin/menu-items}"
+              class="flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white font-semibold hover:bg-gray-50 dark:hover:bg-gray-800 transition-all shadow-md text-sm sm:text-base"
+            >
+              <span class="material-symbols-outlined text-lg">arrow_back</span>
+              Volver al menú
+            </a>
+          </div>
+
+          <section class="bg-white dark:bg-gray-900 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 p-4 sm:p-6 mb-6">
+            <form id="costingFilterForm" method="get" th:action="@{/admin/menu-items/costing}">
+            <input type="hidden" name="page" value="0" />
+            <input type="hidden" name="ivaMode" th:value="${ivaMode}" />
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+              <div>
+                <label for="costingViewMode" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Quiero ver</label>
+                <select id="costingViewMode" name="view" class="w-full rounded-xl border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white">
+                  <option value="all" th:selected="${viewMode == 'all'}">Todos los platillos</option>
+                  <option value="category" th:selected="${viewMode == 'category'}">Una categoría</option>
+                  <option value="dish" th:selected="${viewMode == 'dish'}">Un platillo</option>
+                </select>
+              </div>
+              <div id="categoryFilterWrap" class="hidden">
+                <label for="categoryFilter" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Categoría</label>
+                <select id="categoryFilter" name="category" class="w-full rounded-xl border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white">
+                  <option value="">Todas las categorías</option>
+                  <option th:each="category : ${categories}" th:value="${category}" th:text="${category}" th:selected="${category == categoryFilter}">Categoría</option>
+                </select>
+              </div>
+              <div id="dishSearchWrap" class="hidden md:col-span-2">
+                <label for="dishSearch" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Buscar platillo</label>
+                <div class="flex gap-2">
+                  <input id="dishSearch" name="name" type="search" autocomplete="off" th:value="${nameFilter}" placeholder="Escribe el nombre del platillo..."
+                         class="w-full rounded-xl border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white" />
+                </div>
+              </div>
+            </div>
+            <div class="mt-4 flex justify-end">
+              <button id="clearCostingFilters" type="button"
+                      class="rounded-xl border border-gray-200 dark:border-gray-700 px-4 py-2 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                Limpiar filtros
+              </button>
+            </div>
+            </form>
+          </section>
+
+          <section id="costingTaxMode" class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 sm:px-6"
+                   th:attr="data-tax-rate=${taxRate},data-mode=${ivaMode}">
+            <div>
+              <p class="font-semibold text-gray-900 dark:text-white">¿Cómo quieres ver los precios?</p>
+              <p id="costingTaxModeHint" class="max-w-3xl text-sm text-gray-600 dark:text-gray-400">
+                Precio con IVA es lo que paga el cliente; utilidad y margen son estimados antes del IVA de venta y usan el costo capturado, sin ajustar el IVA de las compras.
+              </p>
+            </div>
+            <div class="inline-flex rounded-xl bg-gray-100 dark:bg-gray-800 p-1" role="group" aria-label="Mostrar precios con o sin IVA">
+              <button type="button" class="tax-mode-button rounded-lg px-4 py-2 text-sm font-semibold transition-colors"
+                      th:classappend="${ivaMode == 'con' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm' : 'text-gray-600 dark:text-gray-300'}"
+                      data-tax-mode="con" th:attr="aria-pressed=${ivaMode == 'con'}">Con IVA</button>
+              <button type="button" class="tax-mode-button rounded-lg px-4 py-2 text-sm font-semibold transition-colors"
+                      th:classappend="${ivaMode == 'sin' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm' : 'text-gray-600 dark:text-gray-300'}"
+                      data-tax-mode="sin" th:attr="aria-pressed=${ivaMode == 'sin'}">Sin IVA</button>
+            </div>
+          </section>
+
+          <div id="allCostingView">
+          <!-- RESUMEN -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
+            <div class="bg-white dark:bg-gray-900 p-4 sm:p-6 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800">
+              <div class="flex items-center gap-4">
+                <div class="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center">
+                  <span class="material-symbols-outlined text-primary text-2xl">restaurant_menu</span>
+                </div>
+                <div>
+                  <p class="text-sm text-gray-600 dark:text-gray-400">Platillos en esta página</p>
+                  <p id="costingItemCount" class="text-2xl font-bold text-gray-900 dark:text-white" th:text="${#lists.size(rows)}">0</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="bg-white dark:bg-gray-900 p-4 sm:p-6 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800">
+              <div class="flex items-center gap-4">
+                <div class="w-12 h-12 bg-blue-500/10 rounded-xl flex items-center justify-center">
+                  <span class="material-symbols-outlined text-blue-600 dark:text-blue-400 text-2xl">percent</span>
+                </div>
+                <div>
+                  <p class="text-sm text-gray-600 dark:text-gray-400">Margen estimado promedio</p>
+                  <p
+                    class="text-2xl font-bold text-gray-900 dark:text-white"
+                    id="costingAverageMargin"
+                    th:text="${averageMargin != null ? #numbers.formatDecimal(averageMargin, 1, 'COMMA', 1, 'POINT') + ' %' : '—'}"
+                  >0 %</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="bg-white dark:bg-gray-900 p-4 sm:p-6 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800">
+              <div class="flex items-center gap-4">
+                <div class="w-12 h-12 bg-amber-500/10 rounded-xl flex items-center justify-center">
+                  <span class="material-symbols-outlined text-amber-600 dark:text-amber-400 text-2xl">help</span>
+                </div>
+                <div>
+                  <p class="text-sm text-gray-600 dark:text-gray-400">Costo incompleto</p>
+                  <p id="costingIncompleteCount" class="text-2xl font-bold text-gray-900 dark:text-white" th:text="${incompleteCount}">0</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="bg-white dark:bg-gray-900 p-4 sm:p-6 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800">
+              <div class="flex items-center gap-4">
+                <div class="w-12 h-12 bg-red-500/10 rounded-xl flex items-center justify-center">
+                  <span class="material-symbols-outlined text-red-600 dark:text-red-400 text-2xl">trending_down</span>
+                </div>
+                <div>
+                  <p class="text-sm text-gray-600 dark:text-gray-400">Margen bajo (&lt; 40 %)</p>
+                  <p id="costingRedCount" class="text-2xl font-bold text-gray-900 dark:text-white" th:text="${redCount}">0</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- TABLA -->
+          <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 overflow-hidden">
+            <div class="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-800">
+              <h2 class="text-lg font-bold text-gray-900 dark:text-white">Platillos</h2>
+              <p class="text-sm text-gray-600 dark:text-gray-400">
+                Ordenados alfabéticamente. Revisa el margen y el estado de cada platillo.
+              </p>
+            </div>
+
+            <div th:if="${#lists.isEmpty(rows)}" class="p-10 text-center text-gray-600 dark:text-gray-400">
+              No hay platillos activos con receta para costear todavía.
+            </div>
+
+            <div th:unless="${#lists.isEmpty(rows)}" class="overflow-x-auto">
+              <table class="w-full text-sm">
+                <thead class="bg-gray-50 dark:bg-gray-800/50 text-gray-600 dark:text-gray-300">
+                  <tr>
+                    <th class="text-left px-4 py-3 font-semibold">Platillo</th>
+                    <th class="text-left px-4 py-3 font-semibold">Categoría</th>
+                    <th id="costingPriceHeading" class="text-right px-4 py-3 font-semibold"
+                        th:text="${'Precio ' + (ivaMode == 'con' ? 'con' : 'sin') + ' IVA'}">Precio con IVA</th>
+                    <th class="text-right px-4 py-3 font-semibold">Costo</th>
+                    <th class="text-right px-4 py-3 font-semibold">Utilidad estimada*</th>
+                    <th class="text-right px-4 py-3 font-semibold">Margen estimado*</th>
+                    <th class="text-center px-4 py-3 font-semibold">Estado</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                  <th:block th:each="row : ${rows}">
+                    <tr class="costing-row hover:bg-gray-50 dark:hover:bg-gray-800/40"
+                        th:attr="data-summary-row='true',data-category=${row.categoryName},data-name=${row.name},data-price=${row.price},data-cost=${row.cost},data-margin=${!row.incomplete ? row.getMarginBeforeTax(taxRate) : null},data-incomplete=${row.incomplete},data-has-recipe=${row.hasRecipe},data-band=${row.getMarginBandBeforeTax(taxRate)}">
+                      <td class="px-4 py-3">
+                        <div class="flex items-center gap-2 flex-wrap">
+                          <span class="font-semibold text-gray-900 dark:text-white" th:text="${row.name}">Platillo</span>
+                          <span
+                            th:if="${row.sizeName != null}"
+                            class="px-2 py-0.5 rounded-full text-xs bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
+                            th:text="${'Tamaño: ' + row.sizeName}"
+                          >Tamaño</span>
+                          <span
+                            th:if="${row.combo}"
+                            class="px-2 py-0.5 rounded-full text-xs bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300"
+                          >Combo</span>
+                          <span
+                            th:if="${!row.hasRecipe and !row.combo}"
+                            class="px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300"
+                          >Sin receta</span>
+                        </div>
+                      </td>
+                      <td class="px-4 py-3 text-gray-600 dark:text-gray-400" th:text="${row.categoryName}">Categoría</td>
+                      <td class="costing-price px-4 py-3 text-right" th:text="${'$' + #numbers.formatDecimal(row.getPriceForTaxMode(taxRate, ivaMode == 'con'), 1, 'COMMA', 2, 'POINT')}">$0.00</td>
+                      <td class="px-4 py-3 text-right font-semibold" th:text="${'$' + #numbers.formatDecimal(row.cost, 1, 'COMMA', 2, 'POINT')}">$0.00</td>
+                      <td
+                        class="costing-profit px-4 py-3 text-right"
+                        th:classappend="${!row.incomplete and row.getProfitBeforeTax(taxRate).signum() < 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-gray-100'}">
+                        <span th:if="${!row.incomplete}" th:text="${'$' + #numbers.formatDecimal(row.getProfitBeforeTax(taxRate), 1, 'COMMA', 2, 'POINT')}">$0.00</span>
+                        <span th:if="${row.incomplete}">—</span>
+                      </td>
+                      <td class="costing-margin px-4 py-3 text-right font-bold">
+                        <span th:if="${!row.incomplete and row.getMarginBeforeTax(taxRate) != null}" th:text="${#numbers.formatDecimal(row.getMarginBeforeTax(taxRate), 1, 'COMMA', 1, 'POINT') + ' %'}">0 %</span>
+                        <span th:if="${row.incomplete or row.getMarginBeforeTax(taxRate) == null}">—</span>
+                      </td>
+                      <td class="px-4 py-3 text-center">
+                        <span
+                          class="costing-state inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold"
+                          th:classappend="${row.getMarginBandBeforeTax(taxRate) == 'green' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' : (row.getMarginBandBeforeTax(taxRate) == 'amber' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' : (row.getMarginBandBeforeTax(taxRate) == 'red' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300'))}"
+                          th:text="${row.getMarginLabelBeforeTax(taxRate)}"
+                        >Estado</span>
+                      </td>
+                    </tr>
+
+                    <tr class="costing-row bg-gray-50/60 dark:bg-gray-800/20"
+                        th:attr="data-category=${row.categoryName},data-name=${row.name},data-margin=${row.marginPercentage},data-incomplete=${row.incomplete}">
+                      <td colspan="7" class="px-4 pb-4 pt-0">
+                        <details class="text-sm">
+                          <summary class="cursor-pointer text-primary font-semibold select-none">Ver desglose de la receta</summary>
+
+                          <div th:if="${row.combo and !row.hasRecipe}" class="mt-3 text-gray-600 dark:text-gray-400">
+                            Este combo no tiene platillos configurados, así que todavía no se puede costear.
+                          </div>
+
+                          <div th:if="${!row.combo and !row.hasRecipe}" class="mt-3 text-gray-600 dark:text-gray-400">
+                            Este platillo no tiene receta capturada, así que su costo aparece en cero. Regístrala en el menú para verlo aquí.
+                          </div>
+
+                          <div th:if="${row.hasRecipe}" class="mt-3 overflow-x-auto">
+                            <table class="w-full text-xs sm:text-sm">
+                              <thead>
+                                <tr class="text-gray-500 dark:text-gray-400">
+                                  <th class="text-left py-2 font-semibold" th:text="${row.combo} ? 'Platillo' : 'Ingrediente'">Ingrediente</th>
+                                  <th class="text-right py-2 font-semibold">Cantidad</th>
+                                  <th class="text-right py-2 font-semibold">Costo unitario</th>
+                                  <th class="text-right py-2 font-semibold">Rendimiento</th>
+                                  <th class="text-right py-2 font-semibold">Subtotal</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                <tr th:each="line : ${row.lines}" class="border-t border-gray-200 dark:border-gray-700">
+                                  <td class="py-2">
+                                    <span th:text="${line.ingredientName}">Ingrediente</span>
+                                    <span
+                                      th:if="${line.missingCost}"
+                                      class="ml-2 px-2 py-0.5 rounded-full text-[10px] bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300"
+                                    >Sin costo</span>
+                                  </td>
+                                  <td
+                                    class="py-2 text-right"
+                                    th:text="${#numbers.formatDecimal(line.quantity, 1, 'COMMA', 2, 'POINT') + ' ' + line.unit}"
+                                  >0</td>
+                                  <td class="py-2 text-right" th:text="${'$' + line.unitCostLabel}">$0.00</td>
+                                  <td class="py-2 text-right" th:text="${line.yieldPercentage != null ? #numbers.formatDecimal(line.yieldPercentage, 1, 'COMMA', 1, 'POINT') + ' %' : '—'}">100 %</td>
+                                  <td class="py-2 text-right font-semibold" th:text="${'$' + #numbers.formatDecimal(line.subtotal, 1, 'COMMA', 2, 'POINT')}">$0.00</td>
+                                </tr>
+                              </tbody>
+                            </table>
+
+                            <p th:if="${row.ingredientsWithoutCost > 0}" class="mt-2 text-xs text-red-600 dark:text-red-400">
+                              <span th:text="${row.ingredientsWithoutCost}">1</span>
+                              ingrediente(s) sin costo capturado: el costo real es más alto y el margen menor.
+                            </p>
+                          </div>
+                        </details>
+                      </td>
+                    </tr>
+                  </th:block>
+                </tbody>
+              </table>
+            </div>
+            <p id="categoryFilterEmpty" class="hidden p-8 text-center text-gray-500 dark:text-gray-400">
+              No hay platillos en esta categoría.
+            </p>
+          </div>
+          <p class="mt-4 text-xs text-gray-500 dark:text-gray-400">
+            El costo es la suma de la receta valuada con el costo promedio ponderado de cada ingrediente.
+            La utilidad y el margen son estimados: usan el costo de compra tal como se capturó, incluido el IVA si se registró así, sin determinar si ese IVA es acreditable. No incluyen complementos, merma ni mano de obra.
+          </p>
+          </div>
+
+          <div id="dishSearchResults" class="hidden mb-6">
+            <p id="dishSearchHint" class="mb-3 text-sm text-gray-600 dark:text-gray-400">Escribe para buscar entre todos tus platillos.</p>
+            <div id="dishSearchEmpty" class="hidden rounded-2xl border border-dashed border-gray-300 dark:border-gray-700 p-8 text-center text-gray-500 dark:text-gray-400">No encontré platillos con ese nombre.</div>
+            <div id="dishSearchCards" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4"></div>
+            <div id="dishSearchPagination" class="hidden mt-4 flex flex-col sm:flex-row items-center justify-between gap-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4">
+              <p class="text-sm text-gray-600 dark:text-gray-400"></p>
+              <div class="flex items-center gap-2">
+                <button type="button" class="search-page-previous rounded-lg border border-gray-200 dark:border-gray-700 px-4 py-2 text-sm font-semibold hover:bg-gray-50 dark:hover:bg-gray-800">Anterior</button>
+                <span class="search-page-label text-sm font-semibold text-gray-700 dark:text-gray-300"></span>
+                <button type="button" class="search-page-next rounded-lg border border-gray-200 dark:border-gray-700 px-4 py-2 text-sm font-semibold hover:bg-gray-50 dark:hover:bg-gray-800">Siguiente</button>
+              </div>
+            </div>
+            <p id="dishSearchError" class="hidden mt-3 text-sm text-red-600 dark:text-red-400" role="alert"></p>
+          </div>
+
+          <nav id="costingPagination" th:if="${totalPages > 1}" class="mb-6 flex flex-col sm:flex-row items-center justify-between gap-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4"
+               aria-label="Paginación del costeo">
+            <p class="text-sm text-gray-600 dark:text-gray-400">
+              Mostrando <span class="font-semibold" th:text="${pageStart}">1</span>–<span class="font-semibold" th:text="${pageEnd}">20</span>
+              de <span class="font-semibold" th:text="${totalItems}">0</span> platillos
+            </p>
+            <div class="flex items-center gap-2">
+              <a th:if="${currentPage > 0}"
+                 th:href="@{/admin/menu-items/costing(page=${currentPage - 1},view=${viewMode},category=${categoryFilter},name=${nameFilter},ivaMode=${ivaMode})}"
+                 class="rounded-lg border border-gray-200 dark:border-gray-700 px-4 py-2 text-sm font-semibold hover:bg-gray-50 dark:hover:bg-gray-800">Anterior</a>
+              <span class="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                Página <span th:text="${currentPage + 1}">1</span> de <span th:text="${totalPages}">1</span>
+              </span>
+              <a th:if="${currentPage + 1 < totalPages}"
+                 th:href="@{/admin/menu-items/costing(page=${currentPage + 1},view=${viewMode},category=${categoryFilter},name=${nameFilter},ivaMode=${ivaMode})}"
+                 class="rounded-lg border border-gray-200 dark:border-gray-700 px-4 py-2 text-sm font-semibold hover:bg-gray-50 dark:hover:bg-gray-800">Siguiente</a>
+            </div>
+          </nav>
+
+          <section id="dishDetail" class="hidden" th:attr="data-selected-id=${selectedDishId}">
+            <div class="flex items-center justify-between gap-3 mb-4">
+              <h2 id="dishDetailHeading" class="text-xl font-bold text-gray-900 dark:text-white">Detalle del platillo</h2>
+              <button id="clearDishSelection" type="button" class="text-sm font-semibold text-primary hover:underline">Elegir otro</button>
+            </div>
+            <div id="dishDetailCards" class="space-y-5">
+              <article th:each="row : ${detailRows}" class="dish-detail-card hidden grid grid-cols-1 xl:grid-cols-5 gap-5"
+                       th:attr="data-id=${row.idItemMenu},data-name=${row.name},data-price=${row.price},data-cost=${row.cost},data-incomplete=${row.incomplete},data-has-recipe=${row.hasRecipe}">
+                <div class="xl:col-span-3 bg-white dark:bg-gray-900 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 p-4 sm:p-6">
+                  <section th:if="${!#lists.isEmpty(row.relatedVariants)}"
+                           class="mb-5 rounded-xl border border-blue-200 dark:border-blue-900 bg-blue-50/70 dark:bg-blue-900/10 p-4">
+                    <button type="button" class="variant-toggle flex w-full items-center justify-between gap-3 text-left font-semibold text-blue-800 dark:text-blue-200"
+                            th:attr="aria-expanded='false',aria-controls='variant-options-' + ${row.idItemMenu}">
+                      <span th:text="${row.parentItemId == null ? 'Ver hijos (' + row.relatedVariants.size() + ')' : 'Ver opciones de ' + row.parentName}">Ver hijos</span>
+                      <span class="material-symbols-outlined" aria-hidden="true">expand_more</span>
+                    </button>
+                    <div class="variant-options hidden mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2"
+                         th:id="${'variant-options-' + row.idItemMenu}">
+                      <a th:each="variant : ${row.relatedVariants}"
+                              th:href="@{/admin/menu-items/costing(page=${currentPage},view='dish',dishId=${variant.idItemMenu},category=${categoryFilter},name=${nameFilter},ivaMode=${ivaMode})}"
+                              class="variant-option flex items-center justify-between gap-3 rounded-lg border border-blue-200 dark:border-blue-800 bg-white dark:bg-gray-900 px-3 py-2 text-left hover:border-primary"
+                              >
+                        <span>
+                          <span class="block font-semibold text-gray-900 dark:text-white"
+                                th:text="${variant.sizeName != null ? variant.sizeName : variant.name}">Tamaño</span>
+                          <span th:if="${variant.selected}" class="block text-xs text-primary">Viendo este platillo</span>
+                        </span>
+                        <span class="variant-price shrink-0 text-sm font-bold text-gray-700 dark:text-gray-300"
+                              th:attr="data-price=${variant.price}"
+                              th:text="${'$' + #numbers.formatDecimal(variant.price, 1, 'COMMA', 2, 'POINT')}">$0.00</span>
+                      </a>
+                    </div>
+                  </section>
+                  <div class="flex items-start justify-between gap-3 mb-4">
+                    <div>
+                      <h3 class="text-lg font-bold text-gray-900 dark:text-white">Preparación por porción</h3>
+                      <p class="text-sm text-gray-500 dark:text-gray-400">Ingredientes y costo de cada uno</p>
+                    </div>
+                    <span class="dish-margin-band shrink-0 rounded-full px-3 py-1 text-xs font-semibold"
+                          th:classappend="${row.getMarginBandBeforeTax(taxRate) == 'green' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' : (row.getMarginBandBeforeTax(taxRate) == 'amber' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' : (row.getMarginBandBeforeTax(taxRate) == 'red' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300'))}"
+                          th:text="${row.getMarginLabelBeforeTax(taxRate)}">Estado</span>
+                  </div>
+
+                  <div th:if="${!row.hasRecipe}" class="rounded-xl bg-amber-50 dark:bg-amber-900/20 p-4 text-sm text-amber-800 dark:text-amber-200">
+                    Este platillo todavía no tiene una receta capturada; su costo y margen no se pueden confirmar.
+                  </div>
+                  <div th:if="${row.hasRecipe}" class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                      <thead class="text-xs uppercase text-gray-500 dark:text-gray-400">
+                        <tr>
+                          <th class="text-left py-2 pr-3">Ingrediente</th>
+                          <th class="text-right py-2 px-2">Cantidad</th>
+                          <th class="text-right py-2 px-2">Costo unitario</th>
+                          <th class="text-right py-2 px-2">Rendimiento</th>
+                          <th class="text-right py-2 pl-2">Costo</th>
+                        </tr>
+                      </thead>
+                      <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                        <tr th:each="line : ${row.lines}">
+                          <td class="py-3 pr-3 font-medium text-gray-900 dark:text-white">
+                            <span th:text="${line.ingredientName}">Ingrediente</span>
+                            <span th:if="${line.missingCost}" class="block text-xs text-red-600 dark:text-red-400">Falta capturar su costo</span>
+                          </td>
+                          <td class="py-3 px-2 text-right whitespace-nowrap" th:text="${#numbers.formatDecimal(line.quantity, 1, 'COMMA', 2, 'POINT') + ' ' + line.unit}">0 kg</td>
+                          <td class="py-3 px-2 text-right whitespace-nowrap" th:text="${'$' + line.unitCostLabel + ' / ' + line.unit}">$0.00</td>
+                          <td class="py-3 px-2 text-right" th:text="${line.yieldPercentage != null ? #numbers.formatDecimal(line.yieldPercentage, 1, 'COMMA', 1, 'POINT') + ' %' : '—'}">100 %</td>
+                          <td class="py-3 pl-2 text-right font-bold whitespace-nowrap" th:text="${'$' + #numbers.formatDecimal(line.subtotal, 1, 'COMMA', 2, 'POINT')}">$0.00</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div class="mt-5 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div class="rounded-xl bg-gray-50 dark:bg-gray-800 p-3">
+                      <p class="text-xs text-gray-500 dark:text-gray-400">Costo total por porción</p>
+                      <p class="text-lg font-bold text-gray-900 dark:text-white" th:text="${'$' + #numbers.formatDecimal(row.cost, 1, 'COMMA', 2, 'POINT')}">$0.00</p>
+                    </div>
+                    <div class="rounded-xl bg-gray-50 dark:bg-gray-800 p-3">
+                      <p class="text-xs text-gray-500 dark:text-gray-400">Costo estimado de ingredientes sobre venta</p>
+                      <p class="dish-food-cost text-lg font-bold text-gray-900 dark:text-white"
+                         th:text="${!row.incomplete and row.getFoodCostPercentageBeforeTax(taxRate) != null ? #numbers.formatDecimal(row.getFoodCostPercentageBeforeTax(taxRate), 1, 'COMMA', 1, 'POINT') + ' %' : '—'}">0 %</p>
+                    </div>
+                    <div class="rounded-xl bg-gray-50 dark:bg-gray-800 p-3">
+                      <p class="text-xs text-gray-500 dark:text-gray-400">Ingredientes sin costo</p>
+                      <p class="text-lg font-bold text-gray-900 dark:text-white" th:text="${row.ingredientsWithoutCost}">0</p>
+                      <p class="text-xs text-gray-500 dark:text-gray-400">Completa estos costos para confiar en el margen</p>
+                    </div>
+                  </div>
+                  <p th:if="${row.incomplete}" class="mt-4 text-sm text-red-600 dark:text-red-400">
+                    El costo puede ser mayor: revisa la receta y los costos que faltan.
+                  </p>
+                </div>
+
+                <aside class="xl:col-span-2 bg-white dark:bg-gray-900 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 overflow-hidden">
+                  <div class="h-52 sm:h-64 bg-gray-100 dark:bg-gray-800 flex items-center justify-center overflow-hidden">
+                    <img th:if="${row.imageUrl}" th:src="${@cloudinaryUrl.card(row.imageUrl)}" th:alt="${row.name}" class="w-full h-full object-cover" loading="lazy" />
+                    <span th:unless="${row.imageUrl}" class="material-symbols-outlined text-gray-400 text-6xl">restaurant</span>
+                  </div>
+                  <div class="p-5 sm:p-6">
+                    <p class="text-sm text-gray-500 dark:text-gray-400" th:text="${row.categoryName}">Categoría</p>
+                    <h3 class="text-2xl font-bold text-gray-900 dark:text-white mt-1" th:text="${row.name}">Platillo</h3>
+                    <div class="mt-5 flex items-end justify-between gap-4">
+                      <div>
+                        <p class="dish-price-label text-sm text-gray-500 dark:text-gray-400"
+                           th:text="${'Precio de venta ' + (ivaMode == 'con' ? 'con' : 'sin') + ' IVA'}">Precio de venta con IVA</p>
+                        <p class="dish-sale-price text-3xl font-extrabold text-gray-900 dark:text-white"
+                           th:text="${'$' + #numbers.formatDecimal(row.getPriceForTaxMode(taxRate, ivaMode == 'con'), 1, 'COMMA', 2, 'POINT')}">$0.00</p>
+                      </div>
+                      <div class="text-right">
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Utilidad estimada*</p>
+                        <p class="dish-profit text-xl font-bold"
+                           th:classappend="${row.incomplete ? 'text-gray-500' : (row.getProfitBeforeTax(taxRate).signum() < 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400')}"
+                           th:text="${!row.incomplete ? '$' + #numbers.formatDecimal(row.getProfitBeforeTax(taxRate), 1, 'COMMA', 2, 'POINT') : '—'}">$0.00</p>
+                      </div>
+                    </div>
+                    <div class="mt-5">
+                      <div class="flex justify-between text-sm mb-2">
+                        <span class="font-semibold text-gray-700 dark:text-gray-300">Semáforo de margen</span>
+                        <span class="dish-margin-label font-bold"
+                              th:classappend="${row.getMarginBandBeforeTax(taxRate) == 'green' ? 'text-green-600 dark:text-green-400' : (row.getMarginBandBeforeTax(taxRate) == 'amber' ? 'text-amber-600 dark:text-amber-400' : (row.getMarginBandBeforeTax(taxRate) == 'red' ? 'text-red-600 dark:text-red-400' : 'text-gray-500'))}"
+                              th:text="${!row.incomplete and row.getMarginBeforeTax(taxRate) != null ? #numbers.formatDecimal(row.getMarginBeforeTax(taxRate), 1, 'COMMA', 1, 'POINT') + ' % · ' + row.getMarginLabelBeforeTax(taxRate) : row.getMarginLabelBeforeTax(taxRate)}">0 %</span>
+                      </div>
+                      <div class="h-3 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden">
+                        <div class="dish-margin-bar h-full rounded-full"
+                             th:classappend="${row.getMarginBandBeforeTax(taxRate) == 'green' ? 'bg-green-500' : (row.getMarginBandBeforeTax(taxRate) == 'amber' ? 'bg-amber-500' : (row.getMarginBandBeforeTax(taxRate) == 'red' ? 'bg-red-500' : 'bg-gray-400'))}"
+                             th:style="${'width:' + row.getMarginBarPercentageBeforeTax(taxRate) + '%'}"></div>
+                      </div>
+                      <div class="mt-1 flex justify-between text-[10px] text-gray-400"><span>0 %</span><span>40 %</span><span>60 %</span><span>100 %</span></div>
+                    </div>
+                    <details class="mt-5 rounded-xl border border-primary/30 bg-primary/5 dark:bg-primary/10 p-4">
+                      <summary class="cursor-pointer text-sm font-semibold text-primary-dark dark:text-primary select-none">
+                        ¿Quieres saber a qué precio venderlo según el margen que elijas?
+                      </summary>
+                      <div class="target-margin-panel mt-4"
+                           th:attr="data-cost=${row.cost},data-incomplete=${row.incomplete},data-has-recipe=${row.hasRecipe}">
+                        <label class="block text-xs text-gray-600 dark:text-gray-400 mb-2">
+                          ¿Qué margen quieres obtener sobre la venta antes del IVA?
+                        </label>
+                        <div class="flex items-center gap-2">
+                          <input type="number" class="target-margin-input w-28 rounded-lg border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                                 min="0" max="99.9" step="0.1" value="60" aria-label="Margen deseado en porcentaje"
+                                 th:disabled="${row.incomplete}" />
+                          <span class="text-sm font-semibold text-gray-700 dark:text-gray-300">% de margen</span>
+                        </div>
+                        <p class="target-margin-error hidden mt-2 text-xs text-red-600 dark:text-red-400">
+                          Ingresa un porcentaje desde 0 hasta 99.9.
+                        </p>
+                        <p th:if="${row.incomplete}" class="mt-2 text-xs text-amber-700 dark:text-amber-300">
+                          Completa primero el costo de la receta para calcular una sugerencia confiable.
+                        </p>
+                        <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div>
+                            <p class="target-margin-price-label text-xs text-gray-600 dark:text-gray-400"
+                               th:text="${'Precio sugerido ' + (ivaMode == 'con' ? 'con' : 'sin') + ' IVA'}">Precio sugerido con IVA</p>
+                            <p class="target-margin-price text-xl font-bold text-gray-900 dark:text-white">—</p>
+                            <p class="target-margin-final-price hidden mt-1 text-xs text-gray-500 dark:text-gray-400"></p>
+                          </div>
+                          <div>
+                            <p class="text-xs text-gray-600 dark:text-gray-400">Utilidad estimada</p>
+                            <p class="target-margin-profit text-xl font-bold text-green-700 dark:text-green-400">—</p>
+                          </div>
+                        </div>
+                        <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                          La ganancia se calcula antes del IVA. El precio sugerido cambia según el modo seleccionado e incluye el IVA cuando eliges “Con IVA”.
+                        </p>
+                      </div>
+                    </details>
+                    <p class="mt-4 text-xs text-gray-500 dark:text-gray-400">
+                      *Estimación antes del IVA de venta; usa los costos capturados (incluido el IVA de compra si se registró) y no incluye complementos, mano de obra ni merma operativa.
+                    </p>
+                  </div>
+                </aside>
+              </article>
+            </div>
+          </section>
+
+        </div>
+      </main>
+    </div>
+
+    <script>
+      (() => {
+        const mode = document.getElementById("costingViewMode");
+        const filterForm = document.getElementById("costingFilterForm");
+        const categoryFilter = document.getElementById("categoryFilter");
+        const categoryWrap = document.getElementById("categoryFilterWrap");
+        const searchWrap = document.getElementById("dishSearchWrap");
+        const search = document.getElementById("dishSearch");
+        const allView = document.getElementById("allCostingView");
+        const results = document.getElementById("dishSearchResults");
+        const detail = document.getElementById("dishDetail");
+        const detailCards = [...document.querySelectorAll(".dish-detail-card")];
+        const empty = document.getElementById("dishSearchEmpty");
+        const hint = document.getElementById("dishSearchHint");
+        const summaryRows = [...document.querySelectorAll('[data-summary-row="true"]')];
+        const categoryEmpty = document.getElementById("categoryFilterEmpty");
+        const searchCards = document.getElementById("dishSearchCards");
+        const searchPagination = document.getElementById("dishSearchPagination");
+        const searchError = document.getElementById("dishSearchError");
+        const costingPagination = document.getElementById("costingPagination");
+        const taxModeControl = document.getElementById("costingTaxMode");
+        const taxRate = Number(taxModeControl.dataset.taxRate) || 0;
+        let currentTaxMode = taxModeControl.dataset.mode === "sin" ? "sin" : "con";
+        const searchPageSize = 20;
+        let searchTimer;
+        let activeSearchRequest;
+        let searchPage = 0;
+        const currencyFormatter = new Intl.NumberFormat("es-MX", {
+          style: "currency",
+          currency: "MXN",
+        });
+        const marginStyles = {
+          green: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300",
+          amber: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300",
+          red: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300",
+          gray: "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300",
+        };
+        const marginTextStyles = {
+          green: "text-green-600 dark:text-green-400",
+          amber: "text-amber-600 dark:text-amber-400",
+          red: "text-red-600 dark:text-red-400",
+          gray: "text-gray-500",
+        };
+        const marginBarStyles = { green: "bg-green-500", amber: "bg-amber-500", red: "bg-red-500", gray: "bg-gray-400" };
+        const taxMultiplier = Number.isFinite(taxRate) && taxRate > 0 ? 1 + taxRate / 100 : 1;
+
+        function priceBeforeTax(grossPrice) {
+          return Math.round((grossPrice / taxMultiplier + Number.EPSILON) * 100) / 100;
+        }
+
+        function getMarginMetrics(grossPrice, cost, incomplete, hasRecipe = true) {
+          const netPrice = priceBeforeTax(grossPrice);
+          if (incomplete) {
+            return {
+              netPrice,
+              profit: null,
+              margin: null,
+              band: "gray",
+              label: hasRecipe ? "Costo incompleto" : "Sin receta",
+            };
+          }
+          const profit = netPrice - cost;
+          const margin = netPrice > 0 ? profit / netPrice * 100 : null;
+          let band = "gray";
+          let label = "Sin calcular";
+          if (Number.isFinite(margin)) {
+            if (margin >= 60) {
+              band = "green";
+              label = "Rentable";
+            } else if (margin >= 40) {
+              band = "amber";
+              label = "Moderado";
+            } else {
+              band = "red";
+              label = "Bajo";
+            }
+          }
+          return { netPrice, profit, margin, band, label };
+        }
+
+        function formatPercentage(value) {
+          return `${value.toLocaleString("es-MX", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} %`;
+        }
+
+        function updateTargetMargin(panel) {
+          const input = panel.querySelector(".target-margin-input");
+          const error = panel.querySelector(".target-margin-error");
+          const target = Number(input.value);
+          const valid = input.value.trim() !== "" && Number.isFinite(target) && target >= 0 && target < 100;
+          error.classList.toggle("hidden", valid);
+
+          const priceOutput = panel.querySelector(".target-margin-price");
+          const profitOutput = panel.querySelector(".target-margin-profit");
+          const finalPriceOutput = panel.querySelector(".target-margin-final-price");
+          const priceLabel = panel.querySelector(".target-margin-price-label");
+          if (!valid) {
+            priceOutput.textContent = "—";
+            profitOutput.textContent = "—";
+            finalPriceOutput.classList.add("hidden");
+            return;
+          }
+
+          if (panel.dataset.incomplete === "true") {
+            priceOutput.textContent = "No disponible";
+            profitOutput.textContent = "No disponible";
+            finalPriceOutput.classList.add("hidden");
+            return;
+          }
+
+          const cost = Number(panel.dataset.cost);
+          if (!Number.isFinite(cost) || cost <= 0) {
+            priceOutput.textContent = "No disponible";
+            profitOutput.textContent = "No disponible";
+            finalPriceOutput.classList.add("hidden");
+            return;
+          }
+
+          const suggestedNetPrice = Math.round((cost / (1 - target / 100) + Number.EPSILON) * 100) / 100;
+          const suggestedGrossPrice = Math.round((suggestedNetPrice * taxMultiplier + Number.EPSILON) * 100) / 100;
+          const estimatedProfit = Math.round((suggestedNetPrice - cost + Number.EPSILON) * 100) / 100;
+          const suggestedPrice = currentTaxMode === "con" ? suggestedGrossPrice : suggestedNetPrice;
+          priceLabel.textContent = `Precio sugerido ${currentTaxMode === "con" ? "con" : "sin"} IVA`;
+          priceOutput.textContent = currencyFormatter.format(suggestedPrice);
+          profitOutput.textContent = currencyFormatter.format(estimatedProfit);
+          if (currentTaxMode === "sin") {
+            finalPriceOutput.textContent = `Precio al cliente con IVA: ${currencyFormatter.format(suggestedGrossPrice)}`;
+            finalPriceOutput.classList.remove("hidden");
+          } else {
+            finalPriceOutput.classList.add("hidden");
+          }
+        }
+
+        function updateSummaryRow(row) {
+          const grossPrice = Number(row.dataset.price);
+          const cost = Number(row.dataset.cost);
+          const metrics = getMarginMetrics(
+            grossPrice, cost, row.dataset.incomplete === "true", row.dataset.hasRecipe === "true");
+          const displayedPrice = currentTaxMode === "con" ? grossPrice : metrics.netPrice;
+          const priceCell = row.querySelector(".costing-price");
+          const profitCell = row.querySelector(".costing-profit");
+          const marginCell = row.querySelector(".costing-margin");
+          const state = row.querySelector(".costing-state");
+          priceCell.textContent = currencyFormatter.format(displayedPrice);
+          profitCell.textContent = metrics.profit === null ? "—" : currencyFormatter.format(metrics.profit);
+          profitCell.classList.toggle("text-red-600", metrics.profit !== null && metrics.profit < 0);
+          profitCell.classList.toggle("dark:text-red-400", metrics.profit !== null && metrics.profit < 0);
+          profitCell.classList.toggle("text-gray-900", metrics.profit === null || metrics.profit >= 0);
+          profitCell.classList.toggle("dark:text-gray-100", metrics.profit === null || metrics.profit >= 0);
+          marginCell.textContent = metrics.margin === null ? "—" : formatPercentage(metrics.margin);
+          state.className = `costing-state inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${marginStyles[metrics.band]}`;
+          state.textContent = metrics.label;
+          row.dataset.margin = metrics.margin === null ? "" : String(metrics.margin);
+          row.dataset.band = metrics.band;
+        }
+
+        function updateDetailCard(card) {
+          const grossPrice = Number(card.dataset.price);
+          const cost = Number(card.dataset.cost);
+          const metrics = getMarginMetrics(
+            grossPrice, cost, card.dataset.incomplete === "true", card.dataset.hasRecipe === "true");
+          const displayedPrice = currentTaxMode === "con" ? grossPrice : metrics.netPrice;
+          card.querySelector(".dish-price-label").textContent = `Precio de venta ${currentTaxMode === "con" ? "con" : "sin"} IVA`;
+          card.querySelector(".dish-sale-price").textContent = currencyFormatter.format(displayedPrice);
+          const profit = card.querySelector(".dish-profit");
+          profit.textContent = metrics.profit === null ? "—" : currencyFormatter.format(metrics.profit);
+          profit.classList.toggle("text-red-600", metrics.profit !== null && metrics.profit < 0);
+          profit.classList.toggle("dark:text-red-400", metrics.profit !== null && metrics.profit < 0);
+          profit.classList.toggle("text-green-600", metrics.profit !== null && metrics.profit >= 0);
+          profit.classList.toggle("dark:text-green-400", metrics.profit !== null && metrics.profit >= 0);
+          profit.classList.toggle("text-gray-500", metrics.profit === null);
+          const marginText = metrics.margin === null ? metrics.label : `${formatPercentage(metrics.margin)} · ${metrics.label}`;
+          const marginLabel = card.querySelector(".dish-margin-label");
+          marginLabel.textContent = marginText;
+          marginLabel.className = `dish-margin-label font-bold ${marginTextStyles[metrics.band]}`;
+          const band = card.querySelector(".dish-margin-band");
+          band.className = `dish-margin-band shrink-0 rounded-full px-3 py-1 text-xs font-semibold ${marginStyles[metrics.band]}`;
+          band.textContent = metrics.label;
+          const bar = card.querySelector(".dish-margin-bar");
+          bar.className = `dish-margin-bar h-full rounded-full ${marginBarStyles[metrics.band]}`;
+          bar.style.width = `${metrics.margin === null ? 0 : Math.max(0, Math.min(100, metrics.margin))}%`;
+          const foodCost = card.querySelector(".dish-food-cost");
+          foodCost.textContent = metrics.profit !== null && metrics.netPrice > 0
+            ? formatPercentage(cost / metrics.netPrice * 100)
+            : "—";
+        }
+
+        function updateTaxMetrics() {
+          document.getElementById("costingPriceHeading").textContent =
+            `Precio ${currentTaxMode === "con" ? "con" : "sin"} IVA`;
+          document.getElementById("costingTaxModeHint").textContent =
+            `El precio se muestra ${currentTaxMode === "con" ? "con" : "sin"} IVA (tasa configurada: ${taxRate.toLocaleString("es-MX", { maximumFractionDigits: 2 })} %). Utilidad y margen son estimados: se calculan antes del IVA de venta y usan los costos capturados, sin ajustar el IVA de las compras.`;
+          document.querySelectorAll(".tax-mode-button").forEach((button) => {
+            const selected = button.dataset.taxMode === currentTaxMode;
+            button.setAttribute("aria-pressed", String(selected));
+            button.className = `tax-mode-button rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${selected ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm" : "text-gray-600 dark:text-gray-300"}`;
+          });
+          filterForm.querySelector('input[name="ivaMode"]').value = currentTaxMode;
+          summaryRows.forEach(updateSummaryRow);
+          detailCards.forEach(updateDetailCard);
+          document.querySelectorAll(".variant-price").forEach((element) => {
+            const grossPrice = Number(element.dataset.price);
+            element.textContent = currencyFormatter.format(currentTaxMode === "con" ? grossPrice : priceBeforeTax(grossPrice));
+          });
+          document.querySelectorAll(".target-margin-panel").forEach(updateTargetMargin);
+          filterCategory();
+        }
+
+        function showSelectedDish(id) {
+          empty.classList.add("hidden");
+          hint.classList.add("hidden");
+          document.querySelectorAll(".variant-options").forEach((options) => options.classList.add("hidden"));
+          document.querySelectorAll(".variant-toggle").forEach((button) => button.setAttribute("aria-expanded", "false"));
+          detailCards.forEach((card) => card.classList.toggle("hidden", card.dataset.id !== id));
+          detail.classList.remove("hidden");
+          const selectedDetail = detailCards.find((card) => card.dataset.id === id);
+          if (selectedDetail) {
+            updateTargetMargin(selectedDetail.querySelector("[data-cost]"));
+          }
+          document.getElementById("dishDetailHeading").textContent =
+            selectedDetail?.dataset.name || "Detalle del platillo";
+        }
+
+        function renderSearchPage(data) {
+          searchCards.replaceChildren();
+          data.items.forEach((item) => {
+            const card = document.createElement("button");
+            card.type = "button";
+            card.className = "flex items-center gap-3 text-left bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm hover:shadow-lg hover:border-primary transition-all p-3";
+            card.addEventListener("click", () => {
+              const params = new URLSearchParams({
+                page: String(Number(filterForm.querySelector('input[name="page"]').value) || 0),
+                view: "dish",
+                dishId: String(item.id),
+                name: search.value.trim(),
+                ivaMode: currentTaxMode,
+              });
+              window.location.href = `${filterForm.action}?${params.toString()}`;
+            });
+
+            const name = document.createElement("span");
+            name.className = "block font-bold text-gray-900 dark:text-white truncate";
+            name.textContent = item.name;
+            const category = document.createElement("span");
+            category.className = "mt-1 block text-xs text-gray-500 dark:text-gray-400 truncate";
+            category.textContent = item.category;
+            const imageWrap = document.createElement("span");
+            imageWrap.className = "flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gray-100 dark:bg-gray-800";
+            if (item.imageUrl) {
+              const image = document.createElement("img");
+              image.src = item.imageUrl;
+              image.alt = item.name;
+              image.loading = "lazy";
+              image.className = "h-full w-full object-cover";
+              imageWrap.append(image);
+            } else {
+              const placeholder = document.createElement("span");
+              placeholder.className = "material-symbols-outlined text-3xl text-gray-400";
+              placeholder.textContent = "restaurant";
+              imageWrap.append(placeholder);
+            }
+            const info = document.createElement("span");
+            info.className = "min-w-0 flex-1";
+            const priceAndMargin = document.createElement("span");
+            priceAndMargin.className = "mt-3 flex items-center justify-between gap-2";
+            const price = document.createElement("span");
+            price.className = "text-sm font-semibold text-gray-700 dark:text-gray-200";
+            const grossPrice = Number(item.price);
+            price.textContent = currencyFormatter.format(currentTaxMode === "con" ? grossPrice : priceBeforeTax(grossPrice));
+            const margin = document.createElement("span");
+            const metrics = getMarginMetrics(grossPrice, Number(item.cost), item.incomplete, item.hasRecipe);
+            margin.className = `rounded-full px-2 py-0.5 text-xs font-semibold ${marginStyles[metrics.band]}`;
+            margin.textContent = metrics.margin === null ? metrics.label : `${formatPercentage(metrics.margin)} · ${metrics.label}`;
+            priceAndMargin.append(price, margin);
+            info.append(name, category, priceAndMargin);
+            card.append(imageWrap, info);
+            searchCards.append(card);
+          });
+
+          empty.classList.toggle("hidden", data.items.length > 0 || !search.value.trim());
+          searchPagination.classList.toggle("hidden", data.totalPages <= 1);
+          searchPagination.querySelector("p").textContent =
+            `Mostrando ${data.totalItems === 0 ? 0 : data.currentPage * searchPageSize + 1}–${Math.min((data.currentPage + 1) * searchPageSize, data.totalItems)} de ${data.totalItems} platillos`;
+          searchPagination.querySelector(".search-page-label").textContent =
+            `Página ${data.currentPage + 1} de ${data.totalPages}`;
+          searchPagination.querySelector(".search-page-previous").disabled = data.currentPage === 0;
+          searchPagination.querySelector(".search-page-next").disabled = data.currentPage + 1 >= data.totalPages;
+          searchPage = data.currentPage;
+        }
+
+        async function searchDishes(page = 0) {
+          if (activeSearchRequest) activeSearchRequest.abort();
+          activeSearchRequest = new AbortController();
+          searchError.classList.add("hidden");
+          searchCards.replaceChildren();
+          searchPagination.classList.add("hidden");
+          if (!search.value.trim()) {
+            empty.classList.add("hidden");
+            hint.textContent = "Escribe para buscar entre todos tus platillos.";
+            hint.classList.remove("hidden");
+            return;
+          }
+          hint.textContent = "Buscando en todos tus platillos...";
+          hint.classList.remove("hidden");
+          const params = new URLSearchParams({ page: String(page), name: search.value.trim() });
+          try {
+            const response = await fetch(`${filterForm.action}/search?${params.toString()}`, {
+              headers: { Accept: "application/json" },
+              signal: activeSearchRequest.signal,
+            });
+            if (!response.ok) {
+              throw new Error(`La búsqueda respondió con el estado ${response.status}.`);
+            }
+            const data = await response.json();
+            renderSearchPage(data);
+            hint.textContent = data.totalItems === 0
+              ? "No se encontraron platillos con ese nombre."
+              : `${data.totalItems} platillo(s) encontrado(s).`;
+          } catch (error) {
+            if (error.name === "AbortError") return;
+            searchCards.replaceChildren();
+            searchPagination.classList.add("hidden");
+            searchError.textContent = "No se pudo completar la búsqueda. Inténtalo de nuevo.";
+            searchError.classList.remove("hidden");
+            hint.classList.add("hidden");
+          }
+        }
+
+        function filterCategory() {
+          const category = categoryFilter.value;
+          document.querySelectorAll(".costing-row").forEach((row) => {
+            row.classList.toggle("hidden", category !== "" && row.dataset.category !== category);
+          });
+          const visibleRows = summaryRows.filter((row) => !row.classList.contains("hidden"));
+          categoryEmpty.classList.toggle("hidden", visibleRows.length > 0);
+          const margins = visibleRows.map((row) => Number(row.dataset.margin)).filter(Number.isFinite);
+          const average = margins.length
+            ? (margins.reduce((sum, margin) => sum + margin, 0) / margins.length).toLocaleString("es-MX", { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + " %"
+            : "—";
+          document.getElementById("costingItemCount").textContent = visibleRows.length;
+          document.getElementById("costingAverageMargin").textContent = average;
+          document.getElementById("costingIncompleteCount").textContent =
+            visibleRows.filter((row) => row.dataset.incomplete === "true").length;
+          document.getElementById("costingRedCount").textContent =
+            visibleRows.filter((row) => row.dataset.band === "red").length;
+        }
+
+        function updateMode(submit = false) {
+          const selectedMode = mode.value;
+          categoryWrap.classList.toggle("hidden", selectedMode !== "category");
+          searchWrap.classList.toggle("hidden", selectedMode !== "dish");
+          allView.classList.toggle("hidden", selectedMode === "dish");
+          results.classList.toggle("hidden", selectedMode !== "dish");
+          costingPagination?.classList.toggle("hidden", selectedMode === "dish");
+          if (selectedMode !== "category") categoryFilter.value = "";
+          if (selectedMode !== "dish") {
+            search.value = "";
+            detail.classList.add("hidden");
+          } else {
+            search.focus();
+            if (search.value.trim()) {
+              searchDishes(0);
+            }
+          }
+          filterCategory();
+          if (submit && selectedMode !== "dish") {
+            filterForm.querySelector('input[name="page"]').value = "0";
+            filterForm.submit();
+          }
+        }
+
+        mode.addEventListener("change", () => updateMode(true));
+        document.getElementById("clearCostingFilters").addEventListener("click", () => {
+          mode.value = "all";
+          categoryFilter.value = "";
+          search.value = "";
+          filterForm.querySelector('input[name="page"]').value = "0";
+          updateMode();
+          filterForm.submit();
+        });
+        filterForm.addEventListener("submit", (event) => {
+          if (mode.value === "dish") {
+            event.preventDefault();
+            searchDishes(0);
+          }
+        });
+        categoryFilter.addEventListener("change", () => {
+          filterForm.querySelector('input[name="page"]').value = "0";
+          filterForm.submit();
+        });
+        search.addEventListener("input", () => {
+          window.clearTimeout(searchTimer);
+          detail.classList.add("hidden");
+          searchTimer = window.setTimeout(() => searchDishes(0), 300);
+        });
+        searchPagination.querySelector(".search-page-previous").addEventListener("click", () => searchDishes(searchPage - 1));
+        searchPagination.querySelector(".search-page-next").addEventListener("click", () => searchDishes(searchPage + 1));
+        document.querySelectorAll(".variant-toggle").forEach((button) => {
+          button.addEventListener("click", () => {
+            const options = button.nextElementSibling;
+            const expanded = button.getAttribute("aria-expanded") === "true";
+            options.classList.toggle("hidden", expanded);
+            button.setAttribute("aria-expanded", String(!expanded));
+          });
+        });
+        document.getElementById("clearDishSelection").addEventListener("click", () => {
+          detail.classList.add("hidden");
+          search.focus();
+          searchDishes(searchPage);
+        });
+        document.querySelectorAll(".target-margin-input").forEach((input) => {
+          input.addEventListener("input", () => updateTargetMargin(input.closest(".target-margin-panel")));
+        });
+        document.querySelectorAll(".tax-mode-button").forEach((button) => {
+          button.addEventListener("click", () => {
+            currentTaxMode = button.dataset.taxMode;
+            updateTaxMetrics();
+          });
+        });
+        updateTaxMetrics();
+        updateMode();
+        if (detail.dataset.selectedId) {
+          showSelectedDish(detail.dataset.selectedId);
+        }
+      })();
+    </script>
+    <div th:replace="~{fragments/sidebar :: sidebarScripts}"></div>
+    <div th:replace="~{fragments/theme :: themeScript}"></div>
+  </body>
+</html>

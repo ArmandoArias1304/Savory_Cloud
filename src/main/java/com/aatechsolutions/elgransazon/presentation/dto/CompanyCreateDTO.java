@@ -4,6 +4,7 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
+import com.aatechsolutions.elgransazon.domain.entity.PaymentMethodType;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -83,4 +84,6 @@ public class CompanyCreateDTO {
     private int licenseMonths = 1;
 
     private Double licenseAmount;
+
+    private PaymentMethodType paymentMethod;
 }

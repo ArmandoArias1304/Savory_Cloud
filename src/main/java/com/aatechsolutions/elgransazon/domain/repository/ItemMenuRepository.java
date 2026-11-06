@@ -213,6 +213,47 @@ public interface ItemMenuRepository extends JpaRepository<ItemMenu, Long> {
                                        @Param("available") Boolean available,
                                        Pageable pageable);
 
+    @Query(value = """
+            SELECT i FROM ItemMenu i LEFT JOIN FETCH i.parentItem
+            WHERE i.company = :company
+              AND i.active = true
+              AND i.deleted = false
+              AND i.internalOnly = false
+              AND (:categoryName IS NULL OR i.category.name = :categoryName)
+              AND (:name IS NULL OR LOWER(i.name) LIKE LOWER(CONCAT('%', :name, '%')))
+            ORDER BY i.name ASC
+            """,
+            countQuery = """
+            SELECT COUNT(i) FROM ItemMenu i
+            WHERE i.company = :company
+              AND i.active = true
+              AND i.deleted = false
+              AND i.internalOnly = false
+              AND (:categoryName IS NULL OR i.category.name = :categoryName)
+              AND (:name IS NULL OR LOWER(i.name) LIKE LOWER(CONCAT('%', :name, '%')))
+            """)
+    Page<ItemMenu> findActiveForCosting(@Param("company") Company company,
+                                        @Param("categoryName") String categoryName,
+                                        @Param("name") String name,
+                                        Pageable pageable);
+
+    @Query("SELECT i FROM ItemMenu i LEFT JOIN FETCH i.parentItem " +
+           "WHERE i.idItemMenu = :itemId AND i.company = :company AND i.active = true " +
+           "AND i.deleted = false AND i.internalOnly = false")
+    Optional<ItemMenu> findActiveCostingItemById(@Param("company") Company company,
+                                                  @Param("itemId") Long itemId);
+
+    @Query("SELECT DISTINCT i.category.name FROM ItemMenu i " +
+           "WHERE i.company = :company AND i.active = true AND i.deleted = false " +
+           "AND i.internalOnly = false AND i.category IS NOT NULL ORDER BY i.category.name ASC")
+    List<String> findActiveCostingCategories(@Param("company") Company company);
+
+    @Query("SELECT i FROM ItemMenu i LEFT JOIN FETCH i.parentItem WHERE i.company = :company " +
+           "AND i.active = true AND i.deleted = false AND i.internalOnly = false " +
+           "AND i.parentItem.idItemMenu IN :parentIds ORDER BY i.price ASC")
+    List<ItemMenu> findActiveCostingVariants(@Param("company") Company company,
+                                              @Param("parentIds") List<Long> parentIds);
+
     /**
      * Find all available items by company
      */

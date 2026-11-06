@@ -5,6 +5,7 @@ import com.aatechsolutions.elgransazon.application.service.CloudflareImagesUrlHe
 import com.aatechsolutions.elgransazon.application.service.GlobalSystemConfigService;
 import com.aatechsolutions.elgransazon.application.service.ImageStorageService;
 import com.aatechsolutions.elgransazon.application.service.LicenseService;
+import com.aatechsolutions.elgransazon.application.service.LicenseReceiptPdfService;
 import com.aatechsolutions.elgransazon.application.service.SocialNetworkService;
 import com.aatechsolutions.elgransazon.application.service.SystemConfigurationService;
 import com.aatechsolutions.elgransazon.domain.entity.*;
@@ -14,6 +15,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.propertyeditors.CustomNumberEditor;
 import org.springframework.beans.propertyeditors.StringTrimmerEditor;
 import org.springframework.http.CacheControl;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -27,6 +30,7 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.io.IOException;
 import java.time.LocalTime;
 import java.util.*;
 
@@ -45,6 +49,7 @@ public class SystemConfigurationController {
     private final BusinessHoursService businessHoursService;
     private final SocialNetworkService socialNetworkService;
     private final LicenseService licenseService;
+    private final LicenseReceiptPdfService licenseReceiptPdfService;
     private final ImageStorageService imageStorageService;
     private final GlobalSystemConfigService globalSystemConfigService;
     private final CloudflareImagesUrlHelper cloudinaryUrl;
@@ -127,6 +132,25 @@ public class SystemConfigurationController {
         }
         
         return "admin/system-configuration/form";
+    }
+
+    @GetMapping("/license-events/{eventId}/receipt")
+    public ResponseEntity<byte[]> downloadLicenseReceipt(@PathVariable Long eventId) throws IOException {
+        LicenseEvent event = licenseService.getPaidEventForCurrentLicense(eventId).orElse(null);
+        SystemLicense license = licenseService.getLicense();
+        if (event == null || license == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        byte[] pdf = licenseReceiptPdfService.generateReceipt(
+                event, license, configurationService.getConfiguration(),
+                globalSystemConfigService.getConfiguration());
+        String filename = "comprobante-pago-licencia-" + event.getId() + ".pdf";
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_PDF)
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        ContentDisposition.attachment().filename(filename).build().toString())
+                .body(pdf);
     }
 
     /**

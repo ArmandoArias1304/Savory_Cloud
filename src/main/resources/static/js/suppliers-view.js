@@ -195,13 +195,22 @@
       return;
     }
 
-    setDetailText("supplierDetailTitle", row.getAttribute("data-supplier-name"));
+    setDetailText(
+      "supplierDetailTitle",
+      row.getAttribute("data-supplier-name"),
+    );
     setDetailText(
       "supplierDetailContact",
       row.getAttribute("data-supplier-contact"),
     );
-    setDetailText("supplierDetailPhone", row.getAttribute("data-supplier-phone"));
-    setDetailText("supplierDetailEmail", row.getAttribute("data-supplier-email"));
+    setDetailText(
+      "supplierDetailPhone",
+      row.getAttribute("data-supplier-phone"),
+    );
+    setDetailText(
+      "supplierDetailEmail",
+      row.getAttribute("data-supplier-email"),
+    );
     setDetailText(
       "supplierDetailAddress",
       row.getAttribute("data-supplier-address"),

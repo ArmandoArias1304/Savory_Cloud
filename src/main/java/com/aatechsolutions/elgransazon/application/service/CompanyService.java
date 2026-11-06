@@ -68,11 +68,25 @@ public interface CompanyService {
      * @param adminPassword Admin password
      * @return Created company
      */
+    default Company create(String slug, String name, String customDomain,
+                           String senderEmail, String senderName, String contactEmail,
+                           String contactPhone, String address, String rfc, String timezone,
+                           String adminUsername, String adminFirstName, String adminLastName, String adminPassword,
+                           boolean freeTrial, String packageType, String billingCycle, int licenseMonths, Double licenseAmount,
+                           java.math.BigDecimal taxRate,
+                           String performedBy) {
+        return create(slug, name, customDomain, senderEmail, senderName, contactEmail,
+                contactPhone, address, rfc, timezone, adminUsername, adminFirstName,
+                adminLastName, adminPassword, freeTrial, packageType, billingCycle,
+                licenseMonths, licenseAmount, null, taxRate, performedBy);
+    }
+
     Company create(String slug, String name, String customDomain,
                    String senderEmail, String senderName, String contactEmail,
                    String contactPhone, String address, String rfc, String timezone,
                    String adminUsername, String adminFirstName, String adminLastName, String adminPassword,
                    boolean freeTrial, String packageType, String billingCycle, int licenseMonths, Double licenseAmount,
+                   com.aatechsolutions.elgransazon.domain.entity.PaymentMethodType paymentMethod,
                    java.math.BigDecimal taxRate,
                    String performedBy);
 

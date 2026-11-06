@@ -130,7 +130,7 @@ public class ItemIngredient implements Serializable {
             return BigDecimal.ZERO;
         }
 
-        return quantity.multiply(ingredient.getCostPerUnit());
+        return quantity.multiply(ingredient.getCostPerRecipeUnit());
     }
 
     /**

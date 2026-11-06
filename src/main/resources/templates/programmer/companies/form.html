@@ -334,6 +334,18 @@
                                placeholder="0.00"
                                class="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent">
                         <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Monto que pagó el cliente por la licencia</p>
+
+                        <div class="mt-4">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Método de pago
+                            </label>
+                            <select th:field="*{paymentMethod}" id="licensePaymentMethod"
+                                    class="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent">
+                                <option value="">No especificado</option>
+                                <option th:each="method : ${paymentMethodTypes}" th:value="${method}" th:text="${method.displayName}"></option>
+                            </select>
+                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Aparecerá en el recibo de pago del cliente</p>
+                        </div>
                     </div>
                 </div>
             </div>

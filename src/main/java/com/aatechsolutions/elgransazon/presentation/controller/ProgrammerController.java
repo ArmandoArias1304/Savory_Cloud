@@ -17,6 +17,7 @@ import com.aatechsolutions.elgransazon.domain.entity.Company;
 import com.aatechsolutions.elgransazon.domain.entity.GlobalSystemConfig;
 import com.aatechsolutions.elgransazon.domain.entity.LandingImage;
 import com.aatechsolutions.elgransazon.domain.entity.LicenseEvent;
+import com.aatechsolutions.elgransazon.domain.entity.PaymentMethodType;
 import com.aatechsolutions.elgransazon.domain.entity.SystemLicense;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -70,6 +71,7 @@ public class ProgrammerController {
                            Model model, 
                            Authentication authentication) {
         log.info("Programmer {} accessed dashboard", authentication.getName());
+        model.addAttribute("paymentMethodTypes", PaymentMethodType.values());
 
         // Load ALL companies with their licenses
         List<Company> allCompanies = companyService.findAll();
@@ -156,13 +158,14 @@ public class ProgrammerController {
     public String renewLicense(@RequestParam Long licenseId,
                               @RequestParam int months,
                               @RequestParam(required = false) Double amount,
+                              @RequestParam(required = false) PaymentMethodType paymentMethod,
                               Authentication authentication,
                               RedirectAttributes redirectAttributes) {
         try {
             String username = authentication.getName();
             
             // Renew the specific license by ID
-            licenseService.renewLicenseById(licenseId, months, amount, username);
+            licenseService.renewLicenseById(licenseId, months, amount, username, paymentMethod);
             
             String action = months > 0 ? "renovada" : "ajustada";
             String monthsText = Math.abs(months) + " mes(es)";

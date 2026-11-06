@@ -47,6 +47,10 @@ public class LicenseEvent implements Serializable {
     @Column(name = "months")
     private Integer months;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "payment_method", length = 40)
+    private PaymentMethodType paymentMethod;
+
     @PrePersist
     protected void onCreate() {
         if (eventDate == null) {

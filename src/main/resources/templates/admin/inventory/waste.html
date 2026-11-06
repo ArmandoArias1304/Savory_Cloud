@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title th:text="${globalSystemConfig.systemName + ' - Registro de merma'}">Registro de merma</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@300;400;500;600;700" rel="stylesheet" />
+  <div th:replace="~{fragments/theme :: themeResources}"></div>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <script>
+    tailwind.config = { darkMode: "class", theme: { extend: { colors: {
+      primary: "#38e07b", "primary-dark": "#2bc866",
+      "background-light": "#f8faf9", "background-dark": "#0f1713",
+    }, fontFamily: { display: ["Work Sans"] } } } };
+  </script>
+  <div th:replace="~{fragments/sidebar :: sidebarStyles}"></div>
+</head>
+<body class="bg-gradient-to-br from-background-light to-gray-50 dark:from-background-dark dark:to-gray-900 font-display text-gray-800 dark:text-gray-200 overflow-hidden">
+<div th:replace="~{fragments/sidebar :: menuControls}"></div>
+<div class="flex min-h-screen h-screen overflow-hidden">
+  <div th:replace="~{fragments/sidebar :: sidebar(activeMenu='inventory')}"></div>
+  <main class="flex-1 overflow-y-auto h-screen">
+    <div class="p-4 sm:p-6 lg:p-8 pt-20 md:pt-20 lg:pt-8 pb-32 max-w-7xl mx-auto">
+      <header class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+        <div>
+          <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">Merma de ingredientes</h1>
+          <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
+            Registra pérdidas operativas y consulta el valor del inventario descontado.
+          </p>
+        </div>
+        <a th:href="@{/admin/inventory}" class="inline-flex items-center gap-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-2.5 font-semibold hover:bg-gray-50 dark:hover:bg-gray-800">
+          <span class="material-symbols-outlined">arrow_back</span> Volver a inventario
+        </a>
+      </header>
+
+      <div th:if="${successMessage}" class="mb-5 rounded-xl border border-green-200 bg-green-50 p-4 text-green-800 dark:border-green-900 dark:bg-green-900/20 dark:text-green-200" role="status" th:text="${successMessage}"></div>
+      <div th:if="${errorMessage}" class="mb-5 rounded-xl border border-red-200 bg-red-50 p-4 text-red-800 dark:border-red-900 dark:bg-red-900/20 dark:text-red-200" role="alert" th:text="${errorMessage}"></div>
+
+      <section class="mb-8 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 sm:p-7 shadow-lg">
+        <h2 class="text-lg font-bold text-gray-900 dark:text-white">Registrar pérdida</h2>
+        <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
+          La cantidad se resta del stock actual. El costo se guarda con el valor unitario vigente al registrar la merma.
+        </p>
+        <form method="post" th:action="@{/admin/inventory/waste}" class="mt-5 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="md:col-span-2">
+            <label for="ingredientId" class="mb-1 block text-sm font-semibold">Ingrediente</label>
+            <select id="ingredientId" name="ingredientId" required class="w-full rounded-xl border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white">
+              <option value="">Selecciona un ingrediente</option>
+              <option th:each="ingredient : ${ingredients}" th:value="${ingredient.idIngredient}"
+                      th:text="${ingredient.name + ' · Disponible: ' + ingredient.currentStock + ' ' + ingredient.unitOfMeasure}">Ingrediente</option>
+            </select>
+          </div>
+          <div>
+            <label for="quantity" class="mb-1 block text-sm font-semibold">Cantidad perdida</label>
+            <input id="quantity" name="quantity" type="number" min="0.01" step="0.01" required
+                   class="w-full rounded-xl border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white" />
+            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Usa la misma unidad configurada para el ingrediente.</p>
+          </div>
+          <div>
+            <label for="reason" class="mb-1 block text-sm font-semibold">Motivo</label>
+            <select id="reason" name="reason" required class="w-full rounded-xl border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white">
+              <option value="">Selecciona el motivo</option>
+              <option th:each="reason : ${wasteReasons}" th:value="${reason}" th:text="${reason.label}">Motivo</option>
+            </select>
+          </div>
+          <div>
+            <label for="occurredOn" class="mb-1 block text-sm font-semibold">Fecha de la pérdida</label>
+            <input id="occurredOn" name="occurredOn" type="date" required th:value="${today}"
+                   class="w-full rounded-xl border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white" />
+          </div>
+          <div>
+            <label for="note" class="mb-1 block text-sm font-semibold">Nota <span class="font-normal text-gray-500">(opcional)</span></label>
+            <input id="note" name="note" type="text" maxlength="500" placeholder="Detalle adicional"
+                   class="w-full rounded-xl border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white" />
+          </div>
+          <div class="md:col-span-2 flex justify-end">
+            <button type="submit" class="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 font-bold text-gray-900 hover:bg-primary-dark">
+              <span class="material-symbols-outlined">delete_sweep</span> Registrar merma
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <section class="overflow-hidden rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-lg">
+        <div class="border-b border-gray-200 dark:border-gray-800 p-5">
+          <h2 class="text-lg font-bold text-gray-900 dark:text-white">Registros recientes</h2>
+          <p class="text-sm text-gray-600 dark:text-gray-400">Se muestran hasta los últimos 100 registros de esta empresa.</p>
+        </div>
+        <div th:if="${#lists.isEmpty(wasteRecords)}" class="p-8 text-center text-gray-500 dark:text-gray-400">
+          Todavía no hay mermas registradas.
+        </div>
+        <div th:unless="${#lists.isEmpty(wasteRecords)}" class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="bg-gray-50 dark:bg-gray-800/60 text-left text-gray-600 dark:text-gray-300">
+              <tr>
+                <th class="px-4 py-3">Fecha</th>
+                <th class="px-4 py-3">Ingrediente</th>
+                <th class="px-4 py-3 text-right">Cantidad</th>
+                <th class="px-4 py-3">Motivo</th>
+                <th class="px-4 py-3">Nota</th>
+                <th class="px-4 py-3">Registró</th>
+                <th class="px-4 py-3 text-right">Costo de pérdida</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+              <tr th:each="record : ${wasteRecords}">
+                <td class="px-4 py-3 whitespace-nowrap" th:text="${#temporals.format(record.occurredOn, 'dd/MM/yyyy')}">01/01/2026</td>
+                <td class="px-4 py-3 font-semibold" th:text="${record.ingredient.name}">Ingrediente</td>
+                <td class="px-4 py-3 text-right whitespace-nowrap" th:text="${#numbers.formatDecimal(record.quantity, 1, 'COMMA', 2, 'POINT') + ' ' + record.ingredient.unitOfMeasure}">0 UN</td>
+                <td class="px-4 py-3" th:text="${record.reason.label}">Motivo</td>
+                <td class="px-4 py-3" th:text="${record.note != null ? record.note : '—'}">—</td>
+                <td class="px-4 py-3" th:text="${record.recordedBy != null ? record.recordedBy.nombre + ' ' + record.recordedBy.apellido : '—'}">Empleado</td>
+                <td class="px-4 py-3 text-right font-semibold whitespace-nowrap" th:text="${'$' + #numbers.formatDecimal(record.totalCost, 1, 'COMMA', 2, 'POINT')}">$0.00</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+<div th:replace="~{fragments/sidebar :: sidebarScripts}"></div>
+<div th:replace="~{fragments/theme :: themeScript}"></div>
+</body>
+</html>

@@ -174,6 +174,21 @@ public class FacturamaService {
             String receiverRfc, String receiverName,
             String receiverRegime, String receiverCfdiUse,
             String receiverZipCode) {
+        return createCfdi(order, config, receiverRfc, receiverName, receiverRegime, receiverCfdiUse,
+                receiverZipCode, true);
+    }
+
+    /**
+     * Create a CFDI 4.0 (Ingreso) for a whole order.
+     *
+     * @param itemized true  → one concept per order line / complement / delivery (current
+     *                 behaviour); false → the whole ticket is folded into a single
+     *                 "Venta de alimentos y bebidas" concept with the same tax-included total.
+     */
+    public Map<String, String> createCfdi(Order order, FacturamaConfig config,
+            String receiverRfc, String receiverName,
+            String receiverRegime, String receiverCfdiUse,
+            String receiverZipCode, boolean itemized) {
         validateCredentials();
 
         if (!config.isReady()) {
@@ -273,6 +288,17 @@ public class FacturamaService {
             if (candidateLines.isEmpty()) {
                 throw new IllegalStateException(
                         "No hay conceptos con valor para facturar: el pedido quedó en $0.00 (solo cortesías).");
+            }
+
+            // Resumida: el cliente pidió un solo concepto con el total de la cuenta. Se
+            // colapsa DESPUÉS de recolectar las líneas para que el total fiscal (artículos
+            // + complementos + envío) y el descuento de orden sean idénticos a los de la
+            // factura detallada.
+            if (!itemized) {
+                candidateLines = collapseIntoSingleConcept(candidateLines,
+                        order.getOrderType() == OrderType.DELIVERY
+                                && order.getDeliveryCost() != null
+                                && order.getDeliveryCost().compareTo(BigDecimal.ZERO) > 0);
             }
 
             // Pro-rata distribution of orderDiscount across line totals (con IVA) +
@@ -590,6 +616,21 @@ public class FacturamaService {
             String receiverRfc, String receiverName,
             String receiverRegime, String receiverCfdiUse,
             String receiverZipCode) {
+        return createCfdi(payment, config, receiverRfc, receiverName, receiverRegime, receiverCfdiUse,
+                receiverZipCode, true);
+    }
+
+    /**
+     * Create a CFDI 4.0 (Ingreso) for ONE account of a split bill.
+     *
+     * @param itemized true  → one concept per account line; false → the whole account is
+     *                 folded into a single "Venta de alimentos y bebidas" concept with the
+     *                 same tax-included total.
+     */
+    public Map<String, String> createCfdi(Payment payment, FacturamaConfig config,
+            String receiverRfc, String receiverName,
+            String receiverRegime, String receiverCfdiUse,
+            String receiverZipCode, boolean itemized) {
         validateCredentials();
 
         if (!config.isReady()) {
@@ -655,6 +696,14 @@ public class FacturamaService {
             if (candidateLines.isEmpty()) {
                 throw new IllegalStateException(
                         "No hay conceptos con valor para facturar: la cuenta quedó en $0.00 (solo cortesías).");
+            }
+
+            // Resumida: un solo concepto con el total de la cuenta (mismo criterio que la
+            // orden completa). El descuento de la cuenta se sigue declarando por concepto.
+            if (!itemized) {
+                candidateLines = collapseIntoSingleConcept(candidateLines,
+                        payment.getDeliveryCost() != null
+                                && payment.getDeliveryCost().compareTo(BigDecimal.ZERO) > 0);
             }
 
             ArrayNode items = objectMapper.createArrayNode();
@@ -901,6 +950,22 @@ public class FacturamaService {
             }
         }
         return dominant != null ? mapPaymentForm(dominant) : "99";
+    }
+
+    /**
+     * Fold every candidate line into ONE CFDI concept carrying the same tax-included
+     * total. SAT accepts a single service description (the tax breakdown stays 16% IVA);
+     * this is the "resumida" option of the autofactura page.
+     */
+    private List<CfdiLine> collapseIntoSingleConcept(List<CfdiLine> lines, boolean includesDelivery) {
+        BigDecimal total = lines.stream()
+                .map(line -> line.lineTotalConIva)
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                .setScale(2, RoundingMode.HALF_UP);
+        String description = includesDelivery
+                ? "Venta de alimentos y bebidas y servicio de entrega a domicilio"
+                : "Venta de alimentos y bebidas";
+        return List.of(new CfdiLine(description, BigDecimal.ONE, total, PROD_CODE_RESTAURANT));
     }
 
     /**

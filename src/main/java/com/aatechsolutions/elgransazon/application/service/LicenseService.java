@@ -2,6 +2,7 @@ package com.aatechsolutions.elgransazon.application.service;
 
 import com.aatechsolutions.elgransazon.domain.entity.Company;
 import com.aatechsolutions.elgransazon.domain.entity.LicenseEvent;
+import com.aatechsolutions.elgransazon.domain.entity.PaymentMethodType;
 import com.aatechsolutions.elgransazon.domain.entity.SystemLicense;
 import com.aatechsolutions.elgransazon.domain.entity.SystemLicense.LicenseStatus;
 import com.aatechsolutions.elgransazon.domain.repository.LicenseEventRepository;
@@ -162,6 +163,15 @@ public class LicenseService {
      */
     @Transactional
     public void renewLicense(int months, Double amount, String performedBy) {
+        renewLicense(months, amount, performedBy, null);
+    }
+
+    /**
+     * Renew the license and record how the payment was made.
+     */
+    @Transactional
+    public void renewLicense(int months, Double amount, String performedBy,
+                             PaymentMethodType paymentMethod) {
         SystemLicense license = getLicense();
         if (license == null) {
             throw new RuntimeException("No license found to renew");
@@ -200,7 +210,8 @@ public class LicenseService {
             description,
             performedBy,
             amount,
-            months
+            months,
+            paymentMethod
         );
 
         log.info("License renewed/adjusted for {} months by {}. New expiration: {}. Fresh start: {}", months, performedBy, newExpiration, startingFresh);
@@ -445,7 +456,7 @@ public class LicenseService {
     @Transactional
     public void createLicenseEvent(Long licenseId, LicenseEvent.EventType eventType, 
                                    String description, String performedBy) {
-        createLicenseEvent(licenseId, eventType, description, performedBy, null, null);
+        createLicenseEvent(licenseId, eventType, description, performedBy, null, null, null);
     }
 
     /**
@@ -454,6 +465,16 @@ public class LicenseService {
     @Transactional
     public void createLicenseEvent(Long licenseId, LicenseEvent.EventType eventType, 
                                    String description, String performedBy, Double amount, Integer months) {
+        createLicenseEvent(licenseId, eventType, description, performedBy, amount, months, null);
+    }
+
+    /**
+     * Create a license event with the payment method used by the customer.
+     */
+    @Transactional
+    public void createLicenseEvent(Long licenseId, LicenseEvent.EventType eventType,
+                                   String description, String performedBy, Double amount, Integer months,
+                                   PaymentMethodType paymentMethod) {
         LicenseEvent event = LicenseEvent.builder()
             .licenseId(licenseId)
             .eventType(eventType)
@@ -462,6 +483,7 @@ public class LicenseService {
             .performedBy(performedBy)
             .amount(amount)
             .months(months)
+            .paymentMethod(paymentMethod)
             .build();
 
         eventRepository.save(event);
@@ -523,6 +545,22 @@ public class LicenseService {
             .stream()
             .filter(e -> (e.getEventType() == LicenseEvent.EventType.RENEWED || e.getEventType() == LicenseEvent.EventType.CREATED) && e.getAmount() != null)
             .toList();
+    }
+
+    /**
+     * Find a paid license event only when it belongs to the current company's license.
+     */
+    public Optional<LicenseEvent> getPaidEventForCurrentLicense(Long eventId) {
+        SystemLicense license = getLicense();
+        if (license == null || license.getId() == null) {
+            return Optional.empty();
+        }
+
+        return eventRepository.findById(eventId)
+                .filter(event -> license.getId().equals(event.getLicenseId()))
+                .filter(event -> event.getAmount() != null)
+                .filter(event -> event.getEventType() == LicenseEvent.EventType.CREATED
+                        || event.getEventType() == LicenseEvent.EventType.RENEWED);
     }
 
     /**
@@ -764,6 +802,15 @@ public class LicenseService {
      */
     @Transactional
     public void renewLicenseById(Long licenseId, int months, Double amount, String performedBy) {
+        renewLicenseById(licenseId, months, amount, performedBy, null);
+    }
+
+    /**
+     * Renew a license by ID and record how the payment was made.
+     */
+    @Transactional
+    public void renewLicenseById(Long licenseId, int months, Double amount, String performedBy,
+                                 PaymentMethodType paymentMethod) {
         SystemLicense license = licenseRepository.findById(licenseId)
             .orElseThrow(() -> new RuntimeException("License not found: " + licenseId));
 
@@ -796,7 +843,7 @@ public class LicenseService {
             description += ". Monto: $" + String.format("%.2f", amount) + " MXN";
         }
         
-        createLicenseEvent(licenseId, LicenseEvent.EventType.RENEWED, description, performedBy, amount, months);
+        createLicenseEvent(licenseId, LicenseEvent.EventType.RENEWED, description, performedBy, amount, months, paymentMethod);
         log.info("License {} renewed/adjusted for {} months by {}. Fresh start: {}", licenseId, months, performedBy, startingFresh);
     }
 
@@ -924,4 +971,3 @@ public class LicenseService {
         log.debug("License cache invalidated for company {}", companyId);
     }
 }
-

@@ -405,6 +405,51 @@
               />
             </div>
 
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                ¿Quieres el desglose de tu factura? *
+              </label>
+              <div class="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <label
+                  class="flex items-start gap-3 p-4 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 cursor-pointer hover:border-primary transition-colors"
+                >
+                  <input
+                    type="radio"
+                    name="conceptMode"
+                    value="DETAILED"
+                    class="mt-1 text-primary focus:ring-primary"
+                    th:checked="${conceptMode != 'SINGLE'}"
+                  />
+                  <span>
+                    <span class="block font-semibold text-gray-900 dark:text-gray-100">Detallada</span>
+                    <span class="block text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      Un concepto por cada producto y complemento, igual que el ticket.
+                    </span>
+                  </span>
+                </label>
+                <label
+                  class="flex items-start gap-3 p-4 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 cursor-pointer hover:border-primary transition-colors"
+                >
+                  <input
+                    type="radio"
+                    name="conceptMode"
+                    value="SINGLE"
+                    class="mt-1 text-primary focus:ring-primary"
+                    th:checked="${conceptMode == 'SINGLE'}"
+                  />
+                  <span>
+                    <span class="block font-semibold text-gray-900 dark:text-gray-100">Resumida</span>
+                    <span class="block text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      Un solo concepto con el total de la cuenta.
+                    </span>
+                  </span>
+                </label>
+              </div>
+              <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                Ambas opciones desglosan el IVA 16%. Elige "Detallada" si necesitas deducir producto por producto.
+              </p>
+            </div>
+
             <button
               type="submit"
               id="btnGenerarFactura"

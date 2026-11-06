@@ -70,10 +70,31 @@ public class Ingredient implements Serializable {
 
     // ========== Pricing ==========
 
+    /**
+     * Costo promedio ponderado por unidad de medida, en la moneda del ingrediente.
+     *
+     * <p>No es el último precio pagado: es {@code Σ(cantidad comprada × costo) / Σ(cantidad
+     * comprada)} sobre las compras vigentes del historial. Se recalcula al agregar, corregir o
+     * anular una compra (ver {@code IngredientServiceImpl#recomputeAverageCost}) y es el número
+     * que usa el costeo de los platillos.</p>
+     */
     @DecimalMin(value = "0.0", inclusive = true, message = "El costo por unidad no puede ser negativo")
     @Digits(integer = 8, fraction = 2, message = "El costo debe tener máximo 8 dígitos y 2 decimales")
     @Column(name = "cost_per_unit", precision = 10, scale = 2)
     private BigDecimal costPerUnit;
+
+    // ========== Compra y rendimiento ==========
+
+    /**
+     * Porcentaje aprovechable después de limpiar, deshuesar o recortar. Un 80 % significa que de
+     * cada kilo comprado quedan 800 g utilizables, así que el costo por porción sube en proporción.
+     */
+    @DecimalMin(value = "1.0", message = "El rendimiento debe ser al menos 1 %")
+    @DecimalMax(value = "100.0", message = "El rendimiento no puede pasar de 100 %")
+    @Digits(integer = 3, fraction = 2, message = "El rendimiento admite máximo 2 decimales")
+    @Column(name = "yield_percentage", precision = 5, scale = 2)
+    @Builder.Default
+    private BigDecimal yieldPercentage = new BigDecimal("100.00");
 
     @Size(max = 3, message = "El código de moneda debe tener 3 caracteres")
     @Column(name = "currency", length = 3)
@@ -138,6 +159,28 @@ public class Ingredient implements Serializable {
         if (minStock != null && maxStock != null && minStock.compareTo(maxStock) > 0) {
             throw new IllegalStateException("El stock mínimo no puede ser mayor al stock máximo");
         }
+    }
+
+    // ========== Costeo de recetas ==========
+
+    /**
+     * Costo de una unidad de inventario, ajustado por el rendimiento.
+     *
+     * <p>Las compras, el inventario y las recetas usan la unidad de medida del ingrediente. Por
+     * ejemplo, 1 kg a $48 con rendimiento del 80 % cuesta $60 por kilo utilizable.</p>
+     */
+    public BigDecimal getCostPerRecipeUnit() {
+        if (costPerUnit == null) {
+            return BigDecimal.ZERO;
+        }
+        BigDecimal yield = yieldPercentage != null
+                && yieldPercentage.compareTo(BigDecimal.ZERO) > 0
+                ? yieldPercentage
+                : new BigDecimal("100.00");
+
+        return costPerUnit
+                .multiply(BigDecimal.valueOf(100))
+                .divide(yield, 6, RoundingMode.HALF_UP);
     }
 
     // ========== Stock Level Business Logic ==========

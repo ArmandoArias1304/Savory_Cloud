@@ -323,6 +323,7 @@ public class CompanyServiceImpl implements CompanyService {
                           String contactPhone, String address, String rfc, String timezone,
                           String adminUsername, String adminFirstName, String adminLastName, String adminPassword,
                           boolean freeTrial, String packageType, String billingCycle, int licenseMonths, Double licenseAmount,
+                          PaymentMethodType paymentMethod,
                           java.math.BigDecimal taxRate,
                           String performedBy) {
         log.info("Creating new company with parameters: {}", slug);
@@ -372,7 +373,7 @@ public class CompanyServiceImpl implements CompanyService {
         log.info("Default SystemConfiguration created for company: {}", savedCompany.getSlug());
 
         // Create configured SystemLicense with financial event
-        createConfiguredLicense(savedCompany, freeTrial, packageType, billingCycle, licenseMonths, licenseAmount, performedBy);
+        createConfiguredLicense(savedCompany, freeTrial, packageType, billingCycle, licenseMonths, licenseAmount, paymentMethod, performedBy);
         log.info("SystemLicense created for company: {} (freeTrial={}, package={}, months={})", savedCompany.getSlug(), freeTrial, packageType, licenseMonths);
 
         // NOTE: BackupConfiguration is GLOBAL, not per-company
@@ -511,7 +512,8 @@ public class CompanyServiceImpl implements CompanyService {
     }
 
     private SystemLicense createConfiguredLicense(Company company, boolean freeTrial, String packageType,
-                                                     String billingCycle, int months, Double amount, String performedBy) {
+                                                     String billingCycle, int months, Double amount,
+                                                     PaymentMethodType paymentMethod, String performedBy) {
         String licenseKey = generateLicenseKey(company.getSlug());
         LocalDateTime purchaseDate = LocalDateTime.now();
         int effectiveMonths = months > 0 ? months : 1;
@@ -580,6 +582,7 @@ public class CompanyServiceImpl implements CompanyService {
             .performedBy(performedBy != null ? performedBy : "SYSTEM")
             .amount(eventAmount)
             .months(effectiveMonths)
+            .paymentMethod(freeTrial ? null : paymentMethod)
             .build();
         licenseEventRepository.save(event);
 
@@ -587,7 +590,7 @@ public class CompanyServiceImpl implements CompanyService {
     }
 
     private SystemLicense createDefaultLicense(Company company) {
-        return createConfiguredLicense(company, true, "BASIC", "MONTHLY", 1, 0.0, "SYSTEM");
+        return createConfiguredLicense(company, true, "BASIC", "MONTHLY", 1, 0.0, null, "SYSTEM");
     }
 
     private Employee createDefaultAdmin(Company company) {

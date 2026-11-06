@@ -27,11 +27,17 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * El listado de ingredientes tal como lo recibe el navegador.
  *
- * <p>El aviso de "revisa las cantidades" se pinta sólo cuando la redirección trae el atributo
- * {@code warningMessage}: es la señal que queda al usuario después de cambiar la unidad de medida de
- * un ingrediente que está en recetas. Si la plantilla deja de pintarlo, el cambio se vuelve
- * silencioso y las recetas quedan con cantidades que ya no significan lo mismo, sin que nada más
- * falle: por eso se fija aquí, contra la plantilla real renderizada.</p>
+ * <p>
+ * El aviso de "revisa las cantidades" se pinta sólo cuando la redirección trae
+ * el atributo
+ * {@code warningMessage}: es la señal que queda al usuario después de cambiar
+ * la unidad de medida de
+ * un ingrediente que está en recetas. Si la plantilla deja de pintarlo, el
+ * cambio se vuelve
+ * silencioso y las recetas quedan con cantidades que ya no significan lo mismo,
+ * sin que nada más
+ * falle: por eso se fija aquí, contra la plantilla real renderizada.
+ * </p>
  */
 @SpringBootTest
 @WithMockUser(username = "admin", roles = "ADMIN")
@@ -82,5 +88,18 @@ class IngredientListUnitWarningRenderTest {
         mockMvc.perform(get("/admin/ingredients"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(not(containsString("revisa cada receta y ajusta la cantidad"))));
+    }
+
+    @Test
+    @DisplayName("las herramientas del inventario agrupan la carga XML y el registro de mermas")
+    void inventoryToolsModalContainsXmlAndWasteActions() throws Exception {
+        mockMvc.perform(get("/admin/ingredients"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("id=\"btnIngredientTools\"")))
+                .andExpect(content().string(containsString("id=\"ingredientToolsModal\"")))
+                .andExpect(content().string(containsString("/admin/inventory/purchases")))
+                .andExpect(content().string(containsString("/admin/inventory/waste")))
+                .andExpect(content().string(containsString("data-ingredient-tools-close")))
+                .andExpect(content().string(containsString("event.key === \"Escape\"")));
     }
 }

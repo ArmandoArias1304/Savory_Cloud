@@ -68,7 +68,8 @@ public class IngredientServiceImpl implements IngredientService {
 
         // Validate unique name within company
         if (ingredientRepository.existsByNameAndCompany(ingredient.getName(), company)) {
-            log.error("Ingredient with name {} already exists for company {}", ingredient.getName(), company.getIdCompany());
+            log.error("Ingredient with name {} already exists for company {}", ingredient.getName(),
+                    company.getIdCompany());
             throw new IllegalArgumentException("Ya existe un ingrediente con el nombre: " + ingredient.getName());
         }
 
@@ -107,9 +108,11 @@ public class IngredientServiceImpl implements IngredientService {
 
         // Validate unique name if changed (within company)
         if (!ingredient.getName().equals(ingredientDetails.getName()) &&
-            ingredientRepository.existsByNameAndCompany(ingredientDetails.getName(), company)) {
-            log.error("Ingredient with name {} already exists for company {}", ingredientDetails.getName(), company.getIdCompany());
-            throw new IllegalArgumentException("Ya existe un ingrediente con el nombre: " + ingredientDetails.getName());
+                ingredientRepository.existsByNameAndCompany(ingredientDetails.getName(), company)) {
+            log.error("Ingredient with name {} already exists for company {}", ingredientDetails.getName(),
+                    company.getIdCompany());
+            throw new IllegalArgumentException(
+                    "Ya existe un ingrediente con el nombre: " + ingredientDetails.getName());
         }
 
         // Validate category
@@ -127,62 +130,70 @@ public class IngredientServiceImpl implements IngredientService {
         // Update fields
         ingredient.setName(ingredientDetails.getName());
         ingredient.setDescription(ingredientDetails.getDescription());
-        
-        // Check if unit of measure is changing to UN (unidades) and current values have decimals
-        boolean isChangingToUnidades = "UN".equals(ingredientDetails.getUnitOfMeasure()) && 
-                                       !"UN".equals(ingredient.getUnitOfMeasure());
-        boolean currentStockHasDecimals = ingredient.getCurrentStock() != null && 
-                                         ingredient.getCurrentStock().stripTrailingZeros().scale() > 0;
-        boolean maxStockHasDecimals = ingredient.getMaxStock() != null && 
-                                     ingredient.getMaxStock().stripTrailingZeros().scale() > 0;
-        
+
+        // Check if unit of measure is changing to UN (unidades) and current values have
+        // decimals
+        boolean isChangingToUnidades = "UN".equals(ingredientDetails.getUnitOfMeasure()) &&
+                !"UN".equals(ingredient.getUnitOfMeasure());
+        boolean currentStockHasDecimals = ingredient.getCurrentStock() != null &&
+                ingredient.getCurrentStock().stripTrailingZeros().scale() > 0;
+        boolean maxStockHasDecimals = ingredient.getMaxStock() != null &&
+                ingredient.getMaxStock().stripTrailingZeros().scale() > 0;
+
         // Allow updating currentStock if:
         // 1. New value is provided and greater than zero, OR
         // 2. Changing to UN and current stock has decimals (need to round)
-        if ((ingredientDetails.getCurrentStock() != null && 
-             ingredientDetails.getCurrentStock().compareTo(BigDecimal.ZERO) > 0) ||
-            (isChangingToUnidades && currentStockHasDecimals)) {
-            
+        if ((ingredientDetails.getCurrentStock() != null &&
+                ingredientDetails.getCurrentStock().compareTo(BigDecimal.ZERO) > 0) ||
+                (isChangingToUnidades && currentStockHasDecimals)) {
+
             BigDecimal newCurrentStock = ingredientDetails.getCurrentStock();
             if (newCurrentStock != null && newCurrentStock.compareTo(BigDecimal.ZERO) > 0) {
                 // Validate integer for UN unit
-                if ("UN".equals(ingredientDetails.getUnitOfMeasure()) && 
-                    newCurrentStock.stripTrailingZeros().scale() > 0) {
+                if ("UN".equals(ingredientDetails.getUnitOfMeasure()) &&
+                        newCurrentStock.stripTrailingZeros().scale() > 0) {
                     throw new IllegalArgumentException(
-                        "Para unidades (UN), el stock actual debe ser un número entero. " +
-                        "Valor recibido: " + newCurrentStock
-                    );
+                            "Para unidades (UN), el stock actual debe ser un número entero. " +
+                                    "Valor recibido: " + newCurrentStock);
                 }
                 ingredient.setCurrentStock(newCurrentStock);
             }
         }
         // Note: currentStock is typically managed through addStock() method
-        
+
         ingredient.setMinStock(ingredientDetails.getMinStock());
-        
+
         // Allow updating maxStock if:
         // 1. New value is provided and greater than zero, OR
         // 2. Changing to UN and max stock has decimals (need to round)
-        if ((ingredientDetails.getMaxStock() != null && 
-             ingredientDetails.getMaxStock().compareTo(BigDecimal.ZERO) > 0) ||
-            (isChangingToUnidades && maxStockHasDecimals)) {
-            
+        if ((ingredientDetails.getMaxStock() != null &&
+                ingredientDetails.getMaxStock().compareTo(BigDecimal.ZERO) > 0) ||
+                (isChangingToUnidades && maxStockHasDecimals)) {
+
             BigDecimal newMaxStock = ingredientDetails.getMaxStock();
             if (newMaxStock != null && newMaxStock.compareTo(BigDecimal.ZERO) > 0) {
                 // Validate integer for UN unit
-                if ("UN".equals(ingredientDetails.getUnitOfMeasure()) && 
-                    newMaxStock.stripTrailingZeros().scale() > 0) {
+                if ("UN".equals(ingredientDetails.getUnitOfMeasure()) &&
+                        newMaxStock.stripTrailingZeros().scale() > 0) {
                     throw new IllegalArgumentException(
-                        "Para unidades (UN), el stock máximo debe ser un número entero. " +
-                        "Valor recibido: " + newMaxStock
-                    );
+                            "Para unidades (UN), el stock máximo debe ser un número entero. " +
+                                    "Valor recibido: " + newMaxStock);
                 }
                 ingredient.setMaxStock(newMaxStock);
             }
         }
-        
+
         String previousUnit = ingredient.getUnitOfMeasure();
         ingredient.setUnitOfMeasure(ingredientDetails.getUnitOfMeasure());
+
+        // Compra, inventario y receta usan la misma unidad de medida.
+        if (ingredientDetails.getYieldPercentage() != null) {
+            BigDecimal yield = ingredientDetails.getYieldPercentage();
+            if (yield.compareTo(BigDecimal.ONE) < 0 || yield.compareTo(new BigDecimal("100")) > 0) {
+                throw new IllegalArgumentException("El rendimiento debe estar entre 1 % y 100 %");
+            }
+            ingredient.setYieldPercentage(yield);
+        }
         // costPerUnit is managed through addStock() method, preserve existing value
         // ingredient.setCostPerUnit(ingredientDetails.getCostPerUnit());
         ingredient.setCurrency(ingredientDetails.getCurrency());
@@ -195,11 +206,11 @@ public class IngredientServiceImpl implements IngredientService {
         int repairedRecipeRows = reconcileRecipeUnits(updatedIngredient);
         if (previousUnit != null && !previousUnit.equalsIgnoreCase(newUnit)) {
             log.info("Unidad de medida del ingrediente '{}' cambiada de '{}' a '{}'; "
-                            + "{} fila(s) de receta sincronizadas",
+                    + "{} fila(s) de receta sincronizadas",
                     updatedIngredient.getName(), previousUnit, newUnit, repairedRecipeRows);
         } else if (repairedRecipeRows > 0) {
             log.info("Se sincronizaron {} fila(s) de receta que seguian con la unidad vieja del "
-                            + "ingrediente '{}' ({})",
+                    + "ingrediente '{}' ({})",
                     repairedRecipeRows, updatedIngredient.getName(), newUnit);
         }
 
@@ -210,23 +221,35 @@ public class IngredientServiceImpl implements IngredientService {
     /**
      * Deja las recetas en sincronía con la unidad vigente del ingrediente.
      *
-     * <p>Cada fila de receta (platillos y complementos) guarda su propia copia de la unidad y se
-     * valida contra la del ingrediente al guardarse: si el ingrediente pasa de {@code UN} a
-     * {@code G} y las filas se quedan con {@code UN}, cualquier edición posterior de esa receta
-     * falla con "la unidad de medida no coincide". Este método corrige la copia de todas las filas
-     * que no coincidan, y se ejecuta en cada guardado del ingrediente para que además repare las
-     * recetas que quedaron desfasadas antes de que existiera este arreglo.</p>
+     * <p>
+     * Cada fila de receta (platillos y complementos) guarda su propia copia de la
+     * unidad y se
+     * valida contra la del ingrediente al guardarse: si el ingrediente pasa de
+     * {@code UN} a
+     * {@code G} y las filas se quedan con {@code UN}, cualquier edición posterior
+     * de esa receta
+     * falla con "la unidad de medida no coincide". Este método corrige la copia de
+     * todas las filas
+     * que no coincidan, y se ejecuta en cada guardado del ingrediente para que
+     * además repare las
+     * recetas que quedaron desfasadas antes de que existiera este arreglo.
+     * </p>
      *
-     * <p><strong>No convierte las cantidades.</strong> El sistema no conoce un factor de conversión
-     * (cuántos gramos pesa una unidad), así que solo cambia la unidad; el usuario debe revisar y
-     * ajustar las cantidades a mano.</p>
+     * <p>
+     * <strong>No convierte las cantidades.</strong> El sistema no conoce un factor
+     * de conversión
+     * (cuántos gramos pesa una unidad), así que solo cambia la unidad; el usuario
+     * debe revisar y
+     * ajustar las cantidades a mano.
+     * </p>
      *
      * @return cuántas filas de receta hubo que corregir
      */
     private int reconcileRecipeUnits(Ingredient ingredient) {
         String currentUnit = ingredient.getUnitOfMeasure();
         if (currentUnit == null || currentUnit.isBlank()) {
-            // Sin unidad vigente no hay nada que sincronizar: la unidad de la fila es obligatoria.
+            // Sin unidad vigente no hay nada que sincronizar: la unidad de la fila es
+            // obligatoria.
             return 0;
         }
 
@@ -241,8 +264,8 @@ public class IngredientServiceImpl implements IngredientService {
             itemIngredientRepository.saveAll(staleItemRows);
         }
 
-        List<ComplementIngredient> complementRecipeRows =
-                complementIngredientRepository.findByIngredientIdIngredient(ingredientId);
+        List<ComplementIngredient> complementRecipeRows = complementIngredientRepository
+                .findByIngredientIdIngredient(ingredientId);
         List<ComplementIngredient> staleComplementRows = complementRecipeRows.stream()
                 .filter(row -> !currentUnit.equalsIgnoreCase(row.getUnit()))
                 .collect(Collectors.toList());
@@ -266,7 +289,8 @@ public class IngredientServiceImpl implements IngredientService {
                     return new IllegalArgumentException("Ingrediente no encontrado con id: " + id);
                 });
 
-        // Set stock to zero when deactivating (this makes related items appear as "Sin Stock")
+        // Set stock to zero when deactivating (this makes related items appear as "Sin
+        // Stock")
         ingredient.setCurrentStock(BigDecimal.ZERO);
         ingredient.setActive(false);
         ingredientRepository.save(ingredient);
@@ -291,9 +315,10 @@ public class IngredientServiceImpl implements IngredientService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<Ingredient> searchWithAllFilters(String search, Long categoryId, Long supplierId, 
-                                                 String sortBy, Boolean active) {
-        log.info("Searching ingredients with filters - search: {}, categoryId: {}, supplierId: {}, sortBy: {}, active: {}",
+    public List<Ingredient> searchWithAllFilters(String search, Long categoryId, Long supplierId,
+            String sortBy, Boolean active) {
+        log.info(
+                "Searching ingredients with filters - search: {}, categoryId: {}, supplierId: {}, sortBy: {}, active: {}",
                 search, categoryId, supplierId, sortBy, active);
 
         // Normalize search string
@@ -301,36 +326,38 @@ public class IngredientServiceImpl implements IngredientService {
 
         // Get current company for multi-tenant filtering
         Company company = CompanyContext.requireCurrentCompany();
-        
+
         List<Ingredient> ingredients;
 
-        // If supplier filter is provided, get ingredients for that supplier through category
+        // If supplier filter is provided, get ingredients for that supplier through
+        // category
         if (supplierId != null) {
             ingredients = ingredientRepository.findBySupplierAndCompany(supplierId, company);
-            
+
             // Apply additional filters
             if (normalizedSearch != null) {
                 final String searchLower = normalizedSearch.toLowerCase();
                 ingredients = ingredients.stream()
-                    .filter(i -> i.getName().toLowerCase().contains(searchLower) ||
-                               (i.getDescription() != null && i.getDescription().toLowerCase().contains(searchLower)))
-                    .collect(Collectors.toList());
+                        .filter(i -> i.getName().toLowerCase().contains(searchLower) ||
+                                (i.getDescription() != null && i.getDescription().toLowerCase().contains(searchLower)))
+                        .collect(Collectors.toList());
             }
-            
+
             if (categoryId != null) {
                 ingredients = ingredients.stream()
-                    .filter(i -> i.getCategory() != null && i.getCategory().getIdCategory().equals(categoryId))
-                    .collect(Collectors.toList());
+                        .filter(i -> i.getCategory() != null && i.getCategory().getIdCategory().equals(categoryId))
+                        .collect(Collectors.toList());
             }
-            
+
             if (active != null) {
                 ingredients = ingredients.stream()
-                    .filter(i -> i.getActive().equals(active))
-                    .collect(Collectors.toList());
+                        .filter(i -> i.getActive().equals(active))
+                        .collect(Collectors.toList());
             }
         } else {
             // Normal search without supplier filter
-            ingredients = ingredientRepository.searchWithFiltersAndCompany(normalizedSearch, categoryId, active, company);
+            ingredients = ingredientRepository.searchWithFiltersAndCompany(normalizedSearch, categoryId, active,
+                    company);
         }
 
         // Apply sorting based on sortBy parameter
@@ -339,20 +366,20 @@ public class IngredientServiceImpl implements IngredientService {
             if ("stock-asc".equals(sortBy)) {
                 // Sort by active status first, then by stock ascending (menor a mayor)
                 ingredients.sort(Comparator.comparing(Ingredient::getActive).reversed()
-                    .thenComparing(Ingredient::getCurrentStock));
+                        .thenComparing(Ingredient::getCurrentStock));
             } else if ("stock-desc".equals(sortBy)) {
                 // Sort by active status first, then by stock descending (mayor a menor)
                 ingredients.sort(Comparator.comparing(Ingredient::getActive).reversed()
-                    .thenComparing(Ingredient::getCurrentStock, Comparator.reverseOrder()));
+                        .thenComparing(Ingredient::getCurrentStock, Comparator.reverseOrder()));
             } else {
                 // Sort by active status first, then alphabetically by name
                 ingredients.sort(Comparator.comparing(Ingredient::getActive).reversed()
-                    .thenComparing(Ingredient::getName, String.CASE_INSENSITIVE_ORDER));
+                        .thenComparing(Ingredient::getName, String.CASE_INSENSITIVE_ORDER));
             }
         } else {
             // Default: Sort by active status first, then alphabetically by name
             ingredients.sort(Comparator.comparing(Ingredient::getActive).reversed()
-                .thenComparing(Ingredient::getName, String.CASE_INSENSITIVE_ORDER));
+                    .thenComparing(Ingredient::getName, String.CASE_INSENSITIVE_ORDER));
         }
 
         log.info("Found {} ingredients with filters", ingredients.size());
@@ -436,7 +463,14 @@ public class IngredientServiceImpl implements IngredientService {
     @Override
     @Transactional
     public Ingredient addStock(Long ingredientId, BigDecimal quantityToAdd, BigDecimal costPerUnit, Employee addedBy) {
-        log.info("Adding stock to ingredient ID: {} - Quantity: {} - Cost per unit: ${}", 
+        return addStockWithHistory(ingredientId, quantityToAdd, costPerUnit, addedBy).getIngredient();
+    }
+
+    @Override
+    @Transactional
+    public IngredientStockHistory addStockWithHistory(Long ingredientId, BigDecimal quantityToAdd,
+            BigDecimal costPerUnit, Employee addedBy) {
+        log.info("Adding stock to ingredient ID: {} - Quantity: {} - Cost per unit: ${}",
                 ingredientId, quantityToAdd, costPerUnit);
 
         Ingredient ingredient = ingredientRepository.findById(ingredientId)
@@ -455,9 +489,9 @@ public class IngredientServiceImpl implements IngredientService {
         ingredient.setCurrentStock(newStock);
         ingredient.setUpdatedAt(LocalDateTime.now());
 
-        Ingredient savedIngredient = ingredientRepository.save(ingredient);
-
-        // Crear registro en el historial
+        // Crear registro en el historial antes de recalcular: el promedio se calcula
+        // justamente
+        // sobre las compras vigentes.
         IngredientStockHistory history = IngredientStockHistory.builder()
                 .ingredient(ingredient)
                 .quantityAdded(quantityToAdd)
@@ -470,11 +504,77 @@ public class IngredientServiceImpl implements IngredientService {
 
         stockHistoryRepository.save(history);
 
-        log.info("Stock agregado exitosamente al ingrediente '{}': +{} {} (Stock anterior: {}, Nuevo stock: {}, Costo total: ${})",
+        // El costo del ingrediente es el promedio ponderado de sus compras: cada
+        // entrada —y cada
+        // corrección o anulación— lo mueve. Sin esto el costeo se queda con el precio
+        // que tenía
+        // el ingrediente el día que se creó.
+        recomputeAverageCost(ingredient);
+
+        ingredientRepository.save(ingredient);
+
+        log.info(
+                "Stock agregado exitosamente al ingrediente '{}': +{} {} (Stock anterior: {}, Nuevo stock: {}, Costo total: ${})",
                 ingredient.getName(), quantityToAdd, ingredient.getUnitOfMeasure(),
                 previousStock, newStock, history.getTotalCost());
 
-        return savedIngredient;
+        return history;
+    }
+
+    /**
+     * Recalcula el costo promedio ponderado del ingrediente con sus compras
+     * vigentes.
+     *
+     * <p>
+     * El promedio es {@code Σ(cantidad × costo) / Σ(cantidad)} sobre las entradas
+     * no anuladas:
+     * es el costo ponderado de lo comprado, no el último precio pagado. Las salidas
+     * (ventas,
+     * complementos, devoluciones) no lo alteran —ésa es la propiedad del promedio
+     * ponderado— por
+     * eso el cálculo no necesita que cada descuento de stock quede registrado.
+     * </p>
+     *
+     * <p>
+     * Si no queda ninguna compra vigente se conserva el costo anterior: un promedio
+     * sin compras
+     * no tiene valor y borrarlo dejaría los platillos en cero sin explicación.
+     * </p>
+     */
+    private void recomputeAverageCost(Ingredient ingredient) {
+        List<IngredientStockHistory> entries = stockHistoryRepository
+                .findByIngredientAndVoidedAtIsNullOrderByAddedAtDesc(ingredient);
+        if (entries == null || entries.isEmpty()) {
+            return;
+        }
+
+        BigDecimal totalQuantity = BigDecimal.ZERO;
+        BigDecimal totalCost = BigDecimal.ZERO;
+        for (IngredientStockHistory entry : entries) {
+            if (entry.getQuantityAdded() == null || entry.getCostPerUnit() == null) {
+                continue;
+            }
+            totalQuantity = totalQuantity.add(entry.getQuantityAdded());
+            totalCost = totalCost.add(entry.getQuantityAdded().multiply(entry.getCostPerUnit()));
+        }
+
+        if (totalQuantity.compareTo(BigDecimal.ZERO) <= 0) {
+            return;
+        }
+
+        // Se divide con más escala que la columna para no arrastrar el redondeo de cada
+        // compra
+        // al promedio, y se guarda con los dos decimales que permite cost_per_unit.
+        BigDecimal average = totalCost.divide(totalQuantity, 6, RoundingMode.HALF_UP)
+                .setScale(2, RoundingMode.HALF_UP);
+        BigDecimal previous = ingredient.getCostPerUnit();
+        ingredient.setCostPerUnit(average);
+
+        if (previous == null || previous.compareTo(average) != 0) {
+            log.info("Costo promedio de '{}' recalculado: {} -> {} por {} ({} compras vigentes)",
+                    ingredient.getName(), previous, average,
+                    ingredient.getUnitOfMeasure(), entries.size());
+        }
     }
 
     @Override
@@ -494,8 +594,8 @@ public class IngredientServiceImpl implements IngredientService {
     @Override
     @Transactional
     public IngredientStockHistory updateStockHistory(Long ingredientId, Long historyId,
-                                                     BigDecimal quantityAdded, BigDecimal costPerUnit,
-                                                     Employee editedBy) {
+            BigDecimal quantityAdded, BigDecimal costPerUnit,
+            Employee editedBy) {
         IngredientStockHistory record = requireHistoryEntry(ingredientId, historyId);
         if (record.isVoided()) {
             throw new IllegalStateException("Esta entrada ya fue anulada y no se puede editar.");
@@ -516,8 +616,10 @@ public class IngredientServiceImpl implements IngredientService {
         record.setQuantityAdded(quantityAdded);
         record.setCostPerUnit(costPerUnit);
         record.setTotalCost(quantityAdded.multiply(costPerUnit).setScale(2, RoundingMode.HALF_UP));
-        // La foto "stock después" se recalcula con la cantidad corregida; las filas posteriores
-        // conservan lo que se registró en su momento (el sistema no reescribe la cadena).
+        // La foto "stock después" se recalcula con la cantidad corregida; las filas
+        // posteriores
+        // conservan lo que se registró en su momento (el sistema no reescribe la
+        // cadena).
         if (record.getPreviousStock() != null) {
             record.setNewStock(record.getPreviousStock().add(quantityAdded)
                     .setScale(2, RoundingMode.HALF_UP));
@@ -527,10 +629,14 @@ public class IngredientServiceImpl implements IngredientService {
 
         ingredient.setCurrentStock(newStock);
         ingredient.setUpdatedAt(LocalDateTime.now());
-        ingredientRepository.save(ingredient);
         IngredientStockHistory saved = stockHistoryRepository.save(record);
+        // La corrección cambia lo que costó esa compra, así que el promedio se
+        // recalcula.
+        recomputeAverageCost(ingredient);
+        ingredientRepository.save(ingredient);
 
-        log.info("Stock history entry {} of ingredient '{}' corrected: quantity {} -> {}, cost {} -> {} (total {}, stock {})",
+        log.info(
+                "Stock history entry {} of ingredient '{}' corrected: quantity {} -> {}, cost {} -> {} (total {}, stock {})",
                 historyId, ingredient.getName(), oldQuantity, quantityAdded,
                 oldCost, costPerUnit, saved.getTotalCost(), newStock);
         return saved;
@@ -539,7 +645,7 @@ public class IngredientServiceImpl implements IngredientService {
     @Override
     @Transactional
     public IngredientStockHistory voidStockHistory(Long ingredientId, Long historyId,
-                                                   String reason, Employee voidedBy) {
+            String reason, Employee voidedBy) {
         IngredientStockHistory record = requireHistoryEntry(ingredientId, historyId);
         if (record.isVoided()) {
             throw new IllegalStateException("Esta entrada ya fue anulada.");
@@ -553,14 +659,18 @@ public class IngredientServiceImpl implements IngredientService {
                 .setScale(2, RoundingMode.HALF_UP);
         assertNotNegative(newStock, ingredient, "anular esta entrada");
 
-        ingredient.setCurrentStock(newStock);
-        ingredient.setUpdatedAt(LocalDateTime.now());
-        ingredientRepository.save(ingredient);
-
         record.setVoidedAt(LocalDateTime.now());
         record.setVoidedBy(voidedBy);
         record.setVoidReason(trimReason(reason));
         IngredientStockHistory saved = stockHistoryRepository.save(record);
+
+        ingredient.setCurrentStock(newStock);
+        ingredient.setUpdatedAt(LocalDateTime.now());
+        // La entrada anulada deja de contar en el promedio. Si era la única compra
+        // vigente se
+        // conserva el costo anterior, porque un promedio sin compras no tiene valor.
+        recomputeAverageCost(ingredient);
+        ingredientRepository.save(ingredient);
 
         log.info("Stock history entry {} of ingredient '{}' voided: -{} {} (stock {})",
                 historyId, ingredient.getName(), record.getQuantityAdded(),
@@ -569,8 +679,10 @@ public class IngredientServiceImpl implements IngredientService {
     }
 
     /**
-     * Una entrada del historial de la empresa actual, validando que pertenezca al ingrediente
-     * de la ruta para que nadie edite el historial de otro ingrediente cambiando el id.
+     * Una entrada del historial de la empresa actual, validando que pertenezca al
+     * ingrediente
+     * de la ruta para que nadie edite el historial de otro ingrediente cambiando el
+     * id.
      */
     private IngredientStockHistory requireHistoryEntry(Long ingredientId, Long historyId) {
         IngredientStockHistory record = stockHistoryRepository
@@ -600,7 +712,8 @@ public class IngredientServiceImpl implements IngredientService {
     }
 
     /**
-     * El inventario nunca puede quedar negativo: si la corrección lo dejaría así, la entrada ya
+     * El inventario nunca puede quedar negativo: si la corrección lo dejaría así,
+     * la entrada ya
      * tenía consumo encima y hay que arreglar el dato de otra forma.
      */
     private void assertNotNegative(BigDecimal newStock, Ingredient ingredient, String action) {

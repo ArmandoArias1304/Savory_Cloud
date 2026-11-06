@@ -1,5 +1,6 @@
 package com.aatechsolutions.elgransazon.domain.repository;
 
+import com.aatechsolutions.elgransazon.domain.entity.Company;
 import com.aatechsolutions.elgransazon.domain.entity.ItemMenuComboItem;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -8,12 +9,28 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Collection;
 
 /**
  * Repository for ItemMenuComboItem entity
  */
 @Repository
 public interface ItemMenuComboItemRepository extends JpaRepository<ItemMenuComboItem, Long> {
+
+    /**
+     * Todos los platillos que componen los combos de la empresa, con el hijo ya cargado.
+     *
+     * <p>El costeo necesita los combos completos de una vez: pedirlos combo por combo sería una
+     * consulta por cada uno.</p>
+     */
+    @Query("SELECT ci FROM ItemMenuComboItem ci JOIN FETCH ci.childMenu " +
+           "WHERE ci.comboMenu.company = :company")
+    List<ItemMenuComboItem> findAllByCompany(@Param("company") Company company);
+
+    @Query("SELECT ci FROM ItemMenuComboItem ci JOIN FETCH ci.childMenu " +
+           "WHERE ci.comboMenu.company = :company AND ci.comboMenu.idItemMenu IN :comboIds")
+    List<ItemMenuComboItem> findByComboMenuIds(@Param("company") Company company,
+                                                @Param("comboIds") Collection<Long> comboIds);
 
     /**
      * Find all combo items for a specific combo menu item

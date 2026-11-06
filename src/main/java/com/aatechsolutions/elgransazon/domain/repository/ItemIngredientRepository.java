@@ -1,5 +1,6 @@
 package com.aatechsolutions.elgransazon.domain.repository;
 
+import com.aatechsolutions.elgransazon.domain.entity.Company;
 import com.aatechsolutions.elgransazon.domain.entity.ItemIngredient;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -7,6 +8,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Collection;
 import java.util.Optional;
 
 /**
@@ -20,6 +22,21 @@ public interface ItemIngredientRepository extends JpaRepository<ItemIngredient, 
      */
     @Query("SELECT ii FROM ItemIngredient ii WHERE ii.itemMenu.idItemMenu = :itemMenuId ORDER BY ii.ingredient.name ASC")
     List<ItemIngredient> findByItemMenuId(@Param("itemMenuId") Long itemMenuId);
+
+    /**
+     * Todas las líneas de receta de la empresa, con su ingrediente ya cargado.
+     *
+     * <p>La pantalla de costeo necesita la receta de todos los platillos a la vez: pedirla
+     * platillo por platillo dispararía una consulta por cada uno.</p>
+     */
+    @Query("SELECT ii FROM ItemIngredient ii JOIN FETCH ii.ingredient " +
+           "WHERE ii.itemMenu.company = :company")
+    List<ItemIngredient> findAllByCompany(@Param("company") Company company);
+
+    @Query("SELECT ii FROM ItemIngredient ii JOIN FETCH ii.ingredient " +
+           "WHERE ii.itemMenu.company = :company AND ii.itemMenu.idItemMenu IN :itemIds")
+    List<ItemIngredient> findByMenuItemIds(@Param("company") Company company,
+                                           @Param("itemIds") Collection<Long> itemIds);
 
     /**
      * Find all menu items that use a specific ingredient

@@ -35,8 +35,10 @@ public interface IngredientService {
     Ingredient update(Long id, Ingredient ingredient);
 
     /**
-     * Count how many recipe lines (menu items and complements) use the given ingredient.
-     * Used to warn the user when a unit change re-labels existing recipes whose quantities
+     * Count how many recipe lines (menu items and complements) use the given
+     * ingredient.
+     * Used to warn the user when a unit change re-labels existing recipes whose
+     * quantities
      * are not converted.
      */
     int countRecipeUsages(Long ingredientId);
@@ -54,7 +56,8 @@ public interface IngredientService {
     /**
      * Search ingredients with all filters and sorting
      */
-    List<Ingredient> searchWithAllFilters(String search, Long categoryId, Long supplierId, String sortBy, Boolean active);
+    List<Ingredient> searchWithAllFilters(String search, Long categoryId, Long supplierId, String sortBy,
+            Boolean active);
 
     /**
      * Find ingredients by category
@@ -102,31 +105,44 @@ public interface IngredientService {
     Ingredient addStock(Long ingredientId, BigDecimal quantityToAdd, BigDecimal costPerUnit, Employee addedBy);
 
     /**
+     * Agrega stock y devuelve la entrada de historial creada para enlazarla con la
+     * compra.
+     */
+    IngredientStockHistory addStockWithHistory(Long ingredientId, BigDecimal quantityToAdd,
+            BigDecimal costPerUnit, Employee addedBy);
+
+    /**
      * Obtiene el historial de stock de un ingrediente (sin las entradas anuladas)
      */
     List<IngredientStockHistory> getStockHistory(Long ingredientId);
 
     /**
-     * Corrige la cantidad y/o el costo de una entrada del historial. El stock del ingrediente
-     * se ajusta por la diferencia entre la cantidad nueva y la original; nunca puede quedar
+     * Corrige la cantidad y/o el costo de una entrada del historial. El stock del
+     * ingrediente
+     * se ajusta por la diferencia entre la cantidad nueva y la original; nunca
+     * puede quedar
      * negativo.
      *
-     * @throws IllegalStateException    cuando la entrada ya fue anulada o el stock quedaría negativo
+     * @throws IllegalStateException    cuando la entrada ya fue anulada o el stock
+     *                                  quedaría negativo
      * @throws IllegalArgumentException cuando la cantidad o el costo no son válidos
      */
     IngredientStockHistory updateStockHistory(Long ingredientId, Long historyId,
-                                              BigDecimal quantityAdded, BigDecimal costPerUnit,
-                                              Employee editedBy);
+            BigDecimal quantityAdded, BigDecimal costPerUnit,
+            Employee editedBy);
 
     /**
-     * Anula una entrada del historial: le resta al stock la cantidad completa que había sumado.
-     * La fila se conserva marcada (quién, cuándo y motivo) pero deja de contar en el historial
+     * Anula una entrada del historial: le resta al stock la cantidad completa que
+     * había sumado.
+     * La fila se conserva marcada (quién, cuándo y motivo) pero deja de contar en
+     * el historial
      * y en los gastos.
      *
-     * @throws IllegalStateException cuando ya estaba anulada o el stock quedaría negativo
+     * @throws IllegalStateException cuando ya estaba anulada o el stock quedaría
+     *                               negativo
      */
     IngredientStockHistory voidStockHistory(Long ingredientId, Long historyId,
-                                            String reason, Employee voidedBy);
+            String reason, Employee voidedBy);
 
     /**
      * Calcula el gasto total de un ingrediente

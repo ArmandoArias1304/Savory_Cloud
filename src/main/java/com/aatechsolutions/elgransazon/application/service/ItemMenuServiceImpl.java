@@ -373,7 +373,10 @@ public class ItemMenuServiceImpl implements ItemMenuService {
 
         // Update recipe if provided
         if (recipe != null) {
+            Map<Long, BigDecimal> previousRecipe = RecipeLineMatcher.snapshot(
+                    itemIngredientRepository.findByItemMenuId(id));
             updateRecipe(id, recipe);
+            propagateRecipeToSizeVariants(id, previousRecipe, recipe);
         }
 
         log.info("Menu item updated successfully: {}", id);
@@ -1496,6 +1499,30 @@ public class ItemMenuServiceImpl implements ItemMenuService {
     }
 
     /** Replace the whole recipe of an item with independent copies of the given lines. */
+    /**
+     * Mantiene sincronizados los tamaños que venían copiando la receta del padre.
+     *
+     * <p>El tamaño copia la receta, no la hereda: si el padre cambia, el "Grande" se quedaba con
+     * la anterior y su costo mentía. Aquí, el tamaño cuya receta es idéntica a la que tenía el
+     * padre antes de guardar adopta la nueva. Un tamaño con receta propia (más cantidad para el
+     * grande, por ejemplo) no coincide y no se toca.</p>
+     */
+    private void propagateRecipeToSizeVariants(Long parentId, Map<Long, BigDecimal> previousRecipe,
+                                               List<ItemIngredient> newRecipe) {
+        if (previousRecipe == null || previousRecipe.isEmpty()) {
+            return;
+        }
+
+        for (ItemMenu variant : itemMenuRepository.findSizeItemsByParentId(parentId)) {
+            List<ItemIngredient> variantRecipe = itemIngredientRepository.findByItemMenuId(variant.getIdItemMenu());
+            if (RecipeLineMatcher.matches(previousRecipe, variantRecipe)) {
+                replaceRecipe(variant, newRecipe != null ? newRecipe : List.of());
+                log.info("Receta del tamaño '{}' sincronizada con la del padre {}",
+                        variant.getName(), parentId);
+            }
+        }
+    }
+
     private void replaceRecipe(ItemMenu item, List<ItemIngredient> lines) {
         List<ItemIngredient> current = itemIngredientRepository.findByItemMenuId(item.getIdItemMenu());
         if (!current.isEmpty()) {

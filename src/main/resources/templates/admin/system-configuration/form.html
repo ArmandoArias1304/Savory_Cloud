@@ -2946,9 +2946,12 @@
                       Meses
                     </th>
                     <th
-                      class="px-4 py-3 text-left text-sm font-semibold rounded-tr-lg"
+                      class="px-4 py-3 text-left text-sm font-semibold"
                     >
                       Monto
+                    </th>
+                    <th class="px-4 py-3 text-left text-sm font-semibold rounded-tr-lg">
+                      Comprobante
                     </th>
                   </tr>
                 </thead>
@@ -2991,6 +2994,16 @@
                         >0.00</span
                       >
                       MXN
+                    </td>
+                    <td class="px-4 py-3 text-sm">
+                      <a
+                        th:href="@{/admin/system-configuration/license-events/{eventId}/receipt(eventId=${event.id})}"
+                        class="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg border border-green-200 px-3 py-2 font-semibold text-green-700 transition hover:bg-green-50 dark:border-green-800 dark:text-green-300 dark:hover:bg-green-900/20"
+                        aria-label="Descargar comprobante de pago en PDF"
+                      >
+                        <span class="material-symbols-outlined text-lg">download</span>
+                        Descargar PDF
+                      </a>
                     </td>
                   </tr>
                 </tbody>

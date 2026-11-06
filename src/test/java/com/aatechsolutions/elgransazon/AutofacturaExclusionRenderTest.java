@@ -138,6 +138,26 @@ class AutofacturaExclusionRenderTest {
         assertFalse(html.contains(EXCLUDED_HEADING), "the excluded notice should not render");
         assertTrue(html.contains("Método de pago"), "whole-order summary should show payment method");
         assertTrue(html.contains("Efectivo"), "whole-order summary should show the recorded method");
+        assertTrue(html.contains("name=\"conceptMode\""), "the page must ask for the concept mode");
+        assertTrue(html.contains("value=\"DETAILED\""), "the itemized option must be offered");
+        assertTrue(html.contains("value=\"SINGLE\""), "the single-concept option must be offered");
+        assertTrue(html.matches("(?s).*value=\"DETAILED\"[^>]*checked.*"),
+                "itemized must be the default selection");
+    }
+
+    @Test
+    void selectedSingleConceptModeSurvivesValidationErrors() {
+        AbstractContext ctx = webContext();
+        baseVariables(ctx);
+        ctx.setVariable("order", order(false));
+        ctx.setVariable("conceptMode", "SINGLE");
+
+        String html = templateEngine.process("autofactura", ctx);
+
+        assertTrue(html.matches("(?s).*value=\"SINGLE\"[^>]*checked.*"),
+                "the resumida choice must stay selected after a validation error");
+        assertFalse(html.matches("(?s).*value=\"DETAILED\"[^>]*checked.*"),
+                "detallada must not be selected when the client chose resumida");
     }
 
     @Test

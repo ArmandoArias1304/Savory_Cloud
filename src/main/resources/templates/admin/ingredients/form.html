@@ -417,7 +417,7 @@
                   for="costPerUnit"
                   class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
                 >
-                  Costo por Unidad
+                  Costo por unidad de medida
                 </label>
                 <input
                   type="number"
@@ -440,7 +440,35 @@
                   class="mt-1 text-xs text-blue-600 dark:text-blue-400 flex items-center gap-1"
                 >
                   <span class="material-symbols-outlined text-sm">info</span>
-                  Se actualiza automáticamente al agregar stock
+                  Costo promedio ponderado de tus compras, por unidad de medida. Se recalcula al agregar, corregir o anular una compra.
+                </p>
+              </div>
+
+              <!-- Rendimiento -->
+              <div>
+                <label
+                  for="yieldPercentage"
+                  class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
+                >
+                  Rendimiento (%)
+                </label>
+                <input
+                  type="number"
+                  id="yieldPercentage"
+                  th:field="*{yieldPercentage}"
+                  min="1"
+                  max="100"
+                  step="0.01"
+                  class="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-primary focus:outline-none"
+                  placeholder="100"
+                />
+                <p
+                  th:if="${#fields.hasErrors('yieldPercentage')}"
+                  th:errors="*{yieldPercentage}"
+                  class="mt-1 text-sm text-red-600 dark:text-red-400"
+                ></p>
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  80 % si al limpiar se pierde una quinta parte. El costo por porción sube en proporción.
                 </p>
               </div>
 
@@ -511,7 +539,7 @@
                     class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-900 transition-all"
                   />
                   <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    Se sumará al stock actual:
+                    Cantidad en <span th:text="${ingredient.unitOfMeasure}">kg</span>. Se sumará al stock actual:
                     <strong
                       th:text="${ingredient.currentStock + ' ' + ingredient.unitOfMeasure}"
                       >100 kg</strong
@@ -550,7 +578,7 @@
                     <span class="material-symbols-outlined text-sm align-middle"
                       >payments</span
                     >
-                    Costo por Unidad ($) *
+                    Costo por unidad de medida ($) *
                   </label>
                   <input
                     type="number"

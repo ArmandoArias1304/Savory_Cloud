@@ -157,9 +157,14 @@ public class AutofacturaController {
             @RequestParam String fiscalRegime,
             @RequestParam String cfdiUse,
             @RequestParam String zipCode,
+            @RequestParam(defaultValue = "DETAILED") String conceptMode,
             Model model) {
 
         log.info("Processing autofactura for key: {}, RFC: {}", key, rfc);
+
+        // Detallada (una línea por producto) salvo que el cliente elija la resumida.
+        boolean itemized = !"SINGLE".equalsIgnoreCase(conceptMode);
+        model.addAttribute("conceptMode", itemized ? "DETAILED" : "SINGLE");
 
         // Resolve the key: per-account Payment first, legacy Order fallback.
         Payment payment = paymentRepository.findByAutofacturaKeyAndCompany(key, CompanyContext.getCurrentCompany())
@@ -311,7 +316,8 @@ public class AutofacturaController {
                         legalName.trim().toUpperCase(),
                         fiscalRegime,
                         cfdiUse,
-                        zipCode.trim()
+                        zipCode.trim(),
+                        itemized
                 );
             } else {
                 cfdiResult = facturamaService.createCfdi(
@@ -320,7 +326,8 @@ public class AutofacturaController {
                         legalName.trim().toUpperCase(),
                         fiscalRegime,
                         cfdiUse,
-                        zipCode.trim()
+                        zipCode.trim(),
+                        itemized
                 );
             }
 

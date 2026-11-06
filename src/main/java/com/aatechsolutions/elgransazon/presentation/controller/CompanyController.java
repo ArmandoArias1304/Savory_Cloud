@@ -7,6 +7,7 @@ import com.aatechsolutions.elgransazon.domain.entity.Company;
 import com.aatechsolutions.elgransazon.domain.entity.FeatureKey;
 import com.aatechsolutions.elgransazon.domain.entity.SystemLicense;
 import com.aatechsolutions.elgransazon.domain.entity.FacturamaConfig;
+import com.aatechsolutions.elgransazon.domain.entity.PaymentMethodType;
 import com.aatechsolutions.elgransazon.domain.repository.CompanyRepository;
 import com.aatechsolutions.elgransazon.domain.repository.GlobalInvoiceRepository;
 import com.aatechsolutions.elgransazon.domain.repository.OrderRepository;
@@ -91,6 +92,7 @@ public class CompanyController {
     @GetMapping("/new")
     public String showCreateForm(Model model) {
         model.addAttribute("company", new CompanyCreateDTO());
+        model.addAttribute("paymentMethodTypes", PaymentMethodType.values());
         return "programmer/companies/form";
     }
 
@@ -106,6 +108,7 @@ public class CompanyController {
             Authentication authentication) {
 
         log.info("Programmer {} creating new company: {}", authentication.getName(), dto.getSlug());
+        model.addAttribute("paymentMethodTypes", PaymentMethodType.values());
 
         // Validate slug uniqueness
         if (companyRepository.existsBySlug(dto.getSlug())) {
@@ -144,6 +147,7 @@ public class CompanyController {
                     dto.getBillingCycle(),
                     dto.getLicenseMonths(),
                     dto.getLicenseAmount(),
+                    dto.getPaymentMethod(),
                     dto.getTaxRate(),
                     authentication.getName());
 

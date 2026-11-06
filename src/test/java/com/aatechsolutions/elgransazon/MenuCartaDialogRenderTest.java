@@ -116,11 +116,31 @@ class MenuCartaDialogRenderTest {
     void offersTheCartaButtonAndTheDialog() {
         String html = render(MenuStyle.defaults());
 
-        assertTrue(html.contains("id=\"btnCartaPdf\""), "falta el botón de la carta");
-        assertTrue(html.contains("Carta en PDF"), "el botón no dice qué hace");
+        assertTrue(html.contains("Herramientas"), "falta el acceso a las herramientas");
+        assertTrue(html.contains("id=\"btnCartaPdf\""), "falta la tarjeta de la carta en herramientas");
         assertTrue(html.contains("id=\"cartaModal\""), "falta el modal de personalización");
         assertTrue(html.contains("id=\"cartaPreview\""), "falta la vista previa de la carta");
         assertTrue(html.contains("id=\"cartaGenerate\""), "falta el botón de generar el PDF");
+    }
+
+    @Test
+    void menuToolsOverlayShowsThreeResponsiveCardsWithoutLeavingTheMenu() {
+        String html = render(MenuStyle.defaults());
+
+        assertTrue(html.contains("id=\"menuToolsModal\""), "las herramientas deben ser una ventana superpuesta");
+        assertTrue(html.contains("backdrop-blur-sm"), "el fondo debe difuminarse al abrir herramientas");
+        assertTrue(html.contains("grid-cols-1") && html.contains("sm:grid-cols-2")
+                        && html.contains("lg:grid-cols-3"),
+                "las tarjetas deben adaptarse a móvil, tablet y escritorio");
+        assertTrue(html.contains("Costeo"));
+        assertTrue(html.contains("Producción interna"));
+        assertTrue(html.contains("Carta en PDF"));
+        assertTrue(html.contains("/admin/menu-items/costing"));
+        assertTrue(html.contains("/internal-production"));
+        assertTrue(html.contains("id=\"btnCartaPdf\""));
+        assertTrue(html.contains("toolsButton.addEventListener(\"click\", openToolsModal)"));
+        assertTrue(html.contains("closeToolsModal();"),
+                "la herramienta de carta debe abrirse desde el menú y cerrar la ventana de herramientas");
     }
 
     @Test

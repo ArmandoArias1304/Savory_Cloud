@@ -2,7 +2,14 @@ package com.aatechsolutions.elgransazon;
 
 import com.aatechsolutions.elgransazon.application.service.InventoryObjectCategoryService;
 import com.aatechsolutions.elgransazon.application.service.InventoryObjectService;
+import com.aatechsolutions.elgransazon.application.service.IngredientPurchaseService;
+import com.aatechsolutions.elgransazon.application.service.IngredientService;
 import com.aatechsolutions.elgransazon.domain.entity.Company;
+import com.aatechsolutions.elgransazon.domain.entity.Ingredient;
+import com.aatechsolutions.elgransazon.domain.entity.IngredientPurchase;
+import com.aatechsolutions.elgransazon.domain.entity.IngredientPurchaseLine;
+import com.aatechsolutions.elgransazon.domain.entity.IngredientPurchaseStatus;
+import com.aatechsolutions.elgransazon.domain.entity.IngredientStockHistory;
 import com.aatechsolutions.elgransazon.domain.entity.InventoryObject;
 import com.aatechsolutions.elgransazon.domain.entity.InventoryObjectCategory;
 import com.aatechsolutions.elgransazon.domain.entity.ObjectCondition;
@@ -37,7 +44,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 /**
  * Las pantallas del inventario tal como las recibe el navegador:
- * el hub con los dos botones, el listado de objetos, su formulario y las categorías.
+ * el hub con los dos botones, el listado de objetos, su formulario y las
+ * categorías.
  */
 @SpringBootTest
 @WithMockUser(username = "admin", roles = "ADMIN")
@@ -51,6 +59,12 @@ class InventoryModuleRenderTest {
 
     @MockitoBean
     private InventoryObjectCategoryService categoryService;
+
+    @MockitoBean
+    private IngredientPurchaseService purchaseService;
+
+    @MockitoBean
+    private IngredientService ingredientService;
 
     private MockMvc mockMvc;
     private InventoryObjectCategory electronica;
@@ -87,6 +101,9 @@ class InventoryModuleRenderTest {
         when(categoryService.searchWithFilters(any(), any())).thenReturn(List.of(electronica));
         when(categoryService.getActiveCount()).thenReturn(1L);
         when(categoryService.getInactiveCount()).thenReturn(0L);
+        when(ingredientService.getActiveCount()).thenReturn(2L);
+        when(ingredientService.countLowStock()).thenReturn(0L);
+        when(ingredientService.countOutOfStock()).thenReturn(0L);
     }
 
     @AfterEach
@@ -104,6 +121,124 @@ class InventoryModuleRenderTest {
         assertThat(html).contains("href=\"/admin/ingredients\"");
         assertThat(html).contains("href=\"/admin/inventory/objects\"");
         assertThat(html).contains("25,500.00");
+    }
+
+    @Test
+    @DisplayName("la lista permite subir XML y muestra las compras registradas")
+    void thePurchaseListOffersXmlUpload() throws Exception {
+        when(purchaseService.findAll()).thenReturn(List.of(IngredientPurchase.builder()
+                .id(5L)
+                .status(IngredientPurchaseStatus.CONFIRMED)
+                .build()));
+
+        String html = render("/admin/inventory/purchases");
+
+        assertThat(html).contains("action=\"/admin/inventory/purchases/upload\"");
+        assertThat(html).contains("name=\"xmlFile\"");
+        assertThat(html).contains("Facturas registradas");
+        assertThat(html).contains("Total facturas");
+        assertThat(html).contains("Pendientes");
+        assertThat(html).contains("Confirmadas");
+        assertThat(html).contains("Canceladas");
+        assertThat(html).contains("href=\"/admin/inventory/purchases/5/details\"");
+        assertThat(html).contains("Ver factura");
+        assertThat(html).contains("No registrado");
+    }
+
+    @Test
+    @DisplayName("una compra confirmada abre su detalle sin volver a confirmar stock")
+    void aConfirmedPurchaseShowsItsReadOnlyDetails() throws Exception {
+        Ingredient tomato = Ingredient.builder()
+                .idIngredient(9L)
+                .name("Tomate")
+                .unitOfMeasure("KG")
+                .build();
+        IngredientPurchaseLine line = IngredientPurchaseLine.builder()
+                .id(12L)
+                .lineNumber(1)
+                .description("Tomate saladet caja 20 kg")
+                .purchasedQuantity(new BigDecimal("2"))
+                .purchaseUnit("XBX")
+                .unitPrice(new BigDecimal("100.00"))
+                .amount(new BigDecimal("200.00"))
+                .discount(BigDecimal.ZERO)
+                .ingredient(tomato)
+                .stockHistory(IngredientStockHistory.builder().id(34L).ingredient(tomato).build())
+                .conversionFactor(new BigDecimal("20"))
+                .stockQuantity(new BigDecimal("40.000"))
+                .costPerStockUnit(new BigDecimal("5.00"))
+                .build();
+        IngredientPurchase purchase = IngredientPurchase.builder()
+                .id(5L)
+                .uuid("ABC-123")
+                .issuerRfc("AAA010101AAA")
+                .issuerName("Proveedor de prueba")
+                .issuedAt(java.time.LocalDateTime.of(2026, 11, 5, 12, 0))
+                .currency("MXN")
+                .total(new BigDecimal("232.00"))
+                .status(IngredientPurchaseStatus.CONFIRMED)
+                .lines(List.of(line))
+                .build();
+        when(purchaseService.findDetails(5L)).thenReturn(purchase);
+
+        String html = render("/admin/inventory/purchases/5/details");
+
+        assertThat(html).contains("Detalle de factura");
+        assertThat(html).contains("ABC-123");
+        assertThat(html).contains("Tomate saladet caja 20 kg");
+        assertThat(html).contains("Tomate");
+        assertThat(html).contains("Stock agregado");
+        assertThat(html).contains("Cancelar factura");
+        assertThat(html).contains("/admin/inventory/purchases/5/cancel");
+        assertThat(html).contains("sweetalert2@11");
+        assertThat(html).contains("¿Cancelar esta factura?");
+        assertThat(html).doesNotContain("onsubmit=\"return confirm(");
+        assertThat(html).doesNotContain("Confirmar y actualizar stock");
+    }
+
+    @Test
+    @DisplayName("la revisión permite buscar ingrediente y convertir la unidad de compra")
+    void thePurchaseReviewOffersIngredientSearchAndConversion() throws Exception {
+        Ingredient tomato = Ingredient.builder()
+                .idIngredient(9L)
+                .name("Tomate")
+                .unitOfMeasure("KG")
+                .currency("MXN")
+                .active(true)
+                .build();
+        IngredientPurchaseLine line = IngredientPurchaseLine.builder()
+                .id(12L)
+                .lineNumber(1)
+                .description("Tomate saladet caja 20 kg")
+                .purchasedQuantity(new BigDecimal("2"))
+                .purchaseUnit("XBX")
+                .amount(new BigDecimal("200.00"))
+                .discount(BigDecimal.ZERO)
+                .build();
+        IngredientPurchase purchase = IngredientPurchase.builder()
+                .id(5L)
+                .uuid("ABC-123")
+                .issuerRfc("AAA010101AAA")
+                .issuerName("Proveedor de prueba")
+                .issuedAt(java.time.LocalDateTime.of(2026, 11, 5, 12, 0))
+                .currency("MXN")
+                .total(new BigDecimal("232.00"))
+                .status(IngredientPurchaseStatus.PENDING)
+                .lines(List.of(line))
+                .build();
+        when(purchaseService.findPending(5L)).thenReturn(purchase);
+        when(ingredientService.findAllActive()).thenReturn(List.of(tomato));
+
+        String html = render("/admin/inventory/purchases/5");
+
+        assertThat(html).contains("Tomate saladet caja 20 kg");
+        assertThat(html).contains("name=\"ingredientIds\"");
+        assertThat(html).contains("name=\"conversionFactors\"");
+        assertThat(html).contains("Buscar ingrediente...");
+        assertThat(html).contains("Precio sin IVA");
+        assertThat(html).contains("Precio con IVA");
+        assertThat(html).contains("×");
+        assertThat(html).contains("Confirmar y actualizar stock");
     }
 
     @Test
@@ -238,7 +373,10 @@ class InventoryModuleRenderTest {
                 .getContentAsString();
     }
 
-    /** Sólo las filas de la tabla, para no confundir las etiquetas con las del filtro */
+    /**
+     * Sólo las filas de la tabla, para no confundir las etiquetas con las del
+     * filtro
+     */
     private String rowsOf(String html) {
         int start = html.indexOf("<tbody");
         int end = html.indexOf("</tbody>", start);
